@@ -25,9 +25,24 @@ conda create --name openoa-env python=2.7
 conda activate openoa-env
 ```
 
+#### Microsoft Windows:
+
+For users Microsoft Windows, the Anaconda python distribution is required. The reason is that pip on windows requires
+Visual Studio libraries to compile some of the dependencies. This can be resolved by manually installing the following
+packages via conda, which installs pre-built binaries of these dependencies, before attempting a pip install of OpenOA.
+
+```
+conda install shapely
+conda install geos
+conda install fiona
+```
+
+If errors about Visual Studio persist, you can try downloading the Microsoft Visual Studio compiler for Python: https://www.microsoft.com/en-us/download/details.aspx?id=44266
+
+
 ### Installation:
 
-Clone the repository and install the library and its dependencies:
+Clone the repository and install the library and its dependencies using pip:
 
 ```
 git clone git@github.com:NREL/OpenOA.git

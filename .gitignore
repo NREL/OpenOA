@@ -13,6 +13,11 @@ operational_analysis.egg-info
 .eggs
 docs
 
+OpenOA.egg-info
+build
+dist
+*.csv
+
 .pytest_cache
 
 .coverage
