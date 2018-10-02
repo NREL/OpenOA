@@ -45,7 +45,7 @@ class PyTestIntegrate(PyTest):
     def run_tests(self):
         import shlex
         import pytest
-        errno = pytest.main(shlex.split(self.pytest_args + " -o python_files=int_*.py"))
+        errno = pytest.main(shlex.split(self.pytest_args + " -o python_files=int_*.py --cov=operational_analysis"))
         sys.exit(errno)
 
 
