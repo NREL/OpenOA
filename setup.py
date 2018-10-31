@@ -5,6 +5,7 @@ import re
 from setuptools import setup
 import sys
 from setuptools.command.test import test as TestCommand
+from setuptools import find_packages
 
 # Configs ##########
 
@@ -57,7 +58,7 @@ setup(name='OpenOA',
       author='NREL PRUF OA Team',
       author_email='caleb.phillips@nrel.gov',
       url='https://github.com/NREL/OpenOA',
-      packages=['operational_analysis'],
+      packages=find_packages(exclude=["test"]),
       install_requires=["numpy==1.14.0",
                         "scipy==1.0.0",
                         "pandas==0.20.3",
