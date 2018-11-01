@@ -21,7 +21,7 @@ from operational_analysis.toolkits import unit_conversion as un
 from operational_analysis.types import timeseries_table
 
 
-class PlantAnalysis():
+class MonteCarloAEP(object):
     """
     A serial (Pandas-driven) implementation of the benchmark PRUF operational
     analysis implementation. This module collects standard processing and
@@ -38,28 +38,165 @@ class PlantAnalysis():
     The end result is a distribution of AEP results which we use to assess expected AEP and associated uncertainty
     """
 
-    def __init__(self, plant):
+    def __init__(self, plant, uncertainty_meter=0.005, uncertainty_losses=0.05,
+                 uncertainty_loss_max=(10, 20), uncertainty_windiness=(10, 20), uncertainty_outlier=(2, 3.1),
+                 uncertainty_nan_energy=0.01):
         """
-        Create a pruf plant analysis timeseries object that is a Timeseries Table.
+        Initialize APE_MC analysis with data and parameters.
 
         Args:
          plant(:obj:`PlantData object`): PlantData object from which PlantAnalysis should draw data.
 
         """
         self._monthly = timeseries_table.TimeseriesTable.factory(plant._engine)
-        self._plant = plant
+        self._plant = plant  # defined at runtime
 
         # Memo dictionaries help speed up computation
         self.long_term_sampling = {} # Combinations of long-term reanalysis data sampling
         self.outlier_filtering = {} # Combinations of outlier filter results
 
         # Define relevant uncertainties, data ranges and max thresholds to be applied in Monte Carlo sampling
-        self.uncertainty_meter = np.float64(0.005)
-        self.uncertainty_losses = np.float64(0.05)
-        self.uncertainty_loss_max = np.array((10,20),dtype=np.float64)
-        self.uncertainty_windiness = np.array((10,20),dtype=np.float64)
-        self.uncertainty_outlier = np.array((2,3.1),dtype=np.float64)
-        self.uncertainty_nan_energy = np.float64(0.01)
+        self.uncertainty_meter = np.float64(uncertainty_meter)
+        self.uncertainty_losses = np.float64(uncertainty_losses)
+        self.uncertainty_loss_max = np.array(uncertainty_loss_max, dtype=np.float64)
+        self.uncertainty_windiness = np.array(uncertainty_windiness, dtype=np.float64)
+        self.uncertainty_outlier = np.array(uncertainty_outlier, dtype=np.float64)
+        self.uncertainty_nan_energy = np.float64(uncertainty_nan_energy)
+
+        # Run preprocessing step
+        self.calculate_monthly_dataframe()
+
+    def run(self, num_sim, reanal_subset):
+        """
+        Perform pre-processing of data into an internal representation for which the analysis can run more quickly.
+        :return: None
+        """
+
+        self.num_sim = num_sim
+        self.reanal_subset = reanal_subset
+
+        self.calculate_long_term_losses()
+
+        self.setup_monte_carlo_inputs()
+        self.results = self.run_AEP_monte_carlo()
+
+    def plot_reanalysis_normalized_annual_windspeed(self, year_range):
+        """
+        Make a plot of annual average wind speeds from reanalysis data to show general trends for each
+        Remove data with incomplete years
+        :param year_range: (start integer, end integer)
+        :return: matplotlib.pyplot object
+        """
+        import matplotlib.pyplot as plt
+        project = self._plant
+        plt.figure(figsize=(14,6))
+        for key,items in project._reanalysis._product.iteritems():
+            rean_df=project._reanalysis._product[key].df
+            ann_ws=rean_df.groupby(rean_df.index.year)['ws_dens_corr'].mean().to_frame()
+            ann_ws['num_ent']=rean_df.groupby(rean_df.index.year)['ws_dens_corr'].count()
+            ann_ws_valid=ann_ws.loc[np.abs(ann_ws.num_ent/ann_ws.num_ent.mean())>0.9]
+            plt.plot(ann_ws_valid['ws_dens_corr']/ann_ws_valid['ws_dens_corr'].mean(),label=key)
+        plt.plot((year_range[0], year_range[1]),(1,1),'k--')
+        plt.xticks(np.arange(year_range[0], year_range[1]))
+        plt.xlabel('Year')
+        plt.ylabel('Normalized wind speed')
+        plt.legend()
+        return plt
+
+    def plot_reanalysis_gross_energy_data(self):
+        """
+        Make a plot of normalized 30-day gross energy vs wind speed for each reanalysis product, include R2 measure
+        :return: matplotlib.pyplot object
+        """
+        import matplotlib.pyplot as plt
+        valid_monthly=self._monthly.df
+        project = self._plant
+        plt.figure(figsize=(12,12))
+        ws_temp=np.arange(10)
+        for p in np.arange(0,len(project._reanalysis._product.keys())):
+            col_name=project._reanalysis._product.keys()[p]
+
+            x = sm.add_constant(valid_monthly[col_name]) # Exclude partial month at end
+            y = valid_monthly['gross_energy_gwh']*30/valid_monthly['num_days_expected'] # Exclude partial month at end
+
+            rlm = sm.RLM(y, x, M = sm.robust.norms.HuberT(t=3))
+            rlm_results = rlm.fit()
+
+            r2 = np.corrcoef(x.loc[rlm_results.weights==1, col_name],y[rlm_results.weights==1])[0,1]
+
+            plt.subplot(2,2,p+1)
+            plt.plot(x[col_name],y,'r.')
+            plt.plot(x.loc[rlm_results.weights==1, col_name],y[rlm_results.weights==1],'.')
+            plt.title(col_name+', R2='+str(np.round(r2,3)))
+            plt.xlabel('Wind speed (m/s)')
+            plt.ylabel('30-day normalized gross energy (GWh)')
+        return plt
+
+    def plot_result_aep_distributions(self):
+        """
+        Plot a distribution of APE values from the Monte-Carlo OA method
+        :return: matplotlib.pyplot object
+        """
+        import matplotlib.pyplot as plt
+        fig=plt.figure(figsize=(14,12))
+
+        sim_results = self.results
+
+        ax = fig.add_subplot(2,2,1)
+        ax.hist(sim_results['aep_GWh'],40,normed=1)
+        ax.text(0.05,0.9,'AEP mean = '+str(np.round(sim_results['aep_GWh'].mean(),1))+ ' GWh/yr',transform=ax.transAxes)
+        ax.text(0.05,0.8,'AEP unc = '+str(np.round(sim_results['aep_GWh'].std()/sim_results['aep_GWh'].mean()*100,1))+"%",transform=ax.transAxes)
+        plt.xlabel('APE (GWh/yr)')
+
+        ax = fig.add_subplot(2,2,2)
+        ax.hist(sim_results['avail_pct']*100,40,normed=1)
+        ax.text(0.05,0.9,'Mean = '+str(np.round((sim_results['avail_pct'].mean())*100,1))+ ' %',transform=ax.transAxes)
+        plt.xlabel('Availability Loss (%)')
+
+        ax = fig.add_subplot(2,2,3)
+        ax.hist(sim_results['curt_pct']*100,40,normed=1)
+        ax.text(0.05,0.9,'Mean: '+str(np.round((sim_results['curt_pct'].mean())*100,2))+ ' %',transform=ax.transAxes)
+        plt.xlabel('Curtailment Loss (%)')
+
+        return plt
+
+    def plot_monthly_gross_energy_timeseries(self):
+        import matplotlib.pyplot as plt
+        valid_monthly=self._monthly.df
+
+        plt.figure(figsize=(15,22))
+
+        plt.subplot(3,1,1)
+        plt.plot(valid_monthly.gross_energy_gwh,'.-')
+        plt.grid('on')
+        plt.xlabel('Year')
+        plt.ylabel('Gross energy (GWh)')
+
+        plt.subplot(3,1,2)
+        plt.plot(valid_monthly.availability_pct*100,'.-')
+        plt.grid('on')
+        plt.xlabel('Year')
+        plt.ylabel('Availability (%)')
+
+        plt.subplot(3,1,3)
+        plt.plot(valid_monthly.curtailment_pct*100,'.-')
+        plt.grid('on')
+        plt.xlabel('Year')
+        plt.ylabel('Curtailment (%)')
+
+        return plt
+
+
+    def calculate_monthly_dataframe(self):
+        # Average to monthly, quantify NaN data
+        self.process_revenue_meter_energy()
+        # Average to monthly, quantify NaN data, merge with revenue meter energy data
+        self.process_loss_estimates()
+        # Density correct wind speeds, average to monthly
+        self.process_reanalysis_data()
+        self.trim_monthly_df()
+        # Drop any data that have NaN gross energy values (means either revenue meter, availability, or curtalment data was NaN)
+        self._monthly.df = self._monthly.df.loc[np.isfinite(self._monthly.df.gross_energy_gwh)]
 
     def process_revenue_meter_energy(self):
         """
@@ -201,7 +338,7 @@ class PlantAnalysis():
         # Calculate long-term availbilty and curtailment losses
         self.long_term_losses = (avail_long_term, curt_long_term)
     
-    def setup_monte_carlo_inputs(self,reanal_subset, num_sim):
+    def setup_monte_carlo_inputs(self):
         """
         Perform Monte Carlo sampling for reported monthly revenue meter energy, availability, and curtailment data, as well
         as reanalysis data
@@ -212,7 +349,10 @@ class PlantAnalysis():
 
         Returns:
             (None)
-        """        
+        """
+        reanal_subset = self.reanal_subset
+        num_sim = self.num_sim
+
         self._mc_slope = np.empty(num_sim,dtype=np.float64)
         self._mc_intercept = np.empty(num_sim,dtype=np.float64)
         self._mc_num_points = np.empty(num_sim,dtype=np.float64)
@@ -344,16 +484,15 @@ class PlantAnalysis():
         # Return slope and intercept values
         return np.float(mc_slope), np.float(mc_intercept)
 
-    def run_AEP_monte_carlo(self, num_sim):
+    def run_AEP_monte_carlo(self):
         """
         Loop through OA process a number of times and return array of AEP results each time
-
-        Args:
-           num_sim(:obj:`int`): Number of simulations to perform
 
         Returns:
             :obj:`numpy.ndarray` Array of AEP, long-term avail, long-term curtailment calculations
         """
+
+        num_sim = self.num_sim
 
         sim_results=pd.DataFrame(index=np.arange(num_sim),data={'aep_GWh':np.empty(num_sim),
                                                                      'avail_pct':np.empty(num_sim),
