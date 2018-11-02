@@ -49,3 +49,20 @@ def compute_gross_energy(net_energy, avail_losses, curt_losses, avail_type = 'fr
         raise Exception('Cannot have negative input values. Check your data')    
 
     return gross
+
+def convert_feet_to_meter(variable):
+    """
+    Compute variable in [meter] from [feet] and return the data column
+
+    Args:
+        df(:obj:`pandas.Series`): the existing data frame to append to
+        variable(:obj:`string`): variable in feet
+
+    Returns:
+        :obj:`pandas.Series`: variable in meters of the input data frame 'df'
+
+    """
+       
+    out = variable * 0.3048
+    
+    return out
