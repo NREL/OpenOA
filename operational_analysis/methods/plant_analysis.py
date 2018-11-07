@@ -80,53 +80,74 @@ class MonteCarloAEP(object):
         self.setup_monte_carlo_inputs()
         self.results = self.run_AEP_monte_carlo()
 
-    def plot_reanalysis_normalized_annual_windspeed(self, year_range):
+    def plot_reanalysis_normalized_rolling_monthly_windspeed(self):
         """
         Make a plot of annual average wind speeds from reanalysis data to show general trends for each
-        Remove data with incomplete years
-        :param year_range: (start integer, end integer)
+        Highlight the period of record for plant data
         :return: matplotlib.pyplot object
         """
         import matplotlib.pyplot as plt
         project = self._plant
+        
+        # Define parameters needed for plot
+        min_val = 1 # Default parameter providing y-axis minimum for shaded plant POR region
+        max_val = 1 # Default parameter providing y-axis maximum for shaded plant POR region
+        por_start = self._monthly.df.index[0] # Start of plant POR
+        por_end = self._monthly.df.index[-1] # End of plant POR
+        
         plt.figure(figsize=(14,6))
         for key,items in project._reanalysis._product.iteritems():
-            rean_df=project._reanalysis._product[key].df
-            ann_ws=rean_df.groupby(rean_df.index.year)['ws_dens_corr'].mean().to_frame()
-            ann_ws['num_ent']=rean_df.groupby(rean_df.index.year)['ws_dens_corr'].count()
-            ann_ws_valid=ann_ws.loc[np.abs(ann_ws.num_ent/ann_ws.num_ent.mean())>0.9]
-            plt.plot(ann_ws_valid['ws_dens_corr']/ann_ws_valid['ws_dens_corr'].mean(),label=key)
-        plt.plot((year_range[0], year_range[1]),(1,1),'k--')
-        plt.xticks(np.arange(year_range[0], year_range[1]))
+            rean_df=project._reanalysis._product[key].df # Set reanalysis product
+            ann_mo_ws=rean_df.resample('MS')['ws_dens_corr'].mean().to_frame() # Take monthly average wind speed
+            ann_roll = ann_mo_ws.rolling(12).mean() # Calculate rolling 12-month average
+            ann_roll_norm = ann_roll['ws_dens_corr']/ann_roll['ws_dens_corr'].mean() # Normalize rolling 12-month average
+            
+            # Update min_val and max_val depending on range of data
+            if ann_roll_norm.min() < min_val: min_val = ann_roll_norm.min()
+            if ann_roll_norm.max() > max_val: max_val = ann_roll_norm.max()
+            
+            # Plot wind speed
+            plt.plot(ann_roll_norm, label = key)
+        
+        # Plot dotted line at y=1 (i.e. average wind speed)
+        plt.plot((ann_roll.index[0],ann_roll.index[-1]),(1,1),'k--')
+        
+        # Fill in plant POR region
+        plt.fill_between([por_start, por_end], [min_val, min_val],[max_val, max_val], alpha = 0.1, label = 'Plant POR')
+        
+        # Final touches to plot
         plt.xlabel('Year')
         plt.ylabel('Normalized wind speed')
         plt.legend()
         return plt
 
-    def plot_reanalysis_gross_energy_data(self):
+    def plot_reanalysis_gross_energy_data(self, outlier_thres):
         """
         Make a plot of normalized 30-day gross energy vs wind speed for each reanalysis product, include R2 measure
+        :param outlier_thres (float): outlier threshold (typical range of 1 to 4) which adjusts outlier sensitivity detection
         :return: matplotlib.pyplot object
         """
         import matplotlib.pyplot as plt
         valid_monthly=self._monthly.df
         project = self._plant
         plt.figure(figsize=(12,12))
-        ws_temp=np.arange(10)
+        
+        # Loop through each reanalysis product and make a scatterplot of monthly wind speed vs plant energy
         for p in np.arange(0,len(project._reanalysis._product.keys())):
-            col_name=project._reanalysis._product.keys()[p]
+            col_name=project._reanalysis._product.keys()[p] # Reanalysis column in monthly data frame
 
-            x = sm.add_constant(valid_monthly[col_name]) # Exclude partial month at end
-            y = valid_monthly['gross_energy_gwh']*30/valid_monthly['num_days_expected'] # Exclude partial month at end
+            x = sm.add_constant(valid_monthly[col_name]) # Define 'x'-values (constant needed for regression function)
+            y = valid_monthly['gross_energy_gwh']*30/valid_monthly['num_days_expected'] # Normalize energy data to 30-days
 
-            rlm = sm.RLM(y, x, M = sm.robust.norms.HuberT(t=3))
-            rlm_results = rlm.fit()
+            rlm = sm.RLM(y, x, M = sm.robust.norms.HuberT(t=outlier_thres)) # Robust linear regression with HuberT algorithm (threshold equal to 2)
+            rlm_results = rlm.fit() 
 
-            r2 = np.corrcoef(x.loc[rlm_results.weights==1, col_name],y[rlm_results.weights==1])[0,1]
+            r2 = np.corrcoef(x.loc[rlm_results.weights==1, col_name],y[rlm_results.weights==1])[0,1] # Get R2 from valid data
 
+            # Plot results
             plt.subplot(2,2,p+1)
-            plt.plot(x[col_name],y,'r.')
-            plt.plot(x.loc[rlm_results.weights==1, col_name],y[rlm_results.weights==1],'.')
+            plt.plot(x.loc[rlm_results.weights!=1, col_name],y[rlm_results.weights!=1],'rx', label = 'Outlier')
+            plt.plot(x.loc[rlm_results.weights==1, col_name],y[rlm_results.weights==1],'.', label = 'Valid data')
             plt.title(col_name+', R2='+str(np.round(r2,3)))
             plt.xlabel('Wind speed (m/s)')
             plt.ylabel('30-day normalized gross energy (GWh)')
@@ -146,7 +167,7 @@ class MonteCarloAEP(object):
         ax.hist(sim_results['aep_GWh'],40,normed=1)
         ax.text(0.05,0.9,'AEP mean = '+str(np.round(sim_results['aep_GWh'].mean(),1))+ ' GWh/yr',transform=ax.transAxes)
         ax.text(0.05,0.8,'AEP unc = '+str(np.round(sim_results['aep_GWh'].std()/sim_results['aep_GWh'].mean()*100,1))+"%",transform=ax.transAxes)
-        plt.xlabel('APE (GWh/yr)')
+        plt.xlabel('AEP (GWh/yr)')
 
         ax = fig.add_subplot(2,2,2)
         ax.hist(sim_results['avail_pct']*100,40,normed=1)
@@ -160,41 +181,57 @@ class MonteCarloAEP(object):
 
         return plt
 
-    def plot_monthly_gross_energy_timeseries(self):
+    def plot_monthly_plant_data_timeseries(self):
+        """
+        Plot timeseries of monthly gross energy, availability and curtailment
+        :return: matplotlib.pyplot object
+        """
         import matplotlib.pyplot as plt
         valid_monthly=self._monthly.df
 
-        plt.figure(figsize=(15,22))
-
-        plt.subplot(3,1,1)
+        plt.figure(figsize=(15,15))
+        
+        # Gross energy
+        plt.subplot(2,1,1)
         plt.plot(valid_monthly.gross_energy_gwh,'.-')
         plt.grid('on')
         plt.xlabel('Year')
         plt.ylabel('Gross energy (GWh)')
-
-        plt.subplot(3,1,2)
-        plt.plot(valid_monthly.availability_pct*100,'.-')
+        
+        # Availability and curtailment
+        plt.subplot(2,1,2)
+        plt.plot(valid_monthly.availability_pct*100,'.-', label = 'Availability')
+        plt.plot(valid_monthly.curtailment_pct*100,'.-', label = 'Curtailment')
         plt.grid('on')
         plt.xlabel('Year')
-        plt.ylabel('Availability (%)')
-
-        plt.subplot(3,1,3)
-        plt.plot(valid_monthly.curtailment_pct*100,'.-')
-        plt.grid('on')
-        plt.xlabel('Year')
-        plt.ylabel('Curtailment (%)')
+        plt.ylabel('Loss (%)')
+        plt.legend()
 
         return plt
 
-
     def calculate_monthly_dataframe(self):
+        """
+        Perform pre-processing of the plant data to produce a monthly data frame to be used in AEP analysis.
+        
+        Args:
+            (None)
+
+        Returns:
+            (None)
+        """    
+
         # Average to monthly, quantify NaN data
         self.process_revenue_meter_energy()
+        
         # Average to monthly, quantify NaN data, merge with revenue meter energy data
         self.process_loss_estimates()
+        
         # Density correct wind speeds, average to monthly
         self.process_reanalysis_data()
+        
+        # Remove first and last reporting months if only partial month reported
         self.trim_monthly_df()
+        
         # Drop any data that have NaN gross energy values (means either revenue meter, availability, or curtalment data was NaN)
         self._monthly.df = self._monthly.df.loc[np.isfinite(self._monthly.df.gross_energy_gwh)]
 
