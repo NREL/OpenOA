@@ -1,35 +1,21 @@
-# Specify information needed for setting up the build environment
-# Not needed for this setup.  Travis CI should run each build from the
-# default Ubuntu container.
-#language: C++
-#sudo: False
+language: python
 
-env:
-- TRAVIS_CI_ENV="Hello, World"
+python:
+  # We don't actually use the Travis Python, but this keeps it organized.
+  - "2.7"
 
-#before_install:
-#- Put commands here to prepare for executing builds/installs
-#- Examples would be using apt-get to install dependencies not
-#  included in the Travis CI build environment by default.
-
-#install:
-#- Put build commands here
-#- In each phase, you can execute multiple commands
-#- Travis CI stops if any single command fails in this phase
-
-before_script:
-- echo $TRAVIS_CI_ENV
+install:
+  - pip install ./OpenOA
 
 script:
-- $TRAVIS_BUILD_DIR/hello_world.sh
-#- Travis CI will run each command in this phase even if a previous command
-#  terminated in failure
+  - cd ./OpenOA
+  - python setup.py test
 
 after_success:
-- echo "You should see that Hello, World was printed by before_script"
+- echo "Success!"
 
 after_failure:
-- echo "Hello, World should not have been printed by before_script"
+- echo "Failure!"
 
 #after_script:
 #- Put clean-up or finalization commands here
