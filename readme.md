@@ -1,4 +1,4 @@
-OpenOA 
+OpenOA [![Build Status](https://travis-ci.org/jordanperr/OpenOA.svg?branch=feature%2Ftravisci)](https://travis-ci.org/jordanperr/OpenOA)
 ======
 
 This library provides a generic framework for working with large timeseries data from wind plants. Its development
