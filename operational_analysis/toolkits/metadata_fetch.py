@@ -43,7 +43,7 @@ def fetch_eia(api_key, plant_id, file_path):
         if (eia_plant.shape[0] == 0): # Couldn't locate EIA ID in database
             raise Exception('Plant ID not found in EIA database')
         
-        eia_info = eia_plant.loc[:, lambda eia_plant:var_list] # select column
+        eia_info = eia_plant[var_list] # select column
         eia_info = eia_info.reset_index(drop=True) # reset index to 0
         eia_dic = eia_info.T.to_dict() # convert to dictionary
         out_dic = eia_dic[0] # remove extra level of dictionary, "0" in this case
