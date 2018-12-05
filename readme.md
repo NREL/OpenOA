@@ -45,7 +45,7 @@ If errors about Visual Studio persist, you can try downloading the Microsoft Vis
 Clone the repository and install the library and its dependencies using pip:
 
 ```
-git clone git@github.com:NREL/OpenOA.git
+git clone https://github.com/NREL/OpenOA.git
 pip install ./OpenOA
 ```
 
