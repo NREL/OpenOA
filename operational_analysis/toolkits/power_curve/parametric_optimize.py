@@ -1,6 +1,5 @@
 import numpy as np
 
-
 """
 Curve fitting routines
 
@@ -60,4 +59,4 @@ def least_squares(x, y):
     Returns:
         real number
     """
-    return np.sum((x-y)**2)
+    return np.sum((x - y) ** 2)

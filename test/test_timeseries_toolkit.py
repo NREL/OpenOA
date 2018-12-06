@@ -10,7 +10,6 @@ from operational_analysis.toolkits import timeseries
 
 
 class SimpleTimeseriesTests(unittest.TestCase):
-
     def setUp(self):
         self.mountain_tz = timezone('US/Mountain')
         self.pacific_tz = timezone('US/Pacific')
@@ -18,10 +17,9 @@ class SimpleTimeseriesTests(unittest.TestCase):
         self.winter_midnight = datetime(2018, 01, 11, 0, 0, 0)
         self.day_of_data = pd.Series(pd.date_range(start="1/1/2018 00:00:00", end="1/1/2018 23:59:59", freq="10min"))
         self.two_days_of_data = self.day_of_data.append(pd.Series(
-                                pd.date_range(start="2/1/2018 00:00:00", end="2/1/2018 23:59:59", freq="10min")))
+            pd.date_range(start="2/1/2018 00:00:00", end="2/1/2018 23:59:59", freq="10min")))
 
     def test_convert_local_to_utc(self):
-
         # Pass in a localized datetime with matching tz string and make sure it throws an exception
         self.assertRaises(Exception, self.mountain_tz.localize(self.summer_midnight),
                           "T1: No exception raised for a datetime object with baked in TZInfo")
@@ -75,35 +73,36 @@ class SimpleTimeseriesTests(unittest.TestCase):
         # df with a gap
         day_of_data = self.day_of_data.copy()
         missing_two = day_of_data.drop([2, 3])
-        missing_two_df = pd.DataFrame({"time":missing_two, "col1":missing_two})
+        missing_two_df = pd.DataFrame({"time": missing_two, "col1": missing_two})
         filled = timeseries.gap_fill_data_frame(missing_two_df, "time", "10min")
-        self.assertEqual(day_of_data.size, filled["time"].size, "T1: Gap filling should increase size of this dataframe")
+        self.assertEqual(day_of_data.size, filled["time"].size,
+                         "T1: Gap filling should increase size of this dataframe")
 
         # df with no gaps
         day_of_data = self.day_of_data.copy()
-        day_of_data_df = pd.DataFrame({"time":day_of_data, "col1":day_of_data})
+        day_of_data_df = pd.DataFrame({"time": day_of_data, "col1": day_of_data})
         filled = timeseries.gap_fill_data_frame(day_of_data_df, "time", "10min")
         self.assertEqual(filled["time"].size, day_of_data.size, "T2: Full series should not have any new members")
 
         # empty input df
         empty = pd.Series()
-        empty_df = pd.DataFrame({"time":empty, "col1":empty})
+        empty_df = pd.DataFrame({"time": empty, "col1": empty})
         filled = timeseries.gap_fill_data_frame(empty_df, "time", "10min")
         self.assertEqual(filled["time"].size, 0, "T3: Empty dataframe should still be empty")
 
     def test_num_days(self):
         # Test 1 day of data
-        day_of_data = pd.DataFrame(index = self.day_of_data)
+        day_of_data = pd.DataFrame(index=self.day_of_data)
         num = timeseries.num_days(day_of_data)
         self.assertEqual(num, 1, "One day of data...")
 
         # Test 0 days of data
-        empty_data = pd.DataFrame(index = pd.DatetimeIndex([]))
+        empty_data = pd.DataFrame(index=pd.DatetimeIndex([]))
         num = timeseries.num_days(empty_data)
         self.assertEqual(num, 0, "Zero days of data...")
 
         # Test 2 days of data separated by a month gap
-        two_days = pd.DataFrame(index = self.two_days_of_data)
+        two_days = pd.DataFrame(index=self.two_days_of_data)
         num = timeseries.num_days(two_days)
         self.assertEqual(num, 32, "Two days of data separated by a month...")
 
@@ -114,31 +113,30 @@ class SimpleTimeseriesTests(unittest.TestCase):
         self.assertEqual(num, 24, "One day of data...")
 
         # Test 0 days of data
-        empty_data = pd.DataFrame(index = pd.DatetimeIndex([]))
+        empty_data = pd.DataFrame(index=pd.DatetimeIndex([]))
         num = timeseries.num_hours(empty_data)
         self.assertEqual(num, 0, "Zero days of data...")
 
         # Test 2 days of data separated by a month gap
-        two_days = pd.DataFrame(index = self.two_days_of_data)
+        two_days = pd.DataFrame(index=self.two_days_of_data)
         num = timeseries.num_hours(two_days)
-        self.assertEqual(num, 32*24, "Two days of data separated by a month...")
+        self.assertEqual(num, 32 * 24, "Two days of data separated by a month...")
 
     def test_percent_nan(self):
-        test_dict={}
-        test_dict['a']=pd.Series(['',1,2,1e5,np.Inf])
-        test_dict['b']=pd.Series(['',np.nan,2,1e5,np.Inf])
-        test_dict['c']=pd.Series([np.nan,1,2,1e5,np.nan])
-        
-        nan_values={'a':0.0, 'b':0.2,'c':0.4}
-        
-        for a,b in test_dict.iteritems():    
-            nptest.assert_almost_equal(nan_values[a], timeseries.percent_nan(test_dict[a]), err_msg="NaN percentage function is broken")
-            
+        test_dict = {}
+        test_dict['a'] = pd.Series(['', 1, 2, 1e5, np.Inf])
+        test_dict['b'] = pd.Series(['', np.nan, 2, 1e5, np.Inf])
+        test_dict['c'] = pd.Series([np.nan, 1, 2, 1e5, np.nan])
+
+        nan_values = {'a': 0.0, 'b': 0.2, 'c': 0.4}
+
+        for a, b in test_dict.iteritems():
+            nptest.assert_almost_equal(nan_values[a], timeseries.percent_nan(test_dict[a]),
+                                       err_msg="NaN percentage function is broken")
+
     def tearDown(self):
         pass
 
+
 if __name__ == '__main__':
-
     unittest.main()
-
-

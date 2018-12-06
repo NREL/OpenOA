@@ -1,6 +1,5 @@
 import numpy as np
 
-
 """
 Power Curves
 
@@ -32,7 +31,7 @@ def logistic5param(x, a, b, c, d, g):
         Function[pandas.Series[real]] -> pandas.Series[real]
 
     """
-    return d+(a-d)/(1+(x/c)**b)**g
+    return d + (a - d) / (1 + (x / c) ** b) ** g
 
 
 def logistic5param_capped(x, a, b, c, d, g, lower, upper):

@@ -23,8 +23,7 @@ class PlantData(object):
 
     """
 
-
-    def __init__(self,path,name,engine="pandas",toolkit=["pruf_analysis"]):
+    def __init__(self, path, name, engine="pandas", toolkit=["pruf_analysis"]):
         """
         Create a plant data object without loading any data.
         
@@ -43,45 +42,46 @@ class PlantData(object):
         self._status = timeseries_table.TimeseriesTable.factory(engine)
         self._curtail = timeseries_table.TimeseriesTable.factory(engine)
         self._asset = AssetData(engine)
-        self._reanalysis=ReanalysisData(engine)
+        self._reanalysis = ReanalysisData(engine)
         self._name = name
         self._path = path
         self._engine = engine
 
         self._version = 1
 
-        self._status_labels = ["full","unavailable"]
+        self._status_labels = ["full", "unavailable"]
 
-        self._scada_std = {"time": "datetime64[ns]","id": "string","power_kw": "float64",
-                            "windspeed_ms": "float64","winddirection_deg": "float64",
-                            "status_label": "string", "pitch_deg": "float64", "temp_c": "float64"}
-        self._tower_std = {"time": "datetime64[ns]","id": "string"}
-        self._meter_std = {"time": "datetime64[ns]","power_kw": "float64","energy_kwh": "float64"}
-        self._reanalysis_std = {"time": "datetime64[ns]","windspeed_ms": "float64",
-                            "winddirection_deg": "float64","rho_kgm-3": "float64"}
-        self._status_std = {"time": "datetime64[ns]","id": "string","status_id": "int64", "status_code":"int64", "status_text":"string"}
-        self._curtail_std = {"time": "datetime64[ns]","curtailment_pct": "float64","availability_pct": "float64","net_energy": "float64"}
-        self._asset_std = {"id": "string","latitude": "float64","longitude": "float64",
-                            "rated_power_kw": "float64","type": "string"}
+        self._scada_std = {"time": "datetime64[ns]", "id": "string", "power_kw": "float64",
+                           "windspeed_ms": "float64", "winddirection_deg": "float64",
+                           "status_label": "string", "pitch_deg": "float64", "temp_c": "float64"}
+        self._tower_std = {"time": "datetime64[ns]", "id": "string"}
+        self._meter_std = {"time": "datetime64[ns]", "power_kw": "float64", "energy_kwh": "float64"}
+        self._reanalysis_std = {"time": "datetime64[ns]", "windspeed_ms": "float64",
+                                "winddirection_deg": "float64", "rho_kgm-3": "float64"}
+        self._status_std = {"time": "datetime64[ns]", "id": "string", "status_id": "int64", "status_code": "int64",
+                            "status_text": "string"}
+        self._curtail_std = {"time": "datetime64[ns]", "curtailment_pct": "float64", "availability_pct": "float64",
+                             "net_energy": "float64"}
+        self._asset_std = {"id": "string", "latitude": "float64", "longitude": "float64",
+                           "rated_power_kw": "float64", "type": "string"}
 
-        self._tables = ["_scada","_meter","_status","_tower","_asset","_curtail","_reanalysis"]
+        self._tables = ["_scada", "_meter", "_status", "_tower", "_asset", "_curtail", "_reanalysis"]
 
+    def amend_std(self, dfname, new_fields):
+        """
+        Amend a dataframe standard with new or changed fields. Consider running ensure_columns afterward to automatically
+        create the new required columns if they don't exist.
+ 
+        Args:
+            dfname (string): one of scada, status, curtail, etc.
+            new_fields (dict): set of new fields and types in the same format as _scada_std to be added/changed in the std
+        
+        Returns:
+            New data field standard
+        """
 
-    def amend_std(self,dfname,new_fields):
-       """
-       Amend a dataframe standard with new or changed fields. Consider running ensure_columns afterward to automatically
-       create the new required columns if they don't exist.
-
-       Args:
-           dfname (string): one of scada, status, curtail, etc.
-           new_fields (dict): set of new fields and types in the same format as _scada_std to be added/changed in the std
-       
-       Returns:
-           New data field standard
-       """
-
-       k = "_%s_std" % (dfname,)
-       setattr(self,k,dict(itertools.chain(getattr(self,k).iteritems(), new_fields.iteritems())))
+        k = "_%s_std" % (dfname,)
+        setattr(self, k, dict(itertools.chain(getattr(self, k).iteritems(), new_fields.iteritems())))
 
     def get_time_range(self):
         """Get time range as tuple
@@ -91,9 +91,9 @@ class PlantData(object):
                 start_time(datetime): start time
                 stop_time(datetime): stop time
         """
-        return (self._start_time,self._stop_time)
+        return (self._start_time, self._stop_time)
 
-    def set_time_range(self,start_time,stop_time):
+    def set_time_range(self, start_time, stop_time):
         """Set time range given two unparsed timestamp strings
         
         Args:
@@ -150,7 +150,7 @@ class PlantData(object):
             getattr(self, df).load(path, df)
 
         meta_path = os.path.join(path, "metadata.json")
-        if(os.path.exists(meta_path)):
+        if (os.path.exists(meta_path)):
             with io.open(os.path.join(path, "metadata.json"), 'r') as infile:
                 meta_dict = json.load(infile)
                 for ca, ci in meta_dict.iteritems():
@@ -160,24 +160,24 @@ class PlantData(object):
 
     def ensure_columns(self):
         """Ensure all dataframes contain necessary columns and format as needed"""
-        for df in ["_scada","_meter","_status","_tower","_curtail"]:
-            if not getattr(self,df).is_empty():
-                getattr(self,df).ensure_columns(getattr(self,"%s_std" % (df,)))
+        for df in ["_scada", "_meter", "_status", "_tower", "_curtail"]:
+            if not getattr(self, df).is_empty():
+                getattr(self, df).ensure_columns(getattr(self, "%s_std" % (df,)))
 
     def merge_asset_metadata(self):
         """Merge metadata from the asset table into the scada and tower tables"""
         if (not (self._scada.is_empty()) and (len(self._asset.turbine_ids()) > 0)):
-            self._scada.pandas_merge(self._asset.df,["latitude","longitude","rated_power_kw","id",
-                                                     "nearest_turbine_id","nearest_tower_id"],"left",on="id")
+            self._scada.pandas_merge(self._asset.df, ["latitude", "longitude", "rated_power_kw", "id",
+                                                      "nearest_turbine_id", "nearest_tower_id"], "left", on="id")
         if (not (self._tower.is_empty()) and (len(self._asset.tower_ids()) > 0)):
-            self._tower.pandas_merge(self._asset.df,["latitude","longitude","rated_power_kw","id",
-                                                     "nearest_turbine_id","nearest_tower_id"],"left",on="id")
+            self._tower.pandas_merge(self._asset.df, ["latitude", "longitude", "rated_power_kw", "id",
+                                                      "nearest_turbine_id", "nearest_tower_id"], "left", on="id")
 
     def prepare(self):
         """Prepare this object for use by loading data and doing essential preprocessing."""
         self.ensure_columns()
         if not ((self._scada.is_empty()) or (self._tower.is_empty())):
-            self._asset.prepare(self._scada.unique("id"),self._tower.unique('id'))
+            self._asset.prepare(self._scada.unique("id"), self._tower.unique('id'))
         self.merge_asset_metadata()
 
     @property
@@ -195,7 +195,7 @@ class PlantData(object):
     @property
     def reanalysis(self):
         return self._reanalysis
-            
+
     @property
     def status(self):
         return self._status
