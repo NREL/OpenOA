@@ -18,5 +18,3 @@ class TurbineExampleProject(PlantData):
         self.scada.df.set_index('time', inplace=True, drop=False)
         self.scada.df.drop(['dttm', 'kw', 'nacelle_position', 'wind_speed'], axis=1, inplace=True)
         self.scada.normalize_time_to_datetime("%Y-%m-%d %H:%M:%S")
-
-
