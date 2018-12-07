@@ -13,6 +13,7 @@ def compute_wind_direction(u, v):
     Args:
         u(:obj:`pandas.Series`): the zonal component of the wind; units of m/s
         v(:obj:`pandas.Series`): the meridional component of the wind; units of m/s
+
     Returns:
         :obj:`pandas.Series`: wind direction; units of degrees
     """
@@ -28,6 +29,7 @@ def compute_u_v_components(wind_speed, wind_dir):
     Args:
         wind_speed(pandas.Series): horizontal wind speed; units of m/s
         wind_dir(pandas.Series): wind direction; units of degrees
+
     Returns:
         (tuple):
             u(pandas.Series): the zonal component of the wind; units of m/s.
@@ -45,7 +47,7 @@ def compute_u_v_components(wind_speed, wind_dir):
 
 def compute_air_density(df, temp_col, pres_col):
     """
-    Calculate air density from the ideal gas law given pressure and temperature. 
+    Calculate air density from the ideal gas law given pressure and temperature.
     This function assumes temperature and pressure are reported in standard units of measurement
     (i.e. Kelvin for temperature, Pascal for pressure)
 
@@ -53,6 +55,7 @@ def compute_air_density(df, temp_col, pres_col):
         df(:obj:`pandas.DataFrame`): the input data frame with temperature and pressure data
         temp_col(:obj:`string`): column in <df> with temperature values; units of Kelvin
         pres_col(:obj:`string`): column in <df> with pressure values; units of Pascals
+
     Returns:
         :obj:`pandas.Series`: Rho, calcualted air density; units of kg/m3
     """
@@ -67,7 +70,7 @@ def compute_air_density(df, temp_col, pres_col):
 
 
 def pressure_vertical_extrapolation(p0, temp_avg, z0, z1):
-    '''
+    """
     Extrapolate pressure from height z0 to height z1 given the average temperature in the layer.
     The hydostatic equation is used to peform the extrapolation.
 
@@ -76,10 +79,10 @@ def pressure_vertical_extrapolation(p0, temp_avg, z0, z1):
         temp_avg(:obj:`pandas.Series`): mean temperature between z0 and z1; units of Kelvin
         z0(:obj:`pandas.Series`): height above surface; units of meters
         z1(:obj:`pandas.Series`): extrapolation height; units of meters
-        
+
     Returns:
         :obj:`pandas.Series`: p1, extrapolated pressure at z1; units of Pascals
-    '''
+    """
     # Send exception if any negative data found
     if (p0[p0 < 0].size > 0) | (temp_avg[temp_avg < 0].size > 0):
         raise Exception('Some of your temperature of pressure data is negative. Check your data')
@@ -110,7 +113,7 @@ def air_density_adjusted_wind_speed(df, wind_col, density_col):
 
 def compute_turbulence_intensity(df, mean_col, std_col):
     """
-    Compute turbulence intensity 
+    Compute turbulence intensity
 
     Args:
         df(:obj:`pandas.DataFrame`): dataframe with wind speed mean and standard deviation columns
@@ -125,12 +128,14 @@ def compute_turbulence_intensity(df, mean_col, std_col):
 
 def compute_shear(df, windspeed_heights, ref_col='empty'):
     """
-    Compute shear coefficient between wind speed measurements 
+    Compute shear coefficient between wind speed measurements
 
     Args:
         df(:obj:`pandas.DataFrame`): dataframe with wind speed columns
-        windspeed_heights(:obj:`dict`): keys are strings of columns in <df> containing wind speed data, values are associated sensor heights (m)
-        ref_col(:obj:`str`): data column name for the data to use as the normalization value; only pertinent if optimizing over multiple measurements
+        windspeed_heights(:obj:`dict`): keys are strings of columns in <df> containing wind speed data, values are
+        associated sensor heights (m)
+        ref_col(:obj:`str`): data column name for the data to use as the normalization value; only pertinent if
+        optimizing over multiple measurements
 
     Returns:
         :obj:`pandas.Series`: shear coefficient (unitless)
@@ -143,7 +148,7 @@ def compute_shear(df, windspeed_heights, ref_col='empty'):
     if len(keys) <= 1:
         raise Exception('More than one wind speed measurement required to compute shear.')
     elif len(keys) == 2:
-        # If there are only two measurements, no optimization possible 
+        # If there are only two measurements, no optimization possible
         wind_a = keys[0]
         wind_b = keys[1]
         height_a = windspeed_heights[wind_a]
@@ -184,7 +189,7 @@ def compute_shear(df, windspeed_heights, ref_col='empty'):
 
 def compute_veer(df, wind_a, height_a, wind_b, height_b):
     """
-    Compute veer between wind direction measurements 
+    Compute veer between wind direction measurements
 
     Args:
         df(:obj:`pandas.DataFrame`): dataframe with wind direction columns

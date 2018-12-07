@@ -53,7 +53,8 @@ def unresponsive_flag(data_col, threshold=3):
 
 
 def std_range_flag(data_col, threshold=2.):
-    """Flag time stamps for which the measurement is outside of the threshold number of standard deviations from the mean across all passed columns; does not distinguish between asset ids
+    """Flag time stamps for which the measurement is outside of the threshold number of standard deviations from the
+    mean across all passed columns; does not distinguish between asset ids
 
     Args:
         data_col(:obj:`pandas.Series`): data to be flagged
@@ -66,7 +67,7 @@ def std_range_flag(data_col, threshold=2.):
     data_mean = data_col.mean()  # Get mean of data
     data_std = data_col.std()  # Get std of data
     flag = ((data_col <= data_mean - threshold * data_std) | (
-    data_col >= data_mean + threshold * data_std))  # Apply the range flag
+            data_col >= data_mean + threshold * data_std))  # Apply the range flag
 
     return flag
 
@@ -108,15 +109,18 @@ def bin_filter(bin_col, value_col, bin_width, threshold=2, center_type='mean', b
         bin_max(:obj:`float`): maximum bin value above which flag should not be applied
         threshold_type(:obj:`str`): option to apply a 'std' or 'scalar' based threshold
         center_type(:obj:`str`): option to use a 'mean' or 'median' center for each bin
-        direction(:obj:`str`): option to apply flag only to data 'above' or 'below' the mean, otherwise the default is 'all'
+        direction(:obj:`str`): option to apply flag only to data 'above' or 'below' the mean, otherwise the default is
+        'all'
 
     Returns:
         :obj:`pandas.Series(bool)`: Array-like object with boolean entries.
     """
 
     # Set bin min and max values if not passed to function
-    if bin_min == None: bin_min = bin_col.min()
-    if bin_max == None: bin_max = bin_col.max()
+    if bin_min is None:
+        bin_min = bin_col.min()
+    if bin_max is None:
+        bin_max = bin_col.max()
 
     # Define bin edges
     bin_edges = np.arange(np.round(bin_min), np.round(bin_max), bin_width)
@@ -195,10 +199,10 @@ def cluster_mahalanobis_2d(data_col1, data_col2, n_clusters=13, dist_thresh=3.):
         clust_sub = ((kmeans.labels_ == ic))
         cluster = df.loc[clust_sub]
 
-        # Cluster centroid 
+        # Cluster centroid
         centroid = kmeans.cluster_centers_[ic]
 
-        # Cluster covariance and inverse covariance 
+        # Cluster covariance and inverse covariance
         covmx = cluster.cov()
         invcovmx = sp.linalg.inv(covmx)
 

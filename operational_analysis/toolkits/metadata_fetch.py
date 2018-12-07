@@ -11,17 +11,17 @@ from operational_analysis.toolkits import unit_conversion
 def fetch_eia(api_key, plant_id, file_path):
     """
     Read in EIA data of wind farm of interest
-	- from EIA API for monthly productions, return monthly net energy generation time series
-	- from local Excel files for wind farm metadata, return dictionary of metadata
+    - from EIA API for monthly productions, return monthly net energy generation time series
+    - from local Excel files for wind farm metadata, return dictionary of metadata
 
-    Args:	
-		api_key(:obj:`string`): 32-character user-specific API key, obtained from EIA
-		plant_id(:obj:`string`): 5-character EIA power plant code
-		file_path(:obj:`string`): directory with EIA metadata .xlsx files in 2017		
+    Args:
+        api_key(:obj:`string`): 32-character user-specific API key, obtained from EIA
+        plant_id(:obj:`string`): 5-character EIA power plant code
+        file_path(:obj:`string`): directory with EIA metadata .xlsx files in 2017
 
     Returns:
-		:obj:`pandas.Series`: monthly net energy generation in MWh 
-		:obj:`dictionary`: metadata of the wind farm with 'plant_id'
+        :obj:`pandas.Series`: monthly net energy generation in MWh
+        :obj:`dictionary`: metadata of the wind farm with 'plant_id'
 
     """
 

@@ -29,9 +29,11 @@ class MonteCarloAEP(object):
 
     The preprocessing should run in this order:
 
-        1. Process revenue meter energy - creates monthly data frame, gets revenue meter on monthly basis, and adds data flag
+        1. Process revenue meter energy - creates monthly data frame, gets revenue meter on monthly basis, and adds
+           data flag
         2. Process loss estimates - add monthly curtailment and availabilty losses to monthly data frame
-        3. Process reanalysis data - add monthly density-corrected wind speeds from several reanalysis products to the monthly data frame
+        3. Process reanalysis data - add monthly density-corrected wind speeds from several reanalysis products to the
+           monthly data frame
         4. Set up Monte Carlo - create the necessary Monte Carlo inputs to the OA process
         5. Run AEP Monte Carlo - run the OA process iteratively to get distribution of AEP results
 
@@ -69,6 +71,7 @@ class MonteCarloAEP(object):
     def run(self, num_sim, reanal_subset):
         """
         Perform pre-processing of data into an internal representation for which the analysis can run more quickly.
+
         :return: None
         """
 
@@ -80,10 +83,12 @@ class MonteCarloAEP(object):
         self.setup_monte_carlo_inputs()
         self.results = self.run_AEP_monte_carlo()
 
+    @property
     def plot_reanalysis_normalized_rolling_monthly_windspeed(self):
         """
         Make a plot of annual average wind speeds from reanalysis data to show general trends for each
         Highlight the period of record for plant data
+
         :return: matplotlib.pyplot object
         """
         import matplotlib.pyplot as plt
@@ -104,8 +109,10 @@ class MonteCarloAEP(object):
                 'ws_dens_corr'].mean()  # Normalize rolling 12-month average
 
             # Update min_val and max_val depending on range of data
-            if ann_roll_norm.min() < min_val: min_val = ann_roll_norm.min()
-            if ann_roll_norm.max() > max_val: max_val = ann_roll_norm.max()
+            if ann_roll_norm.min() < min_val:
+                min_val = ann_roll_norm.min()
+            if ann_roll_norm.max() > max_val:
+                max_val = ann_roll_norm.max()
 
             # Plot wind speed
             plt.plot(ann_roll_norm, label=key)
@@ -125,7 +132,10 @@ class MonteCarloAEP(object):
     def plot_reanalysis_gross_energy_data(self, outlier_thres):
         """
         Make a plot of normalized 30-day gross energy vs wind speed for each reanalysis product, include R2 measure
-        :param outlier_thres (float): outlier threshold (typical range of 1 to 4) which adjusts outlier sensitivity detection
+
+        :param outlier_thres (float): outlier threshold (typical range of 1 to 4) which adjusts outlier sensitivity
+        detection
+
         :return: matplotlib.pyplot object
         """
         import matplotlib.pyplot as plt
@@ -160,6 +170,7 @@ class MonteCarloAEP(object):
     def plot_result_aep_distributions(self):
         """
         Plot a distribution of APE values from the Monte-Carlo OA method
+
         :return: matplotlib.pyplot object
         """
         import matplotlib.pyplot as plt
@@ -193,6 +204,7 @@ class MonteCarloAEP(object):
     def plot_monthly_plant_data_timeseries(self):
         """
         Plot timeseries of monthly gross energy, availability and curtailment
+
         :return: matplotlib.pyplot object
         """
         import matplotlib.pyplot as plt
@@ -221,7 +233,6 @@ class MonteCarloAEP(object):
     def calculate_monthly_dataframe(self):
         """
         Perform pre-processing of the plant data to produce a monthly data frame to be used in AEP analysis.
-        
         Args:
             (None)
 
@@ -241,14 +252,16 @@ class MonteCarloAEP(object):
         # Remove first and last reporting months if only partial month reported
         self.trim_monthly_df()
 
-        # Drop any data that have NaN gross energy values (means either revenue meter, availability, or curtalment data was NaN)
+        # Drop any data that have NaN gross energy values
+        # (means either revenue meter, availability, or curtalment data was NaN)
         self._monthly.df = self._monthly.df.loc[np.isfinite(self._monthly.df.gross_energy_gwh)]
 
     def process_revenue_meter_energy(self):
         """
         Initial creation of monthly data frame:
             1. Populate monthly data frame with energy data summed from 10-min QC'd data
-            2. For each monthly value, find percentage of NaN data used in creating it and flag if percentage is greater than 0
+            2. For each monthly value, find percentage of NaN data used in creating it and flag if percentage is
+            greater than 0
 
         Args:
             (None)
@@ -272,9 +285,10 @@ class MonteCarloAEP(object):
         days_per_month.index = self._monthly.df.index
         self._monthly.df['num_days_expected'] = days_per_month
 
-        # Get actual number of days per month in the raw data (used when trimming beginning and end of monthly data frame)
-        if (self._plant._meter_freq != '1MS') & (
-            self._plant._meter_freq != '1M'):  # If meter data has higher resolution than monthly
+        # Get actual number of days per month in the raw data
+        # (used when trimming beginning and end of monthly data frame)
+        # If meter data has higher resolution than monthly
+        if (self._plant._meter_freq != '1MS') & (self._plant._meter_freq != '1M'):
             self._monthly.df['num_days_actual'] = df.resample('MS')['energy_kwh'].apply(tm.num_days)
         else:
             self._monthly.df['num_days_actual'] = self._monthly.df['num_days_expected']
@@ -320,8 +334,8 @@ class MonteCarloAEP(object):
         self._monthly.df['nan_flag'] = False  # Set flag to false by default
         self._monthly.df.loc[(self._monthly.df['energy_nan_perc'] > self.uncertainty_nan_energy) |
                              (self._monthly.df['avail_nan_perc'] > self.uncertainty_nan_energy) |
-                             (self._monthly.df[
-                                  'curt_nan_perc'] > self.uncertainty_nan_energy), 'nan_flag'] = True  # If more than 1% of data are NaN, set flag to True
+                             (self._monthly.df['curt_nan_perc'] > self.uncertainty_nan_energy), 'nan_flag'] \
+            = True  # If more than 1% of data are NaN, set flag to True
 
         # By default, assume all reported losses are representative of long-term operational
         self._monthly.df['availability_typical'] = True
@@ -344,8 +358,9 @@ class MonteCarloAEP(object):
             (None)
         """
 
+        # Define empty data frame that spans past our period of interest
         self._reanalysis_monthly = pd.DataFrame(index=pd.date_range(start='1997-01-01', end='2020-01-01',
-                                                                    freq='MS'))  # Define empty data frame that spans past our period of interest
+                                                                    freq='MS'))
 
         # Now loop through the different reanalysis products, density-correct wind speeds, and take monthly averages
         for key, items in self._plant._reanalysis._product.iteritems():
@@ -400,8 +415,8 @@ class MonteCarloAEP(object):
 
     def setup_monte_carlo_inputs(self):
         """
-        Perform Monte Carlo sampling for reported monthly revenue meter energy, availability, and curtailment data, as well
-        as reanalysis data
+        Perform Monte Carlo sampling for reported monthly revenue meter energy, availability, and curtailment data,
+        as well as reanalysis data
 
         Args:
             reanal_subset(:obj:`list`): list of str data indicating which reanalysis products to use in OA
@@ -431,27 +446,27 @@ class MonteCarloAEP(object):
         self._mc_reanalysis_product = np.asarray(random.sample(reanal_list, num_sim))
 
     def filter_outliers(self, reanal, outlier_thresh, comb_loss_thresh):
-        '''
+        """
         This function filters outliers based on
-            1. The reanalysis product 
-            2. The Huber parameter which controls sensitivity of outlier detection in robust linear regression 
+            1. The reanalysis product
+            2. The Huber parameter which controls sensitivity of outlier detection in robust linear regression
             3. The combined availability and curtailment loss criteria
-        
+
         There are only 300 combinations of outlier removals:
         (3 reanalysis product x 10 outlier threshold values x 10 combined loss thresholds)
-        
+
         Therefore, we use a memoized funciton to store the regression data in a dictionary for each combination as it
         comes up in the Monte Carlo simulation. This saves significant computational time in not having to run
         robust linear regression for each Monte Carlo iteration
-        
+
         Args:
             reanal(:obj:`string`): The name of the reanalysis product
             outlier_thresh(:obj:`float`): The Huber parameter controlling sensitivity of outlier detection
             comb_loss_thresh(:obj:`float`): The combined availabilty and curtailment monthly loss threshold
-        
+
         Returns:
             :obj:`pandas.DataFrame`: Filtered monthly data ready for linear regression
-        '''
+        """
         # Check if valid data has already been calculated and stored. If so, just return it
         if (reanal, outlier_thresh, comb_loss_thresh) in self.outlier_filtering:
             valid_data = self.outlier_filtering[(reanal, outlier_thresh, comb_loss_thresh)]
@@ -462,7 +477,7 @@ class MonteCarloAEP(object):
 
         # First set of filters checking combined losses and if the Nan data flag was on
         df_sub = df.loc[
-            ((df['availability_pct'] + df['curtailment_pct']) < comb_loss_thresh) & (df['nan_flag'] == False)]
+            ((df['availability_pct'] + df['curtailment_pct']) < comb_loss_thresh) & (df['nan_flag'] is False)]
 
         # Now perform robust linear regression using Huber algorithm to flag outliers
         X = sm.add_constant(df_sub[reanal])  # Reanalysis data with constant column
@@ -485,11 +500,13 @@ class MonteCarloAEP(object):
     def set_regression_data(self, n):
         """
         This will be called for each iteration of the Monte Carlo simulation and will do the following:
-            1. Randomly sample monthly revenue meter, availabilty, and curtailment data based on specified uncertainties and correlations
+            1. Randomly sample monthly revenue meter, availabilty, and curtailment data based on specified uncertainties
+            and correlations
             2. Randomly choose one reanalysis product (### Not yet implemented ###)
             3. Calculate gross energy from randomzied energy data
             4. Normalize gross energy to 30-day months
-            5. Filter results to remove months with NaN data and with combined losses that exceed the Monte Carlo sampled max threhold
+            5. Filter results to remove months with NaN data and with combined losses that exceed the Monte Carlo
+            sampled max threhold
             6. Return the wind speed and normalized gross energy to be used in the regression relationship
 
         Args:
@@ -527,7 +544,7 @@ class MonteCarloAEP(object):
         """
         Run robust linear regression between Monte-Carlo generated monthly gross energy and wind speed
         Return Monte-Carlo sampled slope and intercept values (based on their covariance) and report
-        the number of outliers based on the robust linear regression result. 
+        the number of outliers based on the robust linear regression result.
 
         Args:
             n(:obj:`int`): The Monte Carlo iteration number
@@ -535,14 +552,14 @@ class MonteCarloAEP(object):
         Returns:
             :obj:`float`: Monte-carlo sampled slope
             :obj:`float`: Monte-carlo sampled intercept
-
         """
         reg_data = self.set_regression_data(n)  # Get regression data
 
         p, V = np.polyfit(reg_data[0], reg_data[1], 1,
                           cov=True)  # Perform linear regression, return slope, intercept, and variances
+        # Generate MC-sampled slope and intercept from regression relationship
         mc_slope, mc_intercept = np.random.multivariate_normal(p, V,
-                                                               1).T  # Generate MC-sampled slope and intercept from regression relationship
+                                                               1).T
 
         # Update Monte Carlo tracker fields
         self._mc_num_points[n] = len(reg_data[0])
@@ -567,15 +584,16 @@ class MonteCarloAEP(object):
                                                                    'curt_pct': np.empty(num_sim)})
 
         num_days_lt = (
-        31, 28.25, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)  # Define "long-term" or "typical" number of days per month
+            31, 28.25, 31, 30, 31, 30, 31, 31, 30, 31, 30,
+            31)  # Define "long-term" or "typical" number of days per month
 
         # Loop through number of simulations, run regression each time, store AEP results
         for n in tqdm(np.arange(num_sim)):
             slope, intercept = self.run_regression(n)  # Get slope, intercept from regression
             ws_lt = self.sample_long_term_reanalysis(self._mc_num_years_windiness[n],
                                                      self._mc_reanalysis_product[n])  # Get long-term wind speeds
-            gross_norm_lt = ws_lt.multiply(
-                slope) + intercept  # Get long-term normalized gross energy by applying regression result to long-term monthly wind speeds
+            # Get long-term normalized gross energy by applying regression result to long-term monthly wind speeds
+            gross_norm_lt = ws_lt.multiply(slope) + intercept
             gross_lt = gross_norm_lt * num_days_lt / 30  # Undo normalization to 30-day months
             [avail_lt_losses, curt_lt_losses] = self.sample_long_term_losses(
                 n)  # Get long-term availability and curtailment losses by month
@@ -597,10 +615,10 @@ class MonteCarloAEP(object):
         This function returns the windiness-corrected monthly wind speeds based on the Monte-Carlo generated sample of:
             1. The reanalysis product
             2. The number of years to use in the long-term correction
-        
+
         A memoized approach is used here since there are a finite combination of long-term wind speeds:
             (3 reanalysis products x 10 different year combinations) = 30 total combinations
-            
+
         This memoized approach saves significant computaitonal time in the Monte Carlo simulation
 
         Args:
@@ -611,7 +629,7 @@ class MonteCarloAEP(object):
            :obj:`pandas.DataFrame`: the windiness-corrected or 'long-term' annualized monthly wind speeds
 
         """
-        # Check if valid data has already been calculated and stored. If so, just return it 
+        # Check if valid data has already been calculated and stored. If so, just return it
         if (r, n) in self.long_term_sampling:
             ws_monthly = self.long_term_sampling[(r, n)]
             return ws_monthly
@@ -629,8 +647,8 @@ class MonteCarloAEP(object):
 
     def sample_long_term_losses(self, n):
         """
-        This function calculates long-term availability and curtailment losses based on the Monte Carlo sampled historical
-        availability and curtailment data
+        This function calculates long-term availability and curtailment losses based on the Monte Carlo sampled
+        historical availability and curtailment data
 
         Args:
             n(:obj:`integer`): The Monte Carlo iteration number

@@ -18,7 +18,7 @@
 #
 import os
 import sys
-sys.path.insert(0,os.path.abspath('..'))
+sys.path.insert(0, os.path.abspath('..'))
 
 # -- General configuration ------------------------------------------------
 
@@ -30,12 +30,12 @@ sys.path.insert(0,os.path.abspath('..'))
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = ['sphinx.ext.autodoc',
-    'sphinx.ext.coverage',
-    'sphinx.ext.mathjax',
-    'sphinx.ext.ifconfig',
-    'sphinx.ext.viewcode',
-    'sphinx.ext.napoleon',
-    'sphinx.ext.todo']
+              'sphinx.ext.coverage',
+              'sphinx.ext.mathjax',
+              'sphinx.ext.ifconfig',
+              'sphinx.ext.viewcode',
+              'sphinx.ext.napoleon',
+              'sphinx.ext.todo']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -106,7 +106,7 @@ html_theme_options = {
     'sticky_navigation': True,
     'navigation_depth': 4,
     # 'includehidden': True,
-    #'titles_only': False
+    # 'titles_only': False
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,
@@ -175,4 +175,3 @@ texinfo_documents = [
 napoleon_google_docstring = True
 napoleon_use_param = False
 napoleon_use_ivar = False
-

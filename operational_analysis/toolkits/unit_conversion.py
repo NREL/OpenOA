@@ -24,16 +24,16 @@ def compute_gross_energy(net_energy, avail_losses, curt_losses, avail_type='frac
     """
     This function computes gross energy for a wind plant or turbine by adding reported availability and
     curtailment losses to reported net energy. Account is made of whether availabilty or curtailment loss data
-    is reported in energy ('energy') or fractional units ('frac'). If in energy units, this function assumes that net energy,
-    availability loss, and curtailment loss are all reported in the same units
-    
+    is reported in energy ('energy') or fractional units ('frac'). If in energy units, this function assumes that net
+    energy, availability loss, and curtailment loss are all reported in the same units
+
     Args:
-        net energy (numpy array of Pandas series): reported net energy for wind plant or turbine 
-        avail (numpy array of Pandas series): reported availability losses for wind plant or turbine 
-        curt (numpy array of Pandas series): reported curtailment losses for wind plant or turbine 
-        
+        net energy (numpy array of Pandas series): reported net energy for wind plant or turbine
+        avail (numpy array of Pandas series): reported availability losses for wind plant or turbine
+        curt (numpy array of Pandas series): reported curtailment losses for wind plant or turbine
+
     Return:
-        gross (numpy array of Pandas series): calculated gross energy for wind plant or turbine 
+        gross (numpy array of Pandas series): calculated gross energy for wind plant or turbine
     """
 
     if (avail_type == 'frac') & (curt_type == 'frac'):
@@ -48,7 +48,7 @@ def compute_gross_energy(net_energy, avail_losses, curt_losses, avail_type='frac
     if (len(gross[gross < 0]) > 0) | (len(gross[gross < net_energy]) > 0):
         raise Exception('Gross energy cannot be negative or less than net energy. Check your input values')
     if (len(net_energy[net_energy < 0]) > 0) | (len(avail_losses[avail_losses < 0]) > 0) | (
-        len(curt_losses[curt_losses < 0]) > 0):
+            len(curt_losses[curt_losses < 0]) > 0):
         raise Exception('Cannot have negative input values. Check your data')
 
     return gross

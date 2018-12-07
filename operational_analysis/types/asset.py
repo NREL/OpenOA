@@ -60,7 +60,7 @@ class AssetData(object):
 
     def parse_geometry(self, srs='epsg:4326', zone=None, longitude=None):
         """Calculate UTM coordinates from latitude/longitude.
-        
+
         The UTM system divides the Earth into 60 zones, each 6deg of
         longitude in width. Zone 1 covers longitude 180deg to 174deg W;
         zone numbering increases eastward to zone 60, which covers

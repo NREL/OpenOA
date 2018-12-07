@@ -15,7 +15,8 @@ class SimpleFilters(unittest.TestCase):
                                           'id': ['a', 'a', 'a', 'a', 'a', 'b', 'b', 'b', 'b', 'b']},
                                     index=np.arange(10))
 
-        # Test dataframe #2: two assets, first asset as 2 NaN entries, 2nd asset as one NaN entry overlapping with first asset
+        # Test dataframe #2: two assets, first asset as 2 NaN entries, 2nd asset as one NaN entry overlapping with
+        # first asset
         self.test2_df = pd.DataFrame(data={'time': ['01', '02', '03', '04', '05', '01', '02', '03', '04', '05'],
                                            'data': [0, np.nan, np.nan, 5, 8, 13, np.nan, 20, 20, 30],
                                            'id': ['a', 'a', 'a', 'a', 'a', 'b', 'b', 'b', 'b', 'b']},
@@ -36,7 +37,7 @@ class SimpleFilters(unittest.TestCase):
                                      data={'data1': [1, np.nan, np.nan, np.nan, 5],
                                            'align': ['a', 'b', 'c', 'd', 'e']})
 
-        # Test dataframe #6, same as #5 but with values reversed 
+        # Test dataframe #6, same as #5 but with values reversed
         self.test6_df = pd.DataFrame(index=['a', 'b', 'c', 'd', 'e'],
                                      data={'data1': [5, np.nan, np.nan, np.nan, 1],
                                            'align': ['a', 'b', 'c', 'd', 'e']})
@@ -89,7 +90,7 @@ class SimpleFilters(unittest.TestCase):
                                       index=np.arange(14))
 
     def test_correlation_matrix_by_id_column(self):
-        # Test 1, make sure a simple correlation of two assets works      
+        # Test 1, make sure a simple correlation of two assets works
         y = imputing.correlation_matrix_by_id_column(self.test_df, 'time', 'id', 'data')
         nptest.assert_array_almost_equal(y, np.array([[np.nan, 0.970166], [0.970166, np.nan]]), decimal=4)
 
@@ -117,21 +118,22 @@ class SimpleFilters(unittest.TestCase):
         y4 = imputing.impute_data(self.test5_df, 'data1', self.test4_df, 'data2', 'align')
         nptest.assert_array_almost_equal(y4.loc[['c', 'd']], np.array([2.0, 4.0]), decimal=4)
 
-        # Test 5, make sure exception is thrown if no valid data are available        
+        # Test 5, make sure exception is thrown if no valid data are available
         def func():  # Function to return exception
             imputing.imputing.impute_data(self.test5_df, 'data1', self.test7_df, 'data2', 'align')
 
-        with self.assertRaises(Exception): func()
+        with self.assertRaises(Exception):
+            func()
 
     def test_impute_all_assets_by_correlation(self):
-        # Test 1, pass data frame with three highly correlated assets, ensure all NaN data are imputed in 
+        # Test 1, pass data frame with three highly correlated assets, ensure all NaN data are imputed in
         # final output
         y = imputing.impute_all_assets_by_correlation(self.test11_df, 'data', 'data', 'time', 'id', 0.7).to_frame()
         ans = pd.Series([0.440789, 3.401316, 14.3677, 42.8312, 62.887218, 96.734818])
         nptest.assert_array_almost_equal((y.loc[self.test11_df['data'].isnull(), 'imputed_data']).values, ans.values,
                                          decimal=4)
 
-        # Test 2, 3 highly correlated assets with less data, such that asset 'b' has no data imputed 
+        # Test 2, 3 highly correlated assets with less data, such that asset 'b' has no data imputed
         y2 = imputing.impute_all_assets_by_correlation(self.test10_df, 'data', 'data', 'time', 'id', 0.7).to_frame()
         nan_ind = self.test10_df.loc[self.test10_df['data'].isnull()].index
         ans = pd.Series([1.589147, np.nan, np.nan, np.nan, np.nan, np.nan, 123.7000])

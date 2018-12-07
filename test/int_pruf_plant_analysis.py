@@ -53,7 +53,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         # Expected number of days per month are equal to number of actual days
         nptest.assert_array_equal(df['num_days_expected'], df['num_days_actual'])
 
-        # Check a few energy values 
+        # Check a few energy values
         expected_gwh = pd.Series([6.765, 5.945907, 8.576])
         actual_gwh = df.loc[pd.to_datetime(['2003-12-01', '2010-05-01', '2015-01-01']), 'energy_gwh']
         nptest.assert_array_almost_equal(expected_gwh, actual_gwh)

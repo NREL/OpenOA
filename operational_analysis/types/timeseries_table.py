@@ -1,5 +1,5 @@
 # timeseries_table.py
-'''
+"""
 
 A basic columnar timeseries datastructure whose
 underlying dataframe backend can be Pandas, Dask,
@@ -12,7 +12,7 @@ a regular interval, or they may be irregularly spaced.
 The dataframe may be somewhat sparse (e.g., not all metrics may
 be defined at all time points).
 
-'''
+"""
 
 import datetime
 import importlib
@@ -100,60 +100,55 @@ class AbstractTimeseriesTable:
 
 # These inherited classes implement it
 class PandasTimeseriesTable(AbstractTimeseriesTable):
-    ''' Pandas based timeseries table
-    
-    '''
+    """ Pandas based timeseries table
+    """
 
     def __init__(self, *args, **kwargs):
         self._pd = __import__('pandas', globals(), locals(), [], -1)
 
     def save(self, path, name, format="csv"):
-        '''Write data to file 
-        
-        '''
+        """Write data to file
+        """
         logging.info("save name:{}".format(name))
         if format != "csv":
             raise NotImplementedError("Cannot save to format %s yet" % (format,))
         self.df.to_csv("%s/%s.csv" % (path, name))
 
     def load(self, path, name, format="csv", nrows=None):
-        '''Read data from a file
-        '''
+        """Read data from a file
+        """
         logging.info("Loading name:{}".format(name))
         if format != "csv":
             raise NotImplementedError("Cannot save to format %s yet" % (format,))
         self.df = self._pd.read_csv("%s/%s.csv" % (path, name), nrows=nrows)
 
     def rename_columns(self, mapping):
-        '''Rename columns based on mapping
-        
+        """Rename columns based on mapping
+
         Args:
-            mapping (dict): new and old column names based on {"new":"old"} convention 
-        
-        '''
+            mapping (dict): new and old column names based on {"new":"old"} convention
+        """
         for k in mapping.keys():
             if k != mapping[k]:
                 self.df[k] = self.df[mapping[k]]
                 self.df[mapping[k]] = None
 
     def copy_column(self, to, fro):
-        '''Copy column data
-        
+        """Copy column data
+
         Args:
-            fro (str): column name to copy data from 
+            fro (str): column name to copy data from
             to (str): column name to copy to
-            
-        '''
+        """
         logging.debug("copying {} to {}".format(fro, to))
         self.df[to] = self.df[fro]
 
     def ensure_columns(self, std):
-        ''' Set column types to specified type
-        
+        """ Set column types to specified type
+
         Args:
-            std (dict): 
-        
-        '''
+            std (dict):
+        """
         for col in std.keys():
             logging.debug("checking  {} is astype {} ".format(col, std[col]))
             if col not in self.df.columns:
@@ -165,61 +160,54 @@ class PandasTimeseriesTable(AbstractTimeseriesTable):
         self.df = self.df[std.keys()]
 
     def is_empty(self):
-        ''' Test if data is None
-        
+        """ Test if data is None
+
         Returs:
             (bool): True if None, False if not None
-            
-        '''
+        """
         return self.df is None
 
     def explode_time(self, vars=["year", "month", "day"]):
-        ''' Create new columns for components of time
-        
+        """ Create new columns for components of time
+
         Args:
             vars (list): list of time components
-            
-        '''
+        """
 
         for v in vars:
             self.df[v] = self.df[self._time_field].apply(lambda x: getattr(x, v), 1)
 
     def normalize_time_to_datetime(self, format="%Y-%m-%d %H:%M:%S", col=None):
-        ''' Apply datetime format to timestamp column
-        
-        '''
+        """ Apply datetime format to timestamp column
+        """
         if col is None:
             col = self._time_field
         logging.debug("setting {} to datetime ".format(col))
         self.df[col] = self.df[col].apply(lambda x: datetime.datetime.strptime(x, format), 1)
 
     def to_datetime(self, format="%Y-%m-%d %H:%M:%S", col=None):
-        ''' Run pd.to_datetime on timestamp column
-        
-        '''
+        """ Run pd.to_datetime on timestamp column
+        """
         if col is None:
             col = self._time_field
         logging.debug("Running pd.to_datetime on {} ".format(col))
         self.df[col] = pd.to_datetime(self.df[col])
 
     def epoch_time_to_datetime(self, col=None):
-        '''Format col as datetime
-        
-        '''
+        """Format col as datetime
+        """
         if col is None:
             col = self._time_field
         logging.debug("Running to_datetime on {}  ".format(col))
         self.df[col] = self.df[col].apply(lambda x: pd.to_datetime(x, unit='s'), 1)
 
     def head(self):
-        ''' Head data '''
+        """ Head data """
         return self.df.head()
 
     def map_column(self, col, func):
-        '''Apply a function to col
-        
-        
-        '''
+        """Apply a function to col
+        """
         logging.debug("Mapping col:{}".format(col))
         if col not in self.df.columns:
             self.df[col] = 'unknown'
@@ -227,41 +215,40 @@ class PandasTimeseriesTable(AbstractTimeseriesTable):
         self.df[col] = self.df[col].apply(func, 1)
 
     def pandas_merge(self, right, right_cols, how='left', on='id'):
-        ''' Run merge with data '''
+        """ Run merge with data """
         logging.debug("merging right:{} right_cols:{} ".format(right, right_cols))
         self.df = self.df.merge(right.loc[:, right_cols], how=how, on=on)
 
     def unique(self, col):
-        '''Get unique values of a column  '''
+        """Get unique values of a column  """
         logging.debug("unique col:{}".format(col))
         return self.df[col].unique()
 
     def rbind(self, tt):
-        '''Append data  '''
+        """Append data  """
         logging.debug("appending tt.df")
         self.df = self.df.append(tt.df)
 
     def to_pandas(self):
-        ''' Return data '''
+        """ Return data """
         return self.df
 
     def trim_timeseries(self, start, stop):
-        ''' Get time range
-        
+        """ Get time range
+
         Args:
-            start (datetime):  start of time-sereies trim 
-            stop (datetime):  stop of time-sereies trim 
-        
-        '''
+            start (datetime):  start of time-sereies trim
+            stop (datetime):  stop of time-sereies trim
+        """
         logging.debug("trim_timeseries start:{} stop:{} ".format(start, stop))
         self.df = self.df.loc[(self.df[self._time_field] >= start) & (self.df[self._time_field] <= stop), :]
 
     def max(self):
-        ''' Find maximum timestamp value '''
+        """ Find maximum timestamp value """
         return self.df[self._time_field].max()
 
     def min(self):
-        ''' Find minimum timestamp value '''
+        """ Find minimum timestamp value """
         return self.df[self._time_field].min()
 
 

@@ -11,28 +11,27 @@ from reanalysis import ReanalysisData
 
 class PlantData(object):
     """Plant-level schema for operational wind plant data.
-    
+
     The PlantData object can serialize all of these structures and reload them
     them from the cache as needed.
-    
+
     The underlying datastructure is a TimeseriesTable, which is agnostic to the underlying
     engine and can be implemented with Pandas, Spark, or Dask (for instance).
-    
+
     Individual plants will extend this object with their own
     prepare() and other methods.
-
     """
 
     def __init__(self, path, name, engine="pandas", toolkit=["pruf_analysis"]):
         """
         Create a plant data object without loading any data.
-        
+
         Args:
             path(string): path where data should be read/written
             name(string): uniqiue name for this plant in case there's multiple plant's data in the directory
             engine(string): backend engine - pandas, spark or dask
             toolkit(list): the _tool_classes attribute defines a list of toolkit modules that can be loaded
-            
+
         Returns:
             New object
         """
@@ -69,13 +68,14 @@ class PlantData(object):
 
     def amend_std(self, dfname, new_fields):
         """
-        Amend a dataframe standard with new or changed fields. Consider running ensure_columns afterward to automatically
-        create the new required columns if they don't exist.
- 
+        Amend a dataframe standard with new or changed fields. Consider running ensure_columns afterward to
+        automatically create the new required columns if they don't exist.
+
         Args:
             dfname (string): one of scada, status, curtail, etc.
-            new_fields (dict): set of new fields and types in the same format as _scada_std to be added/changed in the std
-        
+            new_fields (dict): set of new fields and types in the same format as _scada_std to be added/changed in
+            the std
+
         Returns:
             New data field standard
         """
@@ -85,7 +85,7 @@ class PlantData(object):
 
     def get_time_range(self):
         """Get time range as tuple
-        
+
         Returns:
             (tuple):
                 start_time(datetime): start time
@@ -95,14 +95,13 @@ class PlantData(object):
 
     def set_time_range(self, start_time, stop_time):
         """Set time range given two unparsed timestamp strings
-        
+
         Args:
             start_time(string): start time
             stop_time(string): stop time
-            
+
         Returns:
             Nothing
-        
         """
         self._start_time = parse(start_time)
         self._stop_time = parse(stop_time)
@@ -111,13 +110,13 @@ class PlantData(object):
         """Save out the project and all JSON serializeable attributes to a file path.
 
             Args:
-                path(string): Location of new directory into which plant will be saved. The directory should not already
-                    exist. Defaults to self._path
+                path(string): Location of new directory into which plant will be saved. The directory should not
+                already exist. Defaults to self._path
 
             Returns:
                 Nothing
         """
-        if path == None:
+        if path is None:
             raise RuntimeError("Path not specified.")
 
         os.mkdir(path)

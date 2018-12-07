@@ -56,12 +56,14 @@ class SimpleUnitConversionTests(unittest.TestCase):
         def func():  # Function to return exception
             unit_conversion.compute_gross_energy(net[1, :], avail[1, :], curt[1, :], 'frac', 'frac')
 
-        with self.assertRaises(Exception): func()
+        with self.assertRaises(Exception):
+            func()
 
         def func():  # Function to return exception
             unit_conversion.compute_gross_energy(net[2, :], avail[2, :], curt[2, :], 'frac', 'frac')
 
-        with self.assertRaises(Exception): func()
+        with self.assertRaises(Exception):
+            func()
 
     def test_convert_feet_to_meter(self):
         random_ft = np.random.random(100) * 10
