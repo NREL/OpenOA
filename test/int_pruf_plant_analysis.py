@@ -4,8 +4,7 @@ import numpy as np
 import pandas as pd
 from numpy import testing as nptest
 
-from operational_analysis.types import plant
-from operational_analysis.methods import PlantAnalysis
+from operational_analysis.methods import MonteCarloAEP
 from examples.operational_AEP_analysis.project_EIA import Project_EIA
 
 
@@ -16,7 +15,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         # Set up data to use for testing (EIA example plant)
         self.project = Project_EIA('./examples/operational_AEP_analysis/data')
         self.project.prepare()
-        self.analysis = PlantAnalysis(self.project)
+        self.analysis = MonteCarloAEP(self.project)
 
     def test_plant_analysis(self):
         self.analysis.process_revenue_meter_energy()

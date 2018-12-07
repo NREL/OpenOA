@@ -109,11 +109,14 @@ def spline_fit(windspeed_column, power_column, n_splines=20):
     """
 
     # Fit the data
-    spline_fit = LinearGAM(n_splines=n_splines).gridsearch(windspeed_column, power_column)
+    x = windspeed_column.values.reshape((windspeed_column.size, 1))
+    y = power_column.values
+
+    s = LinearGAM(n_splines=n_splines).gridsearch(x, y)
 
     # Create a closure over the spline fit which computes the power curve value for arbitrary array-like input
-    def pc_spline(x):
-        P = spline_fit.predict(x)
+    def pc_spline(xx):
+        P = s.predict(xx)
         return P
 
     return pc_spline

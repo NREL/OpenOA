@@ -142,7 +142,8 @@ def compute_shear(df, windspeed_heights, ref_col='empty'):
    """
 
     # Convert wind speed heights to float
-    windspeed_heights = dict(list(zip(list(windspeed_heights.keys()), [float(value) for value in list(windspeed_heights.values())])))
+    windspeed_heights = \
+        dict(list(zip(list(windspeed_heights.keys()), [float(value) for value in list(windspeed_heights.values())])))
 
     keys = list(windspeed_heights.keys())
     if len(keys) <= 1:
