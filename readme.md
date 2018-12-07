@@ -1,4 +1,4 @@
-OpenOA 
+OpenOA [![Build Status](https://travis-ci.org/NREL/OpenOA.svg?branch=release%2Fv1)](https://travis-ci.org/NREL/OpenOA)
 ======
 
 This library provides a generic framework for working with large timeseries data from wind plants. Its development
