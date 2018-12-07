@@ -2,12 +2,12 @@ OpenOA [![Build Status](https://travis-ci.org/NREL/OpenOA.svg?branch=release%2Fv
 ======
 
 This library provides a generic framework for working with large timeseries data from wind plants. Its development
-has been motivated by the WP3 Benchmarking (PRUF) project, which aims to provide a reference implementaiton for
+has been motivated by the WP3 Benchmarking (PRUF) project, which aims to provide a reference implementation for
 plant-level performance assessment.
 
 The implementation makes use of a flexible backend, so that data loading, processing, and analysis can be performed
-locally (e.g., with Pandas dataframes), in a semi-distributed manner (e.g., with Dask dataframes), or in a fully
-distributed matter (e.g., with Spark dataframes).
+locally (e.g., with Pandas DataFrames), in a semi-distributed manner (e.g., with Dask DataFrames), or in a fully
+distributed matter (e.g., with Spark DataFrames).
 
 Analysis routines are grouped by purpose into methods, and these methods in turn rely on more abstract toolkits.
 In addition to the provided analysis methods, anyone can write their own, which is intended to provide natural
@@ -45,7 +45,7 @@ If errors about Visual Studio persist, you can try downloading the Microsoft Vis
 Clone the repository and install the library and its dependencies using pip:
 
 ```
-git clone git@github.com:NREL/OpenOA.git
+git clone https://github.com/NREL/OpenOA.git
 pip install ./OpenOA
 ```
 
