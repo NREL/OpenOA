@@ -114,13 +114,13 @@ class AssetData(object):
         self._asset['nearest_turbine_id'] = None
         if active_turbine_ids is not None and len(active_turbine_ids) > 0:
             nn = self.nearest_neighbors()
-            for k, v in nn.iteritems():
+            for k, v in nn.items():
                 v = [val for val in v if val in active_turbine_ids]
                 self._asset.loc[self._asset['id'] == k, 'nearest_turbine_id'] = v[0]
         if active_tower_ids is not None and len(active_tower_ids) > 0:
             nt = self.nearest_towers()
             self._asset['nearest_tower_id'] = None
-            for k, v in nt.iteritems():
+            for k, v in nt.items():
                 v = [val for val in v if val in active_tower_ids]
                 self._asset.loc[self._asset['id'] == k, 'nearest_tower_id'] = v[0]
 
@@ -157,7 +157,7 @@ class AssetData(object):
             row = m[i]
             row[row == -1] = float("inf")
             row[towers.tolist()] = float("inf")
-            ret[self._asset.loc[i, "id"]] = map(lambda x: self._asset.loc[x, "id"], row.argsort())
+            ret[self._asset.loc[i, "id"]] = [self._asset.loc[x, "id"] for x in row.argsort()]
 
         self._nearest_neighbors = ret
         return ret
@@ -179,13 +179,13 @@ class AssetData(object):
             row = m[i]
             row[row == -1] = float("inf")
             row[turbines.tolist()] = float("inf")
-            ret[self._asset.loc[i, "id"]] = map(lambda x: self._asset.loc[x, "id"], row.argsort())
+            ret[self._asset.loc[i, "id"]] = [self._asset.loc[x, "id"] for x in row.argsort()]
 
         self._nearest_towers = ret
         return ret
 
     def rename_columns(self, mapping):
-        for k in mapping.keys():
+        for k in list(mapping.keys()):
             if k != mapping[k]:
                 self._asset[k] = self._asset[mapping[k]]
                 self._asset[mapping[k]] = None

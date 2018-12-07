@@ -13,8 +13,8 @@ class SimpleTimeseriesTests(unittest.TestCase):
     def setUp(self):
         self.mountain_tz = timezone('US/Mountain')
         self.pacific_tz = timezone('US/Pacific')
-        self.summer_midnight = datetime(2018, 07, 16, 0, 0, 0)
-        self.winter_midnight = datetime(2018, 01, 11, 0, 0, 0)
+        self.summer_midnight = datetime(2018, 0o7, 16, 0, 0, 0)
+        self.winter_midnight = datetime(2018, 0o1, 11, 0, 0, 0)
         self.day_of_data = pd.Series(pd.date_range(start="1/1/2018 00:00:00", end="1/1/2018 23:59:59", freq="10min"))
         self.two_days_of_data = self.day_of_data.append(pd.Series(
             pd.date_range(start="2/1/2018 00:00:00", end="2/1/2018 23:59:59", freq="10min")))
@@ -130,7 +130,7 @@ class SimpleTimeseriesTests(unittest.TestCase):
 
         nan_values = {'a': 0.0, 'b': 0.2, 'c': 0.4}
 
-        for a, b in test_dict.iteritems():
+        for a, b in test_dict.items():
             nptest.assert_almost_equal(nan_values[a], timeseries.percent_nan(test_dict[a]),
                                        err_msg="NaN percentage function is broken")
 

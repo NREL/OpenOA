@@ -102,7 +102,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
                        'd': ('ncep2', 2, 0.25, 136),
                        'e': ('erai', 3, 0.25, 146)}
 
-        for key, values in filt_params.iteritems():
+        for key, values in filt_params.items():
             nptest.assert_equal((self.analysis.filter_outliers(values[0], values[1], values[2])).shape[0], values[3])
 
     def check_simulation_results(self, s):

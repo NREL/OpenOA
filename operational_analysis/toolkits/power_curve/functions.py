@@ -1,5 +1,5 @@
-from parametric_forms import *
-from parametric_optimize import *
+from .parametric_forms import *
+from .parametric_optimize import *
 from scipy.optimize import differential_evolution
 from pygam import LinearGAM
 import pandas as pd

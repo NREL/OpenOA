@@ -4,9 +4,9 @@ import os
 
 from dateutil.parser import parse
 
-from asset import AssetData
+from .asset import AssetData
 from operational_analysis.types import timeseries_table
-from reanalysis import ReanalysisData
+from .reanalysis import ReanalysisData
 
 
 class PlantData(object):
@@ -81,7 +81,7 @@ class PlantData(object):
         """
 
         k = "_%s_std" % (dfname,)
-        setattr(self, k, dict(itertools.chain(getattr(self, k).iteritems(), new_fields.iteritems())))
+        setattr(self, k, dict(itertools.chain(iter(getattr(self, k).items()), iter(new_fields.items()))))
 
     def get_time_range(self):
         """Get time range as tuple
@@ -122,7 +122,7 @@ class PlantData(object):
         os.mkdir(path)
 
         meta_dict = {}
-        for ca, ci in self.__dict__.iteritems():
+        for ca, ci in self.__dict__.items():
             if ca in self._tables:
                 ci.save(path, ca)
             elif ca in ["_start_time", "_stop_time"]:
@@ -131,7 +131,7 @@ class PlantData(object):
                 meta_dict[ca] = ci
 
         with io.open(os.path.join(path, "metadata.json"), 'w', encoding="utf-8") as outfile:
-            outfile.write(unicode(json.dumps(meta_dict, ensure_ascii=False)))
+            outfile.write(str(json.dumps(meta_dict, ensure_ascii=False)))
 
     def load(self, path=None):
         """Load this project and all associated data from a file path
@@ -152,7 +152,7 @@ class PlantData(object):
         if (os.path.exists(meta_path)):
             with io.open(os.path.join(path, "metadata.json"), 'r') as infile:
                 meta_dict = json.load(infile)
-                for ca, ci in meta_dict.iteritems():
+                for ca, ci in meta_dict.items():
                     if ca in ["_start_time", "_stop_time"]:
                         ci = parse(ci)
                     setattr(self, ca, ci)

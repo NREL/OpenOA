@@ -128,7 +128,7 @@ class PandasTimeseriesTable(AbstractTimeseriesTable):
         Args:
             mapping (dict): new and old column names based on {"new":"old"} convention
         """
-        for k in mapping.keys():
+        for k in list(mapping.keys()):
             if k != mapping[k]:
                 self.df[k] = self.df[mapping[k]]
                 self.df[mapping[k]] = None
@@ -149,7 +149,7 @@ class PandasTimeseriesTable(AbstractTimeseriesTable):
         Args:
             std (dict):
         """
-        for col in std.keys():
+        for col in list(std.keys()):
             logging.debug("checking  {} is astype {} ".format(col, std[col]))
             if col not in self.df.columns:
                 if std[col] == 'float64':
@@ -157,7 +157,7 @@ class PandasTimeseriesTable(AbstractTimeseriesTable):
                 else:
                     self.df[col] = None
             self.df[col] = self.df[col].astype(std[col])
-        self.df = self.df[std.keys()]
+        self.df = self.df[list(std.keys())]
 
     def is_empty(self):
         """ Test if data is None
@@ -280,7 +280,7 @@ class SparkTimeseriesTable(AbstractTimeseriesTable):
             self.df = self.df.limit(nrows)
 
     def rename_columns(self, mapping):
-        for k in mapping.keys():
+        for k in list(mapping.keys()):
             if k != mapping[k]:
                 self.df = self.df.withColumnRenamed(mapping[k], k)
 
@@ -288,13 +288,13 @@ class SparkTimeseriesTable(AbstractTimeseriesTable):
         self.df = self.df.withColumn(df[fro])
 
     def ensure_columns(self, std):
-        for col in std.keys():
+        for col in list(std.keys()):
             if col not in self.df.columns:
                 self.df = self.df.withColumn(col, self._f.lit(None).cast(self._t.StringType()))
             else:
                 cast_to = self.type_map[std[col]]
                 self.df = self.df.withColumn(col, self.df[col].cast(cast_to))
-        self.df = self.df.select(std.keys())
+        self.df = self.df.select(list(std.keys()))
 
     def is_empty(self):
         return self.df is None
@@ -328,7 +328,7 @@ class SparkTimeseriesTable(AbstractTimeseriesTable):
 
     def pandas_merge(self, right, right_cols, how, on):
         right = right.loc[:, right_cols]
-        schema = map(lambda x: self._t.StructField(x, self.type_map[right[x].dtype.name], True), right_cols)
+        schema = [self._t.StructField(x, self.type_map[right[x].dtype.name], True) for x in right_cols]
         schema = self._t.StructType(schema)
         right = self._sqlContext.createDataFrame(right, schema)
         self.df = self.df.join(right, on, how)
@@ -361,7 +361,7 @@ class TimeseriesTable:
 
     @staticmethod
     def factory(engine="pandas", *args, **kwargs):
-        if engine not in TimeseriesTable._classes.keys():
+        if engine not in list(TimeseriesTable._classes.keys()):
             raise NotImplementedError("Engine %s Not Implemented" % (engine,))
         else:
             return TimeseriesTable._classes[engine](*args, **kwargs)

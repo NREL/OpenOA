@@ -31,14 +31,14 @@ class ReanalysisData(object):
 
     def save(self, path, name):
         if self._engine == "pandas":
-            for product, table in self._product.iteritems():
+            for product, table in self._product.items():
                 table.save(path, "{}_{}".format(name, product))
 
         if self._engine == "spark":
             raise NotImplementedError("Spark version of this function is not yet implemented")
 
     def rename_columns(self, mapping):
-        for k in mapping.keys():
+        for k in list(mapping.keys()):
             if k != mapping[k]:
                 self._reanalysis[k] = self._reanalysis[mapping[k]]
                 self._reanalysis[mapping[k]] = None
