@@ -92,7 +92,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
     def check_calculate_long_term_losses(self):
         # Make sure same long term annual availabilty and curtailment losses are being calculated
         nptest.assert_array_almost_equal(
-            [self.analysis.long_term_losses[0].sum(), self.analysis.long_term_losses[1].sum()], [5.6486896, 1.8640194])
+                [self.analysis.long_term_losses[0], self.analysis.long_term_losses[1]], [0.064044, 0.020759])
 
     def check_filter_outliers(self):
         # Run a few combinations of outlier criteria, count number of data points remaining

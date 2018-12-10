@@ -64,6 +64,8 @@ class MonteCarloAEP(object):
         self.uncertainty_windiness = np.array(uncertainty_windiness, dtype=np.float64)
         self.uncertainty_outlier = np.array(uncertainty_outlier, dtype=np.float64)
         self.uncertainty_nan_energy = np.float64(uncertainty_nan_energy)
+        
+        self.num_days_lt=(31,28.25,31,30,31,30,31,31,30,31,30,31)
 
         # Run preprocessing step
         self.calculate_monthly_dataframe()
@@ -397,21 +399,39 @@ class MonteCarloAEP(object):
 
         Returns:
             (tuple):
-                :obj:`float`: annualized monthly availability loss expressed as fraction
-                :obj:`float`: annualized monthly curtailment loss expressed as fraction
+                :obj:`float`: long-term annual availability loss expressed as fraction
+                :obj:`float`: long-term annual curtailment loss expressed as fraction
         """
         df = self._monthly.df
+        
+        days_year_lt = 365.25 # Number of days per long-term year (accounting for leap year every 4 years)
 
         # isolate availabilty and curtailment values that are representative of average plant performance
-        avail_valid = df.loc[df['availability_typical'], 'availability_gwh'].to_frame()
-        curt_valid = df.loc[df['curtailment_typical'], 'curtailment_gwh'].to_frame()
+        avail_valid = df.loc[df['availability_typical'],'availability_pct'].to_frame()
+        curt_valid = df.loc[df['curtailment_typical'],'curtailment_pct'].to_frame()
 
         # Now get average percentage losses by month
-        avail_long_term = avail_valid.groupby(avail_valid.index.month)['availability_gwh'].mean()
-        curt_long_term = curt_valid.groupby(curt_valid.index.month)['curtailment_gwh'].mean()
+        avail_long_term=avail_valid.groupby(avail_valid.index.month)['availability_pct'].mean()
+        curt_long_term=curt_valid.groupby(curt_valid.index.month)['curtailment_pct'].mean()
 
-        # Calculate long-term availbilty and curtailment losses
-        self.long_term_losses = (avail_long_term, curt_long_term)
+        # Ensure there are 12 data points in long-term average. If not, throw an exception:
+        if (avail_long_term.shape[0] != 12):
+            raise Exception('Not all calendar months represented in long-term availability calculation')
+             
+        if (curt_long_term.shape[0] != 12):
+            raise Exception('Not all calendar months represented in long-term curtailment calculation')
+       
+        # Merge long-term losses and number of long-term days
+        lt_losses_df = pd.DataFrame(data = {'avail': avail_long_term, 'curt': curt_long_term, 'n_days': self.num_days_lt})
+        
+        # Calculate long-term annual availbilty and curtailment losses, weighted by number of days per month
+        lt_losses_df['avail_weighted'] = lt_losses_df['avail'].multiply(lt_losses_df['n_days'])
+        lt_losses_df['curt_weighted'] = lt_losses_df['curt'].multiply(lt_losses_df['n_days'])
+        avail_annual = lt_losses_df['avail_weighted'].sum()/days_year_lt
+        curt_annual = lt_losses_df['curt_weighted'].sum()/days_year_lt
+        
+        # Assign long-term annual losses to plant analysis object
+        self.long_term_losses = (avail_annual, curt_annual)
 
     def setup_monte_carlo_inputs(self):
         """
@@ -583,10 +603,6 @@ class MonteCarloAEP(object):
                                                                    'avail_pct': np.empty(num_sim),
                                                                    'curt_pct': np.empty(num_sim)})
 
-        num_days_lt = (
-            31, 28.25, 31, 30, 31, 30, 31, 31, 30, 31, 30,
-            31)  # Define "long-term" or "typical" number of days per month
-
         # Loop through number of simulations, run regression each time, store AEP results
         for n in tqdm(np.arange(num_sim)):
             slope, intercept = self.run_regression(n)  # Get slope, intercept from regression
@@ -594,18 +610,15 @@ class MonteCarloAEP(object):
                                                      self._mc_reanalysis_product[n])  # Get long-term wind speeds
             # Get long-term normalized gross energy by applying regression result to long-term monthly wind speeds
             gross_norm_lt = ws_lt.multiply(slope) + intercept
-            gross_lt = gross_norm_lt * num_days_lt / 30  # Undo normalization to 30-day months
-            [avail_lt_losses, curt_lt_losses] = self.sample_long_term_losses(
-                n)  # Get long-term availability and curtailment losses by month
-
-            # Get total availabilty and curtailment losses per year in MWh
-            avail_lt_gwh = avail_lt_losses.sum()
-            curt_lt_gwh = curt_lt_losses.sum()
+            gross_lt=gross_norm_lt*self.num_days_lt/30 # Undo normalization to 30-day months
+            
+            # Get long-term availability and curtailment losses by month
+            [avail_lt_losses, curt_lt_losses] = self.sample_long_term_losses(n)  
 
             # Assign AEP, long-term availability, and long-term curtailment to output data frame
-            sim_results.loc[n, 'aep_GWh'] = gross_lt.sum() - avail_lt_gwh
-            sim_results.loc[n, 'avail_pct'] = avail_lt_gwh / gross_lt.sum()
-            sim_results.loc[n, 'curt_pct'] = curt_lt_gwh / gross_lt.sum()
+            sim_results.loc[n,'aep_GWh'] = gross_lt.sum() * (1 - avail_lt_losses)
+            sim_results.loc[n,'avail_pct'] = avail_lt_losses
+            sim_results.loc[n,'curt_pct'] = curt_lt_losses
 
         # Return final output
         return sim_results
