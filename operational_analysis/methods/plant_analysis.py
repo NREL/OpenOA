@@ -495,7 +495,7 @@ class MonteCarloAEP(object):
 
         # If valid data hasn't yet been stored in dictionary, determine the valid data
         df = self._monthly.df
-        #print df['nan_flag'] == False
+        
         # First set of filters checking combined losses and if the Nan data flag was on
         df_sub = df.loc[
             ((df['availability_pct'] + df['curtailment_pct']) < comb_loss_thresh) & (df['nan_flag'] == False)]
