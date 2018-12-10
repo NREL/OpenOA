@@ -65,7 +65,7 @@ class MonteCarloAEP(object):
         self.uncertainty_outlier = np.array(uncertainty_outlier, dtype=np.float64)
         self.uncertainty_nan_energy = np.float64(uncertainty_nan_energy)
         
-        self.num_days_lt=(31,28.25,31,30,31,30,31,31,30,31,30,31)
+        self.num_days_lt= (31, 28.25, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
 
         # Run preprocessing step
         self.calculate_monthly_dataframe()
@@ -85,7 +85,6 @@ class MonteCarloAEP(object):
         self.setup_monte_carlo_inputs()
         self.results = self.run_AEP_monte_carlo()
 
-    @property
     def plot_reanalysis_normalized_rolling_monthly_windspeed(self):
         """
         Make a plot of annual average wind speeds from reanalysis data to show general trends for each
@@ -445,7 +444,9 @@ class MonteCarloAEP(object):
         Returns:
             (None)
         """
+        
         reanal_subset = self.reanal_subset
+        
         num_sim = self.num_sim
 
         self._mc_slope = np.empty(num_sim, dtype=np.float64)
@@ -494,11 +495,12 @@ class MonteCarloAEP(object):
 
         # If valid data hasn't yet been stored in dictionary, determine the valid data
         df = self._monthly.df
-
+        #print df['nan_flag'] == False
         # First set of filters checking combined losses and if the Nan data flag was on
         df_sub = df.loc[
-            ((df['availability_pct'] + df['curtailment_pct']) < comb_loss_thresh) & (df['nan_flag'] is False)]
+            ((df['availability_pct'] + df['curtailment_pct']) < comb_loss_thresh) & (df['nan_flag'] == False)]
 
+        #print df_sub
         # Now perform robust linear regression using Huber algorithm to flag outliers
         X = sm.add_constant(df_sub[reanal])  # Reanalysis data with constant column
         y = df_sub['gross_energy_gwh']  # Energy data
