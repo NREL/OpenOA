@@ -5,7 +5,7 @@ import pandas as pd
 from numpy import testing as nptest
 
 from operational_analysis.types import plant
-from operational_analysis.methods import PlantAnalysis
+from operational_analysis.methods import plant_analysis
 from examples.operational_AEP_analysis.project_EIA import Project_EIA
 
 
@@ -16,14 +16,9 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         # Set up data to use for testing (EIA example plant)
         self.project = Project_EIA('./examples/operational_AEP_analysis/data')
         self.project.prepare()
-        self.analysis = PlantAnalysis(self.project)
+        self.analysis = plant_analysis.MonteCarloAEP(self.project)
 
     def test_plant_analysis(self):
-        self.analysis.process_revenue_meter_energy()
-        self.analysis.process_loss_estimates()
-        self.analysis.process_reanalysis_data()
-        self.analysis.trim_monthly_df()
-        self.analysis.calculate_long_term_losses()
 
         df = self.analysis._monthly.df
 
@@ -32,18 +27,13 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         self.check_process_loss_estimates(df)
         self.check_process_reanalysis_data(df)
 
-        # Check long-term loss calculation
-        self.check_calculate_long_term_losses()
-
         # Check outlier filtering
         self.check_filter_outliers()
 
         # Run Monte Carlo AEP analysis, confirm the results are consistent
-        reanal_subset = ['ncep2', 'merra2', 'erai']  # Use all 3 products
-        num_sim = 7500  # Number of Monte Carlo simulations
-        self.analysis.setup_monte_carlo_inputs(reanal_subset, num_sim)  # Set up simulation
-        sim_results = self.analysis.run_AEP_monte_carlo(num_sim)  # Run simulation
-
+        self.analysis.run(num_sim=2000, reanal_subset=['ncep2', 'merra2', 'erai'])
+        
+        sim_results = self.analysis.results        
         self.check_simulation_results(sim_results)
 
     def check_process_revenue_meter_energy(self, df):
@@ -89,11 +79,6 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         nptest.assert_array_almost_equal(expected_erai, df.loc[date_ind, 'erai'])
         nptest.assert_array_almost_equal(expected_ncep2, df.loc[date_ind, 'ncep2'])
 
-    def check_calculate_long_term_losses(self):
-        # Make sure same long term annual availabilty and curtailment losses are being calculated
-        nptest.assert_array_almost_equal(
-            [self.analysis.long_term_losses[0].sum(), self.analysis.long_term_losses[1].sum()], [5.6486896, 1.8640194])
-
     def check_filter_outliers(self):
         # Run a few combinations of outlier criteria, count number of data points remaining
         filt_params = {'a': ('merra2', 2, 0.15, 130),
@@ -107,7 +92,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
 
     def check_simulation_results(self, s):
         # Make sure AEP results are consistent to one decimal place
-        expected_results = [81.88, 1.77, 6.45, 4.89, 2.13, 4.89]
+        expected_results = [81.90, 1.66, 6.41, 5.01, 2.09, 5.01]
 
         calculated_results = [s.aep_GWh.mean(),
                               s.aep_GWh.std() / s.aep_GWh.mean() * 100,
