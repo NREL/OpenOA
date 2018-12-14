@@ -104,7 +104,7 @@ class PandasTimeseriesTable(AbstractTimeseriesTable):
     """
 
     def __init__(self, *args, **kwargs):
-        self._pd = __import__('pandas', globals(), locals(), [], -1)
+        self._pd = __import__('pandas', globals(), locals(), [], 0)
 
     def save(self, path, name, format="csv"):
         """Write data to file
