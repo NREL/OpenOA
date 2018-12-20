@@ -32,8 +32,8 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
 
         # Run Monte Carlo AEP analysis, confirm the results are consistent
         self.analysis.run(num_sim=2000, reanal_subset=['ncep2', 'merra2', 'erai'])
-        
-        sim_results = self.analysis.results        
+
+        sim_results = self.analysis.results
         self.check_simulation_results(sim_results)
 
     def check_process_revenue_meter_energy(self, df):
@@ -87,7 +87,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
                        'd': ('ncep2', 2, 0.25, 136),
                        'e': ('erai', 3, 0.25, 146)}
 
-        for key, values in filt_params.iteritems():
+        for key, values in filt_params.items():
             nptest.assert_equal((self.analysis.filter_outliers(values[0], values[1], values[2])).shape[0], values[3])
 
     def check_simulation_results(self, s):

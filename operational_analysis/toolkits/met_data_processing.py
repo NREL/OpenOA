@@ -142,9 +142,10 @@ def compute_shear(df, windspeed_heights, ref_col='empty'):
    """
 
     # Convert wind speed heights to float
-    windspeed_heights = dict(zip(windspeed_heights.keys(), [float(value) for value in windspeed_heights.values()]))
+    windspeed_heights = \
+        dict(list(zip(list(windspeed_heights.keys()), [float(value) for value in list(windspeed_heights.values())])))
 
-    keys = windspeed_heights.keys()
+    keys = list(windspeed_heights.keys())
     if len(keys) <= 1:
         raise Exception('More than one wind speed measurement required to compute shear.')
     elif len(keys) == 2:
@@ -163,7 +164,7 @@ def compute_shear(df, windspeed_heights, ref_col='empty'):
         # Normalize wind speeds and heights to reference values
         df_norm = df[keys].div(df[ref_col], axis=0)
         h0 = windspeed_heights[ref_col]
-        windspeed_heights = {k: v / h0 for k, v in windspeed_heights.iteritems()}
+        windspeed_heights = {k: v / h0 for k, v in windspeed_heights.items()}
 
         # Rename columns to be windspeed measurement heights
         df_norm = df_norm.rename(columns=windspeed_heights)

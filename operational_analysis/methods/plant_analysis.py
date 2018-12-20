@@ -102,7 +102,7 @@ class MonteCarloAEP(object):
         por_end = self._monthly.df.index[-1]  # End of plant POR
 
         plt.figure(figsize=(14, 6))
-        for key, items in project._reanalysis._product.iteritems():
+        for key, items in project._reanalysis._product.items():
             rean_df = project._reanalysis._product[key].df  # Set reanalysis product
             ann_mo_ws = rean_df.resample('MS')['ws_dens_corr'].mean().to_frame()  # Take monthly average wind speed
             ann_roll = ann_mo_ws.rolling(12).mean()  # Calculate rolling 12-month average
@@ -145,8 +145,8 @@ class MonteCarloAEP(object):
         plt.figure(figsize=(12, 12))
 
         # Loop through each reanalysis product and make a scatterplot of monthly wind speed vs plant energy
-        for p in np.arange(0, len(project._reanalysis._product.keys())):
-            col_name = project._reanalysis._product.keys()[p]  # Reanalysis column in monthly data frame
+        for p in np.arange(0, len(list(project._reanalysis._product.keys()))):
+            col_name = list(project._reanalysis._product.keys())[p]  # Reanalysis column in monthly data frame
 
             x = sm.add_constant(valid_monthly[col_name])  # Define 'x'-values (constant needed for regression function)
             y = valid_monthly['gross_energy_gwh'] * 30 / valid_monthly[
@@ -364,7 +364,7 @@ class MonteCarloAEP(object):
                                                                     freq='MS'))
 
         # Now loop through the different reanalysis products, density-correct wind speeds, and take monthly averages
-        for key, items in self._plant._reanalysis._product.iteritems():
+        for key, items in self._plant._reanalysis._product.items():
             rean_df = self._plant._reanalysis._product[key].df
             rean_df['ws_dens_corr'] = mt.air_density_adjusted_wind_speed(rean_df, 'windspeed_ms',
                                                                          'rho_kgm-3')  # Density correct wind speeds
@@ -462,8 +462,8 @@ class MonteCarloAEP(object):
         self._mc_loss_threshold = np.random.randint(self.uncertainty_loss_max[0], self.uncertainty_loss_max[1] + 1,
                                                     num_sim) / 100.
 
-        reanal_list = np.repeat(reanal_subset,
-                                num_sim)  # Create extra long list of renanalysis product names to sample from
+        reanal_list = list(np.repeat(reanal_subset,
+                                num_sim))  # Create extra long list of renanalysis product names to sample from
         self._mc_reanalysis_product = np.asarray(random.sample(reanal_list, num_sim))
 
     def filter_outliers(self, reanal, outlier_thresh, comb_loss_thresh):

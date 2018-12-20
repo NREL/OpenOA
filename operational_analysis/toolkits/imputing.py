@@ -143,7 +143,7 @@ def impute_all_assets_by_correlation(data, input_col, ref_col, align_col, id_col
     ret = ret.rename(columns={input_col: 'imputed_' + input_col})
 
     # Loop through assets and impute missing data where possible
-    for target_id, target_data in tqdm(asset_dict.iteritems()):  # Target asset refers to data requiring imputation
+    for target_id, target_data in tqdm(iter(asset_dict.items())):  # Target asset refers to data requiring imputation
 
         # List neighboring assets by correlation strength
         corr_list = corr_df[target_id].sort_values(ascending=False)

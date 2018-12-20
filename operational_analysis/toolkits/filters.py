@@ -147,7 +147,7 @@ def bin_filter(bin_col, value_col, bin_width, threshold=2, center_type='mean', b
         elif center_type == 'median':
             cent = y_bin.median()
         else:
-            print 'incorrect center type specified'
+            print('incorrect center type specified')
 
         # Define threshold of data flag
         if threshold_type == 'std':
