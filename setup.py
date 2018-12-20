@@ -38,7 +38,7 @@ class PyTest(TestCommand):
     def run_tests(self):
         import shlex
         import pytest
-        errno = pytest.main(shlex.split(self.pytest_args + " --cov=operational_analysis"))
+        errno = pytest.main(shlex.split(self.pytest_args + " -o python_files=test/*.py --cov=operational_analysis"))
         sys.exit(errno)
 
 class PyTestIntegrate(PyTest):
@@ -46,7 +46,15 @@ class PyTestIntegrate(PyTest):
     def run_tests(self):
         import shlex
         import pytest
-        errno = pytest.main(shlex.split(self.pytest_args + " -o python_files=int_*.py"))
+        errno = pytest.main(shlex.split(self.pytest_args + " -o python_files=int_*.py --cov=operational_analysis"))
+        sys.exit(errno)
+
+class PyTestUnit(PyTest):
+
+    def run_tests(self):
+        import shlex
+        import pytest
+        errno = pytest.main(shlex.split(self.pytest_args + " -o python_files=test_*.py --cov=operational_analysis"))
         sys.exit(errno)
 
 
@@ -69,6 +77,6 @@ setup(name='OpenOA',
                         "scikit_learn==0.18.1"],
       tests_require=['pytest', 'pytest-cov'],
       python_requires='~=2.7',
-      cmdclass={'test': PyTest, 'integrate':PyTestIntegrate},
+      cmdclass={'test': PyTest, 'integrate':PyTestIntegrate, 'unit':PyTestUnit},
       license='None'
       )
