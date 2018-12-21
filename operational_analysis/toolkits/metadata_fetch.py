@@ -71,3 +71,24 @@ def fetch_eia(api_key, plant_id, file_path):
     eia_monthly = eia_monthly.set_index(pd.DatetimeIndex(eia_monthly.index))  # convert to DatetimeIndex
 
     return eia_monthly, out_dic
+
+def add_eia_meta_to_project(project, api_key, plant_id, file_path):
+    """
+    Assign EIA meta data to project file.
+    
+    Args:
+        project:obj:'PlantData'): PlantData object for a particular project
+        api_key(:obj:`string`): 32-character user-specific API key, obtained from EIA
+        plant_id(:obj:`string`): 5-character EIA power plant code
+        file_path(:obj:`string`): directory with EIA metadata .xlsx files
+
+    Returns:
+        None
+    """
+      
+    project._eia = {}
+    project._eia['api_key'] = api_key
+    project._eia['data_dir'] = file_path
+    project._eia['eia_id'] = plant_id
+    project._eia['monthly_energy'], project._eia['meta_data'] = fetch_eia(api_key, plant_id, file_path)
+    
