@@ -74,7 +74,7 @@ def fetch_eia(api_key, plant_id, file_path):
 
 def add_eia_meta_to_project(project, api_key, plant_id, file_path):
     """
-    Assign EIA meta data to project file.
+    Assign EIA meta data to PlantData object.
     
     Args:
         project:obj:'PlantData'): PlantData object for a particular project
@@ -83,7 +83,7 @@ def add_eia_meta_to_project(project, api_key, plant_id, file_path):
         file_path(:obj:`string`): directory with EIA metadata .xlsx files
 
     Returns:
-        None
+        (None)
     """
       
     project._eia = {}
