@@ -89,7 +89,23 @@ PlantData.asset
 Reanalysis Products
 ^^^^^^^^^^^^^^^^^^^
 
+Reanalysis products are included as Plant Data objects and, regardless
+of data source, have a standardized set of field names and types (see below).
+That said, the data sources are obviously different, as are the methods use to 
+calculate these standard fields from the raw datasets. These methods are described here.
+
 PlantData.reanalysis.product["merra2"]
+
+MERRA-2 data are based on the single-level diagnostic data available here:
+
+https://disc.gsfc.nasa.gov/datasets/M2T1NXSLV_V5.12.4/summary?keywords=%22MERRA-2%22
+
+Wind speed and direction are taken directly from the diagnostic 50-m u- and v-wind 
+fields provided in this dataset. Air density at 50m is calculated using temperature
+and pressure estimations at 50m and the ideal gas law. Temperature at 50m is estimated by taking the 10-m
+temperature data provided by this dataset and assuming a constant lapse rate of -9.8 
+degrees Celsius per vertical kilometer. Pressure at 50m is extrapolated from surface pressure
+data provided in this dataset using the hypsometric equation.
 
 ==================== ====================
  Field Name           Data Type
@@ -102,6 +118,17 @@ PlantData.reanalysis.product["merra2"]
 
 PlantData.reanalysis.product["ncep2"]
 
+NCEP-2 data are based on the single-level diagnostic data available here:
+
+https://rda.ucar.edu/datasets/ds091.0/
+
+Wind speed and direction are taken directly from the diagnostic 10-m u- and v-wind 
+fields provided in this dataset. Air density at 10m is calculated using temperature
+and pressure estimations at 10m and the ideal gas law. Temperature at 10m is estimated by taking the 2-m
+temperature data provided by this dataset and assuming a constant lapse rate of -9.8 
+degrees Celsius per vertical kilometer. Pressure at 10m is extrapolated from surface pressure
+data provided in this dataset using the hypsometric equation.
+
 ==================== ====================
  Field Name           Data Type
 ==================== ====================
@@ -113,6 +140,17 @@ PlantData.reanalysis.product["ncep2"]
 
 
 PlantData.reanalysis.product["erai"]
+
+ERA-interim data are based on the model-level data available here:
+
+https://rda.ucar.edu/datasets/ds627.0/
+
+Model levels are based on sigma coordinates (i.e. fractions of surface pressure). From this dataset, we 
+extract temperature, u-wind, and v-wind at the 58th model level, which is on average about 72m above ground level 
+(https://www.ecmwf.int/en/forecasts/documentation-and-support/60-model-levels). We also extract surface pressure 
+data. Air density at the 58th model level is calculated using temperature data extracted at that level and an estimation 
+of pressure at that level using the ideal gas law. Pressure at the 58th model level is extrapolated from surface pressure
+data provided in this dataset using the hypsometric equation.
 
 ==================== ====================
  Field Name           Data Type
