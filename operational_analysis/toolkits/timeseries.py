@@ -91,7 +91,7 @@ def find_duplicate_times(t_series, freq):
 def gap_fill_data_frame(df, time_col, freq):
     """
     Find missing timestamps in the input data frame and add rows with NaN values for those missing rows.
-    Return a new data frame that has no missing timestamps, but may not be sorted by timestamp.
+    Return a new data frame that has no missing timestamps and that is sorted by time.
 
     Args:
         df(:obj:`pandas.DataFrame`): the input data frame
