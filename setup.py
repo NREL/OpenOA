@@ -76,7 +76,7 @@ setup(name='OpenOA',
                         "statsmodels",
                         "scikit_learn"],
       tests_require=['pytest', 'pytest-cov'],
-      python_requires='~=2.7,~=3.7',
+      python_requires='>=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*',
       cmdclass={'test': PyTest, 'integrate':PyTestIntegrate, 'unit':PyTestUnit},
       license='None'
       )
