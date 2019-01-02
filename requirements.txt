@@ -12,3 +12,5 @@ pytest==3.4.0
 pytest-cov==2.5.1
 scikit_learn==0.18.1
 matplotlib==2.1.0
+eia-python==1.22
+requests==2.18.4

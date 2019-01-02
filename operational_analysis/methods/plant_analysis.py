@@ -258,9 +258,11 @@ class MonteCarloAEP(object):
         # Remove first and last reporting months if only partial month reported
         self.trim_monthly_df()
 
-        # Drop any data that have NaN gross energy values
-        # (means either revenue meter, availability, or curtalment data was NaN)
-        self._monthly.df = self._monthly.df.loc[np.isfinite(self._monthly.df.gross_energy_gwh)]
+        # Drop any data that have NaN gross energy values or NaN reanalysis data
+        self._monthly.df = self._monthly.df.loc[np.isfinite(self._monthly.df.gross_energy_gwh) & 
+                                                np.isfinite(self._monthly.df.ncep2) & 
+                                                np.isfinite(self._monthly.df.merra2) & 
+                                                np.isfinite(self._monthly.df.erai)]
 
     @logged_method_call
     def process_revenue_meter_energy(self):
