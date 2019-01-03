@@ -4,28 +4,37 @@ Contributing
 
 ## Issue Tracking
 
-New features, changes, enhancements, non-methodology features, and bug reports can be filed as new issues in the
-github issue tracker at any time.
+New feature requests, changes, enhancements, non-methodology features, and bug reports can be filed as new issues in the
+[Github.com issue tracker](https://github.com/NREL/OpenOA/issues) at any time. Please be sure to fully describe the
+issue.
+
+For other issues, please email the OpenOA distribution list at `openoa@nrel.gov`.
 
 ## Repository
 
-OpenOA repository: http://github.com/NREL/OpenOA
+The OpenOA repository is hosted on Github, and located here: http://github.com/NREL/OpenOA
 
-This repository is organized using the git-flow system. Branches are more-or-less organized as follows:
+This repository is organized using a modified git-flow system. Branches are organized as follows:
 
-- master: Current release including all hot fixes.
 - release/xxx: Development branches targeting a specific release. Tests should pass, but code may be unstable.
 - feature/issue-xxx: Branch of active release branch, must reference a github issue number.
 Features branches are not automatically tested and may contain broken code. Feel free to commit broken code to your own branch.
 
-To work on a feature, please make a new feature branch of the active release branch. If you're working externally
+Please note that our public repository does not have a master or a develop branch. Those branches are hosted on a
+separate, private repository for the NREL team.
+
+To work on a feature, please make a new feature branch based on the target release branch. If you're working externally
 to NREL, please fork OpenOA first and then create a feature branch in your own copy of the repository.
-Work out of that branch before submitting a pull request.
-Complete pull requests should include both updated documentation and pass all unit tests and integration tests.
+Work out of the feature branch before submitting a pull request. Be sure to periodically merge the target release
+branch into your feature branch to avoid conflicts in the pull request.
+
+When the feature branch is ready, make a pull request through the Github.com UI.
 
 ## Pull Request
 
-Pull requests must be made for any changes to be merged into release or master branches.
+Pull requests must be made for any changes to be merged into release branches.
+They must include updated documentation and pass all unit tests and integration tests.
+In addition, code coverage should not be negatively affected by the pull request.
 
 **Scope:** Encapsulate the changes of ideally one, or potentially a couple, issues. It is greatly preferable
 to submit three small pull requests than it is to submit one large pull request. Write a complete description of these
@@ -61,3 +70,4 @@ OpenOA uses pytest and the built in unittest framework. To run tests, navigate t
 ```
 python setup.py test
 ```
+
