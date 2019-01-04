@@ -21,6 +21,9 @@ from operational_analysis.toolkits import unit_conversion as un
 from operational_analysis.types import timeseries_table
 
 from operational_analysis import logged_method_call
+from operational_analysis import logging
+
+logger = logging.getLogger(__name__)
 
 
 class MonteCarloAEP(object):
@@ -53,6 +56,8 @@ class MonteCarloAEP(object):
          plant(:obj:`PlantData object`): PlantData object from which PlantAnalysis should draw data.
 
         """
+        logger.info("Initializing MonteCarloAEP Analysis Object")
+
         self._monthly = timeseries_table.TimeseriesTable.factory(plant._engine)
         self._plant = plant  # defined at runtime
 
@@ -84,10 +89,19 @@ class MonteCarloAEP(object):
         self.num_sim = num_sim
         self.reanal_subset = reanal_subset
 
-        self.calculate_long_term_losses()
+        # Write parameters of run to the log file
+        logged_self_params = ["uncertainty_meter", "uncertainty_losses","uncertainty_loss_max", "uncertainty_windiness",
+                              "uncertainty_outlier", "uncertainty_nan_energy", "num_sim", "reanal_subset"]
+        logged_params = {name: getattr(self, name) for name in logged_self_params}
+        logger.info("Running with parameters: {}".format(logged_params))
 
+        # Start the computation
+        self.calculate_long_term_losses()
         self.setup_monte_carlo_inputs()
         self.results = self.run_AEP_monte_carlo()
+
+        # Log the completion of the run
+        logger.info("Run completed")
 
     def plot_reanalysis_normalized_rolling_monthly_windspeed(self):
         """

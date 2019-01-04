@@ -29,7 +29,7 @@ def logged_method_call(the_method, msg="call"):
 
     def _wrapper(self, *args, **kwargs):
         logger = logging.getLogger(the_method.__module__)
-        logger.info("{}#{}.{}: {}".format(self.__class__.__name__, id(self), the_method.__name__, msg))
+        logger.debug("{}#{}.{}: {}".format(self.__class__.__name__, id(self), the_method.__name__, msg))
         return the_method(self, *args, **kwargs)
 
     return _wrapper
@@ -39,7 +39,7 @@ def logged_function_call(the_function, msg="call"):
 
     def _wrapper(*args, **kwargs):
         logger = logging.getLogger(the_function.__module__)
-        logger.info("{}: {}".format(the_function.__name__, msg))
+        logger.debug("{}: {}".format(the_function.__name__, msg))
         return the_function(*args, **kwargs)
 
     return _wrapper
