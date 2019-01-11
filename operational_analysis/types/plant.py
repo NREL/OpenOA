@@ -10,7 +10,19 @@ from .reanalysis import ReanalysisData
 
 
 class PlantData(object):
-    """Plant-level schema for operational wind plant data.
+    """ Data object for operational wind plant data.
+
+    This class holds references to all tables associated with a wind plant. The tables are grouped by type:
+        - PlantData.scada
+        - PlantData.meter
+        - PlantData.tower
+        - PlantData.status
+        - PlantData.curtail
+        - PlantData.asset
+        - PlantData.reanalysis
+
+    Each table must have columns following the following convention:
+        -
 
     The PlantData object can serialize all of these structures and reload them
     them from the cache as needed.
@@ -50,19 +62,43 @@ class PlantData(object):
 
         self._status_labels = ["full", "unavailable"]
 
-        self._scada_std = {"time": "datetime64[ns]", "id": "string", "power_kw": "float64",
-                           "windspeed_ms": "float64", "winddirection_deg": "float64",
-                           "status_label": "string", "pitch_deg": "float64", "temp_c": "float64"}
-        self._tower_std = {"time": "datetime64[ns]", "id": "string"}
-        self._meter_std = {"time": "datetime64[ns]", "power_kw": "float64", "energy_kwh": "float64"}
-        self._reanalysis_std = {"time": "datetime64[ns]", "windspeed_ms": "float64",
-                                "winddirection_deg": "float64", "rho_kgm-3": "float64"}
-        self._status_std = {"time": "datetime64[ns]", "id": "string", "status_id": "int64", "status_code": "int64",
+        self._scada_std = {"time": "datetime64[ns]",
+                           "turbine_id": "string",
+                           "wgen_activepw_avg": "float64",
+                           "wnac_windspeed_avg": "float64",
+                           "wnac_winddirection_avg": "float64",
+                           "wrot_bladeposition_avg": "float64",
+                           "wnac_temout_avg": "float64",
+                           "status_label": "string"}
+
+        self._tower_std = {"time": "datetime64[ns]",
+                           "id": "string"}
+
+        self._meter_std = {"time": "datetime64[ns]",
+                           "power_kw": "float64",
+                           "energy_kwh": "float64"}
+
+        self._reanalysis_std = {"time": "datetime64[ns]",
+                                "windspeed_ms": "float64",
+                                "winddirection_deg": "float64",
+                                "rho_kgm-3": "float64"}
+
+        self._status_std = {"time": "datetime64[ns]",
+                            "id": "string",
+                            "status_id": "int64",
+                            "status_code": "int64",
                             "status_text": "string"}
-        self._curtail_std = {"time": "datetime64[ns]", "curtailment_pct": "float64", "availability_pct": "float64",
+
+        self._curtail_std = {"time": "datetime64[ns]",
+                             "curtailment_pct": "float64",
+                             "availability_pct": "float64",
                              "net_energy": "float64"}
-        self._asset_std = {"id": "string", "latitude": "float64", "longitude": "float64",
-                           "rated_power_kw": "float64", "type": "string"}
+
+        self._asset_std = {"id": "string",
+                           "latitude": "float64",
+                           "longitude": "float64",
+                           "rated_power_kw": "float64",
+                           "type": "string"}
 
         self._tables = ["_scada", "_meter", "_status", "_tower", "_asset", "_curtail", "_reanalysis"]
 
