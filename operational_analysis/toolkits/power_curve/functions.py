@@ -10,7 +10,7 @@ This module holds ready-to-use power curve functions. They take windspeed and po
 python function which can be used to evaluate the power curve at arbitrary locations.
 """
 
-def extra_trees(X, y, params):
+def extra_trees(X, y, params = {'max_depth': 2}):
     
     """
     Fit ensemble extra tree regressor model trained on X to predict y 
@@ -28,20 +28,14 @@ def extra_trees(X, y, params):
         n_estimators(:obj:`list`): The number of trees in the forest; use single value for final model
         
     Returns:
-        Function: Power curve function, 
+        model.predict
+        model.score
     """
   
     from sklearn.ensemble import ExtraTreesRegressor
 
-    model = ExtraTreesRegressor(**params)
-                                
+    model = ExtraTreesRegressor(**params)                                
     model.fit(X, y)
-    
-    #print model.summary
-    
-    #def pc_extra_trees(xx):
-    #    P = model.predict(xx)
-    #    return P
     
     return model.predict, model.score(X,y)
     
