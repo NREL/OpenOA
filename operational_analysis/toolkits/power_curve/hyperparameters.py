@@ -1,6 +1,10 @@
 import numpy as np
 from scipy.stats import randint as sp_randint
 from sklearn.model_selection import KFold
+from sklearn.ensemble import ExtraTreesRegressor
+from pygam import GAM
+from sklearn.metrics.scorer import make_scorer
+from sklearn.metrics import r2_score
 
 """
 This module is a library of hyperparameters available for different 
@@ -10,16 +14,23 @@ where an analyst would optimize hyperparmeters during cross-validation
 
 class HyperparameterOptimization(object):
 
-    def __init__(self):
+    def __init__(self, algorithm, params = None):
         
+        self.algorithms = {'etr': (ExtraTreesRegressor(), {"max_depth": [4, 8, 12, 16, 20],
+                                                           "min_samples_split": np.arange(2, 11),
+                                                           "min_samples_leaf": np.arange(1, 11),
+                                                           "n_estimators": np.arange(10,801,40)}),
+                           'gam': (GAM(), {'n_splines': np.arange(5,40)})
+                           }
         
-        self.extra_trees_hyp = {"max_depth": [4, 8, 12, 16, 20],
-                                "min_samples_split": sp_randint(2, 11),
-                                "min_samples_leaf": sp_randint(1, 11),
-                                "n_estimators": np.arange(10,801,40)}
-
-        self.gam_hyp = {'n_splines': np.arange(5,40)}
+        self.alg_selection = self.algorithms[algorithm][0]
         
+        if params is None:
+            self.alg_hyper = self.algorithms[algorithm][1]
+        else:
+            self.alg_hyper = params
+        
+        self.my_scorer = make_scorer(r2_score, greater_is_better = True)
 
 
     def hyper_report(self, results, n_top = 5):
@@ -36,20 +47,19 @@ class HyperparameterOptimization(object):
                 print "Parameters: {0}".format(results['params'][candidate]) + '\n'
                 print ""
             
-    def hyper_optimize(self, model, X, y, tscv = KFold(n_splits = 5), n_iter_search = 20):
+    def hyper_optimize(self, model, X, y, cv = KFold(n_splits = 5), n_iter_search = 20):
 
         from sklearn.model_selection import RandomizedSearchCV
         
-        random_search = RandomizedSearchCV(model, 
-                                           cv = tscv, 
-                                           param_distributions = self.extra_trees_hyp, 
-                                           n_iter=n_iter_search)
-        random_search.fit(X, y)
+        self.random_search = RandomizedSearchCV(model, 
+                                           cv = cv, 
+                                           param_distributions = self.alg_hyper, 
+                                           n_iter=n_iter_search,
+                                           scoring = self.my_scorer,
+                                           verbose = 1)
+        self.random_search.fit(X, y)        
+        self.opt_hyp = self.random_search.best_params_        
+        self.hyper_report(self.random_search.cv_results_, n_iter_search)
         
-        best_ind = np.argmax(random_search.cv_results_['mean_test_score'])
+        return self.random_search.predict
         
-        opt_hyp = random_search.cv_results_['params'][best_ind]
-        
-        self.hyper_report(random_search.cv_results_, n_iter_search)
-        
-        return opt_hyp
