@@ -1,0 +1,31 @@
+{
+  "name": "PlantData",
+  "description": "Schema for OpenOA PlantData objects",
+  "version": 0.1,
+  "fields": [
+    {
+      "name": "scada",
+      "type": "record",
+      "description": "data at fixed time interval from all turbines in plant",
+      "fields": [
+        {"name": "time", "type":"datetime64[ns]", "required":true },
+        {"name": "status_label", "type": "string"},
+
+        {"name": "wgen_activepw_avg", "type": "float64", "unit":"kw", "suffix":["_avg", "_std", "_min", "_max"]},
+        {"name": "wnac_windspeed", "type": "float64", "unit":"m/s", "suffix":["_avg", "_std", "_min", "_max"]},
+        {"name": "wnac_winddirection", "type": "float64", "unit":"deg", "suffix":["_avg", "_std", "_min", "_max"]},
+        {"name": "wrot_bladeposition", "type": "float64", "unit":"deg", "suffix":["_avg", "_std", "_min", "_max"]},
+        {"name": "wnac_temout", "type": "float64", "unit":"deg celsius", "suffix":["_avg", "_std", "_min", "_max"]},
+
+      ]
+    },
+    {
+      "name": "met",
+      "type": "record",
+      "description": "data at fixed time interval from met towers around the plant",
+      "fields": [
+        {"name": "wmet_winddirection"}
+      ]
+    }
+  ]
+}
