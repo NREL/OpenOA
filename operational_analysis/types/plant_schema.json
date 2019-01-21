@@ -61,8 +61,6 @@
         {"name": "time", "type":"datetime64[ns]", "required":true, "description": "end of bin"},
         {"name": "asset_id", "type":"int64", "required":true, "description":"foreign key to asset table"},
 
-        {"name": "wmet_winddirection_avg", "type":"float64", "unit":"deg"},
-
       ]
     },
     {
@@ -74,8 +72,6 @@
         {"name": "time", "type":"datetime64[ns]", "required":true, "description": "end of bin"},
         {"name": "asset_id", "type":"int64", "required":true, "description":"foreign key to asset table"},
 
-        {"name": "wmet_winddirection_avg", "type":"float64", "unit":"deg"},
-
       ]
     },
     {
@@ -86,8 +82,6 @@
 
         {"name": "time", "type":"datetime64[ns]", "required":true, "description": "end of bin"},
         {"name": "asset_id", "type":"int64", "required":true, "description":"foreign key to asset table"},
-
-        {"name": "wmet_winddirection_avg", "type":"float64", "unit":"deg"},
 
       ]
     }
