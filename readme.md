@@ -15,7 +15,7 @@ growth of tools within this framework.
 
 ### Requirements
 
-  * Python 2.7.13 (e.g., from Anaconda) with pip
+  * Python 2.7+, 3.6+ (e.g., from Anaconda) with pip
 
 We recommend creating a new virtual environment or Anaconda environment before attempting to install
 OpenOA. To create and activate such a new environment with the name "openoa-env" using Anaconda:
@@ -67,7 +67,19 @@ cd ./OpenOA
 python setup.py test
 ```
 
-To run integration tests (longer running, requires data):
+To run integration tests (longer running, requires data) first unzip the example data:
+
+```
+cd OpenOA/examples/operational_AEP_analysis/data
+unzip eia_example_data.zip
+
+cd OpenOA/examples/turbine_analysis/data
+unzip example_20180829.zip
+
+cd OpenOA
+```
+
+Then, you can run the integration test:
 
 ```
 python setup.py integrate
