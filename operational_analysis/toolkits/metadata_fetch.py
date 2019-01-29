@@ -77,7 +77,7 @@ def add_eia_meta_to_project(project, api_key, plant_id, file_path):
     Assign EIA meta data to PlantData object.
     
     Args:
-        project:obj:'PlantData'): PlantData object for a particular project
+        project(:obj:`PlantData`): PlantData object for a particular project
         api_key(:obj:`string`): 32-character user-specific API key, obtained from EIA
         plant_id(:obj:`string`): 5-character EIA power plant code
         file_path(:obj:`string`): directory with EIA metadata .xlsx files

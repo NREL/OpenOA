@@ -53,6 +53,16 @@ Met Data Processing
     :undoc-members:
     :show-inheritance:
 
+
+Metadata Fetch
+---------------------
+
+.. automodule:: operational_analysis.toolkits.metadata_fetch
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
 Unit Conversion
 ---------------------
 
