@@ -98,6 +98,8 @@ python setup.py integrate -a "--junitxml=./path_to_outputfile.xml"
 Documentation is provided by [sphinx](http://www.sphinx-doc.org/en/stable/). To (re)build the documentation:
 
 ```
+pip install sphinx_rtd_theme ipython m2r
+
 cd sphinx
 make html
 ```
