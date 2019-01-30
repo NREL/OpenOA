@@ -1,6 +1,5 @@
 import numpy as np
 
-
 """
 Curve fitting routines
 
@@ -19,8 +18,10 @@ def fit_parametric_power_curve(x, y, curve, optimization_algorithm, cost_functio
         y(list[float]): dependent variable
         curve(Function): function/lambda name for power curve desired default is curves.logistic5param
         optimization_algorithm(Function): scipy.optimize style optimization algorithm
-        cost_function(Function): Python function that takes two np.array 1D of real numbers and returns a real numeric cost.
-        bounds: bounds on parameters for power curve, default is for logistic5param, with power in kw and windspeed in m/s
+        cost_function(Function): Python function that takes two np.array 1D of real numbers and returns a real numeric
+        cost.
+        bounds: bounds on parameters for power curve, default is for logistic5param, with power in kw and windspeed
+        in m/s
         return_params(Boolean): True = return a tuple of (function, scipy.optimize.fit), False = just return function.
 
     Returns:
@@ -60,4 +61,4 @@ def least_squares(x, y):
     Returns:
         real number
     """
-    return np.sum((x-y)**2)
+    return np.sum((x - y) ** 2)

@@ -38,7 +38,7 @@ class PyTest(TestCommand):
     def run_tests(self):
         import shlex
         import pytest
-        errno = pytest.main(shlex.split(self.pytest_args + " --cov=operational_analysis"))
+        errno = pytest.main(shlex.split(self.pytest_args + " -o python_files=test/*.py --cov=operational_analysis"))
         sys.exit(errno)
 
 class PyTestIntegrate(PyTest):
@@ -46,7 +46,15 @@ class PyTestIntegrate(PyTest):
     def run_tests(self):
         import shlex
         import pytest
-        errno = pytest.main(shlex.split(self.pytest_args + " -o python_files=int_*.py"))
+        errno = pytest.main(shlex.split(self.pytest_args + " -o python_files=int_*.py --cov=operational_analysis"))
+        sys.exit(errno)
+
+class PyTestUnit(PyTest):
+
+    def run_tests(self):
+        import shlex
+        import pytest
+        errno = pytest.main(shlex.split(self.pytest_args + " -o python_files=test_*.py --cov=operational_analysis"))
         sys.exit(errno)
 
 
@@ -56,19 +64,21 @@ setup(name='OpenOA',
       version=find_version("operational_analysis", "__init__.py"),
       description='A package for collecting and assigning wind turbine metrics',
       author='NREL PRUF OA Team',
-      author_email='caleb.phillips@nrel.gov',
+      author_email='openoa@nrel.gov',
       url='https://github.com/NREL/OpenOA',
       packages=find_packages(exclude=["test"]),
-      install_requires=["numpy==1.14.0",
-                        "scipy==1.0.0",
-                        "pandas==0.20.3",
-                        "geopandas==0.3.0",
-                        "pygam==0.4.0",
-                        "tqdm==4.19.5",
-                        "statsmodels==0.8.0",
-                        "scikit_learn==0.18.1"],
+      install_requires=["numpy",
+                        "scipy",
+                        "pandas",
+                        "geopandas",
+                        "pygam",
+                        "tqdm",
+                        "statsmodels",
+                        "scikit_learn",
+                        "EIA-python",
+                        "requests"],
       tests_require=['pytest', 'pytest-cov'],
-      python_requires='~=2.7',
-      cmdclass={'test': PyTest, 'integrate':PyTestIntegrate},
+      python_requires='>=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*',
+      cmdclass={'test': PyTest, 'integrate':PyTestIntegrate, 'unit':PyTestUnit},
       license='None'
       )

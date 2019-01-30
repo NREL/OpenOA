@@ -1,6 +1,5 @@
 import numpy as np
 
-
 """
 Power Curves
 
@@ -9,7 +8,8 @@ These curve functions are written in the style of Scipy.optimize:
 fun : callable
 The objective function to be minimized.
 fun(x, *args) -> float
-where x is an 1-D array with shape (n,) and args is a tuple of the fixed parameters needed to completely specify the function.
+where x is an 1-D array with shape (n,) and args is a tuple of the fixed parameters needed to completely specify the
+function.
 
 ref: https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html#scipy.optimize.minimize
 
@@ -32,7 +32,7 @@ def logistic5param(x, a, b, c, d, g):
         Function[pandas.Series[real]] -> pandas.Series[real]
 
     """
-    return d+(a-d)/(1+(x/c)**b)**g
+    return d + (a - d) / (1 + (x / c) ** b) ** g
 
 
 def logistic5param_capped(x, a, b, c, d, g, lower, upper):

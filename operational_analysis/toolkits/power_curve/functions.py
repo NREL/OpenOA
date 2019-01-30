@@ -1,6 +1,5 @@
-
-from parametric_forms import *
-from parametric_optimize import *
+from .parametric_forms import *
+from .parametric_optimize import *
 from scipy.optimize import differential_evolution
 from pygam import LinearGAM
 import pandas as pd
@@ -11,7 +10,7 @@ python function which can be used to evaluate the power curve at arbitrary locat
 """
 
 
-def IEC(windspeed_column, power_column, bin_width = 0.5, windspeed_start = 0, windspeed_end = 30.0):
+def IEC(windspeed_column, power_column, bin_width=0.5, windspeed_start=0, windspeed_end=30.0):
     """
     Use IEC 61400-12-1-2 method for creating wind-speed binned power curve.
 
@@ -31,11 +30,11 @@ def IEC(windspeed_column, power_column, bin_width = 0.5, windspeed_start = 0, wi
     bins = np.append(np.arange(windspeed_start, windspeed_end, bin_width), [np.inf])
 
     # Initialize an array which will hold the mean values of each bin
-    P_bin = np.ones(len(bins)-1)*np.nan
+    P_bin = np.ones(len(bins) - 1) * np.nan
 
     # Compute the mean of each bin and set corresponding P_bin
-    for ibin in range(0, len(bins)-1):
-        indices = ((windspeed_column >= bins[ibin]) & (windspeed_column < bins[ibin+1]))
+    for ibin in range(0, len(bins) - 1):
+        indices = ((windspeed_column >= bins[ibin]) & (windspeed_column < bins[ibin + 1]))
         P_bin[ibin] = power_column.loc[indices].mean()
 
     # Linearly interpolate any missing bins
@@ -44,8 +43,8 @@ def IEC(windspeed_column, power_column, bin_width = 0.5, windspeed_start = 0, wi
     # Create a closure over the computed bins which computes the power curve value for arbitrary array-like input
     def pc_iec(x):
         P = np.zeros(np.shape(x))
-        for i in range(0, len(bins)-1):
-            idx = np.where((x >= bins[i]) & (x < bins[i+1]))
+        for i in range(0, len(bins) - 1):
+            idx = np.where((x >= bins[i]) & (x < bins[i + 1]))
             P[idx] = P_bin[i]
         return P
 
@@ -94,7 +93,8 @@ def logistic_5_parametric(windspeed_column, power_column):
                                       cost_function=least_squares,
                                       bounds=((1200, 1800), (-10, -1e-3), (1e-3, 30), (1e-3, 1), (1e-3, 10)))
 
-def spline_fit(windspeed_column, power_column, n_splines = 20):
+
+def spline_fit(windspeed_column, power_column, n_splines=20):
     """
     Use the pyGAM package to fit a wind speed and power curve using spline fitting
 
@@ -107,13 +107,16 @@ def spline_fit(windspeed_column, power_column, n_splines = 20):
         :obj:`function`: Python function of type (Array[float] -> Array[float]) implementing the power curve.
 
     """
-    
+
     # Fit the data
-    spline_fit = LinearGAM(n_splines=n_splines).gridsearch(windspeed_column, power_column)
-    
+    x = windspeed_column.values.reshape((windspeed_column.size, 1))
+    y = power_column.values
+
+    s = LinearGAM(n_splines=n_splines).gridsearch(x, y)
+
     # Create a closure over the spline fit which computes the power curve value for arbitrary array-like input
-    def pc_spline(x):
-        P = spline_fit.predict(x)
+    def pc_spline(xx):
+        P = s.predict(xx)
         return P
 
     return pc_spline

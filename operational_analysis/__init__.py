@@ -1,4 +1,4 @@
-__version__ = "1.0"
+__version__ = "1.1"
 
 import json
 import logging
@@ -6,9 +6,9 @@ import logging.config
 import os
 
 
-def setup_logging( default_path='logging.json',
-                   default_level=logging.INFO,
-                   env_key='LOG_CFG'):
+def setup_logging(default_path='logging.json',
+                  default_level=logging.INFO,
+                  env_key='LOG_CFG'):
     """Setup logging configuration """
     path = default_path
     value = os.getenv(env_key, None)
@@ -21,5 +21,5 @@ def setup_logging( default_path='logging.json',
     else:
         logging.basicConfig(level=default_level)
 
-setup_logging()
 
+setup_logging()
