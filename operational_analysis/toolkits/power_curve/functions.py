@@ -10,40 +10,6 @@ This module holds ready-to-use power curve functions. They take windspeed and po
 python function which can be used to evaluate the power curve at arbitrary locations.
 """
 
-def extra_trees(X, y, params = None):
-    
-    """
-    Fit ensemble extra tree regressor model trained on X to predict y 
-    
-    For more information on model algorithm see: 
-    http://scikit-learn.org/stable/modules/generated/sklearn.ensemble.ExtraTreesRegressor.html#sklearn.ensemble.ExtraTreesRegressor 
-    
-    Args:
-        X (:obj:`pandas.dataframe`): feature colums(s)
-        y (:obj:`pandas.series`): response column
-        max_depth
-        max_features
-        min_sample_split
-        min_samples_leaf
-        n_estimators(:obj:`list`): The number of trees in the forest; use single value for final model
-        
-    Returns:
-        model.predict
-        model.score
-    """
-    from sklearn.ensemble import ExtraTreesRegressor
-    
-    # If no hyperparameters passed, run cross-validation
-    if params is None:
-        model = ExtraTreesRegressor()                                
-  
-    else: 
-        model = ExtraTreesRegressor(**params)                                
-    
-    model.fit(X, y)
-    return model.predict
-    
-
 def IEC(windspeed_column, power_column, bin_width=0.5, windspeed_start=0, windspeed_end=30.0):
     """
     Use IEC 61400-12-1-2 method for creating wind-speed binned power curve.
