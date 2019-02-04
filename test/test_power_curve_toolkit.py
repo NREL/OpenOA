@@ -31,12 +31,14 @@ class TestPowerCurveFunctions(unittest.TestCase):
         # Does the logistic-5 power curve match the test data?
         nptest.assert_allclose(self.y, y_pred, rtol=1, atol=noise * 2, err_msg="Power curve did not properly fit.")
 
-    def test_spline_fit(self):
+    def test_gam(self):
         # Create test data using logistic5param form
-        curve = power_curve.spline_fit(self.x, self.y, 20)
+        curve = power_curve.gam(windspeed_column = self.x, power_column = self.y, n_splines = 20)
         y_pred = curve(self.x)
+        print(y_pred[0:5])
+        print(self.y[0:5])
         # Does the spline-fit power curve match the test data?
-        nptest.assert_allclose(self.y, y_pred, rtol=1, atol=noise * 2, err_msg="Power curve did not properly fit.")
+        nptest.assert_allclose(self.y, y_pred, rtol=0.05, atol = 20, err_msg="Power curve did not properly fit.")
 
     def tearDown(self):
         pass
