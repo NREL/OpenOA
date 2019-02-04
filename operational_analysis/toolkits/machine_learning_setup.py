@@ -1,22 +1,45 @@
 import numpy as np
-from scipy.stats import randint as sp_randint
 from sklearn.model_selection import KFold
-from sklearn.ensemble import ExtraTreesRegressor
-from pygam import GAM
+
 from sklearn.metrics.scorer import make_scorer
 from sklearn.metrics import r2_score
 
 """
-This module is a library of hyperparameters available for different 
-learning algorithms. This library would be employed during a machine-learning pipeline
-where an analyst would optimize hyperparmeters during cross-validation
+This module is a library of machine learning algorithms and associated 
+hyperparameter ranges suitable for wind energy analysis. This module allows
+for simple implementation of hyperparameter optimization and the application of
+the best hyperparameter combinations for use in the predictive model. 
 """
 
-class HyperparameterOptimization(object):
+class MachineLearningSetup(object):
 
     def __init__(self, algorithm, params = None):
+        '''
+        Initialize the class with a list of possible algorithms and recommended hyperparameter ranges
+        '''    
+        if algorithm == 'etr': # Extra trees regressor
+            from sklearn.ensemble import ExtraTreesRegressor
+            self.alg_selection = algorithm
+            self.hyper_range = {"max_depth": [4, 8, 12, 16, 20],
+                                "min_samples_split": np.arange(2, 11),
+                                "min_samples_leaf": np.arange(1, 11),
+                                "n_estimators": np.arange(10,801,40)}
+        elif algorithm == 'gbm': # Gradient boosting model
+            from sklearn.ensemble import GradientBoostingRegressor
+            self.hyper_range = {"max_depth": [4, 8, 12, 16, 20],
+                                "min_samples_split": np.arange(2, 11),
+                                "min_samples_leaf": np.arange(1, 11),
+                                "n_estimators": np.arange(10,801,40)}
+        elif algorithm == 'gam': # Gradient boosting model
+            from pygam import GAM
+            self.hyper_range = {'n_splines': np.arange(5,40)}
+        
         
         self.algorithms = {'etr': (ExtraTreesRegressor(), {"max_depth": [4, 8, 12, 16, 20],
+                                                           "min_samples_split": np.arange(2, 11),
+                                                           "min_samples_leaf": np.arange(1, 11),
+                                                           "n_estimators": np.arange(10,801,40)}),
+                           'gbm': (ExtraTreesRegressor(), {"max_depth": [4, 8, 12, 16, 20],
                                                            "min_samples_split": np.arange(2, 11),
                                                            "min_samples_leaf": np.arange(1, 11),
                                                            "n_estimators": np.arange(10,801,40)}),
