@@ -1,32 +1,16 @@
-# PrufPlantAnalysis
-#
-# This class defines key analytical routines for the PRUF/WRA Benchmarking
-# standard operational assessment.
-#
-# The PrufPlantAnalysis object is a factory which instantiates either the Pandas, Dask, or Spark
-# implementation depending on what the user prefers.
-#
-# The resulting object is loaded as a plugin into each PlantData object.
+# This class defines key analytical routines for calculating long-term gross energy 
+# for each turbine at a wind farm
 
-import random
-
-import numpy as np
 import pandas as pd
-import statsmodels.api as sm
-from tqdm import tqdm
 
 from operational_analysis.toolkits import met_data_processing
-from operational_analysis.toolkits import timeseries as tm
-from operational_analysis.toolkits import unit_conversion as un
 from operational_analysis.toolkits import filters
-from operational_analysis.types import timeseries_table
 from operational_analysis.toolkits.power_curve import functions
 
 from operational_analysis import logged_method_call
 from operational_analysis import logging
 
 logger = logging.getLogger(__name__)
-
 
 class TurbineLongTermGrossEnergy(object):
     """
