@@ -98,10 +98,19 @@ class TurbineLongTermGrossEnergy(object):
         Returns:
             (None)
         """
+        logger.info("Filtering turbine data")
         self.filter_turbine_data() # Filter turbine data
+        
+        logger.info("Processing reanalysis data to daily averages")
         self.setup_daily_reanalysis_data() # Setup daily reanalysis products
+        
+        logger.info("Setting up daily data for model fitting")
         self.setup_model_dict() # Setup daily data to be fit using the GAM
+        
+        logger.info("Fitting model data")
         self.fit_model() # Fit daily turbine energy to atmospheric data
+        
+        logger.info("Applying fitting results to calculate long-term gross energy")
         self.apply_model_to_lt() # Apply fitting result to long-term reanalysis data
      
         # Log the completion of the run
@@ -278,8 +287,9 @@ class TurbineLongTermGrossEnergy(object):
         
         
         for t in self._turbs: # Loop throuh turbines
+            logger.info("Fitting turbine %s" %t)
+            
             for r in self._reanal: # Loop through reanalysis products
-                logger.info("Fitting turbine %s and reanalysis product %s" %(t, r,))
                 df = mod_dict[t, r]
                 
                 # Consider wind speed, wind direction, and air density as features
