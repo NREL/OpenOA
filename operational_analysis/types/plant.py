@@ -34,7 +34,7 @@ class PlantData(object):
     prepare() and other methods.
     """
 
-    def __init__(self, path, name, engine="pandas", toolkit=["pruf_analysis"]):
+    def __init__(self, path, name, engine="pandas", schema="plant_schema.json", toolkit=["pruf_analysis"]):
         """
         Create a plant data object without loading any data.
 
@@ -47,6 +47,9 @@ class PlantData(object):
         Returns:
             New object
         """
+        with open(schema, "r") as schema_file:
+            self._schema = json.load(schema_file)
+
         self._scada = timeseries_table.TimeseriesTable.factory(engine)
         self._meter = timeseries_table.TimeseriesTable.factory(engine)
         self._tower = timeseries_table.TimeseriesTable.factory(engine)
@@ -61,44 +64,6 @@ class PlantData(object):
         self._version = 1
 
         self._status_labels = ["full", "unavailable"]
-
-        self._scada_std = {"time": "datetime64[ns]",
-                           "turbine_id": "string",
-                           "wgen_activepw_avg": "float64",
-                           "wnac_windspeed_avg": "float64",
-                           "wnac_winddirection_avg": "float64",
-                           "wrot_bladeposition_avg": "float64",
-                           "wnac_temout_avg": "float64",
-                           "status_label": "string"}
-
-        self._tower_std = {"time": "datetime64[ns]",
-                           "id": "string"}
-
-        self._meter_std = {"time": "datetime64[ns]",
-                           "power_kw": "float64",
-                           "energy_kwh": "float64"}
-
-        self._reanalysis_std = {"time": "datetime64[ns]",
-                                "windspeed_ms": "float64",
-                                "winddirection_deg": "float64",
-                                "rho_kgm-3": "float64"}
-
-        self._status_std = {"time": "datetime64[ns]",
-                            "id": "string",
-                            "status_id": "int64",
-                            "status_code": "int64",
-                            "status_text": "string"}
-
-        self._curtail_std = {"time": "datetime64[ns]",
-                             "curtailment_pct": "float64",
-                             "availability_pct": "float64",
-                             "net_energy": "float64"}
-
-        self._asset_std = {"id": "string",
-                           "latitude": "float64",
-                           "longitude": "float64",
-                           "rated_power_kw": "float64",
-                           "type": "string"}
 
         self._tables = ["_scada", "_meter", "_status", "_tower", "_asset", "_curtail", "_reanalysis"]
 
@@ -195,9 +160,10 @@ class PlantData(object):
 
     def ensure_columns(self):
         """Ensure all dataframes contain necessary columns and format as needed"""
-        for df in ["_scada", "_meter", "_status", "_tower", "_curtail"]:
-            if not getattr(self, df).is_empty():
-                getattr(self, df).ensure_columns(getattr(self, "%s_std" % (df,)))
+        for df in self._schema["fields"]:
+            attr = "_{}".format(df["name"])
+            if not getattr(self, attr).is_empty():
+                getattr(self, attr).ensure_columns(df["fields"])
 
     def merge_asset_metadata(self):
         """Merge metadata from the asset table into the scada and tower tables"""
