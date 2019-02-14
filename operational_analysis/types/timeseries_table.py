@@ -183,10 +183,12 @@ class PandasTimeseriesTable(AbstractTimeseriesTable):
         df_schema = self.schema
         for field in schema["fields"]:
             if field["name"] in df_schema.keys():
-                assert(df_schema[field["name"]] == field["type"], "Incompatible type for field {}. Expected {} but got {}".format(field["name"], field["type"], df_schema[field["name"]]))
+                assert df_schema[field["name"]] == field["type"], \
+                    "Incompatible type for field {}. Expected {} but got {}".format( \
+                        field["name"], field["type"], df_schema[field["name"]])
                 del df_schema[field["name"]]
 
-        assert(len(df_schema) == 0, "Extra columns are present in TimeseriesTable: \n {}".format(df_schema))
+        assert len(df_schema) == 0, "Extra columns are present in TimeseriesTable: \n {}".format(df_schema)
 
         return True
 
