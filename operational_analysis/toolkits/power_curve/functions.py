@@ -110,21 +110,14 @@ def gam(windspeed_column, power_column, winddir_column = None, airdens_column = 
         :obj:`function`: Python function of type (Array[float] -> Array[float]) implementing the power curve.
 
     """
-    # Determine X based on inputs to function:
-    # wind speed only
-    if (winddir_column is None) & (airdens_column is None):
-        X = windspeed_column
-    # wind speed and wind direction
-    elif (winddir_column is not None) & (airdens_column is None):    
-        X = pd.DataFrame(data = {'ws': windspeed_column, 'wd': winddir_column})
-    # wind speed and air density
-    elif (winddir_column is None) & (airdens_column is not None):    
-        X = pd.DataFrame(data = {'ws': windspeed_column, 'dens': airdens_column})    
-    # all 3
-    elif (winddir_column is not None) & (airdens_column is not None):    
-        X = pd.DataFrame(data = {'ws': windspeed_column, 
-                                 'wd': winddir_column,
-                                 'dens': airdens_column}) 
+    # create dataframe input to LinearGAM
+    X = pd.DataFrame({'ws': windspeed_column})
+    if winddir_column:
+        X['wd'] = winddir_column
+    if airdens_column:
+        X['dens'] = airdens_column
+
+
     # Set response
     y = power_column.values
     
