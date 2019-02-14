@@ -159,11 +159,28 @@ class PlantData(object):
                     setattr(self, ca, ci)
 
     def ensure_columns(self):
-        """Ensure all dataframes contain necessary columns and format as needed"""
+        """@deprecated Ensure all dataframes contain necessary columns and format as needed"""
         for df in self._schema["fields"]:
             attr = "_{}".format(df["name"])
             if not getattr(self, attr).is_empty():
                 getattr(self, attr).ensure_columns(df["fields"])
+
+
+    def validate(self, schema=None):
+
+        """Validate this plant data object against its schema. Returns True if valid, Rasies an exception if not valid."""
+
+        if not schema:
+            schema = self._schema
+
+        for field in schema["fields"]:
+            if field["type"] == "timeseries":
+                attr = "_{}".format(field["name"])
+                if not getattr(self, attr).is_empty():
+                    getattr(self, attr).validate(field)
+
+        return True
+
 
     def merge_asset_metadata(self):
         """Merge metadata from the asset table into the scada and tower tables"""

@@ -97,6 +97,10 @@ class AbstractTimeseriesTable:
     def metric_fields(self):
         return self._metric_fields
 
+    @property
+    def schema(self):
+        raise NotImplementedError("Called method on abstract class")
+
 
 # These inherited classes implement it
 class PandasTimeseriesTable(AbstractTimeseriesTable):
@@ -144,7 +148,7 @@ class PandasTimeseriesTable(AbstractTimeseriesTable):
         self.df[to] = self.df[fro]
 
     def ensure_columns(self, std):
-        """ Set column types to specified type
+        """ @deprecated Set column types to specified type
 
         Args:
             std (dict):
@@ -158,6 +162,33 @@ class PandasTimeseriesTable(AbstractTimeseriesTable):
                     self.df[col] = None
             self.df[col] = self.df[col].astype(std[col])
         self.df = self.df[list(std.keys())]
+
+    @property
+    def schema(self):
+        """ Return schema of this dataframe as a dictionary.
+
+        Returns:
+            (dict): {column_name(str): column_type(str)}
+        """
+        return {col: str(t) for col, t in zip(self.df, self.df.dtypes)}
+
+    def validate(self, schema):
+        """ Validate this timeseriestable object against its schema.
+        
+        Returns:
+            (bool): True if valid, Rasies an exception if not valid."""
+        if schema["type"] != "timeseries":
+            raise Exception("Incompatible schema type {} applied to TimeseriesTable".format(schema["type"]))
+
+        df_schema = self.schema
+        for field in schema["fields"]:
+            if field["name"] in df_schema.keys():
+                assert(df_schema[field["name"]] == field["type"], "Incompatible type for field {}. Expected {} but got {}".format(field["name"], field["type"], df_schema[field["name"]]))
+                del df_schema[field["name"]]
+
+        assert(len(df_schema) == 0, "Extra columns are present in TimeseriesTable: \n {}".format(df_schema))
+
+        return True
 
     def is_empty(self):
         """ Test if data is None
