@@ -34,7 +34,7 @@ class PlantData(object):
     prepare() and other methods.
     """
 
-    def __init__(self, path, name, engine="pandas", schema="plant_schema.json", toolkit=["pruf_analysis"]):
+    def __init__(self, path, name, engine="pandas", toolkit=["pruf_analysis"], schema=None):
         """
         Create a plant data object without loading any data.
 
@@ -47,7 +47,10 @@ class PlantData(object):
         Returns:
             New object
         """
-        with open(schema, "r") as schema_file:
+        if not schema:
+            dir = os.path.dirname(os.path.abspath(__file__))
+            schema = dir+"/plant_schema.json"
+        with open(schema) as schema_file:
             self._schema = json.load(schema_file)
 
         self._scada = timeseries_table.TimeseriesTable.factory(engine)

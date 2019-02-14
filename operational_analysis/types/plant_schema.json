@@ -22,7 +22,7 @@
 
         {"name": "wnac_windspeed_avg", "type": "float64", "unit":"m/s"},
         {"name": "wnac_winddirection_avg", "type": "float64", "unit":"deg"},
-        {"name": "wnac_temout_avg", "type": "float64", "unit":"deg celsius"},
+        {"name": "wnac_temout_avg", "type": "float64", "unit":"deg celsius"}
 
       ]
     },
@@ -35,7 +35,7 @@
         {"name": "time", "type":"datetime64[ns]", "required":true, "description": "end of bin"},
         {"name": "asset_id", "type":"int64", "required":true, "description":"foreign key to asset table"},
 
-        {"name": "wmet_winddirection_avg", "type":"float64", "unit":"deg"},
+        {"name": "wmet_winddirection_avg", "type":"float64", "unit":"deg"}
 
       ]
     },
@@ -48,7 +48,7 @@
         {"name": "time", "type":"datetime64[ns]", "required":true, "description": "end of bin"},
         {"name": "asset_id", "type":"int64", "required":true, "description":"foreign key to asset table"},
 
-        {"name": "wmet_winddirection_avg", "type":"float64", "unit":"deg"},
+        {"name": "wmet_winddirection_avg", "type":"float64", "unit":"deg"}
 
       ]
     },
@@ -59,7 +59,7 @@
       "fields": [
 
         {"name": "time", "type":"datetime64[ns]", "required":true, "description": "end of bin"},
-        {"name": "asset_id", "type":"int64", "required":true, "description":"foreign key to asset table"},
+        {"name": "asset_id", "type":"int64", "required":true, "description":"foreign key to asset table"}
 
       ]
     },
@@ -70,7 +70,7 @@
       "fields": [
 
         {"name": "time", "type":"datetime64[ns]", "required":true, "description": "end of bin"},
-        {"name": "asset_id", "type":"int64", "required":true, "description":"foreign key to asset table"},
+        {"name": "asset_id", "type":"int64", "required":true, "description":"foreign key to asset table"}
 
       ]
     },
@@ -81,7 +81,7 @@
       "fields": [
 
         {"name": "time", "type":"datetime64[ns]", "required":true, "description": "end of bin"},
-        {"name": "asset_id", "type":"int64", "required":true, "description":"foreign key to asset table"},
+        {"name": "asset_id", "type":"int64", "required":true, "description":"foreign key to asset table"}
 
       ]
     }
