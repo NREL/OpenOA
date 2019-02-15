@@ -20,6 +20,11 @@ from operational_analysis.toolkits import timeseries as tm
 from operational_analysis.toolkits import unit_conversion as un
 from operational_analysis.types import timeseries_table
 
+from operational_analysis import logged_method_call
+from operational_analysis import logging
+
+logger = logging.getLogger(__name__)
+
 
 class MonteCarloAEP(object):
     """
@@ -40,6 +45,7 @@ class MonteCarloAEP(object):
     The end result is a distribution of AEP results which we use to assess expected AEP and associated uncertainty
     """
 
+    @logged_method_call
     def __init__(self, plant, uncertainty_meter=0.005, uncertainty_losses=0.05,
                  uncertainty_loss_max=(10, 20), uncertainty_windiness=(10, 20), uncertainty_outlier=(2, 3.1),
                  uncertainty_nan_energy=0.01):
@@ -50,6 +56,8 @@ class MonteCarloAEP(object):
          plant(:obj:`PlantData object`): PlantData object from which PlantAnalysis should draw data.
 
         """
+        logger.info("Initializing MonteCarloAEP Analysis Object")
+
         self._monthly = timeseries_table.TimeseriesTable.factory(plant._engine)
         self._plant = plant  # defined at runtime
 
@@ -70,6 +78,7 @@ class MonteCarloAEP(object):
         # Run preprocessing step
         self.calculate_monthly_dataframe()
 
+    @logged_method_call
     def run(self, num_sim, reanal_subset):
         """
         Perform pre-processing of data into an internal representation for which the analysis can run more quickly.
@@ -80,10 +89,19 @@ class MonteCarloAEP(object):
         self.num_sim = num_sim
         self.reanal_subset = reanal_subset
 
-        self.calculate_long_term_losses()
+        # Write parameters of run to the log file
+        logged_self_params = ["uncertainty_meter", "uncertainty_losses","uncertainty_loss_max", "uncertainty_windiness",
+                              "uncertainty_outlier", "uncertainty_nan_energy", "num_sim", "reanal_subset"]
+        logged_params = {name: getattr(self, name) for name in logged_self_params}
+        logger.info("Running with parameters: {}".format(logged_params))
 
+        # Start the computation
+        self.calculate_long_term_losses()
         self.setup_monte_carlo_inputs()
         self.results = self.run_AEP_monte_carlo()
+
+        # Log the completion of the run
+        logger.info("Run completed")
 
     def plot_reanalysis_normalized_rolling_monthly_windspeed(self):
         """
@@ -231,6 +249,7 @@ class MonteCarloAEP(object):
 
         return plt
 
+    @logged_method_call
     def calculate_monthly_dataframe(self):
         """
         Perform pre-processing of the plant data to produce a monthly data frame to be used in AEP analysis.
@@ -259,6 +278,7 @@ class MonteCarloAEP(object):
                                                 np.isfinite(self._monthly.df.merra2) & 
                                                 np.isfinite(self._monthly.df.erai)]
 
+    @logged_method_call
     def process_revenue_meter_energy(self):
         """
         Initial creation of monthly data frame:
@@ -296,6 +316,7 @@ class MonteCarloAEP(object):
         else:
             self._monthly.df['num_days_actual'] = self._monthly.df['num_days_expected']
 
+    @logged_method_call
     def process_loss_estimates(self):
         """
         Append availability and curtailment losses to monthly data frame
@@ -347,6 +368,7 @@ class MonteCarloAEP(object):
         # By default, assume combined availability and curtailment losses are below the threshold to be considered valid
         self._monthly.df['combined_loss_valid'] = True
 
+    @logged_method_call
     def process_reanalysis_data(self):
         """
         Process reanalysis data for use in PRUF plant analysis
@@ -360,7 +382,6 @@ class MonteCarloAEP(object):
         Returns:
             (None)
         """
-
         # Define empty data frame that spans past our period of interest
         self._reanalysis_monthly = pd.DataFrame(index=pd.date_range(start='1997-01-01', end='2020-01-01',
                                                                     freq='MS'))
@@ -376,6 +397,7 @@ class MonteCarloAEP(object):
         self._monthly.df = self._monthly.df.join(
             self._reanalysis_monthly)  # Merge monthly reanalysis data to monthly energy data frame
 
+    @logged_method_call
     def trim_monthly_df(self):
         """
         Remove first and/or last month of data if the raw data had an incomplete number of days
@@ -390,6 +412,7 @@ class MonteCarloAEP(object):
             if self._monthly.df.loc[p, 'num_days_expected'] != self._monthly.df.loc[p, 'num_days_actual']:
                 self._monthly.df.drop(p, inplace=True)  # Drop the row from data frame
 
+    @logged_method_call
     def calculate_long_term_losses(self):
         """
         This function calculates long-term availability and curtailment losses based on the reported monthly data,
@@ -434,6 +457,7 @@ class MonteCarloAEP(object):
         # Assign long-term annual losses to plant analysis object
         self.long_term_losses = (avail_annual, curt_annual)
 
+    @logged_method_call
     def setup_monte_carlo_inputs(self):
         """
         Perform Monte Carlo sampling for reported monthly revenue meter energy, availability, and curtailment data,
@@ -468,6 +492,7 @@ class MonteCarloAEP(object):
                                 num_sim))  # Create extra long list of renanalysis product names to sample from
         self._mc_reanalysis_product = np.asarray(random.sample(reanal_list, num_sim))
 
+    @logged_method_call
     def filter_outliers(self, reanal, outlier_thresh, comb_loss_thresh):
         """
         This function filters outliers based on
@@ -521,6 +546,7 @@ class MonteCarloAEP(object):
         # Return result
         return valid_data
 
+    @logged_method_call
     def set_regression_data(self, n):
         """
         This will be called for each iteration of the Monte Carlo simulation and will do the following:
@@ -564,6 +590,7 @@ class MonteCarloAEP(object):
         # Return values needed for linear regression
         return [mc_wind_speed, mc_gross_norm]  # Return randomly sampled wind speed and normalized gross energy
 
+    @logged_method_call
     def run_regression(self, n):
         """
         Run robust linear regression between Monte-Carlo generated monthly gross energy and wind speed
@@ -593,6 +620,7 @@ class MonteCarloAEP(object):
         # Return slope and intercept values
         return np.float(mc_slope), np.float(mc_intercept)
 
+    @logged_method_call
     def run_AEP_monte_carlo(self):
         """
         Loop through OA process a number of times and return array of AEP results each time
@@ -627,6 +655,7 @@ class MonteCarloAEP(object):
         # Return final output
         return sim_results
 
+    @logged_method_call
     def sample_long_term_reanalysis(self, n, r):
         """
         This function returns the windiness-corrected monthly wind speeds based on the Monte-Carlo generated sample of:
@@ -662,6 +691,7 @@ class MonteCarloAEP(object):
         # Return result
         return ws_monthly
 
+    @logged_method_call
     def sample_long_term_losses(self, n):
         """
         This function calculates long-term availability and curtailment losses based on the Monte Carlo sampled
