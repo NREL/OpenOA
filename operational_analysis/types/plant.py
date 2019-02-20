@@ -163,10 +163,7 @@ class PlantData(object):
 
     def ensure_columns(self):
         """@deprecated Ensure all dataframes contain necessary columns and format as needed"""
-        for df in self._schema["fields"]:
-            attr = "_{}".format(df["name"])
-            if not getattr(self, attr).is_empty():
-                getattr(self, attr).ensure_columns(df["fields"])
+        raise NotImplementedError("ensure_columns has been deprecated. Use plant.validate instead.")
 
 
     def validate(self, schema=None):
