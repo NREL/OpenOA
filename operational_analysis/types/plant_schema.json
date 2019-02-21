@@ -16,9 +16,9 @@
         {"name": "id", "type":"string", "required":true, "description":"foreign key to asset table"},
 
         {"name": "power_kw", "type": "float64"},
-        {"name": "windspeed_ms", "type": "float64", "unit":"kw"},
+        {"name": "windspeed_ms", "type": "float64", "unit":"m/s"},
         {"name": "winddirection_deg", "type": "float64", "unit":"deg"},
-        {"name": "status_label", "type": "string", "unit":"m/s"},
+        {"name": "status_label", "type": "string"},
         {"name": "pitch_deg", "type": "float64", "unit":"deg"},
         {"name": "temp_c", "type": "float64", "unit":"deg celsius"}
 
