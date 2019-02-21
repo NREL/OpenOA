@@ -9,6 +9,54 @@ This module is a library of machine learning algorithms and associated
 hyperparameter ranges suitable for wind energy analysis. This module allows
 for simple implementation of hyperparameter optimization and the application of
 the best hyperparameter combinations for use in the predictive model. 
+
+For the most part, this toolkit is effectively a wrapper over SciKit-Learn machine
+learning algorithms that help ensure consistent and appropriate use of the 
+machine learning algorithms. Specifically, this toolkit constrains the following:
+    
+    1. The learning algorithms available 
+    
+    These include extremely randomized trees, gradient boosting, a generalized 
+    additive model (from pyGAM library, not SciKit-Learn) and a support vector 
+    machine. These algorithms have been used extensively at NREL and have been
+    found to provide robust results for a range of turbine and wind plant power
+    analyses.
+    
+    2. Hyperparameter ranges for optimizing algorithms
+    
+    Specific hyperparameter ranges for each algorithm are provided in this
+    toolkit. Similar to the learning algorithms, the hyperparameter ranges
+    are based on NREL's experience in applying these algorithms to several
+    turbine and wind plant energy analyses. 
+    
+    3. The type of grid search used for cross-validation
+    
+    Two main types of grid searches are generally used: 
+        exhaustive: in which all possible combinations of hyperparameters are 
+                     considered, and:
+        randomized: in which random combinations are chosen and capped at a 
+                    specified level
+        
+    In this toolkit, we implement randomized grid search only, due to the number 
+    of hyperparameters and the magnitude of ranges for certain algorithms. We set 
+    as default 20 randomized samples, although this can be customized within the call 
+    of the hyper_optimize function.
+    
+    4. The train-test split
+    
+    Hyperparameter optimization is performed through cross-validation of the 
+    feature and response data. By default, we assume k-fold cross-validation (i.e. 
+    data is randomly partitioned into 'k' equal-sized subsamples without reordering).
+    The default 'k' value used in this toolkit is 5 (i.e. 80%/20% train-test split).
+    Both the type of cross-validation and 'k' value can be customized within the call
+    of the hyper_optimize function.
+    
+    5. Model performance score
+    
+    When optimzing hyperparamters, model performance is assessed based on the 
+    coefficient of determination, or R2. The scorer can also be customized (e.g. RMSE)
+    within the call of the hyper_optimize function.
+       
 """
 
 class MachineLearningSetup(object):
@@ -24,7 +72,7 @@ class MachineLearningSetup(object):
                                 "min_samples_split": np.arange(2, 11),
                                 "min_samples_leaf": np.arange(1, 11),
                                 "n_estimators": np.arange(10,801,40)}
-            self.algorithm = ExtraTreesRegressor(**self.hyper_range)
+            self.algorithm = ExtraTreesRegressor()
         
         elif algorithm == 'gbm': # Gradient boosting model
             from sklearn.ensemble import GradientBoostingRegressor
@@ -32,19 +80,19 @@ class MachineLearningSetup(object):
                                 "min_samples_split": np.arange(2, 11),
                                 "min_samples_leaf": np.arange(1, 11),
                                 "n_estimators": np.arange(10,801,40)}
-            self.algorithm = GradientBoostingRegressor(**self.hyper_range)
+            self.algorithm = GradientBoostingRegressor()
         
         elif algorithm == 'gam': # Generalized additive model
             from pygam import GAM
             self.hyper_range = {'n_splines': np.arange(5,40)}
-            self.algorithm = GAM(**self.hyper_range)
+            self.algorithm = GAM()
         
         elif algorithm == 'svm': # Support vector machine
             from sklearn.svm import SVR
             self.hyper_range = {"C": [0.1, 1, 10, 50, 100],
                                 "gamma": [0.01, 0.1, 1, 10],
                                 "kernel": ['poly', 'rbf', 'sigmoid']}
-            self.algorithm = SVR(**self.hyper_range)
+            self.algorithm = SVR()
         
         # Set scorer as R2
         self.my_scorer = make_scorer(r2_score, greater_is_better = True)
