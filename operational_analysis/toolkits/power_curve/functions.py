@@ -94,46 +94,56 @@ def logistic_5_parametric(windspeed_column, power_column):
                                       bounds=((1200, 1800), (-10, -1e-3), (1e-3, 30), (1e-3, 1), (1e-3, 10)))
 
 
-def gam(windspeed_column, power_column, winddir_column = None, airdens_column = None, n_splines=20):
+def gam(windspeed_column, power_column, n_splines=20):
     """
-    Use a generalized additive model to fit power to at least wind speed, but also potentially
-    wind direction and air density
+    Use a generalized additive model to fit power to wind speed.
 
     Args:
-        windspeed_column (:obj:`pandas.Series`): wind speed feature column
-        power_column (:obj:`pandas.Series`): power response column
-        winddir_column (:obj:`pandas.Series`): wind direction feature column
-        airdens_column (:obj:`pandas.Series`): air density feature column
+        windspeed_column (:obj:`pandas.Series`): Wind speed feature column
+        power_column (:obj:`pandas.Series`): Power response column
         n_splines (:obj:`int`): number of splines to use in the fit
 
     Returns:
         :obj:`function`: Python function of type (Array[float] -> Array[float]) implementing the power curve.
 
     """
-    # Determine X based on inputs to function:
-    # wind speed only
-    if (winddir_column is None) & (airdens_column is None):
-        X = windspeed_column
-    # wind speed and wind direction
-    elif (winddir_column is not None) & (airdens_column is None):    
-        X = pd.DataFrame(data = {'ws': windspeed_column, 'wd': winddir_column})
-    # wind speed and air density
-    elif (winddir_column is None) & (airdens_column is not None):    
-        X = pd.DataFrame(data = {'ws': windspeed_column, 'dens': airdens_column})    
-    # all 3
-    elif (winddir_column is not None) & (airdens_column is not None):    
-        X = pd.DataFrame(data = {'ws': windspeed_column, 
-                                 'wd': winddir_column,
-                                 'dens': airdens_column}) 
+    # Fit the model
+    return LinearGAM(n_splines=n_splines).\
+        fit(windspeed_column.values, power_column.values).\
+        predict
+
+
+
+def gam_3param(windspeed_column, winddir_column, airdens_column, power_column, n_splines=20):
+    """
+    Use a generalized additive model to fit power to wind speed, wind direction and air density.
+
+    Args:
+        windspeed_column (:obj:`pandas.Series`): Wind speed feature column
+        power_column (:obj:`pandas.Series`): Power response column
+        winddir_column (:obj:`pandas.Series`): Optional. Wind direction feature column
+        airdens_column (:obj:`pandas.Series`): Optional. Air density feature column
+        n_splines (:obj:`int`): number of splines to use in the fit
+
+    Returns:
+        :obj:`function`: Python function of type (Array[float] -> Array[float]) implementing the power curve.
+
+    """
+    # create dataframe input to LinearGAM
+    X = pd.DataFrame({'ws': windspeed_column,
+                      'wd': winddir_column,
+                      'dens': airdens_column})
+
     # Set response
     y = power_column.values
-    
+
     # Fit the model
     s = LinearGAM(n_splines=n_splines).fit(X, y)
 
-    # Create a closure over the spline fit which computes the power curve value for arbitrary array-like input
-    def pc_spline(xx):
-        P = s.predict(xx)
-        return P
-
-    return pc_spline
+    # Wrap the prediction function in a closure to pack input variables
+    def predict(windspeed_column, winddir_column, airdens_column):
+        X = pd.DataFrame({'ws': windspeed_column,
+                          'wd': winddir_column,
+                          'dens': airdens_column})
+        return s.predict(X)
+    return predict

@@ -15,7 +15,6 @@ class TestPowerCurveFunctions(unittest.TestCase):
         params = [1300, -7, 11, 2, 0.5]
         self.x = pd.Series(np.random.random(100) * 30)
         self.y = pd.Series(logistic5param(self.x, *params) + np.random.random(100) * noise)
-        pass
 
     def test_IEC(self):
         # Create test data using logistic5param form
@@ -35,8 +34,15 @@ class TestPowerCurveFunctions(unittest.TestCase):
         # Create test data using logistic5param form
         curve = power_curve.gam(windspeed_column = self.x, power_column = self.y, n_splines = 20)
         y_pred = curve(self.x)
-        print(y_pred[0:5])
-        print(self.y[0:5])
+        # Does the spline-fit power curve match the test data?
+        nptest.assert_allclose(self.y, y_pred, rtol=0.05, atol = 20, err_msg="Power curve did not properly fit.")
+
+    def test_3paramgam(self):
+        # Create test data using logistic5param form
+        winddir = np.random.random(100)
+        airdens = np.random.random(100)
+        curve = power_curve.gam_3param(windspeed_column = self.x, winddir_column=winddir, airdens_column=airdens, power_column = self.y, n_splines = 20)
+        y_pred = curve(self.x, winddir, airdens)
         # Does the spline-fit power curve match the test data?
         nptest.assert_allclose(self.y, y_pred, rtol=0.05, atol = 20, err_msg="Power curve did not properly fit.")
 
