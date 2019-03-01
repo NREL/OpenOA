@@ -32,6 +32,12 @@ class TurbineLongTermGrossEnergy(object):
     that this gross energy metric does not back out losses associated with waking or turbine performance.
     Rather, gross energy in this context is what turbine would have produced under normal operation 
     (i.e. excluding downtime and underperformance).
+
+    Required schema of PlantData:
+            _scada_freq
+            Reanalysis: merra2, erai, ncep2 with columns ['time', 'u_ms', 'v_ms', 'windspeed_ms', 'rho_kgm-3']
+            Scada: columns: ['time', 'id', 'windspeed_ms', 'power_kw', 'energy_kw']
+
     """
 
     @logged_method_call
