@@ -283,10 +283,10 @@ class TurbineLongTermGrossEnergy(object):
                 df = mod_dict[t, r]
                 
                 # Consider wind speed, wind direction, and air density as features
-                mod_results[t, r] = functions.gam(windspeed_column = df['windspeed_ms'], 
-                                                  winddir_column = df['winddirection_deg'],
-                                                  airdens_column = df['rho_kgm-3'],
-                                                  power_column=df['energy_kwh'])
+                mod_results[t, r] = functions.gam_3param(windspeed_column = df['windspeed_ms'],
+                                                         winddir_column = df['winddirection_deg'],
+                                                         airdens_column = df['rho_kgm-3'],
+                                                         power_column=df['energy_kwh'])
         
     def apply_model_to_lt(self):
         """
