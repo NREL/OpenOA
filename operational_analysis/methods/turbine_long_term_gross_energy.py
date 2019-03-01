@@ -309,10 +309,10 @@ class TurbineLongTermGrossEnergy(object):
         for r in self._reanal: # Loop throuh reanalysis products
             daily_reanal = self._daily_reanal_dict[r]
             turb_gross[r] = pd.DataFrame(index = daily_reanal.index) # Set empty data frame to store results
-            X_long_term = daily_reanal[['windspeed_ms', 'winddirection_deg', 'rho_kgm-3']] # Set relevant features
+            X_long_term = daily_reanal['windspeed_ms'], daily_reanal['winddirection_deg'], daily_reanal['rho_kgm-3']
             
             for t in self._turbs: # Loop through turbines
-                turb_gross[r].loc[:, t] = mod_results[t, r](X_long_term) # Apply GAM fit to long-term reanalysis data
+                turb_gross[r].loc[:, t] = mod_results[t, r](*X_long_term) # Apply GAM fit to long-term reanalysis data
             
             turb_annual = turb_gross[r].resample('AS').sum() # Calculate annual sums of energy from long-term estimate4
             self._summary_results.loc[r, :] = turb_annual.mean(axis = 0) # Store mean annual gross energy in data frame
