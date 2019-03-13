@@ -1,4 +1,4 @@
-__version__ = "1.0"
+__version__ = "1.1"
 
 import json
 import logging
@@ -23,3 +23,23 @@ def setup_logging(default_path='logging.json',
 
 
 setup_logging()
+
+
+def logged_method_call(the_method, msg="call"):
+
+    def _wrapper(self, *args, **kwargs):
+        logger = logging.getLogger(the_method.__module__)
+        logger.debug("{}#{}.{}: {}".format(self.__class__.__name__, id(self), the_method.__name__, msg))
+        return the_method(self, *args, **kwargs)
+
+    return _wrapper
+
+
+def logged_function_call(the_function, msg="call"):
+
+    def _wrapper(*args, **kwargs):
+        logger = logging.getLogger(the_function.__module__)
+        logger.debug("{}: {}".format(the_function.__name__, msg))
+        return the_function(*args, **kwargs)
+
+    return _wrapper

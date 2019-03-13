@@ -15,4 +15,10 @@ Plant Level Analysis
     :undoc-members:
     :show-inheritance:
 
-ß
+Turbine Level Analysis
+-----------------------
+
+.. automodule:: operational_analysis.methods.turbine_long_term_gross_energy
+    :members:
+    :undoc-members:
+    :show-inheritance:

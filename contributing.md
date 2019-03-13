@@ -1,68 +1,73 @@
 
-Contributing (Internal Version)
-===============================
+Contributing 
+============
 
-## Change Request Process
+## Issue Tracking
 
-### Methodology Changes
+New feature requests, changes, enhancements, non-methodology features, and bug reports can be filed as new issues in the
+[Github.com issue tracker](https://github.com/NREL/OpenOA/issues) at any time. Please be sure to fully describe the
+issue.
 
-The canonical documentation for the pruf analysis methodology is located in the
-[Operational Analysis Report](https://github.nrel.gov/Benchmarking/operational-analysis-report) repository.
-Any changes to the analysis methodology should be discussed there or offline. Once a methodology change is decided,
-create new tickets in this repository towards implementing the change.
+For other issues, please email the OpenOA distribution list at `openoa@nrel.gov`.
 
-### Bug Reports
+## Repository
 
-Submit bugs as new issues assigned to the current project.
+The OpenOA repository is hosted on Github, and located here: http://github.com/NREL/OpenOA
 
-### Enhancements
+This repository is organized using a modified git-flow system. Branches are organized as follows:
 
-Submit enhancements / non-methodology feature requests as new issues assigned to any future project.
-
-### Iterations
-
-Every Thursday we will have a standup meeting to discuss new tickets, assess progress on active tickets, and assess our
-progress towards the release date.
-
-## Git Repository
-
-### Branch Layout
-
-This repository is organized using the git-flow system. Branches are more-or-less organized as follows:
-
-- master: Current release including all hotfixes.
 - release/xxx: Development branches targeting a specific release. Tests should pass, but code may be unstable.
-- feature/issue-xxx: Branch of active release branch, must reference a github issue number. Feel free to commit broken code to your own branch.
+- feature/issue-xxx: Branch of active release branch, must reference a github issue number.
+Features branches are not automatically tested and may contain broken code. Feel free to commit broken code to your own branch.
 
-To work on a feature, please make a branch of the active release branch. Work out of that branch before submitting a pull request.
-Complete pull requests should include both updated documentation and pass all unit tests.
+Please note that our public repository does not have a master or a develop branch. Those branches are hosted on a
+separate, private repository for the NREL team.
 
-### Pull Requests
+To work on a feature, please make a new feature branch based on the target release branch. If you're working externally
+to NREL, please fork OpenOA first and then create a feature branch in your own copy of the repository.
+Work out of the feature branch before submitting a pull request. Be sure to periodically merge the target release
+branch into your feature branch to avoid conflicts in the pull request.
 
-Pull requests must be made for any changes to be merged into release or master branches.
+When the feature branch is ready, make a pull request through the Github.com UI.
+
+## Pull Request
+
+Pull requests must be made for any changes to be merged into release branches.
+They must include updated documentation and pass all unit tests and integration tests.
+In addition, code coverage should not be negatively affected by the pull request.
 
 **Scope:** Encapsulate the changes of ideally one, or potentially a couple, issues. It is greatly preferable
 to submit three small pull requests than it is to submit one large pull request. Write a complete description of these
 changes in the pull request body.
 
-**Tests:** Pass all tests as defined in Readme.md. Pull requests will be rejected if tests do not pass.
+**Tests:** Must pass all tests. Pull requests will be rejected if tests do not pass.
 
-**Documentation:** Include any relevant changes to inline documentation.
+**Documentation:** Include any relevant changes to inline documentation, as well as any changes to the RST files
+located in /sphinx.
 
-**Coverage:** Jenkins will report the change in test coverage upon successful build. Ensure this number is not negative.
+**Coverage:** The testing framework (described below) will generate a coverage report. Please ensure that your
+work is fully covered.
 
-### Issues
+## Coding Style
 
-New features, changes, and bug reports can be filed as new issues at any time. Do your best to place the issue into a
-relevant milestone and project. Care should be taken when submitting new issues close to a release date.
-Any new issues in the current active project should be discussed at the next standup.
+This code follows the PEP 8 style guide and uses the ``pycodestyle`` linter to check for compliance.
+The only exception is the line length limit of 120 characters.
 
-### Projects
+```
+pylint --max-line-length=120 operational_analysis
+```
 
-The project board contains all of the Issues we're working towards in a given Milestone Iteration.
-Ideally, we only update project boards during weekly standups.
+## Documentation Style
 
-### Milestones
+Documentation is written using RST, and is located both inline and within the /sphinx directory.
+Any changes to the analysis methodology should be discussed there or offline. Once a methodology change is decided,
+create new tickets in this repository towards implementing the change.
 
-Deadlines for releases. Milestones represent large goals for feature sets / use cases of the software.
-We discuss milestone goals at weekly standups and can change them at PRUF internal meetings.
+## Testing
+
+OpenOA uses pytest and the built in unittest framework. To run tests, navigate to the OpenOA directory and run:
+
+```
+python setup.py test
+```
+
