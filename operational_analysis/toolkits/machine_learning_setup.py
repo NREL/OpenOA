@@ -87,13 +87,6 @@ class MachineLearningSetup(object):
             self.hyper_range = {'n_splines': np.arange(5,40)}
             self.algorithm = GAM()
         
-        elif algorithm == 'svm': # Support vector machine
-            from sklearn.svm import SVR
-            self.hyper_range = {"C": [0.1, 1, 10, 50, 100],
-                                "gamma": [0.01, 0.1, 1, 10],
-                                "kernel": ['poly', 'rbf', 'sigmoid']}
-            self.algorithm = SVR()
-        
         # Set scorer as R2
         self.my_scorer = make_scorer(r2_score, greater_is_better = True)
 
