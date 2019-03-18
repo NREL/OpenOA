@@ -22,14 +22,18 @@ class TestMLToolkit(unittest.TestCase):
         # Create simple power relationship with feature variables
         self.y = self.x3 * np.power(self.x1,3) * np.log(self.x2) / 6 # Units of kW
 
-    def test_etr(self):
-    # Test different algorithms hyperoptimization and fitting results
-    # Hyperparameter optimization is based on randomized grid search, so pass criteria is not stringent
-    
-        algorithms = ['etr', 'gbm', 'gam'] # Define algorithms
-        
+    def test_algorithms(self):
+        # Test different algorithms hyperoptimization and fitting results
+        # Hyperparameter optimization is based on randomized grid search, so pass criteria is not stringent
+        np.random.seed(42)
+
+        # Specify expected mean power, R2 and RMSE from the fits
+        required_metrics = {'etr': (0.999852, 125.53987),
+                            'gbm': (0.999999, 0.45794),
+                            'gam': (0.983174, 1312.87460)}
+
         # Loop through algorithms
-        for a in algorithms:
+        for a in required_metrics.keys():
             ml = MachineLearningSetup(a) # Setup ML object
             
             # Perform randomized grid search only once for efficiency
@@ -41,22 +45,18 @@ class TestMLToolkit(unittest.TestCase):
             # Compute performance metrics which we'll test
             corr = np.corrcoef(self.y, y_pred)[0,1] # Correlation between predicted and actual power
             rmse = np.sqrt(mean_squared_error(self.y, y_pred)) # RMSE between predicted and actual power
-            
-            # Specify desired accuracy of model fit           
-            desired_corr = 0.95 # Correlation
-            desired_rmse = 2000.0 # RMSE in kW
-            
-            # Test power sum in GW is within 3 decimal places
-            nptest.assert_almost_equal(self.y.sum()/1e6, y_pred.sum()/1e6, decimal = 3, 
+
+            # Mean power in GW is within 3 decimal places
+            nptest.assert_approx_equal(self.y.sum()/1e6, y_pred.sum()/1e6, significant = 3, 
                                        err_msg="Sum of predicted and actual power not close enough")
             
             # Test correlation of model fit
-            nptest.assert_array_less(desired_corr, corr, 
-                                     err_msg="Correlation between features and response not high enough")
+            nptest.assert_approx_equal(corr, required_metrics[a][0], significant = 4,
+                                     err_msg="Correlation between features and response is wrong")
             
             # Test RMSE of model fit
-            nptest.assert_array_less(rmse, desired_rmse, 
-                                     err_msg="RMSE of model fit not low enough")
+            nptest.assert_approx_equal(rmse, required_metrics[a][1], significant = 3,
+                                     err_msg="RMSE of model fit is wrong")
 
     def tearDown(self):
         pass
