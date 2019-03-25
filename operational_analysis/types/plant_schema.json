@@ -1,0 +1,92 @@
+{
+  "name": "PlantData",
+  "description": "Schema for OpenOA PlantData objects",
+  "version": 0.1,
+  "fields": [
+    {
+      "name": "scada",
+      "type": "timeseries",
+      "description": "SCADA data at fixed time interval from all turbines in plant",
+      "metadata": [
+        {"name": "frequency", "type": "float64", "required":true, "description":"Frequency of this table in Hz"}
+      ],
+      "fields": [
+
+        {"name": "time", "type":"datetime64[ns]", "required":true, "description":"end of bin"},
+        {"name": "id", "type":"string", "required":true, "description":"foreign key to asset table"},
+
+        {"name": "power_kw", "type": "float64"},
+        {"name": "windspeed_ms", "type": "float64", "unit":"m/s"},
+        {"name": "winddirection_deg", "type": "float64", "unit":"deg"},
+        {"name": "status_label", "type": "string"},
+        {"name": "pitch_deg", "type": "float64", "unit":"deg"},
+        {"name": "temp_c", "type": "float64", "unit":"deg celsius"}
+
+      ]
+    },
+    {
+      "name": "tower",
+      "type": "timeseries",
+      "description": "SCADA data at fixed time interval from met towers included with the plant",
+      "fields": [
+
+        {"name": "time", "type":"datetime64[ns]", "required":true, "description": "end of bin"},
+        {"name": "id", "type":"string", "required":true, "description":"foreign key to asset table"}
+
+      ]
+    },
+    {
+      "name": "meter",
+      "type": "timeseries",
+      "description": "SCADA data at fixed time interval from met towers included with the plant",
+      "fields": [
+
+        {"name": "time", "type":"datetime64[ns]", "required":true, "description": "end of bin"},
+        {"name": "power_kw", "type":"int64", "description":"power in kw"},
+        {"name": "energy_kwh", "type":"float64", "unit":"kw/h"}
+
+      ]
+    },
+    {
+      "name": "status",
+      "type": "timeseries",
+      "description": "SCADA data at fixed time interval from met towers included with the plant",
+      "fields": [
+
+        {"name": "time", "type":"datetime64[ns]", "required":true, "description": "end of bin"},
+        {"name": "id", "type":"string", "required":true, "description":"foreign key to asset table"},
+        {"name": "status_id", "type": "int64"},
+        {"name": "status_code", "type": "int64"},
+        {"name": "status_text", "type": "string"}
+      ]
+    },
+    {
+      "name": "curtail",
+      "type": "timeseries",
+      "description": "SCADA data at fixed time interval from met towers included with the plant",
+      "fields": [
+
+        {"name": "time", "type":"datetime64[ns]", "required":true, "description": "end of bin"},
+        {"name": "curtailment_pct", "type":"float64",  "description":"percent of plant that is curtailed"},
+        {"name": "curtailment_kwh", "type":"float64",  "description":"kwh of plant that is curtailed"},
+        {"name": "availability_pct", "type": "float64"},
+        {"name": "availability_kwh", "type": "float64"},
+        {"name": "net_energy", "type": "float64"}
+
+      ]
+    },
+    {
+      "name": "asset",
+      "type": "table",
+      "description": "SCADA data at fixed time interval from met towers included with the plant",
+      "fields": [
+
+        {"name": "id", "type":"string", "required":true, "description":"primary unique key"},
+        {"name": "latitude", "type": "float64"},
+        {"name": "longitude", "type": "float64"},
+        {"name": "rated_power_kw", "type": "float64"},
+        {"name": "type", "type": "string"}
+      ]
+    }
+  ]
+}
