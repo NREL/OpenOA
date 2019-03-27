@@ -1,8 +1,8 @@
 OpenOA
 ======
 
-master: [![Build Status](https://travis-ci.org/NREL/OpenOA.svg?branch=master)](https://travis-ci.org/NREL/OpenOA)
-develop: [![Build Status](https://travis-ci.org/NREL/OpenOA.svg?branch=develop)](https://travis-ci.org/NREL/OpenOA)
+- master: [![Build Status](https://travis-ci.org/NREL/OpenOA.svg?branch=master)](https://travis-ci.org/NREL/OpenOA)
+- develop: [![Build Status](https://travis-ci.org/NREL/OpenOA.svg?branch=develop)](https://travis-ci.org/NREL/OpenOA)
 
 This library provides a generic framework for working with large timeseries data from wind plants. Its development
 has been motivated by the WP3 Benchmarking (PRUF) project, which aims to provide a reference implementation for
