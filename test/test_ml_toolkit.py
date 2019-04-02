@@ -37,7 +37,7 @@ class TestMLToolkit(unittest.TestCase):
         if sys.version_info >= (3, 0):
             required_metrics = {'etr': (0.999852, 125.53987),
                                 'gbm': (0.999999, 28.663720),
-                                'gam': (0.983174, 1312.87460)}
+                                'gam': (0.983174, 1324.01188)}
 
         # Loop through algorithms
         for a in required_metrics.keys():
