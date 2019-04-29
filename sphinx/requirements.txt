@@ -1,0 +1,4 @@
+# Requirements for the OpenOA documentation
+sphinx==1.5.6
+sphinxcontrib-napoleon==0.6.1
+sphinx_rtd_theme==0.2.4
