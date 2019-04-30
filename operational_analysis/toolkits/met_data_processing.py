@@ -50,7 +50,7 @@ def compute_air_density(df, temp_col, pres_col, humi_col = 'default'):
     Calculate air density from the ideal gas law based on the definition provided by IEC 61400-12
     given pressure, temperature and relative humidity.
     This function assumes temperature and pressure are reported in standard units of measurement
-    (i.e. Kelvin for temperature, Pascal for pressure, humidity has no dimension)
+    (i.e. Kelvin for temperature, Pascal for pressure, humidity has no dimension).
     Humidity values are optional. According to the IEC a humiditiy of 50% (0.5) is set as default value. 
 
     Args:
