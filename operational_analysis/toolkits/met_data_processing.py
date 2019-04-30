@@ -45,26 +45,38 @@ def compute_u_v_components(wind_speed, wind_dir):
     return u, v
 
 
-def compute_air_density(df, temp_col, pres_col):
+def compute_air_density(df, temp_col, pres_col, humi_col = 'default'):
     """
-    Calculate air density from the ideal gas law given pressure and temperature.
+    Calculate air density from the ideal gas law based on the definition provided by IEC 61400-12
+    given pressure, temperature and relative humidity.
     This function assumes temperature and pressure are reported in standard units of measurement
-    (i.e. Kelvin for temperature, Pascal for pressure)
+    (i.e. Kelvin for temperature, Pascal for pressure, humidity has no dimension)
+    Humidity values are optional. According to the IEC a humiditiy of 50% (0.5) is set as default value. 
 
     Args:
         df(:obj:`pandas.DataFrame`): the input data frame with temperature and pressure data
         temp_col(:obj:`string`): column in <df> with temperature values; units of Kelvin
         pres_col(:obj:`string`): column in <df> with pressure values; units of Pascals
+        humi_col(:obj:`string`): optional column in <df> with relative humidity values; dimensionless (range 0 to 1) 
 
     Returns:
         :obj:`pandas.Series`: Rho, calcualted air density; units of kg/m3
     """
+    # Check if humidity column is provided and create default df (0.5) if necessary
+    if humi_col in df:
+        rel_humidity = df.loc[:, [humi_col]]
+    else:
+        rel_humidity = pd.DataFrame([0.5]*df[temp_col].shape[0],columns=[humi_col], index=df.index)
+        df['default'] = [0.5]*df[temp_col].shape[0]
     # Send exception if any negative data found
-    if (df.loc[df[temp_col] < 0].shape[0] > 0) | (df.loc[df[pres_col] < 0].shape[0] > 0):
-        raise Exception('Some of your temperature of pressure data is negative. Check your data')
+    if (df.loc[df[temp_col] < 0].shape[0] > 0) | (df.loc[df[pres_col] < 0].shape[0] > 0 
+       | (rel_humidity.loc[rel_humidity[humi_col] < 0].shape[0] > 0)):
+        raise Exception('Some of your temperature, pressure or humidity data is negative. Check your data.')
 
-    R_const = 287.058  # Gas constant for dry air, units of J/kg/K
-    rho = df[pres_col] / df[temp_col] / R_const
+    R_const = 287.05  # Gas constant for dry air, units of J/kg/K
+    Rw_const = 461.5   # Gas constant of water vapour, unit J/kg/K
+    rho = ((1/df[temp_col])*(df[pres_col]/R_const-rel_humidity[humi_col]*(0.0000205*np.exp(0.0631846*df[temp_col]))*
+            (1/R_const-1/Rw_const)))
 
     return rho
 
