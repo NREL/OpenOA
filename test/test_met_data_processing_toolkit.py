@@ -37,7 +37,7 @@ class SimpleMetProcessing(unittest.TestCase):
         df = pd.DataFrame(data={'temp': np.arange(280, 300, 5), 'pres': np.arange(90000, 110000, 5000)})
 
         rho = mt.compute_air_density(df, 'temp', 'pres')  # Test result
-        rho_ans = np.array([1.11973, 1.16121, 1.20125, 1.23993])  # Expected result
+        rho_ans = np.array([1.11744, 1.1581 , 1.19706, 1.23427])  # Expected result
 
         nptest.assert_array_almost_equal(rho, rho_ans, decimal=5)
 
