@@ -1,0 +1,15 @@
+# Requirements for the OpenOA documentation
+eia-python==1.22
+geopandas==0.4.0
+numpy==1.15.4
+pandas==0.23.4
+pygam==0.8.0
+scipy==1.1.0
+statsmodels==0.9.0
+tqdm==4.28.1
+
+# not included in main requirements
+m2r==0.2.1
+sphinx==2.0.0
+sphinxcontrib-napoleon==0.6.1
+sphinx_rtd_theme==0.2.4
