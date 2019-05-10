@@ -23,7 +23,7 @@ in the ‘examples/operational_AEP_analysis/data’ folder or in
 ‘examples/operational_AEP_analysis/data/example_eia_data’ depending on
 how the zip file was unzipped.
 
-.. code:: ipython2
+.. code:: python
 
     # Import required packages
     import os
@@ -48,12 +48,12 @@ In the call below, make sure the appropriate path to the CSV input files
 is specfied. In this example, the CSV files are located directly in the
 ‘examples/operational_AEP_analysis/data’ folder.
 
-.. code:: ipython2
+.. code:: python
 
     # Load plant object
     project = Project_EIA('./data')
 
-.. code:: ipython2
+.. code:: python
 
     # Prepare data
     project.prepare()
@@ -76,7 +76,7 @@ individually by removing the first ‘#’ or comment sign from one of the
 lines below. As an example, the first few rows of the meter data is
 shown below:
 
-.. code:: ipython2
+.. code:: python
 
     # Review plant data
     project._meter.df.head() # Metered energy data
@@ -156,7 +156,7 @@ The raw plant data can be in different time resolutions. The following
 steps process the data into monthly averages and combine them into a
 single ‘monthly’ data frame to be used in the OA assessment.
 
-.. code:: ipython2
+.. code:: python
 
     # Create plant analysis object
     pa = plant_analysis.PlantAnalysis(project)
@@ -180,7 +180,7 @@ of days in the month (useful for normalizing monthly gross energy later)
 - num_days_actual : actual number of days per month as found in the data
 (used when trimming monthly data frame)
 
-.. code:: ipython2
+.. code:: python
 
     # View the monthly data frame
     pa._monthly.df.head()
@@ -374,7 +374,7 @@ good first look at data quality.
 The plot shows that 3 of the reanalysis products track each other
 reasonably well and seem well-suited for the analysis.
 
-.. code:: ipython2
+.. code:: python
 
     # Make a plot of annual average wind speeds from reanalysis data to show general trends for each
     # Remove data with incomplete years
@@ -420,7 +420,7 @@ The plots below reveal that: - there are a large number of outliers
 (typical of EIA data) - All renalysis products are strongly correlated
 with plant energy
 
-.. code:: ipython2
+.. code:: python
 
     ## Make a plot of normalized 30-day gross energy vs wind speed for each reanalysis product, include R2 measure
     valid_monthly=pa._monthly.df
@@ -454,7 +454,7 @@ Next we show time series plots of the monthly gross energy, availabilty,
 and curtialment. Note the randomness of the availability and curtailment
 data, which were in fact randomly generated.
 
-.. code:: ipython2
+.. code:: python
 
     plt.figure(figsize=(15,22))
     
@@ -506,7 +506,7 @@ example, if a high-loss month is found, reasons for the high loss should
 be discussed with the owner/operator to determine if those losses can be
 considered representative of average plant operation.
 
-.. code:: ipython2
+.. code:: python
 
     # For illustrative purposes, let's suppose a few months aren't representative of long-term losses
     pa._monthly.df.loc['2016-11-01',['availability_typical','curtailment_typical']] = False
@@ -520,7 +520,7 @@ and curtailment losses for the plant are calculated based on average
 losses for each calendar month (in energy units). Summing those average
 values yields the long-term annual estimates.
 
-.. code:: ipython2
+.. code:: python
 
     pa.calculate_long_term_losses()
 
@@ -532,7 +532,7 @@ trend and relationship with plant energy), we now set which reanalysis
 products we will include in the OA. For this particular case study, we
 use all 3 products given the high regression relationships.
 
-.. code:: ipython2
+.. code:: python
 
     # Based on the above considerations, determine which reanalysis products should be used in assesing operational AEP
     valid_reanalysis={'ncep2':True,'erai':True,'merra2':True}
@@ -616,7 +616,7 @@ More detailed descriptions are provided below:
    iteration of the OA code, one of the reanalysis products that we’ve
    already determined as valid (see the cells above) is selected.
 
-.. code:: ipython2
+.. code:: python
 
     # Get distribution of AEP values by running the OA multiple times under a Monte Carlo approach
     num_sim = 20000 # Number of simulations
@@ -655,7 +655,7 @@ monthly average wind speeds to calculate long-term monthly gross energy
 of days - Calculate AEP by subtracting out the long-term avaiability
 loss (curtailment loss is left in as part of AEP)
 
-.. code:: ipython2
+.. code:: python
 
     # Run Monte-Carlo based OA
     sim_results=pa.run_AEP_monte_carlo(num_sim)
@@ -686,7 +686,7 @@ uncertainty value, namely through capturing the uncertainty in the slope
 and intercept values and the number of years in the windiness
 correction.
 
-.. code:: ipython2
+.. code:: python
 
     # Plot a distribution of APE values from the Monte-Carlo OA method
     
@@ -727,7 +727,7 @@ completed. Note that for transparency, debugging, and analysis purposes,
 we’ve also included in the tracker data frame the number of data points
 used in the regression.
 
-.. code:: ipython2
+.. code:: python
 
     # Produce histograms of the various MC-parameters
     mc_reg = pd.DataFrame(data = {'slope': pa._mc_slope,
@@ -756,7 +756,7 @@ observe the following:
    num_years_windiness, loss_threshold, and reanalysis_product, as
    expected
 
-.. code:: ipython2
+.. code:: python
 
     plt.figure(figsize=(15,15))
     for s in np.arange(mc_reg.shape[1]):
@@ -780,7 +780,7 @@ we assure we aren’t sampling unrealisic combinations.
 
 The plot below shows that the values are being sampled appropriately
 
-.. code:: ipython2
+.. code:: python
 
     # Produce scatter plots of slope and intercept values, and overlay the resulting line of best fits over the actual wind speed 
     # and gross energy data points. Here we focus on the ERA-I data
@@ -800,7 +800,7 @@ We can look further at the influence of certain Monte Carlo parameters
 on the AEP result. For example, let’s see what effect the choice of
 reanalysis product has on the result:
 
-.. code:: ipython2
+.. code:: python
 
     # Boxplot of AEP based on choice of reanalysis product
     
@@ -823,7 +823,7 @@ slightly higher estimate.
 We can also look at the effect on the number of years used in the
 windiness correction:
 
-.. code:: ipython2
+.. code:: python
 
     # Boxplot of AEP based on number of years in windiness correction
     
