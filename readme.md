@@ -101,10 +101,10 @@ python setup.py integrate -a "--junitxml=./path_to_outputfile.xml"
 
 Documentation is automatically built by, and visible through, [Read The Docs](http://openoa.readthedocs.io/).
 
-Documentation is provided by [sphinx](http://www.sphinx-doc.org/en/stable/). To (re)build the documentation:
+You can build the documentation with [sphinx](http://www.sphinx-doc.org/en/stable/):
 
 ```
-pip install sphinx_rtd_theme ipython
+pip install sphinx_rtd_theme ipython m2r
 
 cd sphinx
 make html
