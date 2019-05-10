@@ -45,7 +45,7 @@ def compute_u_v_components(wind_speed, wind_dir):
     return u, v
 
 
-def compute_air_density(df, temp_col, pres_col, humi_col = 'default'):
+def compute_air_density(df, temp_col, pres_col, humi_col = None):
     """
     Calculate air density from the ideal gas law based on the definition provided by IEC 61400-12
     given pressure, temperature and relative humidity.
@@ -63,14 +63,13 @@ def compute_air_density(df, temp_col, pres_col, humi_col = 'default'):
         :obj:`pandas.Series`: Rho, calcualted air density; units of kg/m3
     """
     # Check if humidity column is provided and create default df (0.5) if necessary
-    if humi_col in df:
+    if humi_col in df and humi_col != None:
         rel_humidity = df.loc[:, [humi_col]]
     else:
+        humi_col = 'relative_humidity'
         rel_humidity = pd.DataFrame([0.5]*df[temp_col].shape[0],columns=[humi_col], index=df.index)
-        df['default'] = [0.5]*df[temp_col].shape[0]
     # Send exception if any negative data found
-    if (df.loc[df[temp_col] < 0].shape[0] > 0) | (df.loc[df[pres_col] < 0].shape[0] > 0 
-       | (rel_humidity.loc[rel_humidity[humi_col] < 0].shape[0] > 0)):
+    if (df[temp_col] < 0).any() | (df[pres_col] < 0).any() | (rel_humidity[humi_col] < 0).any():
         raise Exception('Some of your temperature, pressure or humidity data is negative. Check your data.')
 
     R_const = 287.05  # Gas constant for dry air, units of J/kg/K
