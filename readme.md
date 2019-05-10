@@ -1,8 +1,9 @@
-OpenOA
+OpenOA 
 ======
 
-- master: [![Build Status](https://travis-ci.org/NREL/OpenOA.svg?branch=master)](https://travis-ci.org/NREL/OpenOA)
-- develop: [![Build Status](https://travis-ci.org/NREL/OpenOA.svg?branch=develop)](https://travis-ci.org/NREL/OpenOA)
+[![Build Status](https://travis-ci.org/NREL/OpenOA.svg?branch=master)](https://travis-ci.org/NREL/OpenOA) (Master), [![Build Status](https://travis-ci.org/NREL/OpenOA.svg?branch=develop)](https://travis-ci.org/NREL/OpenOA) (Develop)
+
+[![Documentation Status](https://readthedocs.org/projects/openoa/badge/?version=latest)](https://openoa.readthedocs.io/en/latest/?badge=latest) (Develop)
 
 This library provides a generic framework for working with large timeseries data from wind plants. Its development
 has been motivated by the WP3 Benchmarking (PRUF) project, which aims to provide a reference implementation for
@@ -98,10 +99,12 @@ python setup.py integrate -a "--junitxml=./path_to_outputfile.xml"
 
 ### Documentation
 
-Documentation is provided by [sphinx](http://www.sphinx-doc.org/en/stable/). To (re)build the documentation:
+Documentation is automatically built by, and visible through, [Read The Docs](http://openoa.readthedocs.io/).
+
+You can build the documentation with [sphinx](http://www.sphinx-doc.org/en/stable/):
 
 ```
-pip install sphinx_rtd_theme ipython
+pip install sphinx_rtd_theme ipython m2r
 
 cd sphinx
 make html
