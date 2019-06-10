@@ -7,10 +7,6 @@
 import pandas as pd
 import numpy as np
 
-#from operational_analysis.toolkits import met_data_processing
-#from operational_analysis.toolkits import filters
-#from operational_analysis.toolkits.power_curve import functions
-
 from operational_analysis import logged_method_call
 from operational_analysis import logging
 
@@ -19,52 +15,66 @@ logger = logging.getLogger(__name__)
 class EYAGapAnalysis(object):
     """
     A serial (Pandas-driven) implementation of performing a gap analysis between the estimated
-    annual energy production (AEP) and the actual AEP as measured using operational data.
+    annual energy production (AEP) from an energy yield estimate (EYA) and the actual AEP as 
+    measured from an operational assessment (OA)
 
-    The method proceeds as follows:
+    The gap analysis is based on comparing the following three key metrics
 
-        1. 
-
-
-    """
+        1. Availability loss
+        2. Electrical loss
+        3. Sum of turbine ideal energy
+        
+    Here turbine ideal energy is defined as the energy produced during 'normal' or 'ideal' turbine operation, 
+    i.e., no downtime or considerable underperformance events. This value encompasses several different aspects 
+    of an EYA (wind resource estimate, wake losses,turbine performance, and blade degradation) and in most cases
+    should have the largest impact in a gap analysis relative to the first two metrics.
+    
+    This gap analysis method is fairly straighforward. Relevant EYA and OA metrics are passed in when defining
+    the class, differences in EYA estimates and OA results are calculated, and then a 'waterfall' plot is created
+    showing the differences between the EYA and OA-estimated AEP values and how they are linked from differences in 
+    the three key metrics.
+    
+    """ 
 
     @logged_method_call
-    def __init__(self, plant, eya_estimates, oa_results, plant_name, save_path):
+    def __init__(self, plant, eya_estimates, oa_results, save_fig = False, save_path = 'NA'):
         """
-        Initialize turbine long-term gross energy analysis with data and parameters.
+        Initialize EYA gap analysis class with data and parameters.
 
         Args:
          plant(:obj:`PlantData object`): PlantData object from which EYAGapAnalysis should draw data.
+         eya_estimates(:obj:`numpy array`): Numpy array with EYA estimates listed in required order
+         oa_results(:obj:`numpy array`): Numpy array with OA results listed in required order.
+         save_path(:obj:`string`): Location to save waterfall plot
 
         """
-        logger.info("Initializing TurbineLongTermGrossEnergy Object")
+        logger.info("Initializing EYA Gap Analysis Object")
         
         # Store EYA inputs into dictionary
-        self._eya_estimates = {'aep': eya_estimates[0],
-                               'gross_energy': eya_estimates[1],
-                               'availability_losses': eya_estimates[2],
-                               'electrical_losses': eya_estimates[3],
-                               'turbine_losses': eya_estimates[4],
-                               'blade_degradation_losses': eya_estimates[5],
-                               'wake_losses': eya_estimates[6]}
+        self._eya_estimates = {'aep': eya_estimates[0], # GWh/yr
+                               'gross_energy': eya_estimates[1], # GWh/yr
+                               'availability_losses': eya_estimates[2], # Fraction
+                               'electrical_losses': eya_estimates[3], # Fraction
+                               'turbine_losses': eya_estimates[4], # Fraction
+                               'blade_degradation_losses': eya_estimates[5], # Fraction
+                               'wake_losses': eya_estimates[6]} # Fraction
         
         # Store OA results into dictionary
-        self._oa_results = {'aep': oa_results[0],
-                            'availability_losses': oa_results[1],
-                            'electrical_losses': oa_results[2],
-                            'turbine_ideal_energy': oa_results[3]}
+        self._oa_results = {'aep': oa_results[0], # GWh/yr
+                            'availability_losses': oa_results[1], # Fraction
+                            'electrical_losses': oa_results[2], # Fraction
+                            'turbine_ideal_energy': oa_results[3]} # Fraction
 
         # Axis labels for waterfall plot
         self._plot_index = ['eya_aep', 'ideal_energy', 'avail_loss', 'elec_loss', 'unexplained/uncertain']
-        
-        self._name = plant_name # Name of plant
+        self._savefig = save_fig
         self._path = save_path # Where to save waterfall plot
         
         
     @logged_method_call
     def run(self):
         """
-        Perform pre-processing of data into an internal representation for which the analysis can run more quickly.
+        Run the EYA Gap analysis functions in order by calling this function.
         
         Args:
             (None)
@@ -73,15 +83,21 @@ class EYAGapAnalysis(object):
             (None)
         """
         
-        data = self.compile_data()
-        self.waterfall_plot(data, self._plot_index, self._name, self._path )
+        data = self.compile_data() # Compile EYA and OA data
+        self.waterfall_plot(data, self._plot_index, self._savefig, self._path ) # Produce waterfall plot
         
         logger.info("Gap analysis complete")
         
     def compile_data(self):
+        """
+        Compile EYA and OA metrics, compute differences, and return data needed for waterfall plot.
         
-        # Log the completion of the run
-        logger.info("Compiling data")
+        Args:
+            (None)
+            
+        Returns:
+            (None)
+        """
         
         # Calculate EYA ideal turbine energy
         eya_turbine_ideal_energy = self._eya_estimates['gross_energy'] * \
@@ -107,15 +123,21 @@ class EYAGapAnalysis(object):
         unaccounted = - (eya_aep + turb_gross_diff + avail_diff + elec_diff) + oa_aep
         
         # Combine calculations into array and return
-        data = [eya_aep, turb_gross_diff, avail_diff, elec_diff, unaccounted]#, oa_plant_p50
+        data = [eya_aep, turb_gross_diff, avail_diff, elec_diff, unaccounted]
         return data
         
-    def waterfall_plot(self, data, index, plant_name, path):
+    def waterfall_plot(self, data, index, savefig, path):
         """
-        Document waterfall plot
-        """
+        Produce a waterfall plot showing the progression from the EYA to OA estimates of AEP. 
         
-        index = index
+        Args:
+            data(:obj:`numpy array`): data to be used to create waterfall plot
+            index(:obj:`list`): List of string values to be used for x-axis labels
+            path(:obj:`string`): Location to save waterfall plot
+            
+        Returns:
+            (None)
+        """
         
         # Store data and create a blank series to use for the waterfall
         trans = pd.DataFrame(data = {'amount': data}, index = index) # Assign gaps to data frame
@@ -136,7 +158,7 @@ class EYAGapAnalysis(object):
     
         #Plot and label
         my_plot = trans.plot(kind='bar', stacked=True, bottom=blank, legend=None, 
-                             figsize=(12, 6), title = plant_name + " gap analysis")
+                             figsize=(12, 6))
         my_plot.plot(step.index, step.values,'k')
         my_plot.set_ylabel("Energy (GWh/yr)")
     
@@ -172,7 +194,10 @@ class EYAGapAnalysis(object):
         
         #Rotate the labels
         my_plot.set_xticklabels(trans.index,rotation=0)
-        
+ 
         # Save figure
-        my_plot.get_figure().savefig(path + plant_name + "_waterfall.png", dpi=200, bbox_inches='tight')
+        if savefig:
+            my_plot.get_figure().savefig(path + "waterfall.png", dpi=200, bbox_inches='tight')
+            
+        return my_plot
     
