@@ -2,7 +2,7 @@
 # on EYA-estimated annual energy production (AEP) and that from operational data.
 # Categories considered are availability, electrical losses, and long-term
 # gross energy. The main output is a 'waterfall' plot linking the EYA-
-# estimated and operational-estiamted AEP values. 
+# estimated and operational-estimated AEP values. 
 
 import pandas as pd
 import numpy as np
@@ -33,6 +33,8 @@ class EYAGapAnalysis(object):
     the class, differences in EYA estimates and OA results are calculated, and then a 'waterfall' plot is created
     showing the differences between the EYA and OA-estimated AEP values and how they are linked from differences in 
     the three key metrics.
+    
+    Waterfall plot code was taken and modified from the following post: https://pbpython.com/waterfall-chart.html
     
     """ 
 
@@ -83,8 +85,8 @@ class EYAGapAnalysis(object):
             (None)
         """
         
-        data = self.compile_data() # Compile EYA and OA data
-        self.waterfall_plot(data, self._plot_index, self._savefig, self._path ) # Produce waterfall plot
+        self._compiled_data = self.compile_data() # Compile EYA and OA data
+        self.waterfall_plot(self._compiled_data, self._plot_index, self._savefig, self._path) # Produce waterfall plot
         
         logger.info("Gap analysis complete")
         
