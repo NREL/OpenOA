@@ -40,7 +40,7 @@ class TurbineLongTermGrossEnergy(object):
 
             - _scada_freq
             - reanalysis products ['merra2', 'erai', 'ncep2'] with columns ['time', 'u_ms', 'v_ms', 'windspeed_ms', 'rho_kgm-3']
-            - scada with columns: ['time', 'id', 'windspeed_ms', 'power_kw', 'energy_kw']
+            - scada with columns: ['time', 'id', 'windspeed_ms', 'power_kw', 'energy_kwh']
 
     """
 
@@ -127,9 +127,7 @@ class TurbineLongTermGrossEnergy(object):
         # Loop through turbine IDs
         for t in self._turbs:
             # Store relevant variables in dictionary
-            dic[t] = df.loc[df['id'] == t, ['time', 'windspeed_ms', 'power_kw', 'energy_kwh']]            
-            dic[t].set_index('time', inplace = True) # Set datetime as index
-            dic[t].sort_index(inplace = True) # Sort data by time
+            dic[t] = df.loc[df['id'] == t, ['wmet_wdspd_avg', 'wtur_W_avg']]            
         
     def filter_turbine_data(self):
         """
@@ -147,33 +145,28 @@ class TurbineLongTermGrossEnergy(object):
         
         # Loop through turbines
         for t in self._turbs:
-            max_bin = self._max_power_filter * dic[t].power_kw.max() # Set maximum range for using bin-filter
-            
+            max_bin = self._max_power_filter * dic[t].wtur_W_avg.max()/1000 # Set maximum range for using bin-filter
             # Apply range filter
-            dic[t].loc[:,'flag_range'] = filters.range_flag(dic[t].loc[:, 'windspeed_ms'], below = 0, above = 40)
-            
+            dic[t].loc[:,'flag_range'] = filters.range_flag(dic[t].loc[:, 'wmet_wdspd_avg'], below = 0, above = 40)
             # Apply frozen/unresponsive sensor filter
-            dic[t].loc[:,'flag_frozen'] = filters.unresponsive_flag(dic[t].loc[:, 'windspeed_ms'], threshold = 3)
-            
+            dic[t].loc[:,'flag_frozen'] = filters.unresponsive_flag(dic[t].loc[:, 'wmet_wdspd_avg'], threshold = 3)
             # Apply window range filter
-            dic[t].loc[:,'flag_window'] = filters.window_range_flag(window_col = dic[t].loc[:, 'windspeed_ms'], 
-                                                                    window_start = 5., 
-                                                                    window_end = 40, 
-                                                                    value_col = dic[t].loc[:, 'power_kw'], 
-                                                                    value_min = 20., 
-                                                                    value_max = 2000.)
-            
+            dic[t].loc[:,'flag_window'] = filters.window_range_flag(window_col = dic[t].loc[:, 'wmet_wdspd_avg'], 
+                                                                    window_start = 30000., 
+                                                                    window_end = 240000, 
+                                                                    value_col = dic[t].loc[:, 'wmet_wdspd_avg'], 
+                                                                    value_min = 120000., 
+                                                                    value_max = 12000000.)
             # Apply bin-based filter
-            dic[t].loc[:,'flag_bin'] = filters.bin_filter(bin_col = dic[t].loc[:, 'power_kw'], 
-                                                          value_col = dic[t].loc[:, 'windspeed_ms'], 
-                                                          bin_width = 100, 
-                                                          threshold = 2., 
+            dic[t].loc[:,'flag_bin'] = filters.bin_filter(bin_col = dic[t].loc[:, 'wtur_W_avg'], 
+                                                          value_col = dic[t].loc[:, 'wmet_wdspd_avg'], 
+                                                          bin_width = 100000, 
+                                                          threshold = 20000., 
                                                           center_type = 'median', 
-                                                          bin_min = 20., 
+                                                          bin_min = 200., 
                                                           bin_max = max_bin, 
                                                           threshold_type = 'scalar', 
                                                           direction = 'all')
-            
             # Create a 'final' flag which is true if any of the previous flags are true
             dic[t].loc[:, 'flag_final'] = (dic[t].loc[:, 'flag_range']) | \
                                           (dic[t].loc[:, 'flag_window']) | \
@@ -199,11 +192,11 @@ class TurbineLongTermGrossEnergy(object):
             filt_df = dic[t].loc[dic[t]['flag_final']] # Filter only for valid data
             
             plt.figure(figsize = (6,5))
-            plt.scatter(dic[t].windspeed_ms, dic[t].power_kw, s=1, label = 'Raw') # Plot all data
-            plt.scatter(filt_df['windspeed_ms'], filt_df['power_kw'], s=1, label = 'Flagged') # Plot flagged data
+            plt.scatter(dic[t].wmet_wdspd_avg, dic[t].wtur_W_avg, s=1, label = 'Raw') # Plot all data
+            plt.scatter(filt_df['wmet_wdspd_avg'], filt_df['wtur_W_avg'], s=1, label = 'Flagged') # Plot flagged data
             plt.xlim(0, 30)
             plt.xlabel('Wind speed (m/s)')
-            plt.ylabel('Power (kW)')
+            plt.ylabel('Power (W)')
             plt.title('Filtered power curve for Turbine %s' %t)
             plt.legend(loc = 'lower right')
             plt.savefig('%s/%s_filtered_pc.png' %(save_folder, t,), dpi = 200) # Save file
@@ -229,6 +222,7 @@ class TurbineLongTermGrossEnergy(object):
         # Loop through reanalysis products
         for r in self._reanal:
             reanal = self._plant._reanalysis._product[r].df
+            reanal['u_ms'], reanal['v_ms'] = met_data_processing.compute_u_v_components(reanal['windspeed_ms'], reanal['winddirection_deg'])
             df_daily = reanal.resample('D')['u_ms', 'v_ms', 'windspeed_ms', 'rho_kgm-3'].mean() # Get daily means
             
             # Recalculate daily average wind direction
@@ -255,8 +249,8 @@ class TurbineLongTermGrossEnergy(object):
         # Loop through turbines
         for t in self._turbs:
             scada_filt = scada[t].loc[scada[t]['flag_final'] == False] # Filter for valid data
-            scada_daily = scada_filt.resample('D')['energy_kwh'].sum().to_frame() # Calculate daily energy sum
-            scada_daily['count'] = scada_filt.resample('D')['energy_kwh'].count() # Count number of entries in sum
+            scada_daily = scada_filt.resample('D')['wtur_W_avg'].sum().to_frame()/6000 # Calculate daily energy sum
+            scada_daily['count'] = scada_filt.resample('D')['wtur_W_avg'].count() # Count number of entries in sum
             
             # Discard daily sums if any sub-daily data was missing from that calculation
             daily_valid = scada_daily.loc[scada_daily['count'] == self._num_valid_daily]
@@ -290,7 +284,7 @@ class TurbineLongTermGrossEnergy(object):
                 mod_results[t, r] = functions.gam_3param(windspeed_column = df['windspeed_ms'],
                                                          winddir_column = df['winddirection_deg'],
                                                          airdens_column = df['rho_kgm-3'],
-                                                         power_column=df['energy_kwh'])
+                                                         power_column=df['wtur_W_avg'])
         
     def apply_model_to_lt(self):
         """
