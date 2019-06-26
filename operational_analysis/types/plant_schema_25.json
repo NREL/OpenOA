@@ -1,0 +1,89 @@
+{
+  "name": "PlantData",
+  "description": "Schema for OpenOA PlantData objects",
+  "version": 0.2,
+  "fields": [
+    {
+      "name": "scada",
+      "type": "timeseries",
+      "description": "SCADA data at fixed time interval from all turbines in plant",
+      "metadata": [
+        {"name": "frequency", "type": "float64", "required":true, "description":"Frequency of this table in Hz"}
+      ],
+      "fields": [
+
+        {"name": "time", "type":"datetime64[ns]", "required":true, "description":"end of bin"},
+        {"name": "asset_id", "type":"int64", "required":true, "description":"foreign key to asset table"},
+        {"name": "status_label", "type": "string"},
+
+        {"name": "wgen_activepw_avg", "type": "float64", "unit":"kw"},
+
+        {"name": "wrot_bladeposition_avg", "type": "float64", "unit":"deg"},
+
+        {"name": "wnac_windspeed_avg", "type": "float64", "unit":"m/s"},
+        {"name": "wnac_winddirection_avg", "type": "float64", "unit":"deg"},
+        {"name": "wnac_temout_avg", "type": "float64", "unit":"deg celsius"}
+
+      ]
+    },
+    {
+      "name": "tower",
+      "type": "timeseries",
+      "description": "SCADA data at fixed time interval from met towers included with the plant",
+      "fields": [
+
+        {"name": "time", "type":"datetime64[ns]", "required":true, "description": "end of bin"},
+        {"name": "asset_id", "type":"int64", "required":true, "description":"foreign key to asset table"},
+
+        {"name": "wmet_winddirection_avg", "type":"float64", "unit":"deg"}
+
+      ]
+    },
+    {
+      "name": "meter",
+      "type": "timeseries",
+      "description": "SCADA data at fixed time interval from met towers included with the plant",
+      "fields": [
+
+        {"name": "time", "type":"datetime64[ns]", "required":true, "description": "end of bin"},
+        {"name": "asset_id", "type":"int64", "required":true, "description":"foreign key to asset table"},
+
+        {"name": "wmet_winddirection_avg", "type":"float64", "unit":"deg"}
+
+      ]
+    },
+    {
+      "name": "status",
+      "type": "timeseries",
+      "description": "SCADA data at fixed time interval from met towers included with the plant",
+      "fields": [
+
+        {"name": "time", "type":"datetime64[ns]", "required":true, "description": "end of bin"},
+        {"name": "asset_id", "type":"int64", "required":true, "description":"foreign key to asset table"}
+
+      ]
+    },
+    {
+      "name": "curtail",
+      "type": "timeseries",
+      "description": "SCADA data at fixed time interval from met towers included with the plant",
+      "fields": [
+
+        {"name": "time", "type":"datetime64[ns]", "required":true, "description": "end of bin"},
+        {"name": "asset_id", "type":"int64", "required":true, "description":"foreign key to asset table"}
+
+      ]
+    },
+    {
+      "name": "asset",
+      "type": "table",
+      "description": "SCADA data at fixed time interval from met towers included with the plant",
+      "fields": [
+
+        {"name": "time", "type":"datetime64[ns]", "required":true, "description": "end of bin"},
+        {"name": "asset_id", "type":"int64", "required":true, "description":"foreign key to asset table"}
+
+      ]
+    }
+  ]
+}

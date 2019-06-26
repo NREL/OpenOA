@@ -9,7 +9,7 @@ this case), instantiating a project, and calling its prepare method.
 This process provides us with a PlantData object (turbine, in this case)
 which can be used to query data.
 
-.. code:: ipython2
+.. code:: python
 
     from turbine_project import TurbineExampleProject
     
@@ -105,7 +105,7 @@ of the scada TimeseriesTable exposes a Pandas dataframe which contains
 cleaned SCADA data. Let’s use turbine.scada to define python variables
 windspeed, power_kw, and df for convenience in later examples.
 
-.. code:: ipython2
+.. code:: python
 
     windspeed = turbine.scada.df["windspeed_ms"]
     power_kw = turbine.scada.df["power_kw"]
@@ -118,7 +118,7 @@ The filtering toolkit implements commonly used filters and operates by
 returning a boolean series called “flag” which can be used to index the
 original dataframe. We start by importing the filtering toolkit:
 
-.. code:: ipython2
+.. code:: python
 
     from operational_analysis.toolkits import filters
 
@@ -126,12 +126,12 @@ First let’s define a plotting function for the turbine power curve which
 we can use to examine the effect of different filtering functions on the
 data
 
-.. code:: ipython2
+.. code:: python
 
     import numpy as np
     import matplotlib.pyplot as plt
 
-.. code:: ipython2
+.. code:: python
 
     def plot_flagged_pc(ws, p, flag_bool, alpha):
         plt.scatter(ws, p, s = 1, alpha = alpha)
@@ -142,7 +142,7 @@ data
 
 Now first let’s take a look at the unprocessed data:
 
-.. code:: ipython2
+.. code:: python
 
     plot_flagged_pc(windspeed, power_kw, np.repeat('True', df.shape[0]), 1)
 
@@ -158,7 +158,7 @@ We immediately see two high wind speed outliers likely due to sensor
 malfunction. We can flag and filter these outliers from the dataset
 using the ‘range_flag’ function:
 
-.. code:: ipython2
+.. code:: python
 
     # Show outliers
     out_of_range = filters.range_flag(windspeed, below=0, above=70)
@@ -178,13 +178,13 @@ using the ‘range_flag’ function:
 
 Let’s remove the outliers and plot the result:
 
-.. code:: ipython2
+.. code:: python
 
     # Remove outliers
     windspeed = windspeed[~out_of_range]
     power_kw = power_kw[~out_of_range]
 
-.. code:: ipython2
+.. code:: python
 
     # Show updated power curve
     plot_flagged_pc(windspeed, power_kw, np.repeat('True', df.shape[0]), 0.2)
@@ -202,7 +202,7 @@ near zero power at high wind speeds. We can do this using the
 ‘window_range function’ and removing data greater than 6 m/s but with
 power less than 20 kW:
 
-.. code:: ipython2
+.. code:: python
 
     out_of_window = filters.window_range_flag(windspeed, 6., 40, power_kw, 20., 2000.)
     plot_flagged_pc(windspeed, power_kw, out_of_window, 0.2)
@@ -214,7 +214,7 @@ power less than 20 kW:
 
 Again, let’s remove these flagged data from consideration:
 
-.. code:: ipython2
+.. code:: python
 
     windspeed = windspeed[~out_of_window]
     power_kw = power_kw[~out_of_window]
@@ -237,7 +237,7 @@ threshold of 1.5 m/s from the median for each bin. Let’s also consider
 data on both sides of the curve by setting the ‘direction’ parameter to
 ‘all’
 
-.. code:: ipython2
+.. code:: python
 
     max_bin = 0.90*power_kw.max()
     bin_outliers = filters.bin_filter(power_kw, windspeed, 100, 1.5, 'median', 20., max_bin, 'scalar', 'all')
@@ -255,7 +255,7 @@ but low wind speed that weren’t flagged, however. Let catch those, and
 then remove those as well as the flagged data above, and plot our
 ‘clean’ power curve
 
-.. code:: ipython2
+.. code:: python
 
     out_of_window = filters.window_range_flag(windspeed, 4., 8., power_kw, 0., 1250.)
     windspeed = windspeed[(~out_of_window) & (~bin_outliers)]
@@ -278,7 +278,7 @@ As a final filtering demonstration, we can look for an unrespsonsive
 sensor (i.e. repeating measurements). In this case, let’s look for 3 or
 more repeating wind speed measurements:
 
-.. code:: ipython2
+.. code:: python
 
     frozen = filters.unresponsive_flag(windspeed, 3)
     windspeed[frozen].head()
@@ -301,7 +301,7 @@ more repeating wind speed measurements:
 We actually found a lot, so let’s remove these data as well before
 moving on to power curve fitting.
 
-.. code:: ipython2
+.. code:: python
 
     windspeed = windspeed[~frozen]
     power_kw = power_kw[~frozen]
@@ -314,18 +314,18 @@ curve model to the data. Here we illustrate three types of power curves:
 the standard IEC binned power curve model, a spline fit, and a Logistic
 5 parameter model (L5P):
 
-.. code:: ipython2
+.. code:: python
 
     from operational_analysis.toolkits import power_curve
 
-.. code:: ipython2
+.. code:: python
 
     # Fit the power curves
     iec_curve = power_curve.IEC(windspeed, power_kw)
     l5p_curve = power_curve.logistic_5_parametric(windspeed, power_kw)
     spline_curve = power_curve.spline_fit(windspeed, power_kw, n_splines = 20)
 
-.. code:: ipython2
+.. code:: python
 
     # Plot the results
     x = np.linspace(0,20,100)
@@ -355,11 +355,11 @@ Relative Speed of Power Curve Fitting
 We also note the speed of the computations. The IEC method is by far the
 fastest, followed by the spline fit, and then the L5P model.
 
-.. code:: ipython2
+.. code:: python
 
     import time
 
-.. code:: ipython2
+.. code:: python
 
     start = time.time()
     power_curve.IEC(windspeed, power_kw)
@@ -372,7 +372,7 @@ fastest, followed by the spline fit, and then the L5P model.
     IEC: 0.171 seconds
 
 
-.. code:: ipython2
+.. code:: python
 
     start = time.time()
     power_curve.spline_fit(windspeed, power_kw, n_splines=20)
@@ -385,7 +385,7 @@ fastest, followed by the spline fit, and then the L5P model.
     Spline: 21.586 seconds
 
 
-.. code:: ipython2
+.. code:: python
 
     start = time.time()
     power_curve.logistic_5_parametric(windspeed, power_kw)

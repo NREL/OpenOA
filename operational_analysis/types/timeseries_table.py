@@ -18,7 +18,9 @@ import datetime
 import importlib
 import pandas as pd
 
+from operational_analysis import logged_method_call
 from operational_analysis import logging
+logger = logging.getLogger(__name__)
 
 
 # The abstract class sets the interface for the timeseries table
@@ -97,6 +99,10 @@ class AbstractTimeseriesTable:
     def metric_fields(self):
         return self._metric_fields
 
+    @property
+    def schema(self):
+        raise NotImplementedError("Called method on abstract class")
+
 
 # These inherited classes implement it
 class PandasTimeseriesTable(AbstractTimeseriesTable):
@@ -106,18 +112,20 @@ class PandasTimeseriesTable(AbstractTimeseriesTable):
     def __init__(self, *args, **kwargs):
         self._pd = __import__('pandas', globals(), locals(), [], 0)
 
+    @logged_method_call
     def save(self, path, name, format="csv"):
         """Write data to file
         """
-        logging.info("save name:{}".format(name))
+        logger.info("save name:{}".format(name))
         if format != "csv":
             raise NotImplementedError("Cannot save to format %s yet" % (format,))
         self.df.to_csv("%s/%s.csv" % (path, name))
 
+    @logged_method_call
     def load(self, path, name, format="csv", nrows=None):
         """Read data from a file
         """
-        logging.info("Loading name:{}".format(name))
+        logger.info("Loading name:{}".format(name))
         if format != "csv":
             raise NotImplementedError("Cannot save to format %s yet" % (format,))
         self.df = self._pd.read_csv("%s/%s.csv" % (path, name), nrows=nrows)
@@ -140,11 +148,11 @@ class PandasTimeseriesTable(AbstractTimeseriesTable):
             fro (str): column name to copy data from
             to (str): column name to copy to
         """
-        logging.debug("copying {} to {}".format(fro, to))
+        logger.debug("copying {} to {}".format(fro, to))
         self.df[to] = self.df[fro]
 
     def ensure_columns(self, std):
-        """ Set column types to specified type
+        """ @deprecated Set column types to specified type
 
         Args:
             std (dict):
@@ -158,6 +166,35 @@ class PandasTimeseriesTable(AbstractTimeseriesTable):
                     self.df[col] = None
             self.df[col] = self.df[col].astype(std[col])
         self.df = self.df[list(std.keys())]
+
+    @property
+    def schema(self):
+        """ Return schema of this dataframe as a dictionary.
+
+        Returns:
+            (dict): {column_name(str): column_type(str)}
+        """
+        return {col: str(t) for col, t in zip(self.df, self.df.dtypes)}
+
+    def validate(self, schema):
+        """ Validate this timeseriestable object against its schema.
+        
+        Returns:
+            (bool): True if valid, Rasies an exception if not valid."""
+        if schema["type"] != "timeseries":
+            raise Exception("Incompatible schema type {} applied to TimeseriesTable".format(schema["type"]))
+
+        df_schema = self.schema
+        for field in schema["fields"]:
+            if field["name"] in df_schema.keys():
+                assert df_schema[field["name"]] == field["type"], \
+                    "Incompatible type for field {}. Expected {} but got {}".format( \
+                        field["name"], field["type"], df_schema[field["name"]])
+                del df_schema[field["name"]]
+
+        assert len(df_schema) == 0, "Extra columns are present in TimeseriesTable: \n {}".format(df_schema)
+
+        return True
 
     def is_empty(self):
         """ Test if data is None
@@ -190,7 +227,7 @@ class PandasTimeseriesTable(AbstractTimeseriesTable):
         """
         if col is None:
             col = self._time_field
-        logging.debug("Running pd.to_datetime on {} ".format(col))
+        logger.debug("Running pd.to_datetime on {} ".format(col))
         self.df[col] = pd.to_datetime(self.df[col])
 
     def epoch_time_to_datetime(self, col=None):
@@ -198,7 +235,7 @@ class PandasTimeseriesTable(AbstractTimeseriesTable):
         """
         if col is None:
             col = self._time_field
-        logging.debug("Running to_datetime on {}  ".format(col))
+        logger.debug("Running to_datetime on {}  ".format(col))
         self.df[col] = self.df[col].apply(lambda x: pd.to_datetime(x, unit='s'), 1)
 
     def head(self):
@@ -208,7 +245,7 @@ class PandasTimeseriesTable(AbstractTimeseriesTable):
     def map_column(self, col, func):
         """Apply a function to col
         """
-        logging.debug("Mapping col:{}".format(col))
+        logger.debug("Mapping col:{}".format(col))
         if col not in self.df.columns:
             self.df[col] = 'unknown'
 
@@ -216,17 +253,17 @@ class PandasTimeseriesTable(AbstractTimeseriesTable):
 
     def pandas_merge(self, right, right_cols, how='left', on='id'):
         """ Run merge with data """
-        logging.debug("merging right:{} right_cols:{} ".format(right, right_cols))
+        logger.debug("merging right:{} right_cols:{} ".format(right, right_cols))
         self.df = self.df.merge(right.loc[:, right_cols], how=how, on=on)
 
     def unique(self, col):
         """Get unique values of a column  """
-        logging.debug("unique col:{}".format(col))
+        logger.debug("unique col:{}".format(col))
         return self.df[col].unique()
 
     def rbind(self, tt):
         """Append data  """
-        logging.debug("appending tt.df")
+        logger.debug("appending tt.df")
         self.df = self.df.append(tt.df)
 
     def to_pandas(self):
@@ -240,7 +277,7 @@ class PandasTimeseriesTable(AbstractTimeseriesTable):
             start (datetime):  start of time-sereies trim
             stop (datetime):  stop of time-sereies trim
         """
-        logging.debug("trim_timeseries start:{} stop:{} ".format(start, stop))
+        logger.debug("trim_timeseries start:{} stop:{} ".format(start, stop))
         self.df = self.df.loc[(self.df[self._time_field] >= start) & (self.df[self._time_field] <= stop), :]
 
     def max(self):

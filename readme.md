@@ -1,13 +1,17 @@
 OpenOA 
 ======
 
+[![Build Status](https://travis-ci.org/NREL/OpenOA.svg?branch=master)](https://travis-ci.org/NREL/OpenOA) (Master), [![Build Status](https://travis-ci.org/NREL/OpenOA.svg?branch=develop)](https://travis-ci.org/NREL/OpenOA) (Develop)
+
+[![Documentation Status](https://readthedocs.org/projects/openoa/badge/?version=latest)](https://openoa.readthedocs.io/en/latest/?badge=latest) (Develop)
+
 This library provides a generic framework for working with large timeseries data from wind plants. Its development
-has been motivated by the WP3 Benchmarking (PRUF) project, which aims to provide a reference implementaiton for
+has been motivated by the WP3 Benchmarking (PRUF) project, which aims to provide a reference implementation for
 plant-level performance assessment.
 
 The implementation makes use of a flexible backend, so that data loading, processing, and analysis can be performed
-locally (e.g., with Pandas dataframes), in a semi-distributed manner (e.g., with Dask dataframes), or in a fully
-distributed matter (e.g., with Spark dataframes).
+locally (e.g., with Pandas DataFrames), in a semi-distributed manner (e.g., with Dask DataFrames), or in a fully
+distributed matter (e.g., with Spark DataFrames).
 
 Analysis routines are grouped by purpose into methods, and these methods in turn rely on more abstract toolkits.
 In addition to the provided analysis methods, anyone can write their own, which is intended to provide natural
@@ -95,7 +99,9 @@ python setup.py integrate -a "--junitxml=./path_to_outputfile.xml"
 
 ### Documentation
 
-Documentation is provided by [sphinx](http://www.sphinx-doc.org/en/stable/). To (re)build the documentation:
+Documentation is automatically built by, and visible through, [Read The Docs](http://openoa.readthedocs.io/).
+
+You can build the documentation with [sphinx](http://www.sphinx-doc.org/en/stable/):
 
 ```
 pip install sphinx_rtd_theme ipython m2r

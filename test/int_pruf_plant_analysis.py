@@ -18,6 +18,10 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         self.project.prepare()
         self.analysis = plant_analysis.MonteCarloAEP(self.project)
 
+    def test_validate_data(self):
+        self.assertTrue(self.project.validate(), "Failed to validate PlantData from schema")
+
+
     def test_plant_analysis(self):
 
         df = self.analysis._monthly.df
