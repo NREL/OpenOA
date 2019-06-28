@@ -128,7 +128,8 @@ class TurbineLongTermGrossEnergy(object):
         # Loop through turbine IDs
         for t in self._turbs:
             # Store relevant variables in dictionary
-            dic[t] = df.loc[df['id'] == t, ['wmet_wdspd_avg', 'wtur_W_avg', 'energy_kwh']]            
+            dic[t] = df.loc[df['id'] == t, ['wmet_wdspd_avg', 'wtur_W_avg', 'energy_kwh']]
+            dic[t].sort_index(inplace=True)            
         
     def filter_turbine_data(self):
         """
