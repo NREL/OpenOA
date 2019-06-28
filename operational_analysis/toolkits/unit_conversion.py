@@ -3,7 +3,7 @@ This module provides basic methods for unit conversion and calculation of basic 
 """
 
 
-def convert_power_to_energy(power_col, sample_rate_min=10.0):
+def convert_power_to_energy(power_col, sample_rate_min='10T'):
     """
     Compute energy [kWh] from power [kw] and return the data column
 
@@ -16,7 +16,10 @@ def convert_power_to_energy(power_col, sample_rate_min=10.0):
         :obj:`pandas.Series`: Energy in kWh that matches the length of the input data frame 'df'
 
     """
-    energy_kwh = power_col * sample_rate_min / 60.0
+    time_conversion = {'10T': 10.,
+                            '5T': 5.,
+                            '1H': 60.}
+    energy_kwh = power_col * time_conversion[sample_rate_min]/ 60.0
     return energy_kwh
 
 
