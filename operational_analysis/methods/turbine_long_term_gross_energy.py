@@ -1,5 +1,8 @@
-# This class defines key analytical routines for calculating long-term gross energy 
-# for each turbine at a wind farm
+# This class defines key analytical routines for performing a 'gap-analysis'
+# on EYA-estimated annual energy production (AEP) and that from operational data.
+# Categories considered are availability, electrical losses, and long-term
+# gross energy. The main output is a 'waterfall' plot linking the EYA-
+# estimated and operational-estiamted AEP values. 
 
 import pandas as pd
 
