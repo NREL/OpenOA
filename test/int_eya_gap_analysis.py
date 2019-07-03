@@ -4,8 +4,6 @@ import numpy as np
 import numpy.testing as npt
 
 from operational_analysis.methods.eya_gap_analysis import EYAGapAnalysis
-from examples.turbine_analysis.turbine_project import TurbineExampleProject
-
 
 class EYAGAPAnalysis(unittest.TestCase):
 
@@ -21,7 +19,7 @@ class EYAGAPAnalysis(unittest.TestCase):
         # blade degradation loss (fraction), wake loss (fraction)
 
         # Creat gap analysis method object and run
-        self.analysis = EYAGapAnalysis(plant = 'NA', eya_estimates = eya_data, oa_results = oa_data)
+        self.analysis = EYAGapAnalysis(plant = 'NA', eya_estimates = eya_data, oa_results = oa_data, make_fig = False)
         self.analysis.run()
 
     def test_eya_gap_analysis_results(self):
