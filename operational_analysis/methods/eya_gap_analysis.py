@@ -39,7 +39,7 @@ class EYAGapAnalysis(object):
     """ 
 
     @logged_method_call
-    def __init__(self, plant, eya_estimates, oa_results, save_fig = False, save_path = 'NA'):
+    def __init__(self, plant, eya_estimates, oa_results, make_fig = True, save_fig_path = False):
         """
         Initialize EYA gap analysis class with data and parameters.
 
@@ -47,7 +47,9 @@ class EYAGapAnalysis(object):
          plant(:obj:`PlantData object`): PlantData object from which EYAGapAnalysis should draw data.
          eya_estimates(:obj:`numpy array`): Numpy array with EYA estimates listed in required order
          oa_results(:obj:`numpy array`): Numpy array with OA results listed in required order.
-         save_path(:obj:`string`): Location to save waterfall plot
+         make_fig(:obj:`boolean`): Indicate whether to produce the waterfall plot
+         save_fig_path(:obj:`boolean` or `string'): Provide path to save waterfall plot, or set to 
+                                                    False to not save plot
 
         """
         logger.info("Initializing EYA Gap Analysis Object")
@@ -69,9 +71,8 @@ class EYAGapAnalysis(object):
 
         # Axis labels for waterfall plot
         self._plot_index = ['eya_aep', 'ideal_energy', 'avail_loss', 'elec_loss', 'unexplained/uncertain']
-        self._savefig = save_fig
-        self._path = save_path # Where to save waterfall plot
-        
+        self._makefig = make_fig
+        self._savefigpath = save_fig_path
         
     @logged_method_call
     def run(self):
@@ -86,7 +87,9 @@ class EYAGapAnalysis(object):
         """
         
         self._compiled_data = self.compile_data() # Compile EYA and OA data
-        self.waterfall_plot(self._compiled_data, self._plot_index, self._savefig, self._path) # Produce waterfall plot
+        
+        if self._makefig:
+            self.waterfall_plot(self._compiled_data, self._plot_index, self._savefigpath) # Produce waterfall plot
         
         logger.info("Gap analysis complete")
         
@@ -128,7 +131,7 @@ class EYAGapAnalysis(object):
         data = [eya_aep, turb_gross_diff, avail_diff, elec_diff, unaccounted]
         return data
         
-    def waterfall_plot(self, data, index, savefig, path):
+    def waterfall_plot(self, data, index, save_fig_path):
         """
         Produce a waterfall plot showing the progression from the EYA to OA estimates of AEP. 
         
@@ -198,8 +201,8 @@ class EYAGapAnalysis(object):
         my_plot.set_xticklabels(trans.index,rotation=0)
  
         # Save figure
-        if savefig:
-            my_plot.get_figure().savefig(path + "waterfall.png", dpi=200, bbox_inches='tight')
+        if save_fig_path != False:
+            my_plot.get_figure().savefig(save_fig_path + "/waterfall.png", dpi=200, bbox_inches='tight')
             
         return my_plot
     
