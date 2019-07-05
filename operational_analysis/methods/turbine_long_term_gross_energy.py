@@ -93,7 +93,7 @@ class TurbineLongTermGrossEnergy(object):
             (None)
         """
         
-        self.reanal = reanal_subset
+        self._reanal = reanal_subset
         
         logger.info("Filtering turbine data")
         self.filter_turbine_data() # Filter turbine data
