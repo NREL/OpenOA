@@ -15,7 +15,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         self.project = TurbineExampleProject('./examples/turbine_analysis/data')
         self.project.prepare()
         self.analysis = TurbineLongTermGrossEnergy(self.project)
-        self.analysis.run()
+        self.analysis.run(['erai', 'merra2', 'ncep2'])
 
     def test_longterm_gross_energy_results(self):
         res = self.analysis._summary_results.values.astype("float")

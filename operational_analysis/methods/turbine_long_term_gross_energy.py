@@ -60,7 +60,6 @@ class TurbineLongTermGrossEnergy(object):
         
         self._max_power_filter = max_power_filter # Parameter used for bin-based filtering
         self._wind_bin_thresh = wind_bin_thresh
-        self._reanal = ['merra2', 'erai', 'ncep2'] # Reanalysis products to consider
         
         # Define several dictionaries to be populated within this method
         self._scada_dict = {}
@@ -83,7 +82,7 @@ class TurbineLongTermGrossEnergy(object):
         
 
     @logged_method_call
-    def run(self):
+    def run(self, reanal_subset):
         """
         Perform pre-processing of data into an internal representation for which the analysis can run more quickly.
         
@@ -93,6 +92,9 @@ class TurbineLongTermGrossEnergy(object):
         Returns:
             (None)
         """
+        
+        self.reanal = reanal_subset
+        
         logger.info("Filtering turbine data")
         self.filter_turbine_data() # Filter turbine data
         
