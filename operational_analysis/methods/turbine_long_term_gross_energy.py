@@ -260,7 +260,8 @@ class TurbineLongTermGrossEnergy(object):
             
             # Store the valid data to be used for fitting in a separate dictionary                          
             for r in self._reanal: # Loop through reanalysis products
-                 mod[t, r] = daily_valid.join(reanal[r])         
+                 mod[t, r] = daily_valid.join(reanal[r])
+                 mod[t, r].dropna(inplace = True)         
       
     def fit_model(self):
         """
