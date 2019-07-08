@@ -14,12 +14,12 @@ class SimpleUnitConversionTests(unittest.TestCase):
     def test_convert_power_to_energy(self):
         np.random.seed(42)
         power = np.random.random(100) * 100
-        time_interval = [10, 30, 60]  # Minutes
+        time_interval = {'10T': 10, '30T': 30., '1H': 60}  # Minutes
         df = pd.DataFrame(data={'power_kw': power})
 
-        for t in time_interval:
-            energy = power * t / 60
-            energy_test = unit_conversion.convert_power_to_energy(df['power_kw'], t)
+        for key, item in time_interval.items():
+            energy = power * item / 60
+            energy_test = unit_conversion.convert_power_to_energy(df['power_kw'], key)
             nptest.assert_almost_equal(energy, energy_test, err_msg="Convert power to energy is broken")
 
     def test_compute_gross_energy(self):

@@ -16,9 +16,11 @@ def convert_power_to_energy(power_col, sample_rate_min='10T'):
         :obj:`pandas.Series`: Energy in kWh that matches the length of the input data frame 'df'
 
     """
-    time_conversion = {'10T': 10.,
-                            '5T': 5.,
-                            '1H': 60.}
+    time_conversion = {'1T': 1.,
+                       '5T': 5.,
+                       '10T': 10.,
+                       '30T': 30.,
+                       '1H': 60.}
     energy_kwh = power_col * time_conversion[sample_rate_min]/ 60.0
     return energy_kwh
 
