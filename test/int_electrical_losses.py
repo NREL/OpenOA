@@ -38,9 +38,9 @@ class TestElectricalLosses(unittest.TestCase):
     def test_electrical_losses_results(self):
         
         # Check that the computed electrical losses are as expected
-        expected_losses = 0.0123478
+        expected_losses = 0.012622
         actual_compiled_data = self.analysis._electrical_losses
-        npt.assert_array_almost_equal(expected_losses, actual_compiled_data, decimal = 4)
+        npt.assert_array_almost_equal(expected_losses, actual_compiled_data, decimal = 5)
 
     def tearDown(self):
         pass
