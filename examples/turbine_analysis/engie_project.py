@@ -43,8 +43,8 @@ class TurbineEngieOpenData(PlantData):
             else:
                  self.scada.df.append(pd.read_json(url,orient='columns'), ignore_index=True)
         self.scada.rename_columns({"time": "date_time",
-                                   "power_kw": "p_avg",
-                                   "winddirection_deg": "wa_avg",
-                                   "windspeed_ms": "ws_avg"})
+                                   "wtur_W_avg": "p_avg",
+                                   "wmet_wDir_avg": "wa_avg",
+                                   "wmet_wdspd_avg": "ws_avg"})
         self.scada.df.set_index('time', inplace=True, drop=False)
         self.scada.df.drop(['date_time', 'p_avg', 'wa_avg', 'ws_avg'], axis=1, inplace=True)
