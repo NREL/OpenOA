@@ -18,9 +18,9 @@ class TurbineExampleProject(PlantData):
     def prepare(self):
         self.scada.load(self._path, "scada_10min_4cols", "csv")
         self.scada.rename_columns({"time": "dttm",
-                                   "power_kw": "kw",
-                                   "winddirection_deg": "nacelle_position",
-                                   "windspeed_ms": "wind_speed"})
+                                   "wtur_W_avg": "kw",
+                                   "wmet_wDir_avg": "nacelle_position",
+                                   "wmet_wdspd_avg": "wind_speed"})
         self.scada.df.set_index('time', inplace=True, drop=False)
         self.scada.df.drop(['dttm', 'kw', 'nacelle_position', 'wind_speed'], axis=1, inplace=True)
         self.scada.normalize_time_to_datetime("%Y-%m-%d %H:%M:%S")
@@ -53,7 +53,7 @@ class TurbineExampleProject(PlantData):
         p._reanalysis._product['ncep2'].df = generate_reanal(index_reanal)
 
         # Project is missing energy column
-        p.scada.df['energy_kwh'] = convert_power_to_energy(p.scada.df['power_kw'], sample_rate_min=10.0)
+        p.scada.df['energy_kwh'] = convert_power_to_energy(p.scada.df['wtur_W_avg'], sample_rate_min='10T')
 
 class TurbineEngieOpenData(PlantData):
     """This class loads wind turbine data from the engie open data platform  https://opendata-renewables.engie.com"""
