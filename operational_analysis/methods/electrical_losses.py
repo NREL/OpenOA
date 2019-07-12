@@ -44,7 +44,8 @@ class ElectricalLosses(object):
                                  '5T': 5.,
                                  '10T': 10.,
                                  '30T': 30.,
-                                 '1H': 60.}
+                                 '1H': 60.,
+                                 'D': 60 * 24}
         
         self._min_per_hour = 60 # Mintues per hour converter
         self._hours_per_day= 24 # Hours per day converter
