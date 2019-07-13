@@ -1,5 +1,8 @@
-# This class defines key analytical routines for calculating long-term gross energy 
-# for each turbine at a wind farm
+# This class defines key analytical routines for performing a 'gap-analysis'
+# on EYA-estimated annual energy production (AEP) and that from operational data.
+# Categories considered are availability, electrical losses, and long-term
+# gross energy. The main output is a 'waterfall' plot linking the EYA-
+# estimated and operational-estiamted AEP values. 
 
 import pandas as pd
 
@@ -37,12 +40,12 @@ class TurbineLongTermGrossEnergy(object):
 
             - _scada_freq
             - reanalysis products ['merra2', 'erai', 'ncep2'] with columns ['time', 'u_ms', 'v_ms', 'windspeed_ms', 'rho_kgm-3']
-            - scada with columns: ['time', 'id', 'windspeed_ms', 'power_kw', 'energy_kw']
+            - scada with columns: ['time', 'id', 'wmet_wdspd_avg', 'wtur_W_avg', 'energy_kwh']
 
     """
 
     @logged_method_call
-    def __init__(self, plant, max_power_filter = 0.85):
+    def __init__(self, plant, max_power_filter = 0.85, wind_bin_thresh=2):
         """
         Initialize turbine long-term gross energy analysis with data and parameters.
 
@@ -56,6 +59,7 @@ class TurbineLongTermGrossEnergy(object):
         self._turbs = self._plant._scada.df['id'].unique() # Store turbine names
         
         self._max_power_filter = max_power_filter # Parameter used for bin-based filtering
+        self._wind_bin_thresh = wind_bin_thresh
         self._reanal = ['merra2', 'erai', 'ncep2'] # Reanalysis products to consider
         
         # Define several dictionaries to be populated within this method
@@ -124,9 +128,8 @@ class TurbineLongTermGrossEnergy(object):
         # Loop through turbine IDs
         for t in self._turbs:
             # Store relevant variables in dictionary
-            dic[t] = df.loc[df['id'] == t, ['time', 'windspeed_ms', 'power_kw', 'energy_kwh']]            
-            dic[t].set_index('time', inplace = True) # Set datetime as index
-            dic[t].sort_index(inplace = True) # Sort data by time
+            dic[t] = df.loc[df['id'] == t, ['wmet_wdspd_avg', 'wtur_W_avg', 'energy_kwh']]
+            dic[t].sort_index(inplace=True)            
         
     def filter_turbine_data(self):
         """
@@ -144,33 +147,29 @@ class TurbineLongTermGrossEnergy(object):
         
         # Loop through turbines
         for t in self._turbs:
-            max_bin = self._max_power_filter * dic[t].power_kw.max() # Set maximum range for using bin-filter
-            
+            turb_capac = dic[t].wtur_W_avg.max()
+            max_bin = self._max_power_filter * turb_capac # Set maximum range for using bin-filter
             # Apply range filter
-            dic[t].loc[:,'flag_range'] = filters.range_flag(dic[t].loc[:, 'windspeed_ms'], below = 0, above = 40)
-            
+            dic[t].loc[:,'flag_range'] = filters.range_flag(dic[t].loc[:, 'wmet_wdspd_avg'], below = 0, above = 40)
             # Apply frozen/unresponsive sensor filter
-            dic[t].loc[:,'flag_frozen'] = filters.unresponsive_flag(dic[t].loc[:, 'windspeed_ms'], threshold = 3)
-            
+            dic[t].loc[:,'flag_frozen'] = filters.unresponsive_flag(dic[t].loc[:, 'wmet_wdspd_avg'], threshold = 3)
             # Apply window range filter
-            dic[t].loc[:,'flag_window'] = filters.window_range_flag(window_col = dic[t].loc[:, 'windspeed_ms'], 
+            dic[t].loc[:,'flag_window'] = filters.window_range_flag(window_col = dic[t].loc[:, 'wmet_wdspd_avg'], 
                                                                     window_start = 5., 
                                                                     window_end = 40, 
-                                                                    value_col = dic[t].loc[:, 'power_kw'], 
-                                                                    value_min = 20., 
-                                                                    value_max = 2000.)
-            
+                                                                    value_col = dic[t].loc[:, 'wtur_W_avg'], 
+                                                                    value_min =  0.02*turb_capac,
+                                                                    value_max =  1.2*turb_capac) 
             # Apply bin-based filter
-            dic[t].loc[:,'flag_bin'] = filters.bin_filter(bin_col = dic[t].loc[:, 'power_kw'], 
-                                                          value_col = dic[t].loc[:, 'windspeed_ms'], 
-                                                          bin_width = 100, 
-                                                          threshold = 2., 
+            dic[t].loc[:,'flag_bin'] = filters.bin_filter(bin_col = dic[t].loc[:, 'wtur_W_avg'], 
+                                                          value_col = dic[t].loc[:, 'wmet_wdspd_avg'], 
+                                                          bin_width = 0.06* turb_capac,
+                                                          threshold = self._wind_bin_thresh, # wind bin thresh; 2.5 or so 
                                                           center_type = 'median', 
-                                                          bin_min = 20., 
+                                                          bin_min = 0.01* turb_capac,
                                                           bin_max = max_bin, 
                                                           threshold_type = 'scalar', 
                                                           direction = 'all')
-            
             # Create a 'final' flag which is true if any of the previous flags are true
             dic[t].loc[:, 'flag_final'] = (dic[t].loc[:, 'flag_range']) | \
                                           (dic[t].loc[:, 'flag_window']) | \
@@ -196,11 +195,11 @@ class TurbineLongTermGrossEnergy(object):
             filt_df = dic[t].loc[dic[t]['flag_final']] # Filter only for valid data
             
             plt.figure(figsize = (6,5))
-            plt.scatter(dic[t].windspeed_ms, dic[t].power_kw, s=1, label = 'Raw') # Plot all data
-            plt.scatter(filt_df['windspeed_ms'], filt_df['power_kw'], s=1, label = 'Flagged') # Plot flagged data
+            plt.scatter(dic[t].wmet_wdspd_avg, dic[t].wtur_W_avg, s=1, label = 'Raw') # Plot all data
+            plt.scatter(filt_df['wmet_wdspd_avg'], filt_df['wtur_W_avg'], s=1, label = 'Flagged') # Plot flagged data
             plt.xlim(0, 30)
             plt.xlabel('Wind speed (m/s)')
-            plt.ylabel('Power (kW)')
+            plt.ylabel('Power (W)')
             plt.title('Filtered power curve for Turbine %s' %t)
             plt.legend(loc = 'lower right')
             plt.savefig('%s/%s_filtered_pc.png' %(save_folder, t,), dpi = 200) # Save file
@@ -226,6 +225,7 @@ class TurbineLongTermGrossEnergy(object):
         # Loop through reanalysis products
         for r in self._reanal:
             reanal = self._plant._reanalysis._product[r].df
+            reanal['u_ms'], reanal['v_ms'] = met_data_processing.compute_u_v_components(reanal['windspeed_ms'], reanal['winddirection_deg'])
             df_daily = reanal.resample('D')['u_ms', 'v_ms', 'windspeed_ms', 'rho_kgm-3'].mean() # Get daily means
             
             # Recalculate daily average wind direction
@@ -253,15 +253,16 @@ class TurbineLongTermGrossEnergy(object):
         for t in self._turbs:
             scada_filt = scada[t].loc[scada[t]['flag_final'] == False] # Filter for valid data
             scada_daily = scada_filt.resample('D')['energy_kwh'].sum().to_frame() # Calculate daily energy sum
-            scada_daily['count'] = scada_filt.resample('D')['energy_kwh'].count() # Count number of entries in sum
+            scada_daily['count'] = scada_filt.resample('D')['energy_kwh'].count() # Count number of entries in sum 
             
             # Discard daily sums if any sub-daily data was missing from that calculation
             daily_valid = scada_daily.loc[scada_daily['count'] == self._num_valid_daily]
             
             # Store the valid data to be used for fitting in a separate dictionary                          
             for r in self._reanal: # Loop through reanalysis products
-                 mod[t, r] = daily_valid.join(reanal[r])         
-      
+                 mod[t, r] = daily_valid.join(reanal[r])
+                 mod[t, r].dropna(inplace = True)
+            
     def fit_model(self):
         """
         Fit the daily turbine energy sum and atmospheric variable averages using a GAM model
@@ -287,7 +288,7 @@ class TurbineLongTermGrossEnergy(object):
                 mod_results[t, r] = functions.gam_3param(windspeed_column = df['windspeed_ms'],
                                                          winddir_column = df['winddirection_deg'],
                                                          airdens_column = df['rho_kgm-3'],
-                                                         power_column=df['energy_kwh'])
+                                                         power_column=df['energy_kwh']) 
         
     def apply_model_to_lt(self):
         """
@@ -317,3 +318,4 @@ class TurbineLongTermGrossEnergy(object):
             
             turb_annual = turb_gross[r].resample('AS').sum() # Calculate annual sums of energy from long-term estimate4
             self._summary_results.loc[r, :] = turb_annual.mean(axis = 0) # Store mean annual gross energy in data frame
+            self._plant_gross = self._summary_results.sum(axis=1).mean()

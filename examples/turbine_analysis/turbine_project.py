@@ -3,8 +3,6 @@ from operational_analysis.types import PlantData
 import numpy as np
 from operational_analysis.toolkits.unit_conversion import convert_power_to_energy
 from operational_analysis.toolkits.met_data_processing import compute_wind_direction
-from dateutil.parser import parse
-import urllib
 
 class TurbineExampleProject(PlantData):
     """This class loads data for NREL's GE Turbine into a PlantData object"""
@@ -18,9 +16,9 @@ class TurbineExampleProject(PlantData):
     def prepare(self):
         self.scada.load(self._path, "scada_10min_4cols", "csv")
         self.scada.rename_columns({"time": "dttm",
-                                   "power_kw": "kw",
-                                   "winddirection_deg": "nacelle_position",
-                                   "windspeed_ms": "wind_speed"})
+                                   "wtur_W_avg": "kw",
+                                   "wmet_wDir_avg": "nacelle_position",
+                                   "wmet_wdspd_avg": "wind_speed"})
         self.scada.df.set_index('time', inplace=True, drop=False)
         self.scada.df.drop(['dttm', 'kw', 'nacelle_position', 'wind_speed'], axis=1, inplace=True)
         self.scada.normalize_time_to_datetime("%Y-%m-%d %H:%M:%S")
@@ -53,49 +51,5 @@ class TurbineExampleProject(PlantData):
         p._reanalysis._product['ncep2'].df = generate_reanal(index_reanal)
 
         # Project is missing energy column
-        p.scada.df['energy_kwh'] = convert_power_to_energy(p.scada.df['power_kw'], sample_rate_min=10.0)
+        p.scada.df['energy_kwh'] = convert_power_to_energy(p.scada.df['wtur_W_avg'], sample_rate_min='10T')
 
-class TurbineEngieOpenData(PlantData):
-    """This class loads wind turbine data from the engie open data platform  https://opendata-renewables.engie.com"""
-
-    def __init__(self, name, start_date ,end_date , engine="pandas"):
-        """
-        Create a turbine based on data loaded from the engie open data platform.
-
-        Args:
-            name(string): uniqiue name (wind_turbine_name) of the wind turbine in the engie open data platform
-            start_date(string): start date of the data to be loaded into the object (%d.%m.%y %H:%M)
-            end_date(string): end date of the data to be loaded into the object (%d.%m.%y %H:%M)
-
-        Returns:
-            New object
-        """
-        path = ""
-        self._start_date = start_date
-        self._end_date = end_date
-        super(TurbineEngieOpenData, self).__init__(path, name, engine, toolkit=[])
-
-    def prepare(self):
-        #The Engie Open Data set consists of two data sets, 2013 - 2016 and 2017 - 2020. The data is collected from 
-        #the two sources depending on the selected period
-        self._urls = []
-        if parse(self._start_date,dayfirst=True).year <= 2016:
-             self._urls.append('https://opendata-renewables.engie.com/api/v2/catalog/datasets/la-haute-borne-data'
-                               +'-2013-2016/exports/json?where=wind_turbine_name%20%3D%20%22')
-        elif parse(self._start_date,dayfirst=True).year > 2016 or parse(self._end_date.year,dayfirst=True).year > 2016:
-             self._urls.append('https://opendata-renewables.engie.com/api/v2/catalog/datasets/la-haute-borne-data'
-                               +'-2017-2020/exports/json?where=wind_turbine_name%20%3D%20%22')
-        for url in self._urls:
-            url = (url + self._name+'%22%20and%20date_time%20%3E%3D%20%22'
-                 +urllib.parse.quote(self._start_date)+'%22%20and%20date_time%20%3C%3D%20%22'
-                 +urllib.parse.quote(self._end_date)+'%22&rows=-1&pretty=false&timezone=UTC')
-            if self.scada.df is None:
-                 self.scada.df = pd.read_json(url,orient='columns')
-            else:
-                 self.scada.df.append(pd.read_json(url,orient='columns'), ignore_index=True)
-        self.scada.rename_columns({"time": "date_time",
-                                   "power_kw": "p_avg",
-                                   "winddirection_deg": "wa_avg",
-                                   "windspeed_ms": "ws_avg"})
-        self.scada.df.set_index('time', inplace=True, drop=False)
-        self.scada.df.drop(['date_time', 'p_avg', 'wa_avg', 'ws_avg'], axis=1, inplace=True)
