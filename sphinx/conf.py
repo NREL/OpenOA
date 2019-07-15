@@ -18,6 +18,13 @@
 #
 import os
 import sys
+import nbmerge 
+
+
+#Merge example Notebooks into one notebook to keep the required structure
+new_nb = nbmerge.merge_notebooks('./',('./examples.ipynb','../examples/operational_AEP_analysis/operational_AEP_analysis.ipynb','../examples/turbine_analysis/Turbine_Toolkit_Examples.ipynb','../examples/turbine_analysis/EngieTurbineData_Example.ipynb'))
+nbmerge.write_notebook(new_nb,'./examplesout.ipynb')
+
 sys.path.insert(0, os.path.abspath('..'))
 
 # -- General configuration ------------------------------------------------
@@ -36,7 +43,7 @@ extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.viewcode',
               'sphinx.ext.napoleon',
               'sphinx.ext.todo',
-              'm2r']
+              'm2r','nbsphinx',]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
