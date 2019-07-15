@@ -151,6 +151,9 @@ class TurbineLongTermGrossEnergy(object):
         for t in self._turbs:
             turb_capac = dic[t].wtur_W_avg.max()
             max_bin = self._max_power_filter * turb_capac # Set maximum range for using bin-filter
+            
+            # Flag turbine energy data less than zero
+            dic[t].loc[:,'flag_neg'] = filters.range_flag(dic[t].loc[:, 'wtur_W_avg'], below = 0, above = turb_capac)
             # Apply range filter
             dic[t].loc[:,'flag_range'] = filters.range_flag(dic[t].loc[:, 'wmet_wdspd_avg'], below = 0, above = 40)
             # Apply frozen/unresponsive sensor filter
@@ -177,7 +180,10 @@ class TurbineLongTermGrossEnergy(object):
                                           (dic[t].loc[:, 'flag_window']) | \
                                           (dic[t].loc[:, 'flag_bin']) | \
                                           (dic[t].loc[:, 'flag_frozen'])
-            
+                       
+            # Set negative turbine data to zero
+            dic[t].loc[dic[t]['flag_neg'], 'wtur_W_avg'] = 0
+
     def plot_filtered_power_curves(self, save_folder, output_to_terminal = False):
         """
         Plot the raw and flagged power curve data and save to file.
