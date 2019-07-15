@@ -159,16 +159,16 @@ class ElectricalLosses(object):
             scada_monthly = self._scada_daily.resample('MS')['corrected_energy'].sum().to_frame()
             scada_monthly.columns = ['turbine_energy_kwh']
             
-            merge_df = meter_df.join(scada_monthly)
+            self._merge_df = meter_df.join(scada_monthly)
         
         # If sub-monthly meter data, merge the daily data for which all turbines are reporting at all timestamps
         else:
             # Note 'self._scada_sub' only contains full reported data
-            merge_df = self._meter_daily.join(self._scada_sub)
+            self._merge_df = self._meter_daily.join(self._scada_sub)
             
         # Drop non-concurrent timestamps and get total sums over concurrent period of record
-        merge_df.dropna(inplace = True)
-        merge_sum = merge_df.sum(axis = 0)
+        self._merge_df.dropna(inplace = True)
+        merge_sum = self._merge_df.sum(axis = 0)
         
         # Calculate electrical loss from difference of sum of turbine and meter energy 
         self._total_turbine_energy = merge_sum['turbine_energy_kwh']
