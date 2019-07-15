@@ -45,7 +45,7 @@ class TurbineLongTermGrossEnergy(object):
     """
 
     @logged_method_call
-    def __init__(self, plant, max_power_filter = 0.85, wind_bin_thresh=2):
+    def __init__(self, plant):
         """
         Initialize turbine long-term gross energy analysis with data and parameters.
 
@@ -57,9 +57,6 @@ class TurbineLongTermGrossEnergy(object):
         
         self._plant = plant  # Set plant as attribute of analysis object
         self._turbs = self._plant._scada.df['id'].unique() # Store turbine names
-        
-        self._max_power_filter = max_power_filter # Parameter used for bin-based filtering
-        self._wind_bin_thresh = wind_bin_thresh
         
         # Define several dictionaries to be populated within this method
         self._scada_dict = {}
@@ -78,11 +75,12 @@ class TurbineLongTermGrossEnergy(object):
         self._num_valid_daily = 60. / self._time_conversion[self._plant._scada_freq] * 24
         
         # Initially sort the different turbine data into dictionary entries
+        logger.info("Processing SCADA data into dictionaries by turbine (this can take a while)")
         self.sort_scada_by_turbine()
         
 
     @logged_method_call
-    def run(self, reanal_subset):
+    def run(self, reanal_subset = ['erai', 'ncep2', 'merra2'], max_power_filter = 0.85, wind_bin_thresh=2):
         """
         Perform pre-processing of data into an internal representation for which the analysis can run more quickly.
         
@@ -94,6 +92,9 @@ class TurbineLongTermGrossEnergy(object):
         """
         
         self._reanal = reanal_subset
+        self._max_power_filter = max_power_filter # Parameter used for bin-based filtering
+        self._wind_bin_thresh = wind_bin_thresh
+        
         
         logger.info("Filtering turbine data")
         self.filter_turbine_data() # Filter turbine data
@@ -144,13 +145,15 @@ class TurbineLongTermGrossEnergy(object):
         Returns:
             (None)
         """
-        
         dic = self._scada_dict
         
         # Loop through turbines
         for t in self._turbs:
             turb_capac = dic[t].wtur_W_avg.max()
             max_bin = self._max_power_filter * turb_capac # Set maximum range for using bin-filter
+            
+            dic[t].dropna(subset = ['wmet_wdspd_avg', 'energy_kwh'], inplace = True) # Drop any data where scada wind speed or energy is NaN
+            #print(dic[t].loc[np.isnan(dic[t]['wmet_wdspd_avg'])])
             
             # Flag turbine energy data less than zero
             dic[t].loc[:,'flag_neg'] = filters.range_flag(dic[t].loc[:, 'wtur_W_avg'], below = 0, above = turb_capac)
@@ -252,6 +255,7 @@ class TurbineLongTermGrossEnergy(object):
         Returns:
             (None)
         """
+        self._hours_per_day= 24 # Hours per day converter
         
         scada = self._scada_dict
         reanal = self._daily_reanal_dict
@@ -261,10 +265,13 @@ class TurbineLongTermGrossEnergy(object):
         for t in self._turbs:
             scada_filt = scada[t].loc[scada[t]['flag_final'] == False] # Filter for valid data
             scada_daily = scada_filt.resample('D')['energy_kwh'].sum().to_frame() # Calculate daily energy sum
-            scada_daily['count'] = scada_filt.resample('D')['energy_kwh'].count() # Count number of entries in sum 
+            scada_daily['data_count'] = scada_filt.resample('D')['energy_kwh'].count() # Count number of entries in sum 
             
-            # Discard daily sums if any sub-daily data was missing from that calculation
-            daily_valid = scada_daily.loc[scada_daily['count'] == self._num_valid_daily]
+            # Correct energy for missing data
+            scada_daily['energy_kwh_corr'] = scada_daily ['energy_kwh'] * self._num_valid_daily/scada_daily['data_count']
+            
+            # Discard daily sums if less than 140 data counts (90% reported data)
+            daily_valid = scada_daily.loc[scada_daily['data_count'] >= 130] # 
             
             # Store the valid data to be used for fitting in a separate dictionary                          
             for r in self._reanal: # Loop through reanalysis products
@@ -286,9 +293,7 @@ class TurbineLongTermGrossEnergy(object):
         mod_results = self._model_results
         
         
-        for t in self._turbs: # Loop throuh turbines
-            logger.info("Fitting turbine %s" %t)
-            
+        for t in self._turbs: # Loop throuh turbines            
             for r in self._reanal: # Loop through reanalysis products
                 df = mod_dict[t, r]
                 
@@ -296,7 +301,7 @@ class TurbineLongTermGrossEnergy(object):
                 mod_results[t, r] = functions.gam_3param(windspeed_column = df['windspeed_ms'],
                                                          winddir_column = df['winddirection_deg'],
                                                          airdens_column = df['rho_kgm-3'],
-                                                         power_column=df['energy_kwh']) 
+                                                         power_column=df['energy_kwh_corr']) 
         
     def apply_model_to_lt(self):
         """
@@ -309,7 +314,6 @@ class TurbineLongTermGrossEnergy(object):
         Returns:
             (None)
         """
-        
         turb_gross = self._turb_lt_gross
         mod_results = self._model_results
         
