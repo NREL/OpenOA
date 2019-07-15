@@ -45,12 +45,13 @@ class TurbineLongTermGrossEnergy(object):
     """
 
     @logged_method_call
-    def __init__(self, plant, max_power_filter = 0.85, wind_bin_thresh=2):
+    def __init__(self, plant, max_power_filter = 0.85, wind_bin_thresh=2, rep_thresh=3):
         """
         Initialize turbine long-term gross energy analysis with data and parameters.
 
         Args:
          plant(:obj:`PlantData object`): PlantData object from which TurbineLongTermGrossEnergy should draw data.
+         max_power_filter(float): 
 
         """
         logger.info("Initializing TurbineLongTermGrossEnergy Object")
@@ -60,6 +61,7 @@ class TurbineLongTermGrossEnergy(object):
         
         self._max_power_filter = max_power_filter # Parameter used for bin-based filtering
         self._wind_bin_thresh = wind_bin_thresh
+        self._rep_threshold = rep_thresh
         self._reanal = ['merra2', 'erai', 'ncep2'] # Reanalysis products to consider
         
         # Define several dictionaries to be populated within this method
@@ -152,14 +154,22 @@ class TurbineLongTermGrossEnergy(object):
             # Apply range filter
             dic[t].loc[:,'flag_range'] = filters.range_flag(dic[t].loc[:, 'wmet_wdspd_avg'], below = 0, above = 40)
             # Apply frozen/unresponsive sensor filter
-            dic[t].loc[:,'flag_frozen'] = filters.unresponsive_flag(dic[t].loc[:, 'wmet_wdspd_avg'], threshold = 3)
+            dic[t].loc[:,'flag_frozen'] = filters.unresponsive_flag(dic[t].loc[:, 'wmet_wdspd_avg'], threshold = self._rep_threshold)
             # Apply window range filter
             dic[t].loc[:,'flag_window'] = filters.window_range_flag(window_col = dic[t].loc[:, 'wmet_wdspd_avg'], 
-                                                                    window_start = 5., 
+                                                                    window_start = 5, 
                                                                     window_end = 40, 
                                                                     value_col = dic[t].loc[:, 'wtur_W_avg'], 
-                                                                    value_min =  0.02*turb_capac,
+                                                                    value_min =  0.01*turb_capac,
                                                                     value_max =  1.2*turb_capac) 
+
+            # Apply window range filter; note flipped axes approach
+            dic[t].loc[:,'flag_window_2'] = filters.window_range_flag(window_col = dic[t].loc[:, 'wtur_W_avg'], 
+                                                                    window_start = .97*turb_capac, 
+                                                                    window_end = 1.2*turb_capac, 
+                                                                    value_col = dic[t].loc[:, 'wmet_wdspd_avg'],
+                                                                    value_min =  8,
+                                                                    value_max =  30)
             # Apply bin-based filter
             dic[t].loc[:,'flag_bin'] = filters.bin_filter(bin_col = dic[t].loc[:, 'wtur_W_avg'], 
                                                           value_col = dic[t].loc[:, 'wmet_wdspd_avg'], 
@@ -170,9 +180,12 @@ class TurbineLongTermGrossEnergy(object):
                                                           bin_max = max_bin, 
                                                           threshold_type = 'scalar', 
                                                           direction = 'all')
+
             # Create a 'final' flag which is true if any of the previous flags are true
             dic[t].loc[:, 'flag_final'] = (dic[t].loc[:, 'flag_range']) | \
                                           (dic[t].loc[:, 'flag_window']) | \
+                                          (dic[t].loc[:, 'flag_window']) | \
+                                          (dic[t].loc[:, 'flag_window_2']) | \
                                           (dic[t].loc[:, 'flag_bin']) | \
                                           (dic[t].loc[:, 'flag_frozen'])
             
@@ -288,7 +301,7 @@ class TurbineLongTermGrossEnergy(object):
                 mod_results[t, r] = functions.gam_3param(windspeed_column = df['windspeed_ms'],
                                                          winddir_column = df['winddirection_deg'],
                                                          airdens_column = df['rho_kgm-3'],
-                                                         power_column=df['energy_kwh']) 
+                                                         power_column=df['energy_kwh'])
         
     def apply_model_to_lt(self):
         """
@@ -312,10 +325,10 @@ class TurbineLongTermGrossEnergy(object):
             daily_reanal = self._daily_reanal_dict[r]
             turb_gross[r] = pd.DataFrame(index = daily_reanal.index) # Set empty data frame to store results
             X_long_term = daily_reanal['windspeed_ms'], daily_reanal['winddirection_deg'], daily_reanal['rho_kgm-3']
-            
+
             for t in self._turbs: # Loop through turbines
                 turb_gross[r].loc[:, t] = mod_results[t, r](*X_long_term) # Apply GAM fit to long-term reanalysis data
-            
+
             turb_annual = turb_gross[r].resample('AS').sum() # Calculate annual sums of energy from long-term estimate4
             self._summary_results.loc[r, :] = turb_annual.mean(axis = 0) # Store mean annual gross energy in data frame
             self._plant_gross = self._summary_results.sum(axis=1).mean()
