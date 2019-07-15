@@ -61,11 +61,8 @@ class TurbineLongTermGrossEnergy(object):
         
         self._max_power_filter = max_power_filter # Parameter used for bin-based filtering
         self._wind_bin_thresh = wind_bin_thresh
-<<<<<<< HEAD
         self._rep_threshold = rep_thresh
         self._reanal = ['merra2', 'erai', 'ncep2'] # Reanalysis products to consider
-=======
->>>>>>> develop
         
         # Define several dictionaries to be populated within this method
         self._scada_dict = {}
