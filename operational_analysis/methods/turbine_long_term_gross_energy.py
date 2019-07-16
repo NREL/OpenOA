@@ -5,6 +5,7 @@
 # estimated and operational-estiamted AEP values. 
 
 import pandas as pd
+import numpy as np
 
 from operational_analysis.toolkits import met_data_processing
 from operational_analysis.toolkits import filters
@@ -58,7 +59,11 @@ class TurbineLongTermGrossEnergy(object):
         
         self._plant = plant  # Set plant as attribute of analysis object
         self._turbs = self._plant._scada.df['id'].unique() # Store turbine names
-        self._turbs = self._plant._scada.df['id'].unique()[0:10] # Store turbine names
+        
+        # Get start and end of POR days in SCADA
+        self._por_start = format(plant._scada.df.index.min(), '%Y-%m-%d')
+        self._por_end = format(plant._scada.df.index.max(), '%Y-%m-%d')
+        self._full_por = pd.date_range(self._por_start, self._por_end, freq = 'D')
         
         # Define several dictionaries and data frames to be populated within this method
         self._scada_dict = {}
@@ -75,6 +80,8 @@ class TurbineLongTermGrossEnergy(object):
         
         # Set number of 'valid' counts required when summing data to daily values
         self._num_valid_daily = 60. / self._time_conversion[self._plant._scada_freq] * 24
+        
+
         
         # Initially sort the different turbine data into dictionary entries
         logger.info("Processing SCADA data into dictionaries by turbine (this can take a while)")
@@ -110,7 +117,6 @@ class TurbineLongTermGrossEnergy(object):
         logger.info("Processing scada data to daily sums")
         self.filter_and_sum_scada() # Setup daily reanalysis products
         
-        """
         logger.info("Setting up daily data for model fitting")
         self.setup_model_dict() # Setup daily data to be fit using the GAM
         
@@ -122,7 +128,7 @@ class TurbineLongTermGrossEnergy(object):
      
         # Log the completion of the run
         logger.info("Run completed")
-        """
+
     def sort_scada_by_turbine(self):
         """
         Take raw SCADA data in plant object and sort into a dictionary using turbine IDs.
@@ -275,16 +281,24 @@ class TurbineLongTermGrossEnergy(object):
             scada_filt = scada[t].loc[scada[t]['flag_final'] == False] # Filter for valid data
             scada_daily = scada_filt.resample('D')['energy_kwh'].sum().to_frame() # Calculate daily energy sum
             scada_daily['data_count'] = scada_filt.resample('D')['energy_kwh'].count() # Count number of entries in sum 
-            scada_daily['id'] = t
-            scada_daily['day'] = scada_daily.index
+            
             
             # Correct energy for missing data
             scada_daily['energy_kwh_corr'] = scada_daily ['energy_kwh'] * self._num_valid_daily/scada_daily['data_count']
             
-            # Discard daily sums if less than 140 data counts (90% reported data) and store in single data frame
-            # for imputing
-            self._scada_daily_valid = self._scada_daily_valid.append(scada_daily.loc[scada_daily['data_count'] >= num_thres]) # 
+            # Discard daily sums if less than 140 data counts (90% reported data) 
+            scada_daily = scada_daily.loc[scada_daily['data_count'] >= num_thres]
             
+            # Create temporary data frame that is gap filled and to be used for imputing
+            temp_df = pd.DataFrame(index = self._full_por)
+            temp_df['energy_kwh_corr'] = scada_daily['energy_kwh_corr'] # Corrected energy data
+            temp_df['id'] = np.repeat(t, temp_df.shape[0]) # Index
+            temp_df['day'] = temp_df.index # Day
+            
+            # Append turbine data into single data frame for imputing
+            self._scada_daily_valid = self._scada_daily_valid.append(temp_df) # 
+        
+        # Reset index after all turbines has been combined
         self._scada_daily_valid.reset_index(inplace = True)
         
         # Impute missing days for each turbine
@@ -293,6 +307,9 @@ class TurbineLongTermGrossEnergy(object):
                                                                                               ref_col = 'energy_kwh_corr',
                                                                                               align_col = 'day',
                                                                                               id_col = 'id')
+        
+        # Drop data that could not be imputed
+        self._scada_daily_valid.dropna(subset = ['energy_imputed'], inplace = True)
   
     def setup_model_dict(self):
         """
@@ -305,17 +322,16 @@ class TurbineLongTermGrossEnergy(object):
         Returns:
             (None)
         """
-        
-        
+
         reanal = self._daily_reanal_dict
         mod = self._model_dict
         
-        
-            
-            # Store the valid data to be used for fitting in a separate dictionary                          
-           # for r in self._reanal: # Loop through reanalysis products
-           #      mod[t, r] = daily_valid.join(reanal[r])
-           #      mod[t, r].dropna(inplace = True)
+        # Store the valid data to be used for fitting in a separate dictionary                          
+        for t in self._turbs:    
+            daily_valid = self._scada_daily_valid.loc[self._scada_daily_valid['id'] == t]
+            daily_valid.set_index('day', inplace = True)
+            for r in self._reanal: # Loop through reanalysis products
+                mod[t, r] = daily_valid.join(reanal[r])
             
     def fit_model(self):
         """
@@ -335,12 +351,11 @@ class TurbineLongTermGrossEnergy(object):
         for t in self._turbs: # Loop throuh turbines            
             for r in self._reanal: # Loop through reanalysis products
                 df = mod_dict[t, r]
-                
                 # Consider wind speed, wind direction, and air density as features
                 mod_results[t, r] = functions.gam_3param(windspeed_column = df['windspeed_ms'],
                                                          winddir_column = df['winddirection_deg'],
                                                          airdens_column = df['rho_kgm-3'],
-                                                         power_column=df['energy_kwh_corr']) 
+                                                         power_column=df['energy_imputed']) 
         
     def apply_model_to_lt(self):
         """
