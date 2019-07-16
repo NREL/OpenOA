@@ -89,33 +89,44 @@ class TurbineLongTermGrossEnergy(object):
         
 
     @logged_method_call
-    def run(self, reanal_subset = ['erai', 'ncep2', 'merra2'], 
-            max_power_filter = 0.85, 
-            wind_bin_thresh = 2,
-            correction_threshold = 0.90):
+    def run(self, reanal_subset = ['erai', 'ncep2', 'merra2'], max_power_filter = 0.85, 
+            wind_bin_thresh = 2, correction_threshold = 0.90, enable_plotting = False,
+            plot_dir = None):
         """
         Perform pre-processing of data into an internal representation for which the analysis can run more quickly.
         
         Args:
-            (None)
+            reanal_subset(:obj:`list`): Which reanalysis products to use for long-term correction
+            max_power_filter(:obj:`float`): Maximum power threshold (fraction) to which the bin filter 
+                                            should be applied (default 0.85)
+            wind_bin_thresh(:obj:`float`): The filter threshold for each bin (default is 2 m/s)
+            correction_threshold(:obj:`float`): The threshold (fraction) above which daily scada energy data
+                                                should be corrected (default is 0.90)
+            enable_plotting(:obj:`boolean`): Indicate whether to output plots
+            plot_dir(:obj:`string`): Location to save figures
             
         Returns:
             (None)
         """
         
-        self._reanal = reanal_subset
-        self._max_power_filter = max_power_filter # Parameter used for bin-based filtering
+        # Assign parameters as object attributes
+        self._reanal = reanal_subset # Reanalysis data to consider in fitting
+        self._max_power_filter = max_power_filter 
         self._wind_bin_thresh = wind_bin_thresh
         self._correction_threshold = correction_threshold
         
         logger.info("Filtering turbine data")
         self.filter_turbine_data() # Filter turbine data
         
+        if enable_plotting:
+            logger.info("Plotting filtered power curves")
+            self.plot_filtered_power_curves(plot_dir) # Setup daily reanalysis products
+        
         logger.info("Processing reanalysis data to daily averages")
         self.setup_daily_reanalysis_data() # Setup daily reanalysis products
         
         logger.info("Processing scada data to daily sums")
-        self.filter_and_sum_scada() # Setup daily reanalysis products
+        self.filter_sum_impute_scada() # Setup daily reanalysis products
         
         logger.info("Setting up daily data for model fitting")
         self.setup_model_dict() # Setup daily data to be fit using the GAM
@@ -125,6 +136,10 @@ class TurbineLongTermGrossEnergy(object):
         
         logger.info("Applying fitting results to calculate long-term gross energy")
         self.apply_model_to_lt() # Apply fitting result to long-term reanalysis data
+        
+        if enable_plotting:
+            logger.info("Plotting daily fitted power curves")
+            self.plot_daily_fitting_result(plot_dir) # Setup daily reanalysis products
      
         # Log the completion of the run
         logger.info("Run completed")
@@ -228,13 +243,50 @@ class TurbineLongTermGrossEnergy(object):
             plt.ylabel('Power (W)')
             plt.title('Filtered power curve for Turbine %s' %t)
             plt.legend(loc = 'lower right')
-            plt.savefig('%s/%s_filtered_pc.png' %(save_folder, t,), dpi = 200) # Save file
+            plt.savefig('%s/filtered_power_curve_%s.png' %(save_folder, t,), dpi = 200) # Save file
             
             # Output figure to terminal if desired
             if output_to_terminal:
                 plt.show()
             
             plt.close()
+    
+    def plot_daily_fitting_result(self, save_folder, output_to_terminal = False):
+        """
+        Plot the raw and flagged power curve data and save to file.
+        
+        Args:
+            save_folder('obj':'str'): The pathname to where figure files should be saved
+            output_to_terminal('obj':'boolean'): Indicate whether or not to output figures to terminal
+            
+        Returns:
+            (None)
+        """
+        import matplotlib.pyplot as plt
+        
+        mod_input = self._model_dict
+        
+        # Loop through turbines
+        for t in self._turbs:
+            for r in self._reanal:
+                df = mod_input[(t, r)]
+                daily_reanal = self._daily_reanal_dict[r]
+                ws_daily = daily_reanal['windspeed_ms']
+            
+                plt.figure(figsize = (6,5))
+                plt.plot(ws_daily, self._turb_lt_gross[r].loc[:, t], 'r.', alpha = 0.1, label = 'Modeled')
+                plt.plot(df['windspeed_ms'], df['energy_imputed'], '.', label= 'Input')
+                plt.xlabel('Wind speed (m/s)')
+                plt.ylabel('Daily Energy (kWh)')
+                plt.title('Daily SCADA Energy Fitting, Turbine %s' %t)
+                plt.legend(loc = 'lower right')
+                plt.savefig('%s/daily_power_curve_%s_%s.png' %(save_folder, r, t,), dpi = 200) # Save file
+            
+                # Output figure to terminal if desired
+                if output_to_terminal:
+                    plt.show()
+            
+                plt.close()
     
     def setup_daily_reanalysis_data(self):
         """
@@ -259,10 +311,11 @@ class TurbineLongTermGrossEnergy(object):
                                                                                        v = df_daily['v_ms'])
             dic[r] = df_daily # Assign result to dictionary
             
-    def filter_and_sum_scada(self):
+    def filter_sum_impute_scada(self):
         """
         Filter SCADA data for unflagged data, gather SCADA energy data into daily sums, and correct daily summed
-        energy based on amount of missing data and a threshold limit
+        energy based on amount of missing data and a threshold limit. Finally impute missing data for each turbine
+        based on reported energy data from other highly correlated turbines.
         threshold
         
         Args:
@@ -332,6 +385,7 @@ class TurbineLongTermGrossEnergy(object):
             daily_valid.set_index('day', inplace = True)
             for r in self._reanal: # Loop through reanalysis products
                 mod[t, r] = daily_valid.join(reanal[r])
+                mod[t, r].dropna(inplace = True) # Drop any remaining NaNs (e.g., reanalysis does not cover fulll POR)
             
     def fit_model(self):
         """
