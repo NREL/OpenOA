@@ -9,6 +9,7 @@ import pandas as pd
 from operational_analysis.toolkits import met_data_processing
 from operational_analysis.toolkits import filters
 from operational_analysis.toolkits.power_curve import functions
+from operational_analysis.toolkits import imputing
 
 from operational_analysis import logged_method_call
 from operational_analysis import logging
@@ -57,15 +58,16 @@ class TurbineLongTermGrossEnergy(object):
         
         self._plant = plant  # Set plant as attribute of analysis object
         self._turbs = self._plant._scada.df['id'].unique() # Store turbine names
+        self._turbs = self._plant._scada.df['id'].unique()[0:10] # Store turbine names
         
-        # Define several dictionaries to be populated within this method
+        # Define several dictionaries and data frames to be populated within this method
         self._scada_dict = {}
         self._daily_reanal_dict = {}
         self._model_dict = {}
         self._model_results = {}
         self._turb_lt_gross = {}
-        
-        
+        self._scada_daily_valid = pd.DataFrame()
+              
         # Dictionary to convert time interval indicator into minutes
         self._time_conversion = {'10T': 10.,
                                  '5T': 5.,
@@ -80,7 +82,10 @@ class TurbineLongTermGrossEnergy(object):
         
 
     @logged_method_call
-    def run(self, reanal_subset = ['erai', 'ncep2', 'merra2'], max_power_filter = 0.85, wind_bin_thresh=2):
+    def run(self, reanal_subset = ['erai', 'ncep2', 'merra2'], 
+            max_power_filter = 0.85, 
+            wind_bin_thresh = 2,
+            correction_threshold = 0.90):
         """
         Perform pre-processing of data into an internal representation for which the analysis can run more quickly.
         
@@ -94,7 +99,7 @@ class TurbineLongTermGrossEnergy(object):
         self._reanal = reanal_subset
         self._max_power_filter = max_power_filter # Parameter used for bin-based filtering
         self._wind_bin_thresh = wind_bin_thresh
-        
+        self._correction_threshold = correction_threshold
         
         logger.info("Filtering turbine data")
         self.filter_turbine_data() # Filter turbine data
@@ -102,6 +107,10 @@ class TurbineLongTermGrossEnergy(object):
         logger.info("Processing reanalysis data to daily averages")
         self.setup_daily_reanalysis_data() # Setup daily reanalysis products
         
+        logger.info("Processing scada data to daily sums")
+        self.filter_and_sum_scada() # Setup daily reanalysis products
+        
+        """
         logger.info("Setting up daily data for model fitting")
         self.setup_model_dict() # Setup daily data to be fit using the GAM
         
@@ -113,7 +122,7 @@ class TurbineLongTermGrossEnergy(object):
      
         # Log the completion of the run
         logger.info("Run completed")
-        
+        """
     def sort_scada_by_turbine(self):
         """
         Take raw SCADA data in plant object and sort into a dictionary using turbine IDs.
@@ -244,6 +253,47 @@ class TurbineLongTermGrossEnergy(object):
                                                                                        v = df_daily['v_ms'])
             dic[r] = df_daily # Assign result to dictionary
             
+    def filter_and_sum_scada(self):
+        """
+        Filter SCADA data for unflagged data, gather SCADA energy data into daily sums, and correct daily summed
+        energy based on amount of missing data and a threshold limit
+        threshold
+        
+        Args:
+            (None)
+            
+        Returns:
+            (None)
+        """
+        
+        scada = self._scada_dict
+        
+        num_thres = self._correction_threshold * self._num_valid_daily # Number of permissible reported timesteps
+        
+        # Loop through turbines
+        for t in self._turbs:
+            scada_filt = scada[t].loc[scada[t]['flag_final'] == False] # Filter for valid data
+            scada_daily = scada_filt.resample('D')['energy_kwh'].sum().to_frame() # Calculate daily energy sum
+            scada_daily['data_count'] = scada_filt.resample('D')['energy_kwh'].count() # Count number of entries in sum 
+            scada_daily['id'] = t
+            scada_daily['day'] = scada_daily.index
+            
+            # Correct energy for missing data
+            scada_daily['energy_kwh_corr'] = scada_daily ['energy_kwh'] * self._num_valid_daily/scada_daily['data_count']
+            
+            # Discard daily sums if less than 140 data counts (90% reported data) and store in single data frame
+            # for imputing
+            self._scada_daily_valid = self._scada_daily_valid.append(scada_daily.loc[scada_daily['data_count'] >= num_thres]) # 
+            
+        self._scada_daily_valid.reset_index(inplace = True)
+        
+        # Impute missing days for each turbine
+        self._scada_daily_valid['energy_imputed'] = imputing.impute_all_assets_by_correlation(self._scada_daily_valid, 
+                                                                                              input_col = 'energy_kwh_corr',
+                                                                                              ref_col = 'energy_kwh_corr',
+                                                                                              align_col = 'day',
+                                                                                              id_col = 'id')
+  
     def setup_model_dict(self):
         """
         Setup daily atmospheric variable averages and daily turbine energy sums for use
@@ -255,28 +305,17 @@ class TurbineLongTermGrossEnergy(object):
         Returns:
             (None)
         """
-        self._hours_per_day= 24 # Hours per day converter
         
-        scada = self._scada_dict
+        
         reanal = self._daily_reanal_dict
         mod = self._model_dict
         
-        # Loop through turbines
-        for t in self._turbs:
-            scada_filt = scada[t].loc[scada[t]['flag_final'] == False] # Filter for valid data
-            scada_daily = scada_filt.resample('D')['energy_kwh'].sum().to_frame() # Calculate daily energy sum
-            scada_daily['data_count'] = scada_filt.resample('D')['energy_kwh'].count() # Count number of entries in sum 
-            
-            # Correct energy for missing data
-            scada_daily['energy_kwh_corr'] = scada_daily ['energy_kwh'] * self._num_valid_daily/scada_daily['data_count']
-            
-            # Discard daily sums if less than 140 data counts (90% reported data)
-            daily_valid = scada_daily.loc[scada_daily['data_count'] >= 130] # 
+        
             
             # Store the valid data to be used for fitting in a separate dictionary                          
-            for r in self._reanal: # Loop through reanalysis products
-                 mod[t, r] = daily_valid.join(reanal[r])
-                 mod[t, r].dropna(inplace = True)
+           # for r in self._reanal: # Loop through reanalysis products
+           #      mod[t, r] = daily_valid.join(reanal[r])
+           #      mod[t, r].dropna(inplace = True)
             
     def fit_model(self):
         """
