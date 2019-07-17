@@ -49,7 +49,7 @@ class ElectricalLosses(object):
         
         self._min_per_hour = 60 # Mintues per hour converter
         self._hours_per_day= 24 # Hours per day converter
-        self._month_hours = [44640,40320,43200]
+        self._month_hours = [44640,40320,41760,43200] # number of hours in a month, separated by number of days
         
     @logged_method_call
     def run(self):
@@ -176,10 +176,22 @@ class ElectricalLosses(object):
             scada_monthly.loc[month_list, 'expected_count_monthly'] = \
             self._month_hours[0]* self._plant._num_turbines /self._time_conversion[self._plant._scada_freq]
 
-            #February (no leap year correction)
+            #February 
             month_list = (scada_monthly.index.month ==2)
-            scada_monthly.loc[month_list, 'expected_count_monthly'] = \
+            year_list = ((scada_monthly.index.year == 2000) | \
+            (scada_monthly.index.year == 2004) | \
+            (scada_monthly.index.year == 2008) | \
+            (scada_monthly.index.year == 2012) | \
+            (scada_monthly.index.year == 2016) | \
+            (scada_monthly.index.year == 2020))
+
+            #Non Leap year
+            scada_monthly.loc[(month_list & year_list), 'expected_count_monthly'] = \
             self._month_hours[1]* self._plant._num_turbines /self._time_conversion[self._plant._scada_freq]
+            
+            #Leap year
+            scada_monthly.loc[(month_list & (~year_list)), 'expected_count_monthly'] = \
+            self._month_hours[2]* self._plant._num_turbines /self._time_conversion[self._plant._scada_freq]
 
             #months with 30 days
             month_list = ((scada_monthly.index.month ==4) | \
@@ -187,7 +199,7 @@ class ElectricalLosses(object):
             (scada_monthly.index.month ==9) | \
             (scada_monthly.index.month ==11))
             scada_monthly.loc[month_list, 'expected_count_monthly'] = \
-            self._month_hours[2]* self._plant._num_turbines / self._time_conversion[self._plant._scada_freq]
+            self._month_hours[3]* self._plant._num_turbines / self._time_conversion[self._plant._scada_freq]
 
             scada_monthly['perc'] = scada_monthly['count']/scada_monthly['expected_count_monthly']
             
