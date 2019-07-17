@@ -436,7 +436,7 @@ class TurbineLongTermGrossEnergy(object):
             for t in self._turbs: # Loop through turbines
                 turb_gross[r].loc[:, t] = mod_results[t, r](*X_long_term) # Apply GAM fit to long-term reanalysis data
             
-            turb_gross[turb_gross < 0] = 0 # Set any predicted negative energy to zero
+            turb_gross[r][turb_gross[r] < 0] = 0 # Set any predicted negative energy to zero
             turb_annual = turb_gross[r].resample('AS').sum() # Calculate annual sums of energy from long-term estimate4
             self._summary_results.loc[r, :] = turb_annual.mean(axis = 0) # Store mean annual gross energy in data frame
             self._plant_gross = self._summary_results.sum(axis=1).mean()
