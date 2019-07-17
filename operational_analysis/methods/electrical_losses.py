@@ -28,7 +28,7 @@ class ElectricalLosses(object):
     """ 
 
     @logged_method_call
-    def __init__(self, plant):
+    def __init__(self, plant, correction_thresh=.95):
         """
         Initialize electrical losses class with input parameters
 
@@ -50,7 +50,8 @@ class ElectricalLosses(object):
         self._min_per_hour = 60 # Mintues per hour converter
         self._hours_per_day= 24 # Hours per day converter
         self._month_hours = [44640,40320,41760,43200] # number of hours in a month, separated by number of days
-        
+        self._correction_thresh = correction_thresh
+
     @logged_method_call
     def run(self):
         """
@@ -204,7 +205,7 @@ class ElectricalLosses(object):
             scada_monthly['perc'] = scada_monthly['count']/scada_monthly['expected_count_monthly']
             
             # Filter out months in which there was less than 95% of total running (all turbines at all timesteps)
-            scada_monthly = scada_monthly.loc[scada_monthly['perc']>= .95, :]
+            scada_monthly = scada_monthly.loc[scada_monthly['perc']>= self._correction_thresh, :]
             merge_df = meter_df.join(scada_monthly)
         
         # If sub-monthly meter data, merge the daily data for which all turbines are reporting at all timestamps
