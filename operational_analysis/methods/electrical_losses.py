@@ -49,6 +49,7 @@ class ElectricalLosses(object):
         
         self._min_per_hour = 60 # Mintues per hour converter
         self._hours_per_day= 24 # Hours per day converter
+        self._month_hours = [44640,40320,43200]
         
     @logged_method_call
     def run(self):
@@ -163,9 +164,31 @@ class ElectricalLosses(object):
             # Determine availability for each month represented
             scada_monthly['count'] = self._scada_sum.resample('MS')['count'].sum()
             scada_monthly['expected_count_monthly'] = 1 #initialized values for column
-            scada_monthly.loc[((scada_monthly.index.month ==1) | (scada_monthly.index.month == 3) | (scada_monthly.index.month ==5) | (scada_monthly.index.month ==7) | (scada_monthly.index.month ==8) | (scada_monthly.index.month ==10) | (scada_monthly.index.month ==12)), 'expected_count_monthly'] = 44640* self._plant._num_turbines /self._time_conversion[self._plant._scada_freq]
-            scada_monthly.loc[(scada_monthly.index.month ==2), 'expected_count_monthly'] = 40320* self._plant._num_turbines /self._time_conversion[self._plant._scada_freq]
-            scada_monthly.loc[(scada_monthly.index.month ==4) | (scada_monthly.index.month ==6) | (scada_monthly.index.month ==9) | (scada_monthly.index.month ==11), 'expected_count_monthly'] = 43200* self._plant._num_turbines / self._time_conversion[self._plant._scada_freq]
+
+            #months with 31 days
+            month_list = ((scada_monthly.index.month ==1) | \
+            (scada_monthly.index.month == 3) | \
+            (scada_monthly.index.month ==5) | \
+            (scada_monthly.index.month ==7) | \
+            (scada_monthly.index.month ==8) | \
+            (scada_monthly.index.month ==10) | \
+            (scada_monthly.index.month ==12))
+            scada_monthly.loc[month_list, 'expected_count_monthly'] = \
+            self._month_hours[0]* self._plant._num_turbines /self._time_conversion[self._plant._scada_freq]
+
+            #February (no leap year correction)
+            month_list = (scada_monthly.index.month ==2)
+            scada_monthly.loc[month_list, 'expected_count_monthly'] = \
+            self._month_hours[1]* self._plant._num_turbines /self._time_conversion[self._plant._scada_freq]
+
+            #months with 30 days
+            month_list = ((scada_monthly.index.month ==4) | \
+            (scada_monthly.index.month ==6) | \
+            (scada_monthly.index.month ==9) | \
+            (scada_monthly.index.month ==11))
+            scada_monthly.loc[month_list, 'expected_count_monthly'] = \
+            self._month_hours[2]* self._plant._num_turbines / self._time_conversion[self._plant._scada_freq]
+
             scada_monthly['perc'] = scada_monthly['count']/scada_monthly['expected_count_monthly']
             
             # Filter out months in which there was less than 95% of total running (all turbines at all timesteps)
