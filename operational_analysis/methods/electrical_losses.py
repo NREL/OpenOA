@@ -49,6 +49,7 @@ class ElectricalLosses(object):
         
         self._min_per_hour = 60 # Mintues per hour converter
         self._hours_per_day= 24 # Hours per day converter
+        self._month_hours = [44640,40320,41760,43200] # number of hours in a month, separated by number of days
         
     @logged_method_call
     def run(self):
@@ -68,7 +69,7 @@ class ElectricalLosses(object):
         # Process meter data to daily sums (if time frequency is less than monthly)
         self._monthly_meter = True # Keep track of reported meter data frequency
         
-        if (self._plant._meter_freq != 'MS') & (self._plant._meter_freq != 'M'):
+        if (self._plant._meter_freq != 'MS') & (self._plant._meter_freq != 'M') & (self._plant._meter_freq != '1MS'):
             self.process_meter()
             self._monthly_meter = False # Set to false if sub-monthly frequency
         
@@ -94,6 +95,7 @@ class ElectricalLosses(object):
         # Sum up SCADA data power and energy and count number of entries        
         scada_sum = scada_df.groupby(scada_df.index)[['energy_kwh']].sum()
         scada_sum['count'] = scada_df.groupby(scada_df.index)[['energy_kwh']].count()
+        self._scada_sum = scada_sum
         
         # Calculate daily sum of all turbine energy production and count number of entries
         self._scada_daily = scada_sum.resample('D')['energy_kwh'].sum().to_frame()
@@ -158,7 +160,51 @@ class ElectricalLosses(object):
         if self._monthly_meter:
             scada_monthly = self._scada_daily.resample('MS')['corrected_energy'].sum().to_frame()
             scada_monthly.columns = ['turbine_energy_kwh']
+
+            # Determine availability for each month represented
+            scada_monthly['count'] = self._scada_sum.resample('MS')['count'].sum()
+            scada_monthly['expected_count_monthly'] = 1 #initialized values for column
+
+            #months with 31 days
+            month_list = ((scada_monthly.index.month ==1) | \
+            (scada_monthly.index.month == 3) | \
+            (scada_monthly.index.month ==5) | \
+            (scada_monthly.index.month ==7) | \
+            (scada_monthly.index.month ==8) | \
+            (scada_monthly.index.month ==10) | \
+            (scada_monthly.index.month ==12))
+            scada_monthly.loc[month_list, 'expected_count_monthly'] = \
+            self._month_hours[0]* self._plant._num_turbines /self._time_conversion[self._plant._scada_freq]
+
+            #February 
+            month_list = (scada_monthly.index.month ==2)
+            year_list = ((scada_monthly.index.year == 2000) | \
+            (scada_monthly.index.year == 2004) | \
+            (scada_monthly.index.year == 2008) | \
+            (scada_monthly.index.year == 2012) | \
+            (scada_monthly.index.year == 2016) | \
+            (scada_monthly.index.year == 2020))
+
+            #Non Leap year
+            scada_monthly.loc[(month_list & year_list), 'expected_count_monthly'] = \
+            self._month_hours[1]* self._plant._num_turbines /self._time_conversion[self._plant._scada_freq]
             
+            #Leap year
+            scada_monthly.loc[(month_list & (~year_list)), 'expected_count_monthly'] = \
+            self._month_hours[2]* self._plant._num_turbines /self._time_conversion[self._plant._scada_freq]
+
+            #months with 30 days
+            month_list = ((scada_monthly.index.month ==4) | \
+            (scada_monthly.index.month ==6) | \
+            (scada_monthly.index.month ==9) | \
+            (scada_monthly.index.month ==11))
+            scada_monthly.loc[month_list, 'expected_count_monthly'] = \
+            self._month_hours[3]* self._plant._num_turbines / self._time_conversion[self._plant._scada_freq]
+
+            scada_monthly['perc'] = scada_monthly['count']/scada_monthly['expected_count_monthly']
+            
+            # Filter out months in which there was less than 95% of total running (all turbines at all timesteps)
+            scada_monthly = scada_monthly.loc[scada_monthly['perc']>= .95, :]
             merge_df = meter_df.join(scada_monthly)
         
         # If sub-monthly meter data, merge the daily data for which all turbines are reporting at all timestamps
@@ -168,6 +214,7 @@ class ElectricalLosses(object):
             
         # Drop non-concurrent timestamps and get total sums over concurrent period of record
         merge_df.dropna(inplace = True)
+        self._merge_df = merge_df
         merge_sum = merge_df.sum(axis = 0)
         
         # Calculate electrical loss from difference of sum of turbine and meter energy 
