@@ -94,6 +94,7 @@ class ElectricalLosses(object):
         # Sum up SCADA data power and energy and count number of entries        
         scada_sum = scada_df.groupby(scada_df.index)[['energy_kwh']].sum()
         scada_sum['count'] = scada_df.groupby(scada_df.index)[['energy_kwh']].count()
+        self._scada_sum = scada_sum
         
         # Calculate daily sum of all turbine energy production and count number of entries
         self._scada_daily = scada_sum.resample('D')['energy_kwh'].sum().to_frame()
