@@ -109,6 +109,7 @@ class ElectricalLosses(object):
         # Correct sum of turbine energy for cases with missing reported data
         self._scada_daily['corrected_energy'] = self._scada_daily['turbine_energy_kwh'] * expected_count / \
                                                 self._scada_daily['count']
+        self._scada_daily['perc'] = self._scada_daily['count']/expected_count
                                                 
         # Store daily SCADA data where all turbines reporting for every time step during the day
         self._scada_sub = self._scada_daily[self._scada_daily['count'] == expected_count]
