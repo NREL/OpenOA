@@ -11,6 +11,7 @@ from operational_analysis.toolkits import met_data_processing
 from operational_analysis.toolkits import filters
 from operational_analysis.toolkits.power_curve import functions
 from operational_analysis.toolkits import imputing
+from operational_analysis.toolkits import timeseries
 
 from operational_analysis import logged_method_call
 from operational_analysis import logging
@@ -58,7 +59,8 @@ class TurbineLongTermGrossEnergy(object):
         logger.info("Initializing TurbineLongTermGrossEnergy Object")
         
         self._plant = plant  # Set plant as attribute of analysis object
-        self._turbs = self._plant._scada.df['id'].unique() # Store turbine names
+        self._turbs = self._plant._scada.df['id'].unique()[0:10] # Store turbine names
+        print(self._turbs)
         
         # Get start and end of POR days in SCADA
         self._por_start = format(plant._scada.df.index.min(), '%Y-%m-%d')
@@ -272,10 +274,14 @@ class TurbineLongTermGrossEnergy(object):
                 df = mod_input[(t, r)]
                 daily_reanal = self._daily_reanal_dict[r]
                 ws_daily = daily_reanal['windspeed_ms']
+                
+                df_imputed = df.loc[df['energy_kwh_corr'] != df['energy_imputed']]
+
             
                 plt.figure(figsize = (6,5))
                 plt.plot(ws_daily, self._turb_lt_gross[r].loc[:, t], 'r.', alpha = 0.1, label = 'Modeled')
                 plt.plot(df['windspeed_ms'], df['energy_imputed'], '.', label= 'Input')
+                plt.plot(df_imputed['windspeed_ms'], df_imputed['energy_imputed'], '.', label= 'Imputed')
                 plt.xlabel('Wind speed (m/s)')
                 plt.ylabel('Daily Energy (kWh)')
                 plt.title('Daily SCADA Energy Fitting, Turbine %s' %t)
@@ -334,6 +340,7 @@ class TurbineLongTermGrossEnergy(object):
             scada_filt = scada[t].loc[scada[t]['flag_final'] == False] # Filter for valid data
             scada_daily = scada_filt.resample('D')['energy_kwh'].sum().to_frame() # Calculate daily energy sum
             scada_daily['data_count'] = scada_filt.resample('D')['energy_kwh'].count() # Count number of entries in sum 
+            scada_daily['perc_nan'] = scada_filt.resample('D')['energy_kwh'].apply(timeseries.percent_nan) # Count number of entries in sum 
             
             
             # Correct energy for missing data
@@ -345,6 +352,7 @@ class TurbineLongTermGrossEnergy(object):
             # Create temporary data frame that is gap filled and to be used for imputing
             temp_df = pd.DataFrame(index = self._full_por)
             temp_df['energy_kwh_corr'] = scada_daily['energy_kwh_corr'] # Corrected energy data
+            temp_df['perc_nan'] = scada_daily['perc_nan'] # Corrected energy data
             temp_df['id'] = np.repeat(t, temp_df.shape[0]) # Index
             temp_df['day'] = temp_df.index # Day
             
@@ -385,7 +393,7 @@ class TurbineLongTermGrossEnergy(object):
             daily_valid.set_index('day', inplace = True)
             for r in self._reanal: # Loop through reanalysis products
                 mod[t, r] = daily_valid.join(reanal[r])
-                mod[t, r].dropna(inplace = True) # Drop any remaining NaNs (e.g., reanalysis does not cover fulll POR)
+                mod[t, r].dropna(subset = ['energy_imputed', 'windspeed_ms'], inplace = True) # Drop any remaining NaNs (e.g., reanalysis does not cover fulll POR)
             
     def fit_model(self):
         """
@@ -435,8 +443,8 @@ class TurbineLongTermGrossEnergy(object):
             
             for t in self._turbs: # Loop through turbines
                 turb_gross[r].loc[:, t] = mod_results[t, r](*X_long_term) # Apply GAM fit to long-term reanalysis data
-            
-            turb_gross[r][turb_gross[r] < 0] = 0 # Set any predicted negative energy to zero
+                turb_gross[r].loc[turb_gross[r][t] < 0, t] = 0
+            #turb_gross[r][turb_gross[r] < 0] = 0 # Set any predicted negative energy to zero
             turb_annual = turb_gross[r].resample('AS').sum() # Calculate annual sums of energy from long-term estimate4
             self._summary_results.loc[r, :] = turb_annual.mean(axis = 0) # Store mean annual gross energy in data frame
             self._plant_gross = self._summary_results.sum(axis=1).mean()
