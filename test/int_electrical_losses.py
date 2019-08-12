@@ -32,7 +32,7 @@ class TestElectricalLosses(unittest.TestCase):
         self.project._meter_freq = '10T'
                 
         # Creat electrical loss method object and run
-        self.analysis = ElectricalLosses(self.project)
+        self.analysis = ElectricalLosses(self.project, correction_thresh=.95)
         self.analysis.run()
 
     def test_electrical_losses_results(self):
