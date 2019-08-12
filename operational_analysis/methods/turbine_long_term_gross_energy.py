@@ -51,8 +51,7 @@ class TurbineLongTermGrossEnergy(object):
         logger.info("Initializing TurbineLongTermGrossEnergy Object")
         
         self._plant = plant  # Set plant as attribute of analysis object
-        self._turbs = self._plant._scada.df['id'].unique()[0:10] # Store turbine names
-        print(self._turbs)
+        self._turbs = self._plant._scada.df['id'].unique() # Store turbine names
         
         # Get start and end of POR days in SCADA
         self._por_start = format(plant._scada.df.index.min(), '%Y-%m-%d')
