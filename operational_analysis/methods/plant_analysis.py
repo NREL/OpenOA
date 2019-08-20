@@ -220,6 +220,29 @@ class MonteCarloAEP(object):
 
         return plt
 
+    def plot_aep_boxplot(self, param, lab):
+        """                                                                                                                                                                                        
+        Plot box plots of AEP results sliced by a specified Monte Carlo parameter                                                                                                                  
+
+        Args:                                                                                                                                                                                      
+           param( :obj:`list'): The Monte Carlo parameter on which to split the AEP results                                                                                                                   lab(:obj:'str'): The name to use for the parameter when producing the figure
+        
+        Returns:                                                                                                                                                                                   
+            (none)                                                                                                                                                                               
+        """
+
+        import matplotlib.pyplot as plt
+        sim_results = self.results
+
+        tmp_df=pd.DataFrame(data={'aep': sim_results.aep_GWh, 'param': param})
+        tmp_df.boxplot(column='aep',by='param',figsize=(8,6))
+        plt.ylabel('AEP (GWh/yr)')
+        plt.xlabel(lab)
+        plt.title('AEP estimates by %s' % lab)
+        plt.suptitle("")
+
+        return plt
+
     def plot_monthly_plant_data_timeseries(self):
         """
         Plot timeseries of monthly gross energy, availability and curtailment
