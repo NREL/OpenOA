@@ -82,7 +82,7 @@ class MonteCarloAEP(object):
         self._start_month = self._monthly.df.index.min()
         self._end_month = self._monthly.df.index.max()
         
-        # Create a dataframe to store monthly reanalysis data over plant period of record
+        # Create a data frame to store monthly reanalysis data over plant period of record
         self._reanalysis_por = self._monthly.df.loc[(self._monthly.df.index >= self._start_month) & \
                                                     (self._monthly.df.index <= self._end_month)]
         self._reanalysis_por_avg = self._reanalysis_por.groupby(self._reanalysis_por.index.month).mean()
