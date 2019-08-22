@@ -73,6 +73,10 @@ class EYAGapAnalysis(object):
         self._plot_index = ['eya_aep', 'ideal_energy', 'avail_loss', 'elec_loss', 'unexplained/uncertain']
         self._makefig = make_fig
         self._savefigpath = save_fig_path
+
+        #Plant variable to use for plotting
+        self._plant = plant
+        self._data = [] # Array to hold index values for each plant
         
     @logged_method_call
     def run(self):
@@ -129,6 +133,7 @@ class EYAGapAnalysis(object):
         
         # Combine calculations into array and return
         data = [eya_aep, turb_gross_diff, avail_diff, elec_diff, unaccounted]
+        self._data = data
         return data
         
     def waterfall_plot(self, data, index, save_fig_path):
@@ -151,7 +156,7 @@ class EYAGapAnalysis(object):
         # Get the net total number for the final element in the waterfall
         total = trans.sum().amount
         trans.loc["oa_aep"]= total # Add new field to gaps data frame
-        blank.loc["oa_aep"] = total # Add new fiekd to cumulative sum data frame
+        blank.loc["oa_aep"] = total # Add new field to cumulative sum data frame
     
         # The steps graphically show the levels as well as used for label placement
         step = blank.reset_index(drop=True).repeat(3).shift(-1)
@@ -166,6 +171,7 @@ class EYAGapAnalysis(object):
                              figsize=(12, 6))
         my_plot.plot(step.index, step.values,'k')
         my_plot.set_ylabel("Energy (GWh/yr)")
+        my_plot.set_title(self._plant)
     
         #Get the y-axis position for the labels
         y_height = trans.amount.cumsum().shift(1).fillna(0)
