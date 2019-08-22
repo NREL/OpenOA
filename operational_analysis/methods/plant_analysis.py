@@ -351,7 +351,6 @@ class MonteCarloAEP(object):
         if (self._plant._meter_freq == '1MS') | (self._plant._meter_freq == '1M'):
             self._monthly.df['num_days_actual'] = self._monthly.df['num_days_expected']            
         else:
-            print('yes')
             self._monthly.df['num_days_actual'] = df.resample('MS')['energy_kwh'].apply(tm.num_days)
 
     @logged_method_call
