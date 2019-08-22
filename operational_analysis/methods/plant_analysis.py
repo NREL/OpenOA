@@ -669,10 +669,10 @@ class MonteCarloAEP(object):
 
         num_sim = self.num_sim
 
-        sim_results = pd.DataFrame(index=np.arange(num_sim), data={'aep_GWh': np.empty(num_sim),
-                                                                   'avail_pct': np.empty(num_sim),
-                                                                   'curt_pct': np.empty(num_sim),
-                                                                   'lt_por_ratio': np.empty(num_sim)})
+        aep_GWh = np.empty(num_sim)
+        avail_pct =  np.empty(num_sim)
+        curt_pct =  np.empty(num_sim)
+        lt_por_ratio =  np.empty(num_sim)
 
         # Loop through number of simulations, run regression each time, store AEP results
         for n in tqdm(np.arange(num_sim)):
@@ -692,12 +692,16 @@ class MonteCarloAEP(object):
             [avail_lt_losses, curt_lt_losses] = self.sample_long_term_losses(n)  
 
             # Assign AEP, long-term availability, and long-term curtailment to output data frame
-            sim_results.loc[n,'aep_GWh'] = gross_lt.sum() * (1 - avail_lt_losses)
-            sim_results.loc[n,'avail_pct'] = avail_lt_losses
-            sim_results.loc[n,'curt_pct'] = curt_lt_losses
-            sim_results.loc[n, 'lt_por_ratio'] = gross_lt.sum() / gross_por.sum()
+            aep_GWh[n] = gross_lt.sum() * (1 - avail_lt_losses)
+            avail_pct[n] = avail_lt_losses
+            curt_pct[n] = curt_lt_losses
+            lt_por_ratio[n] = gross_lt.sum() / gross_por.sum()            
 
         # Return final output
+        sim_results = pd.DataFrame(index=np.arange(num_sim), data={'aep_GWh': aep_GWh,                                                                                                        
+                                                                   'avail_pct': avail_pct,                                                                                                      
+                                                                   'curt_pct': curt_pct,                                                                                                       
+                                                                   'lt_por_ratio': lt_por_ratio})      
         return sim_results
 
     @logged_method_call
@@ -729,7 +733,6 @@ class MonteCarloAEP(object):
         ws_df = self._reanalysis_monthly[r].to_frame().dropna()  # Drop NA values from monthly reanalysis data series
         ws_data = ws_df.tail(n * 12)  # Get last 'x' years of data from reanalysis product
         ws_monthly = ws_data.groupby(ws_data.index.month)[r].mean()  # Get long-term annualized monthly wind speeds
-        #ws_monthly = ws_data.resample('MS')[r].mean()  # Get long-term annualized monthly wind speeds      
 
         # Store result in dictionary
         self.long_term_sampling[(r, n)] = ws_monthly
