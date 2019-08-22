@@ -13,14 +13,14 @@ def range_flag(data_col, below=-1. * np.inf, above=np.inf):
 
     Args:
         data_col (:obj:`pandas.Series`): data to be flagged
-        below (:obj:`float`): upper threshold for data; default np.inf
-        above (:obj:`float`): lower threshold for data; default -np.inf
+        below (:obj:`float`): upper threshold (inclusive) for data; default np.inf
+        above (:obj:`float`): lower threshold (inclusive) for data; default -np.inf
 
     Returns:
         :obj:`pandas.Series(bool)`: Array-like object with boolean entries.
     """
 
-    flag = ((data_col <= below) | (data_col >= above))  # Apply the range flag
+    flag = ((data_col < below) | (data_col > above))  # Apply the range flag
     return flag  # Return boolean series of data flags
 
 
