@@ -225,7 +225,8 @@ class MonteCarloAEP(object):
         Plot box plots of AEP results sliced by a specified Monte Carlo parameter                                                                                                                  
 
         Args:                                                                                                                                                                                      
-           param( :obj:`list'): The Monte Carlo parameter on which to split the AEP results                                                                                                                   lab(:obj:'str'): The name to use for the parameter when producing the figure
+           param( :obj:`list'): The Monte Carlo parameter on which to split the AEP results                                                                                                
+           lab(:obj:'str'): The name to use for the parameter when producing the figure
         
         Returns:                                                                                                                                                                                   
             (none)                                                                                                                                                                               
