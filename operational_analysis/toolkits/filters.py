@@ -20,7 +20,7 @@ def range_flag(data_col, below=-1. * np.inf, above=np.inf):
         :obj:`pandas.Series(bool)`: Array-like object with boolean entries.
     """
 
-    flag = ((data_col < below) | (data_col > above))  # Apply the range flag
+    flag = ~((data_col <= above) & (data_col >= below)) # Apply the range flag
     return flag  # Return boolean series of data flags
 
 
