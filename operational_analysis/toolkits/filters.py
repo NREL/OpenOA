@@ -217,3 +217,16 @@ def cluster_mahalanobis_2d(data_col1, data_col2, n_clusters=13, dist_thresh=3.):
         flag.loc[flag_bin.index] = flag_bin
 
     return flag
+
+def duplicate_dates(data_col):
+    """Flag data having duplicate dates in the index
+
+    Args:
+        data_col (:obj:`pandas.Series`): data to be flagged
+
+    Returns:
+        :obj:`pandas.Series(bool)`: Array-like object with boolean entries.
+    """
+
+    flag = data_col.index.duplicated(keep='first')  # Flag duplicate entries
+    return flag  # Return boolean series of data flags
