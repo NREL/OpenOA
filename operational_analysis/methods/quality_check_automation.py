@@ -70,9 +70,8 @@ class QCAuto(object):
         logger.info("Isolating Extrema Values")
         self.print_max_min()
         logger.info("Plotting Turbine Power Curves")
-        #self.turb_plots()
-        
-        
+        self.turb_plots()
+    
         logger.info("QC Diagnostic Complete")
 
     def dup_time_identification(self):
@@ -298,7 +297,7 @@ class QCAuto(object):
         for t in turbs:
             plt.subplot(num_rows, 4, n)
             scada_sub = self._scada_df.loc[self._scada_df[self._id] == t, :]
-            plt.scatter(scada_sub[self._ws], scada_sub[self._ws], s = 5)
+            plt.scatter(scada_sub[self._ws], scada_sub[self._w], s = 5)
             n = n + 1
             plt.title(t)
         plt.tight_layout()
