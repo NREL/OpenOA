@@ -190,7 +190,7 @@ class TurbineLongTermGrossEnergy(object):
                                                                     window_start = 5., 
                                                                     window_end = 40, 
                                                                     value_col = dic[t].loc[:, 'wtur_W_avg'], 
-                                                                    value_min =  0.01*turb_capac,
+                                                                    value_min =  0.02*turb_capac,
                                                                     value_max =  1.2*turb_capac) 
 
             # Apply bin-based filter
@@ -199,7 +199,7 @@ class TurbineLongTermGrossEnergy(object):
                                                           bin_width = 0.06* turb_capac,
                                                           threshold = self._wind_bin_thresh, # wind bin thresh; 2.5 or so 
                                                           center_type = 'median', 
-                                                          bin_min = 0.02* turb_capac,
+                                                          bin_min = 0.01* turb_capac,
                                                           bin_max = max_bin, 
                                                           threshold_type = 'scalar', 
                                                           direction = 'all')
