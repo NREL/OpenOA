@@ -48,7 +48,6 @@ class TurbineLongTermGrossEnergy(object):
         Args:
          plant(:obj:`PlantData object`): PlantData object from which TurbineLongTermGrossEnergy should draw data.
          max_power_filter(float): 
-
         """
         logger.info("Initializing TurbineLongTermGrossEnergy Object")
         
@@ -188,7 +187,7 @@ class TurbineLongTermGrossEnergy(object):
             dic[t].loc[:,'flag_frozen'] = filters.unresponsive_flag(dic[t].loc[:, 'wmet_wdspd_avg'], threshold = 3)
             # Apply window range filter
             dic[t].loc[:,'flag_window'] = filters.window_range_flag(window_col = dic[t].loc[:, 'wmet_wdspd_avg'], 
-                                                                    window_start = 5, 
+                                                                    window_start = 5., 
                                                                     window_end = 40, 
                                                                     value_col = dic[t].loc[:, 'wtur_W_avg'], 
                                                                     value_min =  0.01*turb_capac,
@@ -200,14 +199,13 @@ class TurbineLongTermGrossEnergy(object):
                                                           bin_width = 0.06* turb_capac,
                                                           threshold = self._wind_bin_thresh, # wind bin thresh; 2.5 or so 
                                                           center_type = 'median', 
-                                                          bin_min = 0.01* turb_capac,
+                                                          bin_min = 0.02* turb_capac,
                                                           bin_max = max_bin, 
                                                           threshold_type = 'scalar', 
                                                           direction = 'all')
 
             # Create a 'final' flag which is true if any of the previous flags are true
             dic[t].loc[:, 'flag_final'] = (dic[t].loc[:, 'flag_range']) | \
-                                          (dic[t].loc[:, 'flag_window']) | \
                                           (dic[t].loc[:, 'flag_window']) | \
                                           (dic[t].loc[:, 'flag_bin']) | \
                                           (dic[t].loc[:, 'flag_frozen'])
