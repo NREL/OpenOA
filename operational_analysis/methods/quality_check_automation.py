@@ -48,7 +48,7 @@ class QCAuto(object):
     @logged_method_call
     def run(self):
         """
-        Run the EYA Gap analysis functions in order by calling this function.
+        Run the QC gap analysis functions in order by calling this function.
         
         Args:
             (None)
@@ -57,29 +57,47 @@ class QCAuto(object):
             (None)
         """
 
+        logger.info("Determining dtype values")
+        self.dtype_eval()
+        logger.info("Identifying Nans")
+        #Function to determine nans
         logger.info("Identifying Time Duplications")
         self.dup_time_identification()
         logger.info("Identifying Time Gaps")
-        #self.gap_time_identification()
-        logger.info("Plotting Daylight Savings Time plots")
-        self.daylight_savings_plot(hour_window=3)
+        self.gap_time_identification()
         logger.info("Evaluating timezone deviation from UTC")
-        ws_diurnal = self.ws_diurnal_prep()
-        self.wtk_diurnal_plot(ws_diurnal)
-        self.corr_df_calc(ws_diurnal)
+        self._ws_diurnal = self.ws_diurnal_prep()
+        self.corr_df_calc()
         logger.info("Isolating Extrema Values")
-        self.print_max_min()
-        logger.info("Plotting Turbine Power Curves")
-        self.turb_plots()
-    
+        self.max_min()
         logger.info("QC Diagnostic Complete")
 
     def dup_time_identification(self):
-        return self._scada_df.duplicated(subset= [self._id, self._t])
+        """
+        This function returns any time duplications in the dataset.
+
+        Args:
+        (None)
+
+        Returns:
+        (None)
+        """
+        self._time_duplications = self._scada_df.loc[self._scada_df.duplicated(subset= [self._id, self._t]), self._t]
 
     def gap_time_identification(self):
-        for i in self._scada_df[self._id].unique():
-            print(timeseries.find_time_gaps(self._scada_df[self._t], self._freq))
+        """
+        This function returns any time gaps in the dataset.
+
+        Args:
+        (None)
+
+        Returns:
+        (None)
+        """
+        self._time_gaps = timeseries.find_time_gaps(self._scada_df[self._t], freq=self._freq)
+
+    def dtype_eval(self):
+        self._dtypes = self._scada_df.dtypes
 
     def indicesForCoord(self,f):
 
@@ -89,6 +107,7 @@ class QCAuto(object):
         uses the Proj4 library to find a nearby point and then converts to x/y indices
         Args:
         f (h5 file): file to be read in
+        Returns: x and y coordinates corresponding to a given lat/lon as a tuple
         """
 
         dset_coords = f['coordinates']
@@ -147,19 +166,19 @@ class QCAuto(object):
 
         return ws_diurnal
 
-    def wtk_diurnal_plot(self, ws_diurnal):
+    def wtk_diurnal_plot(self):
 
         """
         This method plots the WTK diurnal plot alongisde the hourly power averages of the scada_df across all turbines
         Args:
-        ws_diurnal: Pandas series that contains windspeed data from the wind toolkit with hourly resolution
-        Returns: None
+        (None)
+        Returns: (None)
         """
 
         scada_df_temp = self._scada_sum.copy()
         scada_diurnal = scada_df_temp.groupby(scada_df_temp.index.hour)[self._w].mean()
 
-        ws_norm = ws_diurnal/ws_diurnal.mean()
+        ws_norm = self._ws_diurnal/self._ws_diurnal.mean()
         scada_norm = scada_diurnal/scada_diurnal.mean()
     
         plt.figure(figsize=(8,5))
@@ -172,15 +191,15 @@ class QCAuto(object):
         plt.legend()
         plt.show()
 
-    def corr_df_calc(self, ws_diurnal):
+    def corr_df_calc(self):
         """
-        This method returns a correlation matrix that compares the current power data (with different shift thresholds) to wind speed data from the WTK with hourly resolution.
+        This method returns a correlation series that compares the current power data (with different shift thresholds) to wind speed data from the WTK with hourly resolution.
 
         Args:
-        ws_diurnal: Pandas series that contains windspeed data from the wind toolkit with hourly resolution
+        (None)
 
         Returns:
-        A correlation matrix with the correlation between the ws_diurnal data and the power data of scada_df with different degrrees of hourly shifts
+        (None)
         """
         scada_diurnal = self._scada_sum.groupby(self._scada_sum.index.hour)[self._w].mean()
     
@@ -191,11 +210,9 @@ class QCAuto(object):
             if i != 0:
                 scada_temp[np.arange(i)] = scada_diurnal[-i:]
 
-            return_corr[i] = np.corrcoef(ws_diurnal['ws'], scada_temp)[0,1]
-
-        s = pd.DataFrame(index = np.arange(24), data = {'Hour Shift Correlation': return_corr})
-        print(s)
-        return s
+            return_corr[i] = np.corrcoef(self._ws_diurnal['ws'], scada_temp)[0,1]
+            
+        self._hour_shift = pd.DataFrame(index = np.arange(24), data = {'Hour Shift Correlation': return_corr})
 
 
     def daylight_savings_plot(self, hour_window = 3):
@@ -203,7 +220,7 @@ class QCAuto(object):
         Produce a timeseries plot showing daylight savings events for each year using the passed data.
 
         Args:
-        hour_window(:obj: 'int'): number of hours outside of the Daylight Savings Time transitions to view in the plot
+        hour_window(:obj: 'int'): number of hours outside of the Daylight Savings Time transitions to view in the plot (optional)
 
         Returns:
         None
@@ -250,32 +267,21 @@ class QCAuto(object):
         plt.tight_layout()
         plt.show()
 
-    def print_max_min(self):
+    def max_min(self):
 
         """
-        Prints the maximum and minimum value for each column in the DataFrame
+        Creates a DataFrame that contains the max and min values for each column
 
         Args:
-        None
+        (None)
 
         Returns:
-        Plot of different values for int/float columns of DataFrame along with producing time-based plots for columns that are numeric-typed
+        (None)
         """
-        
-        for c in self._scada_df.columns:
-            print('min', c, self._scada_df[c].min())
-            print('max', c, self._scada_df[c].max())
-        
-        plt.figure(figsize=(12,8))
 
-        n = 1
-        for c in self._scada_df.columns:
-            if (self._scada_df[c].dtype==float) | (self._scada_df[c].dtype==int):
-                plt.subplot(2,2,n)
-                plt.hist(self._scada_df[c].dropna(), 40)
-                n = n + 1
-                plt.title(c)
-            plt.show()
+        self._max_min = pd.DataFrame(index = self._scada_df.columns, columns = {'max', 'min'})
+        self._max_min['max'] = self._scada_df.max()
+        self._max_min['min'] = self._scada_df.min()
 
     def turb_plots(self):
 
@@ -283,10 +289,10 @@ class QCAuto(object):
         Produces plots of each individual turbine
 
         Args:
-        None
+        (None)
 
         Returns:
-        None
+        (None)
         """
         turbs = self._scada_df[self._id].unique()
         num_turbs = len(turbs)
@@ -303,8 +309,22 @@ class QCAuto(object):
         plt.tight_layout()
         plt.show()
 
+    def column_plots(self):
+        """
+        Produces plots for each numeric column.
+        Args:
+        (None)
 
-    
+        Returns:
+        (None)
+        """
+        plt.figure(figsize=(12,8))
 
-
-
+        n = 1
+        for c in self._scada_df.columns:
+            if (self._scada_df[c].dtype==float) | (self._scada_df[c].dtype==int):
+                plt.subplot(2,2,n)
+                plt.hist(self._scada_df[c].dropna(), 40)
+                n = n + 1
+                plt.title(c)
+            plt.show()

@@ -194,13 +194,6 @@ class TurbineLongTermGrossEnergy(object):
                                                                     value_min =  0.01*turb_capac,
                                                                     value_max =  1.2*turb_capac) 
 
-            # Apply window range filter; note flipped axes approach
-            dic[t].loc[:,'flag_window_2'] = filters.window_range_flag(window_col = dic[t].loc[:, 'wtur_W_avg'], 
-                                                                    window_start = .97*turb_capac, 
-                                                                    window_end = 1.2*turb_capac, 
-                                                                    value_col = dic[t].loc[:, 'wmet_wdspd_avg'],
-                                                                    value_min =  8,
-                                                                    value_max =  30)
             # Apply bin-based filter
             dic[t].loc[:,'flag_bin'] = filters.bin_filter(bin_col = dic[t].loc[:, 'wtur_W_avg'], 
                                                           value_col = dic[t].loc[:, 'wmet_wdspd_avg'], 
@@ -216,7 +209,6 @@ class TurbineLongTermGrossEnergy(object):
             dic[t].loc[:, 'flag_final'] = (dic[t].loc[:, 'flag_range']) | \
                                           (dic[t].loc[:, 'flag_window']) | \
                                           (dic[t].loc[:, 'flag_window']) | \
-                                          (dic[t].loc[:, 'flag_window_2']) | \
                                           (dic[t].loc[:, 'flag_bin']) | \
                                           (dic[t].loc[:, 'flag_frozen'])
                        

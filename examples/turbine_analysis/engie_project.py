@@ -7,7 +7,7 @@ from operational_analysis.types import PlantData
 class TurbineEngieOpenData(PlantData):
     """This class loads wind turbine data from the engie open data platform  https://opendata-renewables.engie.com"""
 
-    def __init__(self, name, start_date ,end_date , engine="pandas"):
+    def __init__(self, name, start_date ,end_date,engine="pandas"):
         """
         Create a turbine based on data loaded from the engie open data platform.
 
