@@ -20,22 +20,22 @@ logger = logging.getLogger(__name__)
 class QCAuto(object):
 
     @logged_method_call
-    def __init__(self,scada_df, ws_field='wmet_wdspd_avg', power_field= 'wtur_W_avg', time_field= 'datetime', id_field= 'Unit', freq = '10T', lat_lon= (0,0)):
+    def __init__(self,df, ws_field='wmet_wdspd_avg', power_field= 'wtur_W_avg', time_field= 'datetime', id_field= 'None', freq = '10T', lat_lon= (0,0)):
         """
         Initialize QCAuto object with data and parameters.
 
         Args:
-         scada_df(:obj:`DataFrame object`): DataFrame object that contains turbine data
-         ws_field(:obj: 'String'): String name of the windspeed field to scada_df
-         power_field(:obj: 'String'): String name of the power field to scada_df
-         time_field(:obj: 'String'): String name of the time field to scada_df
-         id_field(:obj: 'String'): String name of the id field to scada_df
-         freq(:obj: 'String'): String representation of the resolution for the time field to scada_df
+         df(:obj:`DataFrame object`): DataFrame object that contains data
+         ws_field(:obj: 'String'): String name of the windspeed field to df
+         power_field(:obj: 'String'): String name of the power field to df
+         time_field(:obj: 'String'): String name of the time field to df
+         id_field(:obj: 'String'): String name of the id field to df
+         freq(:obj: 'String'): String representation of the resolution for the time field to df
          lat_lon(:obj: 'tuple'): latitude and longitude of farm represented as a tuple
         """
         logger.info("Initializing QC_Automation Object")
         
-        self._scada_df = scada_df
+        self._df = df
         self._ws = ws_field
         self._w = power_field
         self._t = time_field
@@ -43,12 +43,13 @@ class QCAuto(object):
         self._freq = freq
         self._lat_lon = lat_lon
 
-        self._scada_sum = self._scada_df.groupby(self._scada_df[self._t])[self._w].sum().to_frame()
+        #self._scada_sum = self._scada_df.groupby(self._scada_df[self._t])[self._w].sum().to_frame()
+
 
     @logged_method_call
     def run(self):
         """
-        Run the QC gap analysis functions in order by calling this function.
+        Run the QC analysis functions in order by calling this function.
         
         Args:
             (None)
@@ -57,10 +58,6 @@ class QCAuto(object):
             (None)
         """
 
-        logger.info("Determining dtype values")
-        self.dtype_eval()
-        logger.info("Identifying Nans")
-        #Function to determine nans
         logger.info("Identifying Time Duplications")
         self.dup_time_identification()
         logger.info("Identifying Time Gaps")
@@ -72,6 +69,7 @@ class QCAuto(object):
         self.max_min()
         logger.info("QC Diagnostic Complete")
 
+        
     def dup_time_identification(self):
         """
         This function returns any time duplications in the dataset.
@@ -82,7 +80,10 @@ class QCAuto(object):
         Returns:
         (None)
         """
-        self._time_duplications = self._scada_df.loc[self._scada_df.duplicated(subset= [self._id, self._t]), self._t]
+        if self._id!= 'None':
+            self._time_duplications = self._df.loc[self._df.duplicated(subset= [self._id, self._t]), self._t]
+        else:
+            self._time_duplications = self._df.loc[self._df.index.duplicated(), self._t]
 
     def gap_time_identification(self):
         """
@@ -94,10 +95,7 @@ class QCAuto(object):
         Returns:
         (None)
         """
-        self._time_gaps = timeseries.find_time_gaps(self._scada_df[self._t], freq=self._freq)
-
-    def dtype_eval(self):
-        self._dtypes = self._scada_df.dtypes
+        self._time_gaps = timeseries.find_time_gaps(self._df[self._t], freq=self._freq)
 
     def indicesForCoord(self,f):
 
@@ -175,19 +173,23 @@ class QCAuto(object):
         Returns: (None)
         """
 
-        scada_df_temp = self._scada_sum.copy()
-        scada_diurnal = scada_df_temp.groupby(scada_df_temp.index.hour)[self._w].mean()
+        if self._id != 'None':
+            scada_sum = self._df.groupby(self._df[self._t])[self._w].sum().to_frame()
+            df_temp = scada_sum.copy()
+        else:
+            df_temp = self._df
+        df_diurnal = df_temp.groupby(df_temp.index.hour)[self._w].mean()
 
         ws_norm = self._ws_diurnal/self._ws_diurnal.mean()
-        scada_norm = scada_diurnal/scada_diurnal.mean()
+        df_norm = df_diurnal/df_diurnal.mean()
     
         plt.figure(figsize=(8,5))
         plt.plot(ws_norm, label = 'WTK wind speed (UTC)')
-        plt.plot(scada_norm, label = 'SCADA power')
+        plt.plot(df_norm, label = 'QC power')
         plt.grid()
         plt.xlabel('Hour of day')
         plt.ylabel('Normalized values')
-        plt.title('WTK and SCADA Timezone Comparison')
+        plt.title('WTK and QC Timezone Comparison')
         plt.legend()
         plt.show()
 
@@ -201,21 +203,25 @@ class QCAuto(object):
         Returns:
         (None)
         """
-        scada_diurnal = self._scada_sum.groupby(self._scada_sum.index.hour)[self._w].mean()
-    
+        if self._id != 'None':
+            scada_sum = self._df.groupby(self._df[self._t])[self._w].sum().to_frame()
+            df_diurnal = scada_sum.groupby(scada_sum.index.hour)[self._w].mean()
+        else:
+            df_diurnal = self._df.groupby(self._df.index.hour)[self._w].mean()
+
         return_corr = np.empty((24))
         for i in np.arange(24):
-            scada_temp = scada_diurnal.shift(i)
+            df_temp = df_diurnal.shift(i)
         
             if i != 0:
-                scada_temp[np.arange(i)] = scada_diurnal[-i:]
+                df_temp[np.arange(i)] = df_diurnal[-i:]
 
-            return_corr[i] = np.corrcoef(self._ws_diurnal['ws'], scada_temp)[0,1]
+            return_corr[i] = np.corrcoef(self._ws_diurnal['ws'], df_temp)[0,1]
             
         self._hour_shift = pd.DataFrame(index = np.arange(24), data = {'Hour Shift Correlation': return_corr})
 
-
     def daylight_savings_plot(self, hour_window = 3):
+          
         """
         Produce a timeseries plot showing daylight savings events for each year using the passed data.
 
@@ -227,10 +233,15 @@ class QCAuto(object):
         """
     
         # List of daylight savings days back to 2010
-        dst_df = pd.read_csv('./daylight_savings.csv') 
+        dst_df = pd.read_csv('./daylight_savings.csv')
+
+        if self._id != 'None':
+            self._df_dst =  self._df.groupby(self._df[self._t])[self._w].sum().to_frame()
+        else:
+            self._df_dst = self._df
     
-        self._scada_sum['time'] = self._scada_sum.index
-        df_full = timeseries.gap_fill_data_frame(self._scada_sum, 'time', self._freq) # Gap fill so spring ahead is visible
+        self._df_dst['time'] = self._df_dst.index
+        df_full = timeseries.gap_fill_data_frame(self._df_dst, 'time', self._freq) # Gap fill so spring ahead is visible
         df_full.set_index('time', inplace = True) # Have to reset index to datetime
     
         years = df_full.index.year.unique() # Years in data record
@@ -279,9 +290,9 @@ class QCAuto(object):
         (None)
         """
 
-        self._max_min = pd.DataFrame(index = self._scada_df.columns, columns = {'max', 'min'})
-        self._max_min['max'] = self._scada_df.max()
-        self._max_min['min'] = self._scada_df.min()
+        self._max_min = pd.DataFrame(index = self._df.columns, columns = {'max', 'min'})
+        self._max_min['max'] = self._df.max()
+        self._max_min['min'] = self._df.min()
 
     def turb_plots(self):
 
@@ -294,7 +305,7 @@ class QCAuto(object):
         Returns:
         (None)
         """
-        turbs = self._scada_df[self._id].unique()
+        turbs = self._df[self._id].unique()
         num_turbs = len(turbs)
         num_rows = np.ceil(num_turbs/4.)
 
@@ -302,7 +313,7 @@ class QCAuto(object):
         n = 1
         for t in turbs:
             plt.subplot(num_rows, 4, n)
-            scada_sub = self._scada_df.loc[self._scada_df[self._id] == t, :]
+            scada_sub = self._df.loc[self._df[self._id] == t, :]
             plt.scatter(scada_sub[self._ws], scada_sub[self._w], s = 5)
             n = n + 1
             plt.title(t)
@@ -321,10 +332,14 @@ class QCAuto(object):
         plt.figure(figsize=(12,8))
 
         n = 1
-        for c in self._scada_df.columns:
-            if (self._scada_df[c].dtype==float) | (self._scada_df[c].dtype==int):
+        for c in self._df.columns:
+            if (self._df[c].dtype==float) | (self._df[c].dtype==int):
                 plt.subplot(2,2,n)
-                plt.hist(self._scada_df[c].dropna(), 40)
+                plt.hist(self._df[c].dropna(), 40)
                 n = n + 1
                 plt.title(c)
             plt.show()
+        
+
+        
+    
