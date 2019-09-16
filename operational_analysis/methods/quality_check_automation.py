@@ -83,7 +83,7 @@ class QCAuto(object):
         if self._id!= 'None':
             self._time_duplications = self._df.loc[self._df.duplicated(subset= [self._id, self._t]), self._t]
         else:
-            self._time_duplications = self._df.loc[self._df.index.duplicated(), self._t]
+            self._time_duplications = self._df.loc[self._df[self._t].duplicated(), self._t]
 
     def gap_time_identification(self):
         """
@@ -178,7 +178,7 @@ class QCAuto(object):
             df_temp = scada_sum.copy()
         else:
             df_temp = self._df
-        df_diurnal = df_temp.groupby(df_temp.index.hour)[self._w].mean()
+        df_diurnal = df_temp.groupby(df_temp[self._t].dt.hour)[self._w].mean()
 
         ws_norm = self._ws_diurnal/self._ws_diurnal.mean()
         df_norm = df_diurnal/df_diurnal.mean()
@@ -205,9 +205,9 @@ class QCAuto(object):
         """
         if self._id != 'None':
             scada_sum = self._df.groupby(self._df[self._t])[self._w].sum().to_frame()
-            df_diurnal = scada_sum.groupby(scada_sum.index.hour)[self._w].mean()
+            df_diurnal = scada_sum.groupby(scada_sum[self._t].dt.hour)[self._w].mean()
         else:
-            df_diurnal = self._df.groupby(self._df.index.hour)[self._w].mean()
+            df_diurnal = self._df.groupby(self._df[self._t].dt.hour)[self._w].mean()
 
         return_corr = np.empty((24))
         for i in np.arange(24):
@@ -240,7 +240,7 @@ class QCAuto(object):
         else:
             self._df_dst = self._df
     
-        self._df_dst['time'] = self._df_dst.index
+        self._df_dst['time'] = self._df_dst[self._t]
         df_full = timeseries.gap_fill_data_frame(self._df_dst, 'time', self._freq) # Gap fill so spring ahead is visible
         df_full.set_index('time', inplace = True) # Have to reset index to datetime
     
