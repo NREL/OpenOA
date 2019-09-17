@@ -1,7 +1,3 @@
-# This class defines key analytical procedures in a quality check process for turbine data.
-# After analyzing the data for missing and duplicate timestamps, timezones, Daylight Savings Time corrections, and extrema values,
-# a report is produced to allow the user to make informed decisions about how to handle the data.
-
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -17,10 +13,14 @@ from operational_analysis import logging
 
 logger = logging.getLogger(__name__)
 
-class QCAuto(object):
+class WindToolKitQualityControlDiagnosticSuite(object):
+
+    """This class defines key analytical procedures in a quality check process for turbine data.
+    After analyzing the data for missing and duplicate timestamps, timezones, Daylight Savings Time corrections, and extrema values,
+    the user can make informed decisions about how to handle the data."""
 
     @logged_method_call
-    def __init__(self,df, ws_field='wmet_wdspd_avg', power_field= 'wtur_W_avg', time_field= 'datetime', id_field= 'None', freq = '10T', lat_lon= (0,0)):
+    def __init__(self,df, ws_field='wmet_wdspd_avg', power_field= 'wtur_W_avg', time_field= 'datetime', id_field= None, freq = '10T', lat_lon= (0,0)):
         """
         Initialize QCAuto object with data and parameters.
 
@@ -43,8 +43,8 @@ class QCAuto(object):
         self._freq = freq
         self._lat_lon = lat_lon
 
-        #self._scada_sum = self._scada_df.groupby(self._scada_df[self._t])[self._w].sum().to_frame()
-
+        if self._id==None:
+            self._df['ID'] = 'Data'
 
     @logged_method_call
     def run(self):
@@ -63,7 +63,7 @@ class QCAuto(object):
         logger.info("Identifying Time Gaps")
         self.gap_time_identification()
         logger.info("Evaluating timezone deviation from UTC")
-        self._ws_diurnal = self.ws_diurnal_prep()
+        self._wtk_ws_diurnal = self.ws_diurnal_prep()
         self.corr_df_calc()
         logger.info("Isolating Extrema Values")
         self.max_min()
@@ -72,7 +72,7 @@ class QCAuto(object):
         
     def dup_time_identification(self):
         """
-        This function returns any time duplications in the dataset.
+        This function identifies any time duplications in the dataset.
 
         Args:
         (None)
@@ -80,14 +80,11 @@ class QCAuto(object):
         Returns:
         (None)
         """
-        if self._id!= 'None':
-            self._time_duplications = self._df.loc[self._df.duplicated(subset= [self._id, self._t]), self._t]
-        else:
-            self._time_duplications = self._df.loc[self._df[self._t].duplicated(), self._t]
+        self._time_duplications = self._df.loc[self._df.duplicated(subset= [self._id, self._t]), self._t]
 
     def gap_time_identification(self):
         """
-        This function returns any time gaps in the dataset.
+        This function identifies any time gaps in the dataset.
 
         Args:
         (None)
@@ -102,7 +99,8 @@ class QCAuto(object):
         """
         This function finds the nearest x/y indices for a given lat/lon. 
         Rather than fetching the entire coordinates database, which is 500+ MB, this
-        uses the Proj4 library to find a nearby point and then converts to x/y indices
+        uses the Proj4 library to find a nearby point and then converts to x/y indices.
+        This function relies on the Wind Toolkit HSDS API.
         Args:
         f (h5 file): file to be read in
         Returns: x and y coordinates corresponding to a given lat/lon as a tuple
@@ -173,14 +171,13 @@ class QCAuto(object):
         Returns: (None)
         """
 
-        if self._id != 'None':
-            scada_sum = self._df.groupby(self._df[self._t])[self._w].sum().to_frame()
-            df_temp = scada_sum.copy()
-        else:
-            df_temp = self._df
+        sum_df = self._df.groupby(self._df[self._t])[self._w].sum().to_frame()
+        df_temp = sum_df.copy()
+        df_temp[self._t] = df_temp.index
+
         df_diurnal = df_temp.groupby(df_temp[self._t].dt.hour)[self._w].mean()
 
-        ws_norm = self._ws_diurnal/self._ws_diurnal.mean()
+        ws_norm = self._wtk_ws_diurnal/self._wtk_ws_diurnal.mean()
         df_norm = df_diurnal/df_diurnal.mean()
     
         plt.figure(figsize=(8,5))
@@ -195,7 +192,7 @@ class QCAuto(object):
 
     def corr_df_calc(self):
         """
-        This method returns a correlation series that compares the current power data (with different shift thresholds) to wind speed data from the WTK with hourly resolution.
+        This method creates a correlation series that compares the current power data (with different shift thresholds) to wind speed data from the WTK with hourly resolution.
 
         Args:
         (None)
@@ -203,20 +200,13 @@ class QCAuto(object):
         Returns:
         (None)
         """
-        if self._id != 'None':
-            scada_sum = self._df.groupby(self._df[self._t])[self._w].sum().to_frame()
-            df_diurnal = scada_sum.groupby(scada_sum[self._t].dt.hour)[self._w].mean()
-        else:
-            df_diurnal = self._df.groupby(self._df[self._t].dt.hour)[self._w].mean()
-
+            
+        sum_df = self._df.groupby(self._df[self._t])[self._w].sum().to_frame()
+        self._df_diurnal = sum_df.groupby(sum_df.index.hour)[self._w].mean()
         return_corr = np.empty((24))
-        for i in np.arange(24):
-            df_temp = df_diurnal.shift(i)
-        
-            if i != 0:
-                df_temp[np.arange(i)] = df_diurnal[-i:]
 
-            return_corr[i] = np.corrcoef(self._ws_diurnal['ws'], df_temp)[0,1]
+        for i in np.arange(24):
+            return_corr[i] = np.corrcoef(self._wtk_ws_diurnal['ws'], np.roll(self._df_diurnal, i))[0,1]
             
         self._hour_shift = pd.DataFrame(index = np.arange(24), data = {'Hour Shift Correlation': return_corr})
 
@@ -235,14 +225,11 @@ class QCAuto(object):
         # List of daylight savings days back to 2010
         dst_df = pd.read_csv('./daylight_savings.csv')
 
-        if self._id != 'None':
-            self._df_dst =  self._df.groupby(self._df[self._t])[self._w].sum().to_frame()
-        else:
-            self._df_dst = self._df
+        self._df_dst =  self._df.groupby(self._df[self._t])[self._w].sum().to_frame()
     
-        self._df_dst['time'] = self._df_dst[self._t]
+        self._df_dst['time'] = self._df_dst.index
         df_full = timeseries.gap_fill_data_frame(self._df_dst, 'time', self._freq) # Gap fill so spring ahead is visible
-        df_full.set_index('time', inplace = True) # Have to reset index to datetime
+        df_full.set_index('time', inplace=True, drop=False)
     
         years = df_full.index.year.unique() # Years in data record
         num_years = len(years)
@@ -297,7 +284,7 @@ class QCAuto(object):
     def turb_plots(self):
 
         """
-        Produces plots of each individual turbine
+        Produces power curve (power vs. wind speed) plot for each individual turbine
 
         Args:
         (None)
@@ -322,7 +309,7 @@ class QCAuto(object):
 
     def column_plots(self):
         """
-        Produces plots for each numeric column.
+        Produces histogram plot for each numeric column.
         Args:
         (None)
 
