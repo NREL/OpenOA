@@ -44,6 +44,7 @@ class WindToolKitQualityControlDiagnosticSuite(object):
         self._lat_lon = lat_lon
 
         if self._id==None:
+            self._id = 'ID'
             self._df['ID'] = 'Data'
 
     @logged_method_call
@@ -200,15 +201,14 @@ class WindToolKitQualityControlDiagnosticSuite(object):
         Returns:
         (None)
         """
-            
-        sum_df = self._df.groupby(self._df[self._t])[self._w].sum().to_frame()
-        self._df_diurnal = sum_df.groupby(sum_df.index.hour)[self._w].mean()
+
+        self._df_diurnal = self._df.groupby(self._df[self._t].dt.hour)[self._w].mean()
         return_corr = np.empty((24))
 
         for i in np.arange(24):
-            return_corr[i] = np.corrcoef(self._wtk_ws_diurnal['ws'], np.roll(self._df_diurnal, i))[0,1]
-            
-        self._hour_shift = pd.DataFrame(index = np.arange(24), data = {'Hour Shift Correlation': return_corr})
+            return_corr[i] = np.corrcoef(self._wtk_ws_diurnal['ws'], np.roll(self._df_diurnal,i))[0,1]
+
+        self._hour_shift = pd.DataFrame(index = np.arange(24), data = {'corr_by_hour': return_corr})
 
     def daylight_savings_plot(self, hour_window = 3):
           
@@ -225,11 +225,10 @@ class WindToolKitQualityControlDiagnosticSuite(object):
         # List of daylight savings days back to 2010
         dst_df = pd.read_csv('./daylight_savings.csv')
 
-        self._df_dst =  self._df.groupby(self._df[self._t])[self._w].sum().to_frame()
+        self._df_dst =  self._df.loc[self._df[self._id]==self._df[self._id].unique()[0], :]
     
-        self._df_dst['time'] = self._df_dst.index
-        df_full = timeseries.gap_fill_data_frame(self._df_dst, 'time', self._freq) # Gap fill so spring ahead is visible
-        df_full.set_index('time', inplace=True, drop=False)
+        df_full = timeseries.gap_fill_data_frame(self._df_dst, self._t, self._freq) # Gap fill so spring ahead is visible
+        df_full.set_index(self._t, inplace=True)
     
         years = df_full.index.year.unique() # Years in data record
         num_years = len(years)
