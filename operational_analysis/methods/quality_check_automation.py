@@ -20,7 +20,7 @@ class WindToolKitQualityControlDiagnosticSuite(object):
     the user can make informed decisions about how to handle the data."""
 
     @logged_method_call
-    def __init__(self,df, ws_field='wmet_wdspd_avg', power_field= 'wtur_W_avg', time_field= 'datetime', id_field= None, freq = '10T', lat_lon= (0,0)):
+    def __init__(self,df, ws_field='wmet_wdspd_avg', power_field= 'wtur_W_avg', time_field= 'datetime', id_field= None, freq = '10T', lat_lon= (0,0), dst_subset = 'American'):
         """
         Initialize QCAuto object with data and parameters.
 
@@ -42,6 +42,7 @@ class WindToolKitQualityControlDiagnosticSuite(object):
         self._id = id_field
         self._freq = freq
         self._lat_lon = lat_lon
+        self._dst_subset = dst_subset
 
         if self._id==None:
             self._id = 'ID'
@@ -63,8 +64,10 @@ class WindToolKitQualityControlDiagnosticSuite(object):
         self.dup_time_identification()
         logger.info("Identifying Time Gaps")
         self.gap_time_identification()
+        logger.info('Grabbing DST Transition Times')
+        self.create_dst_df()
         logger.info("Evaluating timezone deviation from UTC")
-        self._wtk_ws_diurnal = self.ws_diurnal_prep()
+        self.ws_diurnal_prep()
         self.corr_df_calc()
         logger.info("Isolating Extrema Values")
         self.max_min()
@@ -126,7 +129,8 @@ class WindToolKitQualityControlDiagnosticSuite(object):
     def ws_diurnal_prep(self, start_date = '2007-01-01', end_date = '2013-12-31'):
 
         """
-        This method returns a Pandas Series corresponding to hourly average windspeeds
+        This method links into Wind Toolkit data on AWS as a data source, grabs wind speed data, and calculates diurnal hourly averages. 
+        These diurnal hourly averages are returned as a Pandas series. 
 
         Args:
         start_date(:obj:'String'): start date to diurnal analysis (optional)
@@ -161,12 +165,12 @@ class WindToolKitQualityControlDiagnosticSuite(object):
         # Calculate diurnal profile of wind speed
         ws_diurnal=ws_df.groupby(ws_df.index.hour).mean()
 
-        return ws_diurnal
+        self._wtk_ws_diurnal= ws_diurnal
 
     def wtk_diurnal_plot(self):
 
         """
-        This method plots the WTK diurnal plot alongisde the hourly power averages of the scada_df across all turbines
+        This method plots the WTK diurnal plot alongisde the hourly power averages of the df across all turbines
         Args:
         (None)
         Returns: (None)
@@ -206,10 +210,30 @@ class WindToolKitQualityControlDiagnosticSuite(object):
         return_corr = np.empty((24))
 
         for i in np.arange(24):
-            return_corr[i] = np.corrcoef(self._wtk_ws_diurnal['ws'], np.roll(self._df_diurnal,i))[0,1]
-
+            df_temp = self._df_diurnal.shift(i)
+            
+            if i != 0:
+                df_temp[np.arange(i)] = self._df_diurnal[-i:]
+                
+            return_corr[i] = np.corrcoef(self._wtk_ws_diurnal['ws'], df_temp)[0,1]
+        
         self._hour_shift = pd.DataFrame(index = np.arange(24), data = {'corr_by_hour': return_corr})
 
+    
+    def create_dst_df(self):
+        if self._dst_subset == 'American':
+        # List of daylight savings days back to 2008
+            self._dst_dates = pd.DataFrame()
+            self._dst_dates['year'] =  [2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019]
+            self._dst_dates['start'] = ['3/9/08 2:00', '3/8/09 2:00', '3/14/10 2:00', '3/13/11 2:00', '3/11/12 2:00', '3/10/13 2:00', '3/9/14 2:00', '3/8/15 2:00', '3/13/16 2:00', '3/12/17 2:00', '3/11/18 2:00' , '3/10/19 2:00']
+            self._dst_dates['end'] = ['11/2/08 2:00', '11/1/09 2:00', '11/7/10 2:00', '11/6/11 2:00', '11/4/12 2:00', '11/3/13 2:00', '11/2/14 2:00', '11/1/15 2:00', '11/6/16 2:00', '11/5/17 2:00', '11/4/18 2:00', '11/3/19 2:00']
+        else:
+            # List of daylight savings days back to 2008
+            self._dst_dates = pd.DataFrame()
+            self._dst_dates['year'] = [2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019]
+            self._dst_dates['start'] = ['3/30/08 2:00', '3/29/09 2:00', '3/28/10 2:00', '3/27/11 2:00', '3/25/12 2:00', '3/31/13 2:00', '3/30/14 2:00', '3/29/15 2:00', '3/27/16 2:00', '3/26/17 2:00', '3/25/18 2:00' , '3/31/19 2:00']
+            self._dst_dates['end'] = ['10/26/08 3:00', '10/25/09 3:00', '10/31/10 3:00', '10/30/11 3:00', '10/28/12 3:00', '10/27/13 3:00', '10/26/14 3:00', '10/25/15 3:00', '10/30/16 3:00', '10/29/17 3:00', '10/28/18 3:00', '10/27/19 3:00']
+    
     def daylight_savings_plot(self, hour_window = 3):
           
         """
@@ -221,14 +245,12 @@ class WindToolKitQualityControlDiagnosticSuite(object):
         Returns:
         None
         """
-    
-        # List of daylight savings days back to 2010
-        dst_df = pd.read_csv('./daylight_savings.csv')
 
         self._df_dst =  self._df.loc[self._df[self._id]==self._df[self._id].unique()[0], :]
-    
+
         df_full = timeseries.gap_fill_data_frame(self._df_dst, self._t, self._freq) # Gap fill so spring ahead is visible
         df_full.set_index(self._t, inplace=True)
+        self._df_full = df_full
     
         years = df_full.index.year.unique() # Years in data record
         num_years = len(years)
@@ -236,7 +258,7 @@ class WindToolKitQualityControlDiagnosticSuite(object):
         plt.figure(figsize = (12,20))
 
         for y in np.arange(num_years):
-            dst_data = dst_df.loc[dst_df['year'] == years[y]] 
+            dst_data = self._dst_dates.loc[self._dst_dates['year'] == years[y]]
         
             # Set spring ahead window to plot
             spring_start = pd.to_datetime(dst_data['start']) - pd.Timedelta(hours = hour_window)
@@ -267,7 +289,7 @@ class WindToolKitQualityControlDiagnosticSuite(object):
     def max_min(self):
 
         """
-        Creates a DataFrame that contains the max and min values for each column
+        This function creates a DataFrame that contains the max and min values for each column
 
         Args:
         (None)
@@ -280,17 +302,25 @@ class WindToolKitQualityControlDiagnosticSuite(object):
         self._max_min['max'] = self._df.max()
         self._max_min['min'] = self._df.min()
 
-    def turb_plots(self):
+    def plot_by_id(self, x_axis = None, y_axis = None):
 
         """
-        Produces power curve (power vs. wind speed) plot for each individual turbine
+        This is generalized function that allows the user to plot any two fields against each other with unique plots for each unique ID.
+        For scada data, this function produces turbine plots and for meter data, this will return a single plot.
 
         Args:
-        (None)
+        x_axis(:obj:'String'): Independent variable to plot (default is windspeed field)
+        y_axis(:obj:'String'): Dependent variable to plot (default is power field)
 
         Returns:
         (None)
         """
+        if x_axis is None:
+            x_axis = self._ws
+        
+        if y_axis is None:
+            y_axis = self._w
+
         turbs = self._df[self._id].unique()
         num_turbs = len(turbs)
         num_rows = np.ceil(num_turbs/4.)
@@ -300,13 +330,13 @@ class WindToolKitQualityControlDiagnosticSuite(object):
         for t in turbs:
             plt.subplot(num_rows, 4, n)
             scada_sub = self._df.loc[self._df[self._id] == t, :]
-            plt.scatter(scada_sub[self._ws], scada_sub[self._w], s = 5)
+            plt.scatter(scada_sub[x_axis], scada_sub[y_axis], s = 5)
             n = n + 1
             plt.title(t)
         plt.tight_layout()
         plt.show()
 
-    def column_plots(self):
+    def column_histograms(self):
         """
         Produces histogram plot for each numeric column.
         Args:
