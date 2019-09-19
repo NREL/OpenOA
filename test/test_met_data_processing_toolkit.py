@@ -34,9 +34,11 @@ class SimpleMetProcessing(unittest.TestCase):
 
     def test_compute_air_density(self):
         # Test data frame with pressure and temperature data
-        df = pd.DataFrame(data={'temp': np.arange(280, 300, 5), 'pres': np.arange(90000, 110000, 5000)})
 
-        rho = mt.compute_air_density(df, 'temp', 'pres')  # Test result
+        temp = np.arange(280, 300, 5) 
+        pres = np.arange(90000, 110000, 5000)
+
+        rho = mt.compute_air_density(temp, pres)  # Test result
         rho_ans = np.array([1.11744, 1.1581 , 1.19706, 1.23427])  # Expected result
 
         nptest.assert_array_almost_equal(rho, rho_ans, decimal=5)
@@ -55,17 +57,19 @@ class SimpleMetProcessing(unittest.TestCase):
 
     def test_air_density_adjusted_wind_speed(self):
         # Test dataframe with wind speed and density data
-        df = pd.DataFrame(data={'wind_speed': np.arange(0, 10, 2), 'dens': np.arange(1.10, 1.20, 0.02)})
+        wind_speed = np.arange(0, 10, 2)
+        dens = np.arange(1.10, 1.20, 0.02)
 
-        adjusted_ws = mt.air_density_adjusted_wind_speed(df, 'wind_speed', 'dens')  # Test answer
+        adjusted_ws = mt.air_density_adjusted_wind_speed(wind_speed, dens)  # Test answer
         adjusted_ws_ans = np.array([0., 1.988235, 4., 6.034885, 8.092494])  # Expected answer
 
         nptest.assert_array_almost_equal(adjusted_ws, adjusted_ws_ans, decimal=5)
 
     def test_compute_turbulence_intensity(self):
-        df = pd.DataFrame(data={'mean': np.linspace(2., 25., 10),
-                                'std': np.linspace(0.1, 2.0, 10)})
-        computed_TI = mt.compute_turbulence_intensity(df, 'mean', 'std')
+
+        mean = np.linspace(2., 25., 10)
+        std = np.linspace(0.1, 2.0, 10)
+        computed_TI = mt.compute_turbulence_intensity(mean, std)
         expected_TI = np.array([0.05, 0.06829268, 0.0734375, 0.07586207, 0.07727273,
                                 0.07819549, 0.07884615, 0.07932961, 0.07970297, 0.08])
         nptest.assert_allclose(computed_TI, expected_TI, err_msg="Turbulence intensity not properly computed.")
@@ -92,12 +96,12 @@ class SimpleMetProcessing(unittest.TestCase):
         nptest.assert_allclose(computed_alpha, expected_alpha, err_msg="Shear multi-sensor optimization failing.")
 
     def test_compute_veer(self):
-        df = pd.DataFrame(data={'wind_low': np.linspace(2., 10., 10),
-                                'wind_high': np.linspace(8., 25., 10)})
+        wind_low = np.linspace(2., 10., 10)
+        wind_high = np.linspace(8., 25., 10)})
         height_low = 30.0
         height_high = 80.0
 
-        computed_veer = mt.compute_veer(df, 'wind_low', height_low, 'wind_high', height_high)
+        computed_veer = mt.compute_veer(wind_low, height_low, wind_high, height_high)
         expected_veer = np.array([0.12, 0.14, 0.16, 0.18, 0.2, 0.22, 0.24, 0.26, 0.28, 0.3])
         nptest.assert_allclose(computed_veer, expected_veer, err_msg="Veer computed incorrectly.")
 
