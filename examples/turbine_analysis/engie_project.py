@@ -13,8 +13,8 @@ class TurbineEngieOpenData(PlantData):
 
         Args:
             name(string): uniqiue name (wind_turbine_name) of the wind turbine in the engie open data platform
-            start_date(string): start date of the data to be loaded into the object (%d.%m.%y %H:%M)
-            end_date(string): end date of the data to be loaded into the object (%d.%m.%y %H:%M)
+            start_date(string): start date of the data to be loaded into the object (%m.%d.%y %H:%M)
+            end_date(string): end date of the data to be loaded into the object (%m.%d.%y %H:%M)
 
         Returns:
             New object
