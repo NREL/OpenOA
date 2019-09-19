@@ -184,13 +184,13 @@ class TurbineLongTermGrossEnergy(object):
             # Apply range filter
             dic[t].loc[:,'flag_range'] = filters.range_flag(dic[t].loc[:, 'wmet_wdspd_avg'], below = 0, above = 40)
             # Apply frozen/unresponsive sensor filter
-            dic[t].loc[:,'flag_frozen'] = filters.unresponsive_flag(dic[t].loc[:, 'wmet_wdspd_avg'], threshold = self._rep_threshold)
+            dic[t].loc[:,'flag_frozen'] = filters.unresponsive_flag(dic[t].loc[:, 'wmet_wdspd_avg'], threshold = 3)
             # Apply window range filter
             dic[t].loc[:,'flag_window'] = filters.window_range_flag(window_col = dic[t].loc[:, 'wmet_wdspd_avg'], 
-                                                                    window_start = 5, 
+                                                                    window_start = 5., 
                                                                     window_end = 40, 
                                                                     value_col = dic[t].loc[:, 'wtur_W_avg'], 
-                                                                    value_min =  0.01*turb_capac,
+                                                                    value_min =  0.02*turb_capac,
                                                                     value_max =  1.2*turb_capac) 
 
             # Apply bin-based filter
@@ -206,7 +206,6 @@ class TurbineLongTermGrossEnergy(object):
 
             # Create a 'final' flag which is true if any of the previous flags are true
             dic[t].loc[:, 'flag_final'] = (dic[t].loc[:, 'flag_range']) | \
-                                          (dic[t].loc[:, 'flag_window']) | \
                                           (dic[t].loc[:, 'flag_window']) | \
                                           (dic[t].loc[:, 'flag_bin']) | \
                                           (dic[t].loc[:, 'flag_frozen'])
