@@ -32,6 +32,7 @@ class WindToolKitQualityControlDiagnosticSuite(object):
          id_field(:obj: 'String'): String name of the id field to df
          freq(:obj: 'String'): String representation of the resolution for the time field to df
          lat_lon(:obj: 'tuple'): latitude and longitude of farm represented as a tuple
+         dst_subset(:obj: 'String'): Set of Daylight Savings Time transitions to use (currently American or France)
         """
         logger.info("Initializing QC_Automation Object")
         
@@ -177,10 +178,11 @@ class WindToolKitQualityControlDiagnosticSuite(object):
         """
 
         sum_df = self._df.groupby(self._df[self._t])[self._w].sum().to_frame()
-        df_temp = sum_df.copy()
-        df_temp[self._t] = df_temp.index
+        #df_temp = sum_df.copy()
+        #df_temp[self._t] = df_temp.index
 
-        df_diurnal = df_temp.groupby(df_temp[self._t].dt.hour)[self._w].mean()
+        #df_diurnal = df_temp.groupby(df_temp[self._t].dt.hour)[self._w].mean()
+        df_diurnal = sum_df.groupby(sum_df.index.hour)[self._w].mean()
 
         ws_norm = self._wtk_ws_diurnal/self._wtk_ws_diurnal.mean()
         df_norm = df_diurnal/df_diurnal.mean()
@@ -210,25 +212,20 @@ class WindToolKitQualityControlDiagnosticSuite(object):
         return_corr = np.empty((24))
 
         for i in np.arange(24):
-            df_temp = self._df_diurnal.shift(i)
-            
-            if i != 0:
-                df_temp[np.arange(i)] = self._df_diurnal[-i:]
-                
-            return_corr[i] = np.corrcoef(self._wtk_ws_diurnal['ws'], df_temp)[0,1]
+            return_corr[i] = np.corrcoef(self._wtk_ws_diurnal['ws'], np.roll(self._df_diurnal,i))[0,1]
         
         self._hour_shift = pd.DataFrame(index = np.arange(24), data = {'corr_by_hour': return_corr})
 
     
     def create_dst_df(self):
         if self._dst_subset == 'American':
-        # List of daylight savings days back to 2008
+        # American DST Transition Dates (Local Time)
             self._dst_dates = pd.DataFrame()
             self._dst_dates['year'] =  [2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019]
             self._dst_dates['start'] = ['3/9/08 2:00', '3/8/09 2:00', '3/14/10 2:00', '3/13/11 2:00', '3/11/12 2:00', '3/10/13 2:00', '3/9/14 2:00', '3/8/15 2:00', '3/13/16 2:00', '3/12/17 2:00', '3/11/18 2:00' , '3/10/19 2:00']
             self._dst_dates['end'] = ['11/2/08 2:00', '11/1/09 2:00', '11/7/10 2:00', '11/6/11 2:00', '11/4/12 2:00', '11/3/13 2:00', '11/2/14 2:00', '11/1/15 2:00', '11/6/16 2:00', '11/5/17 2:00', '11/4/18 2:00', '11/3/19 2:00']
         else:
-            # List of daylight savings days back to 2008
+            # European DST Transition Dates (Local Time)
             self._dst_dates = pd.DataFrame()
             self._dst_dates['year'] = [2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019]
             self._dst_dates['start'] = ['3/30/08 2:00', '3/29/09 2:00', '3/28/10 2:00', '3/27/11 2:00', '3/25/12 2:00', '3/31/13 2:00', '3/30/14 2:00', '3/29/15 2:00', '3/27/16 2:00', '3/26/17 2:00', '3/25/18 2:00' , '3/31/19 2:00']
