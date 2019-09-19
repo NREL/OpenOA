@@ -47,6 +47,7 @@ class TurbineLongTermGrossEnergy(object):
         Initialize turbine long-term gross energy analysis with data and parameters.
         Args:
          plant(:obj:`PlantData object`): PlantData object from which TurbineLongTermGrossEnergy should draw data.
+         max_power_filter(float): 
         """
         logger.info("Initializing TurbineLongTermGrossEnergy Object")
         
@@ -191,6 +192,7 @@ class TurbineLongTermGrossEnergy(object):
                                                                     value_col = dic[t].loc[:, 'wtur_W_avg'], 
                                                                     value_min =  0.02*turb_capac,
                                                                     value_max =  1.2*turb_capac) 
+
             # Apply bin-based filter
             dic[t].loc[:,'flag_bin'] = filters.bin_filter(bin_col = dic[t].loc[:, 'wtur_W_avg'], 
                                                           value_col = dic[t].loc[:, 'wmet_wdspd_avg'], 
@@ -201,6 +203,7 @@ class TurbineLongTermGrossEnergy(object):
                                                           bin_max = max_bin, 
                                                           threshold_type = 'scalar', 
                                                           direction = 'all')
+
             # Create a 'final' flag which is true if any of the previous flags are true
             dic[t].loc[:, 'flag_final'] = (dic[t].loc[:, 'flag_range']) | \
                                           (dic[t].loc[:, 'flag_window']) | \
@@ -431,7 +434,7 @@ class TurbineLongTermGrossEnergy(object):
             daily_reanal = self._daily_reanal_dict[r]
             turb_gross[r] = pd.DataFrame(index = daily_reanal.index) # Set empty data frame to store results
             X_long_term = daily_reanal['windspeed_ms'], daily_reanal['winddirection_deg'], daily_reanal['rho_kgm-3']
-            
+
             for t in self._turbs: # Loop through turbines
                 turb_gross[r].loc[:, t] = mod_results[t, r](*X_long_term) # Apply GAM fit to long-term reanalysis data
                 turb_gross[r].loc[turb_gross[r][t] < 0, t] = 0
