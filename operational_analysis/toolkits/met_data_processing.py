@@ -70,6 +70,10 @@ def compute_air_density(temp_col, pres_col, humi_col = None):
     if np.any(temp_col < 0) | np.any(pres_col < 0) | np.any(rel_humidity < 0):
         raise Exception('Some of your temperature, pressure or humidity data is negative. Check your data.')
 
+    #protect against python 2 integer division rules
+    temp_col = temp_col.astype(float)
+    pres_col = pres_col.astype(float)
+
     R_const = 287.05  # Gas constant for dry air, units of J/kg/K
     Rw_const = 461.5   # Gas constant of water vapour, unit J/kg/K
     rho = ((1/temp_col)*(pres_col/R_const-rel_humidity*(0.0000205*np.exp(0.0631846*temp_col))*
