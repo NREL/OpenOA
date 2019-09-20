@@ -97,7 +97,7 @@ class SimpleMetProcessing(unittest.TestCase):
 
     def test_compute_veer(self):
         wind_low = np.linspace(2., 10., 10)
-        wind_high = np.linspace(8., 25., 10)})
+        wind_high = np.linspace(8., 25., 10)
         height_low = 30.0
         height_high = 80.0
 
