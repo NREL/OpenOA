@@ -75,8 +75,18 @@ class MonteCarloAEP(object):
         
         self.num_days_lt= (31, 28.25, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
 
-        # Run preprocessing step
+        # Run preprocessing step                                                                                                                                                                                   
         self.calculate_monthly_dataframe()
+
+        # Store start and end of period of record
+        self._start_month = self._monthly.df.index.min()
+        self._end_month = self._monthly.df.index.max()
+        
+        # Create a data frame to store monthly reanalysis data over plant period of record
+        self._reanalysis_por = self._monthly.df.loc[(self._monthly.df.index >= self._start_month) & \
+                                                    (self._monthly.df.index <= self._end_month)]
+        self._reanalysis_por_avg = self._reanalysis_por.groupby(self._reanalysis_por.index.month).mean()
+    
 
     @logged_method_call
     def run(self, num_sim, reanal_subset):
@@ -146,6 +156,7 @@ class MonteCarloAEP(object):
         plt.xlabel('Year')
         plt.ylabel('Normalized wind speed')
         plt.legend()
+        plt.tight_layout()
         return plt
 
     def plot_reanalysis_gross_energy_data(self, outlier_thres):
@@ -160,7 +171,7 @@ class MonteCarloAEP(object):
         import matplotlib.pyplot as plt
         valid_monthly = self._monthly.df
         project = self._plant
-        plt.figure(figsize=(12, 12))
+        plt.figure(figsize=(9, 9))
 
         # Loop through each reanalysis product and make a scatterplot of monthly wind speed vs plant energy
         for p in np.arange(0, len(list(project._reanalysis._product.keys()))):
@@ -184,6 +195,7 @@ class MonteCarloAEP(object):
             plt.title(col_name + ', R2=' + str(np.round(r2, 3)))
             plt.xlabel('Wind speed (m/s)')
             plt.ylabel('30-day normalized gross energy (GWh)')
+        plt.tight_layout()
         return plt
 
     def plot_result_aep_distributions(self):
@@ -193,7 +205,7 @@ class MonteCarloAEP(object):
         :return: matplotlib.pyplot object
         """
         import matplotlib.pyplot as plt
-        fig = plt.figure(figsize=(14, 12))
+        fig = plt.figure(figsize=(10, 8))
 
         sim_results = self.results
 
@@ -217,7 +229,31 @@ class MonteCarloAEP(object):
         ax.text(0.05, 0.9, 'Mean: ' + str(np.round((sim_results['curt_pct'].mean()) * 100, 2)) + ' %',
                 transform=ax.transAxes)
         plt.xlabel('Curtailment Loss (%)')
+        plt.tight_layout()
+        return plt
 
+    def plot_aep_boxplot(self, param, lab):
+        """                                                                                                                                                                                        
+        Plot box plots of AEP results sliced by a specified Monte Carlo parameter                                                                                                                  
+
+        Args:                                                                                                                                                                                      
+           param( :obj:`list'): The Monte Carlo parameter on which to split the AEP results
+           lab(:obj:'str'): The name to use for the parameter when producing the figure
+        
+        Returns:                                                                                                                                                                                   
+            (none)                                                                                                                                                                               
+        """
+
+        import matplotlib.pyplot as plt
+        sim_results = self.results
+
+        tmp_df=pd.DataFrame(data={'aep': sim_results.aep_GWh, 'param': param})
+        tmp_df.boxplot(column='aep',by='param',figsize=(8,6))
+        plt.ylabel('AEP (GWh/yr)')
+        plt.xlabel(lab)
+        plt.title('AEP estimates by %s' % lab)
+        plt.suptitle("")
+        plt.tight_layout()
         return plt
 
     def plot_monthly_plant_data_timeseries(self):
@@ -229,7 +265,7 @@ class MonteCarloAEP(object):
         import matplotlib.pyplot as plt
         valid_monthly = self._monthly.df
 
-        plt.figure(figsize=(15, 15))
+        plt.figure(figsize=(12, 9))
 
         # Gross energy
         plt.subplot(2, 1, 1)
@@ -246,7 +282,8 @@ class MonteCarloAEP(object):
         plt.xlabel('Year')
         plt.ylabel('Loss (%)')
         plt.legend()
-
+        
+        plt.tight_layout()
         return plt
 
     @logged_method_call
@@ -311,10 +348,10 @@ class MonteCarloAEP(object):
         # Get actual number of days per month in the raw data
         # (used when trimming beginning and end of monthly data frame)
         # If meter data has higher resolution than monthly
-        if (self._plant._meter_freq != '1MS') & (self._plant._meter_freq != '1M'):
-            self._monthly.df['num_days_actual'] = df.resample('MS')['energy_kwh'].apply(tm.num_days)
+        if (self._plant._meter_freq == '1MS') | (self._plant._meter_freq == '1M'):
+            self._monthly.df['num_days_actual'] = self._monthly.df['num_days_expected']            
         else:
-            self._monthly.df['num_days_actual'] = self._monthly.df['num_days_expected']
+            self._monthly.df['num_days_actual'] = df.resample('MS')['energy_kwh'].apply(tm.num_days)
 
     @logged_method_call
     def process_loss_estimates(self):
@@ -631,28 +668,39 @@ class MonteCarloAEP(object):
 
         num_sim = self.num_sim
 
-        sim_results = pd.DataFrame(index=np.arange(num_sim), data={'aep_GWh': np.empty(num_sim),
-                                                                   'avail_pct': np.empty(num_sim),
-                                                                   'curt_pct': np.empty(num_sim)})
+        aep_GWh = np.empty(num_sim)
+        avail_pct =  np.empty(num_sim)
+        curt_pct =  np.empty(num_sim)
+        lt_por_ratio =  np.empty(num_sim)
 
         # Loop through number of simulations, run regression each time, store AEP results
         for n in tqdm(np.arange(num_sim)):
             slope, intercept = self.run_regression(n)  # Get slope, intercept from regression
             ws_lt = self.sample_long_term_reanalysis(self._mc_num_years_windiness[n],
                                                      self._mc_reanalysis_product[n])  # Get long-term wind speeds
+            
             # Get long-term normalized gross energy by applying regression result to long-term monthly wind speeds
             gross_norm_lt = ws_lt.multiply(slope) + intercept
             gross_lt=gross_norm_lt*self.num_days_lt/30 # Undo normalization to 30-day months
             
+            # Get long-term normalized gross energy by applying regression result to long-term monthly wind speeds                                                                    
+            gross_norm_por = self._reanalysis_por_avg[self._mc_reanalysis_product[n]].multiply(slope) + intercept
+            gross_por=gross_norm_por*self.num_days_lt/30 # Undo normalization to 30-day months 
+
             # Get long-term availability and curtailment losses by month
             [avail_lt_losses, curt_lt_losses] = self.sample_long_term_losses(n)  
 
             # Assign AEP, long-term availability, and long-term curtailment to output data frame
-            sim_results.loc[n,'aep_GWh'] = gross_lt.sum() * (1 - avail_lt_losses)
-            sim_results.loc[n,'avail_pct'] = avail_lt_losses
-            sim_results.loc[n,'curt_pct'] = curt_lt_losses
+            aep_GWh[n] = gross_lt.sum() * (1 - avail_lt_losses)
+            avail_pct[n] = avail_lt_losses
+            curt_pct[n] = curt_lt_losses
+            lt_por_ratio[n] = gross_lt.sum() / gross_por.sum()            
 
         # Return final output
+        sim_results = pd.DataFrame(index=np.arange(num_sim), data={'aep_GWh': aep_GWh,                                                                                                        
+                                                                   'avail_pct': avail_pct,                                                                                                      
+                                                                   'curt_pct': curt_pct,                                                                                                       
+                                                                   'lt_por_ratio': lt_por_ratio})      
         return sim_results
 
     @logged_method_call
@@ -680,7 +728,7 @@ class MonteCarloAEP(object):
             ws_monthly = self.long_term_sampling[(r, n)]
             return ws_monthly
 
-            # If data hasn't yet been computed, peform the calculation
+        # If data hasn't yet been computed, peform the calculation
         ws_df = self._reanalysis_monthly[r].to_frame().dropna()  # Drop NA values from monthly reanalysis data series
         ws_data = ws_df.tail(n * 12)  # Get last 'x' years of data from reanalysis product
         ws_monthly = ws_data.groupby(ws_data.index.month)[r].mean()  # Get long-term annualized monthly wind speeds

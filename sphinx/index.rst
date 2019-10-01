@@ -35,7 +35,7 @@ anyone can write their own, which is intended to provide natural growth of tools
     :caption: Contents:
 
     install.rst
-    examples.rst
+    examplesout
     toolkits.rst
     methods.rst
     types.rst

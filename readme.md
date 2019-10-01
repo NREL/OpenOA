@@ -1,4 +1,4 @@
-OpenOA 
+OpenOA
 ======
 
 [![Build Status](https://travis-ci.org/NREL/OpenOA.svg?branch=master)](https://travis-ci.org/NREL/OpenOA) (Master), [![Build Status](https://travis-ci.org/NREL/OpenOA.svg?branch=develop)](https://travis-ci.org/NREL/OpenOA) (Develop)
@@ -19,13 +19,13 @@ growth of tools within this framework.
 
 ### Requirements
 
-  * Python 2.7+, 3.6+ (e.g., from Anaconda) with pip
+  * Python 3.6+ (e.g., from Anaconda) with pip
 
 We recommend creating a new virtual environment or Anaconda environment before attempting to install
 OpenOA. To create and activate such a new environment with the name "openoa-env" using Anaconda:
 
 ```
-conda create --name openoa-env python=2.7
+conda create --name openoa-env python=3
 conda activate openoa-env
 ```
 
@@ -104,9 +104,8 @@ Documentation is automatically built by, and visible through, [Read The Docs](ht
 You can build the documentation with [sphinx](http://www.sphinx-doc.org/en/stable/):
 
 ```
-pip install sphinx_rtd_theme ipython m2r
-
 cd sphinx
+pip install -r requirements.txt
 make html
 ```
 
@@ -128,7 +127,7 @@ pip install -e ./OpenOA
 ```
 
 
-### Credit
+### Contributors
 
 Alphabetically:
 Anna Craig,
@@ -139,6 +138,7 @@ Monte Lunacek,
 John Meissner,
 Mike Optis,
 Jordan Perr-Sauer,
+Sebastian Pfaffel,
 Caleb Phillips,
 Eliot Quon,
 Sheungwen Sheng,
