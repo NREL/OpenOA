@@ -49,7 +49,6 @@ OpenOA was originally scoped to calculate the operational annual energy producti
 OpenOA has since expand its scope to support additional types of analyses including turbine performance and reliability and to support data from wind plants outside the initial set of test projects.
 Released publicly in September 2018, the OpenOA repository contains numerous examples worked out in Jupyter notebooks, along with free example data which can be used to run the built in unit and integration tests.
 
-## Published Work
 OpenOA has been used in the following projects... **[CITATIONS]**
 
 # Operational Analysis
