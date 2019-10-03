@@ -44,7 +44,8 @@ bibliography: paper.bib
 OpenOA is an open source Python package which implements operational analysis (OA) methods for wind plants.
 The development of OpenOA started internally at the National Renewable Energy Laboratory (NREL) to support the lab's efforts in the Wind Plant Performance and Prediction (WP3) Benchmark, which is a key risk reduction activity of the Performance, Risk, Uncertainty, and Finance project under the Atmosphere to Electrons initiative [@A2EWebsite].
 The goal of WP3 is to provide an independent benchmark of bias in pre-construction energy yield assessment (EYA), and to understand the sources of uncertainty therein.
-OpenOA was created to calculate the operational annual energy production (AEP) of case study wind power plants, providing a baseline to which bias can be measured. **[CITE WP3 RESULTS?]**
+
+OpenOA was originally scoped to calculate the operational annual energy production (AEP) of case study wind power plants, providing a baseline to which bias can be measured. **[CITE WP3 RESULTS?]**
 OpenOA has since expand its scope to support additional types of analyses including turbine performance and reliability and to support data from wind plants outside the initial set of test projects.
 Released publicly in September 2018, the OpenOA repository contains numerous examples worked out in Jupyter notebooks, along with free example data which can be used to run the built in unit and integration tests.
 
