@@ -46,11 +46,9 @@ OpenOA is an open source Python package which implements operational analysis (O
 The development of OpenOA started internally at the National Renewable Energy Laboratory (NREL) to support the lab's efforts in the Wind Plant Performance and Prediction (WP3) benchmarking initiative, which is a key risk reduction activity of the Performance, Risk, Uncertainty, and Finance project under the Atmosphere to Electrons initiative [@A2EWebsite].
 The goal of WP3 is to provide an independent benchmark of bias in pre-construction energy yield assessment (EYA), and to understand the sources of uncertainty therein.
 
-OpenOA was originally scoped to calculate the operational annual energy production (AEP) of case study wind power plants, providing a baseline to which bias can be measured. **[CITE WP3 RESULTS?]**
+OpenOA was originally scoped to calculate the operational annual energy production (AEP) of case study wind power plants, providing a baseline to which bias can be measured.
 OpenOA has since expand its scope to support additional types of analyses including turbine performance and reliability and to support data from wind plants outside the initial set of test projects.
 Released publicly in September 2018, the OpenOA repository contains numerous examples worked out in Jupyter notebooks, along with publicly available data which can be used to run the built in unit and integration tests.
-
-OpenOA has been used in the following projects... **[CITATIONS]**
 
 # Operational Analysis
 Operational analyses consume data from various sources, including from supervisory control and data acquisition (SCADA) systems and meteorological reanalysis products (such as weather models).
@@ -103,7 +101,6 @@ The steps of this particular example are provided in detail as a Jupyter noteboo
 # Towards Industry Standards
 OpenOA implements a data standard for wind plant SCADA data based on the International Electrotechnical Commission (IEC) standard 61400-25.
 The standard defines naming conventions for columns and data types for variables which are encountered in wind plants.
-Unfortunately, this standard has seen only piecemeal adoption throughout the wind energy industry. **[CITE]**
 OpenOA aims to boost this adoption by providing an internal data model based upon the 61400-25 standard.
 Users are required to build a mapping of their data source to OpenOA's data model by extending the built in "PlantData" class.
 
