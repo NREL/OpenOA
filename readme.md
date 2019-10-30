@@ -5,17 +5,19 @@ OpenOA
 
 [![Documentation Status](https://readthedocs.org/projects/openoa/badge/?version=latest)](https://openoa.readthedocs.io/en/latest/?badge=latest) (Develop)
 
-This library provides a generic framework for working with large timeseries data from wind plants. Its development
-has been motivated by the WP3 Benchmarking (PRUF) project, which aims to provide a reference implementation for
-plant-level performance assessment.
+This library provides a framework for working with large timeseries data from wind plants, such as SCADA.
+Its development has been motivated by the WP3 Benchmarking (PRUF) project,
+which aims to provide a reference implementation for plant-level performance assessment.
 
-The implementation makes use of a flexible backend, so that data loading, processing, and analysis can be performed
-locally (e.g., with Pandas DataFrames), in a semi-distributed manner (e.g., with Dask DataFrames), or in a fully
-distributed matter (e.g., with Spark DataFrames).
-
-Analysis routines are grouped by purpose into methods, and these methods in turn rely on more abstract toolkits.
-In addition to the provided analysis methods, anyone can write their own, which is intended to provide natural
+Analysis routines are grouped by purpose into methods,
+and these methods in turn rely on more abstract toolkits.
+In addition to the provided analysis methods,
+anyone can write their own, which is intended to provide natural
 growth of tools within this framework.
+
+The library is written around Pandas Data Frames, utilizing a flexible backend
+so that data loading, processing, and analysis could be performed using other libraries,
+such as Dask and Spark, in the future.
 
 ### Requirements
 
@@ -130,6 +132,7 @@ pip install -e ./OpenOA
 ### Contributors
 
 Alphabetically:
+Nathan Agarwal,
 Anna Craig,
 Jason Fields,
 Travis Kemper,
