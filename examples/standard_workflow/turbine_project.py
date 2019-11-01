@@ -11,18 +11,21 @@ class TurbineExampleProject(PlantData):
 
         self._scada_freq = '10T'
         self._file_name = fileName
-        self._column_napping = columnMapping
+        
+        #nonEmpty Mappings Only
+        colMap = {k: columnMapping[k] for k in columnMapping.keys() if (isinstance(columnMapping[k], str) and columnMapping[k] != "") }
+        
+        self._column_napping = colMap
 
         super(TurbineExampleProject, self).__init__(path, name, engine, toolkit=[])
 
     def prepare(self):
-        self.scada.load(self._path, "scada_10min_4cols", "csv")
-        self.scada.rename_columns({"time": "dttm",
-                                   "power_kw": "kw",
-                                   "winddirection_deg": "nacelle_position",
-                                   "windspeed_ms": "wind_speed"})
+        self.scada.load(self._path, self._file_name)
+        self.scada.rename_columns(self._column_napping)
         self.scada.df.set_index('time', inplace=True, drop=False)
-        self.scada.df.drop(['dttm', 'kw', 'nacelle_position', 'wind_speed'], axis=1, inplace=True)
+        
+        # drop things not specified in column mapping
+        self.scada.df.drop(list(set(self.scada.df.columns).difference(self._column_napping.keys())), axis=1, inplace=True)
         self.scada.normalize_time_to_datetime("%Y-%m-%d %H:%M:%S")
 
         self.fix_data_issues()
@@ -33,8 +36,7 @@ class TurbineExampleProject(PlantData):
         This is a temporary method to remedy the data issues in this example project so it can be used for testing.
         """
         p = self
-        # Project doesn't have turbine ids, but analysis requires it.
-        p.scada.df["id"] = "T0"
+        #p.scada.df["id"] = "T0"
         p.scada.df.index = pd.to_datetime(p.scada.df.index)
 
         # Project is missing reanalysis data, but analysis requires it.
