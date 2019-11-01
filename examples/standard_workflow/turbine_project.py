@@ -7,9 +7,11 @@ from operational_analysis.toolkits.met_data_processing import compute_wind_direc
 class TurbineExampleProject(PlantData):
     """This class loads data for NREL's GE Turbine into a PlantData object"""
 
-    def __init__(self, path="data", name="turbine_example", engine="pandas"):
+    def __init__(self, path, fileName, columnMapping, name="turbine_example", engine="pandas"):
 
         self._scada_freq = '10T'
+        self._file_name = fileName
+        self._column_napping = columnMapping
 
         super(TurbineExampleProject, self).__init__(path, name, engine, toolkit=[])
 
