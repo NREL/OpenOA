@@ -123,13 +123,14 @@ Three power curves are computed using the power curve toolkit and are plotted ag
 right figure.*
 
 # Towards Industry Standards
-OpenOA implements a data standard for wind plant SCADA data based on the International Electrotechnical Commission (IEC) standard 61400-25.
+OpenOA provides an internal data model which is based on a data standard for wind plant SCADA data from the
+International Electrotechnical Commission (IEC) standard 61400-25 [@iec25].
 The standard defines naming conventions and data types for variables which are encountered in wind plant data.
 OpenOA aims to boost this adoption by providing an internal data model based upon the 61400-25 standard.
 Users are required to build a mapping of their data source to OpenOA's data model by extending the built in "PlantData" class.
 
-For operational assessments, there are only limited standards covering specific applications: IEC 61400-12 IEC
-61400-12-1:2017 addresses turbine power curve testing and IEC 61400-26 IEC 61400-26- 3:2016 addresses the derivation
+For operational assessments, there are only limited standards covering specific applications: IEC
+61400-12 [@iec12] addresses turbine power curve testing and IEC 61400-26 [@iec26] addresses the derivation
 and categorization of availability loss metrics.
 Notably lacking standards are AEP estimates, reliability and performance metrics, and fault and underperformance diagnosis.
 In fact, very little documentation of OA best practices exists beyond these standards, and seems to be limited
