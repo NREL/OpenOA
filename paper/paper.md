@@ -50,11 +50,16 @@ The goal of WP3 is to provide an independent benchmark of bias in pre-constructi
 and to understand the sources of uncertainty therein.
 
 OpenOA was originally scoped to calculate the operational annual energy production (AEP) of case study wind power
-plants, providing a baseline to which bias in EYA can be measured.
+plants, providing a baseline to which EYA bias can be measured.
 OpenOA has since expand its scope to support additional types of analyses including turbine performance and reliability
 and to support data from wind plants outside the initial set of test projects.
 Released publicly in September 2018, the OpenOA repository contains numerous examples worked out in Jupyter notebooks,
 along with publicly available data which can be used to run the built in unit and integration tests.
+We hope OpenOA will foster collaboration and methods sharing in a wind industry that has historically been very
+protective of methods and data.
+OpenOA currently implements a long-term corrected AEP analysis, and provides low level functions which are helpful in this computation.
+Over time, we hope that OpenOA will become a reference implementation for OA methods.
+
 
 # Operational Analysis
 Operational analyses consume data from various sources, including from supervisory control and data acquisition (SCADA)
@@ -141,18 +146,6 @@ We believe significant efficiency gains can be achieved by providing a public re
 dissemination of OA methods and best practices.
 Furthermore, we believe that a standard operational analysis will benefit those who rely upon these analysis for
 investment decisions, as a standardized analysis will produce more consistent results.
-
-# Fostering Collaboration
-The intent of OpenOA is to foster collaboration and methods sharing in a wind industry that has historically been very
-protective of methods and data.
-Much of an OA analysis could be standard and uncontroversial, and by creating a public repository for the collection and
-dissemination of OA methods and best practices, significant efficiency gains can be achieved.
-OpenOA currently implements a long-term corrected AEP analysis, and provides low level functions which are helpful in this computation.
-Over time, we hope that OpenOA will become a reference implementation for OA methods from which a published standard
-(IEC or otherwise) may quickly follow.
-To our knowledge, this approach of fostering a collaborative repository of methods that are tested and used prior to
-developing a published standard is new to the wind industry, and may indeed prove more efficient than the multi-year
-approach of writing a standard from scratch.
 
 # Acknowledgements
 This work was authored by the National Renewable Energy Laboratory, operated by Alliance for Sustainable Energy, LLC, for the U.S. Department of Energy (DOE) under Contract No. DE-AC36-08GO28308.
