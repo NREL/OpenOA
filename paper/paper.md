@@ -8,6 +8,7 @@ tags:
   - standardization
 authors:
   - name: Mike Optis
+    orcid: 0000-0001-5617-6134
     affiliation: 1
   - name: Jordan Perr-Sauer
     orcid: 0000-0003-0872-7098
@@ -42,31 +43,27 @@ bibliography: paper.bib
 
 # Summary
 
-OpenOA is an open source Python package which implements operational analysis (OA) methods for wind plants.
+OpenOA is an open source Python package which implements operational analysis (OA) methods for wind farms.
+The goal of OpenOA is to collaboration and methods sharing in a wind industry that has historically been very protective of methods and data.
+Over time, we hope that OpenOA will become a reference implementation for OA methods.
+
 The development of OpenOA started internally at the National Renewable Energy Laboratory (NREL) to support the lab's
 efforts in the Wind Plant Performance and Prediction (WP3) benchmarking initiative, which is a key risk reduction
 activity of the Performance, Risk, Uncertainty, and Finance project under the Atmosphere to Electrons initiative [@A2EWebsite].
 The goal of WP3 is to provide an independent benchmark of bias in pre-construction energy yield assessment (EYA),
 and to understand the sources of uncertainty therein.
 
-OpenOA was originally scoped to calculate the operational annual energy production (AEP) of case study wind power
-plants, providing a baseline to which EYA bias can be measured.
-OpenOA has since expand its scope to support additional types of analyses including turbine performance and reliability
-and to support data from wind plants outside the initial set of test projects.
-Released publicly in September 2018, the OpenOA repository contains numerous examples worked out in Jupyter notebooks,
-along with publicly available data which can be used to run the built in unit and integration tests.
-We hope OpenOA will foster collaboration and methods sharing in a wind industry that has historically been very
-protective of methods and data.
-OpenOA currently implements a long-term corrected AEP analysis, and provides low level functions which are helpful in this computation.
-Over time, we hope that OpenOA will become a reference implementation for OA methods.
+OpenOA was originally scoped to calculate the operational annual energy production (AEP) of case study wind power plants, providing a baseline to which EYA bias can be measured.
+OpenOA has since expanded its scope to support additional types of analyses including turbine performance and electrical losses and to support data from wind plants outside the initial set of test projects.
+Released publicly in September 2018, the OpenOA repository contains numerous examples worked out in Jupyter notebooks along with publicly available data which can be used to run the built in unit and integration tests.
 
-
-# Operational Analysis
-Operational analyses consume data from various sources, including from supervisory control and data acquisition (SCADA)
-systems and meteorological reanalysis products such as weather models.
-These data are used to perform a wide variety of assessments ranging from the long-term estimates of AEP, diagnosis of
-faults and underperformance, benchmarking of performance improvements (e.g., wind sector management, vortex generators),
-and building/tuning statistical or physics-based models for various applications (e.g., wake model validation, wind power forecasting).
+# Importance of Operational Analysis
+Operational analyses use collected data from wind farms to perform assessments ranging from the diagnosis of
+faults and underperformance, benchmarking of performance improvements (e.g., wind sector management,
+vortex generators), long-term estimates of annual energy production (AEP), and building/tuning
+statistical or physics-based models for various applications (e.g.,, wake model validation, wind power
+forecasting). Data sources include the wind farm revenue meter, turbine supervisory, control and data
+acquisition (SCADA) systems, on-site meteorological towers, and modeled atmospheric data (e.g., reanalysis data).
 
 ## Long Term AEP Calculation
 
