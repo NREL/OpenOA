@@ -6,33 +6,33 @@ tags:
   - operational analysis
   - data analysis
   - standardization
-authors:
-  - name: Mike Optis
-    orcid: 0000-0001-5617-6134
-    affiliation: 1
+authors
   - name: Jordan Perr-Sauer
     orcid: 0000-0003-0872-7098
     affiliation: 1 # (Multiple affiliations must be quoted)
-  - name: Caleb Phillips
+  - name: Mike Optis
+    orcid: 0000-0001-5617-6134
     affiliation: 1
-  - name: Anna E. Craig
+  - name: Jason M. Fields
     affiliation: 1
-  - name: Travis Kemper
+  - name: Lindy Williams
     affiliation: 1
   - name: Joseph C.Y. Lee
     orcid: 0000-0003-1897-6290
     affiliation: 1
+  - name: Caleb Phillips
+    affiliation: 1
   - name: Monte Lunacek
     affiliation: 1
-  - name: Shuangwen Shang
+  - name: Anna Craig
     affiliation: 1
-  - name: Lindy Williams
+  - name: Travis Kemper
+    affiliation: 1
+  - name: Shuangwen Shang
     affiliation: 1
   - name: Eric Simley
     affiliation: 1
   - name: John Meissner
-    affiliation: 1
-  - name: Jason M. Fields
     affiliation: 1
 affiliations:
  - name: National Renewable Energy Laboratory, Golden, CO, USA
