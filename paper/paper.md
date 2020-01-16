@@ -20,6 +20,8 @@ authors
   - name: Joseph C.Y. Lee
     orcid: 0000-0003-1897-6290
     affiliation: 1
+  - name: Austin Todd
+    affiliation: 1
   - name: Caleb Phillips
     affiliation: 1
   - name: Monte Lunacek
