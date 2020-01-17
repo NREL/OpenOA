@@ -6,7 +6,7 @@ tags:
   - operational analysis
   - data analysis
   - standardization
-authors
+authors:
   - name: Jordan Perr-Sauer
     orcid: 0000-0003-0872-7098
     affiliation: 1 # (Multiple affiliations must be quoted)
@@ -30,7 +30,7 @@ authors
     affiliation: 1
   - name: Travis Kemper
     affiliation: 1
-  - name: Shuangwen Shang
+  - name: Shuangwen Sheng
     affiliation: 1
   - name: Eric Simley
     affiliation: 1
