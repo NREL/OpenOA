@@ -6,7 +6,7 @@ tags:
   - operational analysis
   - data analysis
   - standardization
-authors
+authors:
   - name: Jordan Perr-Sauer
     orcid: 0000-0003-0872-7098
     affiliation: 1 # (Multiple affiliations must be quoted)
@@ -45,22 +45,24 @@ bibliography: paper.bib
 
 # Summary
 
-OpenOA is an open source Python package which implements operational analysis (OA) methods for wind farms.
-The goal of OpenOA is to collaboration and methods sharing in a wind industry that has historically been very protective of methods and data.
+OpenOA is an open source Python package which implements operational analysis (OA) methods for wind energy plants.
+The goal of OpenOA is collaboration and methods sharing in a wind industry that has historically been very protective of methods and data.
 Over time, we hope that OpenOA will become a reference implementation for OA methods.
 
 The development of OpenOA started internally at the National Renewable Energy Laboratory (NREL) to support the lab's
-efforts in the Wind Plant Performance and Prediction (WP3) benchmarking initiative, which is a key risk reduction
+efforts in the Wind Plant Performance and Prediction (WP3) benchmarking initiative [WP3][d1942dfc], which is a key risk reduction
 activity of the Performance, Risk, Uncertainty, and Finance project under the Atmosphere to Electrons initiative [@A2EWebsite].
 The goal of WP3 is to provide an independent benchmark of bias in pre-construction energy yield assessment (EYA),
 and to understand the sources of uncertainty therein.
 
+  [d1942dfc]: https://a2e.energy.gov/projects/wp3 "WP3 Website"
+
 OpenOA was originally scoped to calculate the operational annual energy production (AEP) of case study wind power plants, providing a baseline to which EYA bias can be measured.
 OpenOA has since expanded its scope to support additional types of analyses including turbine performance and electrical losses and to support data from wind plants outside the initial set of test projects.
-Released publicly in September 2018, the OpenOA repository contains numerous examples worked out in Jupyter notebooks along with publicly available data which can be used to run the built in unit and integration tests.
+Released publicly in September 2018, the OpenOA repository contains numerous examples demonstrated in Jupyter notebooks along with publicly available data which can be used to run the built in unit and integration tests.
 
 # Importance of Operational Analysis
-Operational analyses use collected data from wind farms to perform assessments ranging from the diagnosis of
+Operational analysis uses collected data from wind farms to perform assessments ranging from the diagnosis of
 faults and underperformance, benchmarking of performance improvements (e.g., wind sector management,
 vortex generators), long-term estimates of annual energy production (AEP), and building/tuning
 statistical or physics-based models for various applications (e.g.,, wake model validation, wind power
@@ -82,7 +84,7 @@ Calculation of AEP involves several steps:
 gross energy.
 6. Estimation of long-term AEP from long-term gross energy and expected future losses.
 7. Uncertainty quantification through a Monte Carlo approach in which inputs to and intermediate calculations within
-the process are sampled based on their assumed or calculated uncertainties.
+the process are sampled based on their assumed or calculated error distributions.
 
 An example usage of this method is shown in Figure 1.
 Here, revenue meter and reanalysis data attributes from plant data are used with several toolkit modules to calculate
@@ -140,11 +142,11 @@ Notably lacking standards are AEP estimates, reliability and performance metrics
 In fact, very little documentation of OA best practices exists beyond these standards, and seems to be limited
 to a consultant report [@lindvall2016], an academic thesis [@khatab2017], and some conference proceedings [@lunacek2018].
 
-Moving forward, we see a role for OpenOA in fostering standards development for the methods of wind plant OA.
+Moving forward, we see a role for OpenOA in fostering reference methods and standards development for the methods of wind plant OA.
 We believe significant efficiency gains can be achieved by providing a public repository for the collection and
 dissemination of OA methods and best practices.
 Furthermore, we believe that a standard operational analysis will benefit those who rely upon these analysis for
-investment decisions, as a standardized analysis will produce more consistent results.
+daily operations management through to investment decisions. A standardized analysis will produce more consistent results across industry and yield better faster decision making.
 
 # Acknowledgements
 This work was authored by the National Renewable Energy Laboratory, operated by Alliance for Sustainable Energy, LLC, for the U.S. Department of Energy (DOE) under Contract No. DE-AC36-08GO28308.
