@@ -30,7 +30,7 @@ authors:
     affiliation: 1
   - name: Travis Kemper
     affiliation: 1
-  - name: Shuangwen Shang
+  - name: Shuangwen Sheng
     affiliation: 1
   - name: Eric Simley
     affiliation: 1
