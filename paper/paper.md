@@ -50,12 +50,10 @@ The goal of OpenOA is collaboration and methods sharing in a wind industry that 
 Over time, we hope that OpenOA will become a reference implementation for OA methods.
 
 The development of OpenOA started internally at the National Renewable Energy Laboratory (NREL) to support the lab's
-efforts in the Wind Plant Performance and Prediction (WP3) benchmarking initiative [WP3][d1942dfc], which is a key risk reduction
-activity of the Performance, Risk, Uncertainty, and Finance project under the Atmosphere to Electrons initiative [@A2EWebsite].
+efforts in the Wind Plant Performance and Prediction (WP3) benchmarking initiative [@WP3Website], which is a key risk reduction
+activity of the Performance, Risk, Uncertainty, and Finance project under the Atmosphere to Electrons initiative.
 The goal of WP3 is to provide an independent benchmark of bias in pre-construction energy yield assessment (EYA),
 and to understand the sources of uncertainty therein.
-
-  [d1942dfc]: https://a2e.energy.gov/projects/wp3 "WP3 Website"
 
 OpenOA was originally scoped to calculate the operational annual energy production (AEP) of case study wind power plants, providing a baseline to which EYA bias can be measured.
 OpenOA has since expanded its scope to support additional types of analyses including turbine performance and electrical losses and to support data from wind plants outside the initial set of test projects.
