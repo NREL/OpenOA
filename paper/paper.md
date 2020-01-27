@@ -50,19 +50,21 @@ The goal of OpenOA is collaboration and methods sharing in a wind industry that 
 Over time, we hope that OpenOA will become a reference implementation for OA methods.
 
 The development of OpenOA started internally at the National Renewable Energy Laboratory (NREL) to support the lab's
-efforts in the Wind Plant Performance and Prediction (WP3) benchmarking initiative [@WP3Website], which is a key risk reduction
+efforts in the Wind Plant Performance and Prediction (WP3) benchmarking initiative [^wp3website], which is a key risk reduction
 activity of the Performance, Risk, Uncertainty, and Finance project under the Atmosphere to Electrons initiative.
 The goal of WP3 is to provide an independent benchmark of bias in pre-construction energy yield assessment (EYA),
-and to understand the sources of uncertainty therein.
+and to understand the sources of uncertainty therein
+
+[^wp3website]: \url{https://a2e.energy.gov/projects/wp3}
 
 OpenOA was originally scoped to calculate the operational annual energy production (AEP) of case study wind power plants, providing a baseline to which EYA bias can be measured.
 OpenOA has since expanded its scope to support additional types of analyses including turbine performance and electrical losses and to support data from wind plants outside the initial set of test projects.
-Released publicly in September 2018, the OpenOA repository contains numerous examples demonstrated in Jupyter notebooks along with publicly available data which can be used to run the built in unit and integration tests.
+Released publicly in September 2018, the OpenOA repository contains numerous examples demonstrated in Jupyter notebooks along with publicly available data which can be used to run the built in unit and integration tests. The software has also been used in study on the impact of analyst choice in the outcome of OAs. [@craig2018]
 
 # Importance of Operational Analysis
 Operational analysis uses collected data from wind farms to perform assessments ranging from the diagnosis of
 faults and underperformance, benchmarking of performance improvements (e.g., wind sector management,
-vortex generators), long-term estimates of annual energy production (AEP), and building/tuning
+vortex generators), long-term estimates of AEP, and building
 statistical or physics-based models for various applications (e.g.,, wake model validation, wind power
 forecasting). Data sources include the wind farm revenue meter, turbine supervisory, control and data
 acquisition (SCADA) systems, on-site meteorological towers, and modeled atmospheric data (e.g., reanalysis data).
