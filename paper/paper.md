@@ -109,7 +109,7 @@ In this way, the toolkit modules can be applied in a variety of situations, both
 and criteria based on the variance.
 - Imputing: Functions for filling in null data with interpolated (imputed) values.
 - Meteorological data: Functions for calculating common meteorological variables used in wind resource analysis,
-such as: Air density correction, vertical pressure extrapolation, and computation of sheer and veer.
+such as: Air density correction, vertical pressure extrapolation, and computation of shear and veer.
 - Time series: Functions for common time series analysis, such as: Missing time-stamp identification, and gap filling.
 - Unit conversion: Functions for common unit conversions in wind energy, such as power to energy conversion.
 - Power curve: Functions to fit data to a specified wind turbine power curve model
@@ -144,7 +144,7 @@ Little documentation of OA best practices exists beyond these standards, to our 
 Moving forward, we see a role for OpenOA in fostering reference methods and standards development for the methods of wind plant OA.
 We believe significant efficiency gains can be achieved by providing a public repository for the collection and
 dissemination of OA methods and best practices.
-Furthermore, we believe that a standard operational analysis will benefit those who rely upon these analysis for
+Furthermore, we believe that a standard operational analysis will benefit those who rely upon these analyses for
 daily operations management through to investment decisions. A standardized analysis will produce more consistent results across industry and yield better faster decision making.
 
 # Acknowledgements
