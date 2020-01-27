@@ -46,7 +46,7 @@ bibliography: paper.bib
 # Summary
 
 OpenOA is an open source Python package which implements operational analysis (OA) methods for wind energy plants.
-The goal of OpenOA is collaboration and methods sharing in a wind industry that has historically been very protective of methods and data.
+The goal of OpenOA is collaboration and methods sharing in a wind industry that has historically been very protective of methods and data [@McCann2018].
 Over time, we hope that OpenOA will become a reference implementation for OA methods.
 
 The development of OpenOA started internally at the National Renewable Energy Laboratory (NREL) to support the lab's
@@ -59,7 +59,7 @@ and to understand the sources of uncertainty therein
 
 OpenOA was originally scoped to calculate the operational annual energy production (AEP) of case study wind power plants, providing a baseline to which EYA bias can be measured.
 OpenOA has since expanded its scope to support additional types of analyses including turbine performance and electrical losses and to support data from wind plants outside the initial set of test projects.
-Released publicly in September 2018, the OpenOA repository contains numerous examples demonstrated in Jupyter notebooks along with publicly available data which can be used to run the built in unit and integration tests. The software has also been used in study on the impact of analyst choice in the outcome of OAs. [@craig2018]
+Released publicly in September 2018, the OpenOA repository contains numerous examples demonstrated in Jupyter notebooks along with publicly available data which can be used to run the built in unit and integration tests. The software has also been used in study on the impact of analyst choice in the outcome of OAs [@craig2018].
 
 # Importance of Operational Analysis
 Operational analysis uses collected data from wind farms to perform assessments ranging from the diagnosis of
@@ -139,8 +139,7 @@ For operational assessments, there are only limited standards covering specific 
 61400-12 [@iec12] addresses turbine power curve testing and IEC 61400-26 [@iec26] addresses the derivation
 and categorization of availability loss metrics.
 Notably lacking standards are AEP estimates, reliability and performance metrics, and fault and underperformance diagnosis.
-In fact, very little documentation of OA best practices exists beyond these standards, and seems to be limited
-to a consultant report [@lindvall2016], an academic thesis [@khatab2017], and some conference proceedings [@lunacek2018].
+Little documentation of OA best practices exists beyond these standards, to our knowledge. We are aware of a consultant report [@lindvall2016], an academic thesis [@khatab2017], and some conference proceedings [@lunacek2018].
 
 Moving forward, we see a role for OpenOA in fostering reference methods and standards development for the methods of wind plant OA.
 We believe significant efficiency gains can be achieved by providing a public repository for the collection and
