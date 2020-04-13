@@ -30,7 +30,10 @@ authors:
     affiliation: 1
   - name: Travis Kemper
     affiliation: 1
-  - name: Shuangwen Sheng
+  - name: Nathan Agarwal
+    orcid: 0000-0002-2734-5514
+    affiliation: 1
+  - name: Shawn Sheng
     affiliation: 1
   - name: Eric Simley
     affiliation: 1
