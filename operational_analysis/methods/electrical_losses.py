@@ -186,3 +186,26 @@ class ElectricalLosses(object):
         self._total_turbine_energy = merge_sum['turbine_energy_kwh']
         self._total_meter_energy = merge_sum['energy_kwh']
         self._electrical_losses = 1 - self._total_meter_energy/self._total_turbine_energy
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        

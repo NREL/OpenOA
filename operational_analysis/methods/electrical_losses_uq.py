@@ -36,19 +36,36 @@ class ElectricalLosses(object):
     """ 
 
     @logged_method_call
-    def __init__(self, plant, num_sim, uncertainty_meter=0.005, uncertainty_scada=0.005,
-                 uncertainty_correction_thresh=(0.9,0.995)):
+    def __init__(self, plant, UQ = 'Y', num_sim = 20000, uncertainty_meter=0.005, uncertainty_scada=0.005,
+                 uncertainty_correction_thresh=(0.9,0.995), correction_thresh=.95):
         """
         Initialize electrical losses class with input parameters
 
         Args:
          plant(:obj:`PlantData object`): PlantData object from which EYAGapAnalysis should draw data.
-
+         num_sim:(:obj:`int`): number of Monte Carlo simulations
+         UQ:(:obj:`str`): choice whether to perform ('Y') or not ('N') uncertainty quantification
+         uncertainty_meter(:obj:`float`): uncertainty imposed to revenue meter data
+         uncertainty_scada(:obj:`float`): uncertainty imposed to scada data
+         uncertainty_correction_threshold(:obj:`float`): The interval of data availability thresholds (fractions) 
+                                                         under which months should be eliminated - used for UQ cases    
+         correction_thresh(:obj:`float`): The data availability threshold (fraction) under which months 
+                                         should be eliminated (default is 0.95)  - used for not-UQ cases                                          
         """
         logger.info("Initializing Electrical Losses Object")
         
+        # Check that selected UQ is allowed
+        if UQ == 'Y':
+            logger.info("Note: uncertainty quantification will be performed in the calculation")
+            self.num_sim = num_sim
+        elif UQ == 'N':    
+            logger.info("Note: uncertainty quantification will NOT be performed in the calculation")
+            self.num_sim = 1
+        else:   
+            raise ValueError("UQ has to either be Y (uncertainty quantification performed, default) or N (uncertainty quantification NOT performed)")
+        self.UQ = UQ
+        
         self._plant = plant
-        self.num_sim = num_sim
         
         self._time_conversion = {'1T': 1.,
                                  '5T': 5.,
@@ -64,7 +81,7 @@ class ElectricalLosses(object):
         self.uncertainty_meter = np.float64(uncertainty_meter)
         self.uncertainty_scada = np.float64(uncertainty_scada)
         self.uncertainty_correction_thresh = np.array(uncertainty_correction_thresh, dtype=np.float64)  
-
+        self._correction_thresh = correction_thresh
 
     @logged_method_call
     def run(self):
@@ -89,7 +106,8 @@ class ElectricalLosses(object):
             self._monthly_meter = False # Set to false if sub-monthly frequency
         
         # Monte Carlo sampling
-        self.setup_monte_carlo_inputs()
+        if self.UQ == 'Y':
+            self.setup_monte_carlo_inputs()
         
         # Calculate electrical losses, Monte Carlo approach
         self.calculate_electrical_losses()
@@ -172,12 +190,13 @@ class ElectricalLosses(object):
         Returns:
             (None)
         """
-        
+
         self._mc_metered_energy_fraction = np.random.normal(1, self.uncertainty_meter, self.num_sim)        
         self._mc_scada_data_fraction = np.random.normal(1, self.uncertainty_scada, self.num_sim)        
         self._mc_correction_thresh = np.random.randint(self.uncertainty_correction_thresh[0]*1000, self.uncertainty_correction_thresh[1]*1000,
                                                         self.num_sim) / 1000.  
-        
+
+            
     @logged_method_call
     def calculate_electrical_losses(self):                
         """
@@ -215,8 +234,9 @@ class ElectricalLosses(object):
                 scada_monthly['perc'] = scada_monthly['count']/scada_monthly['expected_count_monthly']
                                 
                 # Filter out months in which there was less than x% of total running (all turbines at all timesteps)
-                self._correction_thresh = self._mc_correction_thresh[n]
-                
+                if self.UQ == 'Y':
+                    self._correction_thresh = self._mc_correction_thresh[n]
+                    
                 scada_monthly = scada_monthly.loc[scada_monthly['perc']>= self._correction_thresh, :]
                 merge_df = meter_df.join(scada_monthly)
             
@@ -232,13 +252,13 @@ class ElectricalLosses(object):
         
             # Calculate electrical loss from difference of sum of turbine and meter energy 
             self._total_turbine_energy = merge_sum['turbine_energy_kwh']
-            self.mc_total_turbine_energy = self._total_turbine_energy * self._mc_scada_data_fraction[n]
             self._total_meter_energy = merge_sum['energy_kwh']
-            self.mc_total_meter_energy = self._total_meter_energy * self._mc_metered_energy_fraction[n]
-
-            self._electrical_losses[n] = 1 - self.mc_total_meter_energy/self.mc_total_turbine_energy
-
-        
+            if self.UQ == 'Y':
+                self.mc_total_turbine_energy = self._total_turbine_energy * self._mc_scada_data_fraction[n]
+                self.mc_total_meter_energy = self._total_meter_energy * self._mc_metered_energy_fraction[n]
+                self._electrical_losses[n] = 1 - self.mc_total_meter_energy/self.mc_total_turbine_energy
+            elif self.UQ == 'N':
+                self._electrical_losses = 1 - self._total_meter_energy/self._total_turbine_energy
         
         
         

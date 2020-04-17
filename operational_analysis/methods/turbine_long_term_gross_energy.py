@@ -336,7 +336,6 @@ class TurbineLongTermGrossEnergy(object):
             scada_daily['data_count'] = scada_filt.resample('D')['energy_kwh'].count() # Count number of entries in sum 
             scada_daily['perc_nan'] = scada_filt.resample('D')['energy_kwh'].apply(timeseries.percent_nan) # Count number of entries in sum 
             
-            
             # Correct energy for missing data
             scada_daily['energy_kwh_corr'] = scada_daily ['energy_kwh'] * self._num_valid_daily/scada_daily['data_count']
             
@@ -442,3 +441,33 @@ class TurbineLongTermGrossEnergy(object):
             turb_mo_avg = turb_mo.groupby(turb_mo.index.month).mean() # get average sum by calendar month
             self._summary_results.loc[r, :] = turb_mo_avg.sum(axis = 0) # Store mean annual gross energy by turb in data frame
             self._plant_gross = self._summary_results.sum(axis=1).mean() # Store sum of turbine gross energy
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
