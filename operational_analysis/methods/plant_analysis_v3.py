@@ -18,10 +18,12 @@ from tqdm import tqdm
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
 from sklearn.metrics import mean_squared_error
+from sklearn.model_selection import KFold
 from operational_analysis.toolkits import met_data_processing as mt
 from operational_analysis.toolkits import timeseries as tm
-#from operational_analysis.toolkits.machine_learning_setup import MachineLearningSetup
+from operational_analysis.toolkits.machine_learning_setup import MachineLearningSetup
 from operational_analysis.toolkits import unit_conversion as un
+from operational_analysis.toolkits import filters
 from operational_analysis.types import timeseries_table
 from operational_analysis import logged_method_call
 from operational_analysis import logging
@@ -50,7 +52,8 @@ class MonteCarloAEP(object):
 
     @logged_method_call
     def __init__(self, plant, uncertainty_meter=0.005, uncertainty_losses=0.05,
-                 uncertainty_loss_max=(10, 20), uncertainty_windiness=(10, 20), uncertainty_outlier=(2, 3.1),
+                 uncertainty_windiness=(10, 20), uncertainty_wind_bin_thresh=(1, 3), 
+                 uncertainty_loss_max=(10, 20), uncertainty_max_power_filter=(0.8, 0.9), 
                  uncertainty_nan_energy=0.01, time_resolution = 'M', reg_model = 'lin', 
                  reg_temperature = 'N', reg_winddirection = 'N'):
         """
@@ -60,9 +63,11 @@ class MonteCarloAEP(object):
          plant(:obj:`PlantData object`): PlantData object from which PlantAnalysis should draw data.
          uncertainty_meter(:obj:`float`): uncertainty on revenue meter data
          uncertainty_losses(:obj:`float`): uncertainty on long-term losses
-         uncertainty_loss_max(:obj:`float`): threshold for the combined availabilty and curtailment monthly loss threshold
          uncertainty_windiness(:obj:`float`): number of years to use for the windiness correction
-         uncertainty_outlier(:obj:`float`): the Huber parameter which controls sensitivity of outlier detection in robust linear regression
+         uncertainty_wind_bin_thresh(:obj:`float`): The filter threshold for each bin (default is 2 m/s)
+         uncertainty_loss_max(:obj:`float`): threshold for the combined availabilty and curtailment monthly loss threshold
+         uncertainty_max_power_filter(:obj:`float`): Maximum power threshold (fraction) to which the bin filter 
+                                            should be applied (default 0.85)
          uncertainty_nan_energy(:obj:`float`): threshold to flag days/months based on NaNs
          time_resolution(:obj:`string`): whether to perform the AEP calculation at monthly ('M') or daily ('D') time resolution
          reg_model(:obj:`string`): which model to use for the regression ('lin' for linear, 'gam', 'gbm', 'etr')
@@ -76,19 +81,15 @@ class MonteCarloAEP(object):
         self._plant = plant  # defined at runtime
 
         # Memo dictionaries help speed up computation
-        self.long_term_sampling = {}  # Combinations of long-term reanalysis data sampling
-        self.long_term_sampling_wd = {} 
-        self.long_term_sampling_wd_sin = {} 
-        self.long_term_sampling_wd_cos = {} 
-        self.long_term_sampling_temp = {} 
         self.outlier_filtering = {}  # Combinations of outlier filter results
 
         # Define relevant uncertainties, data ranges and max thresholds to be applied in Monte Carlo sampling
         self.uncertainty_meter = np.float64(uncertainty_meter)
         self.uncertainty_losses = np.float64(uncertainty_losses)
-        self.uncertainty_loss_max = np.array(uncertainty_loss_max, dtype=np.float64)
         self.uncertainty_windiness = np.array(uncertainty_windiness, dtype=np.float64)
-        self.uncertainty_outlier = np.array(uncertainty_outlier, dtype=np.float64)
+        self.uncertainty_loss_max = np.array(uncertainty_loss_max, dtype=np.float64)
+        self.uncertainty_max_power_filter = np.array(uncertainty_max_power_filter, dtype=np.float64)
+        self.uncertainty_wind_bin_thresh = np.array(uncertainty_wind_bin_thresh, dtype=np.float64)
         self.uncertainty_nan_energy = np.float64(uncertainty_nan_energy)
         
         # Check that selected time resolution is allowed
@@ -108,17 +109,13 @@ class MonteCarloAEP(object):
         
         # Check that selected regression model is allowed
         if reg_model not in ['lin', 'gbm','etr','gam']:
-            raise ValueError("reg_model has to either be lin (Robust linear regression), gbm (Gradient boosting model, default), etr (Extra trees regressor) or gam (Generalized additive model)")
+            raise ValueError("reg_model has to either be lin (Linear regression, default), gbm (Gradient boosting model), etr (Extra trees regressor) or gam (Generalized additive model)")
         self.reg_model = reg_model
         
         # Monthly data can only use robus linear regression
         if (time_resolution == 'M') & (reg_model != 'lin'):
-            raise ValueError("For monthly time resolution, only robust linear regression is allowed!")
-        
-        # No machine learning regression for now - next pull request!
-        if reg_model in ['gbm','etr','gam']:
-            raise ValueError("Machine learning regression models will be incorporated in the next pull request!")
-        
+            raise ValueError("For monthly time resolution, only linear regression is allowed!")
+
         # Run preprocessing step                                                                                                                                                                              
         self.calculate_monthly_daily_dataframe()
 
@@ -151,8 +148,8 @@ class MonteCarloAEP(object):
         self.reanal_subset = reanal_subset
 
         # Write parameters of run to the log file
-        logged_self_params = ["uncertainty_meter", "uncertainty_losses","uncertainty_loss_max", "uncertainty_windiness",
-                              "uncertainty_outlier", "uncertainty_nan_energy", "num_sim", "reanal_subset"]
+        logged_self_params = ["uncertainty_meter", "uncertainty_losses", "uncertainty_loss_max", "uncertainty_windiness",
+                              "uncertainty_nan_energy", "num_sim", "reanal_subset"]
         logged_params = {name: getattr(self, name) for name in logged_self_params}
         logger.info("Running with parameters: {}".format(logged_params))
 
@@ -671,10 +668,12 @@ class MonteCarloAEP(object):
         self._mc_intercept = np.empty(num_sim, dtype=np.float64)
         self._mc_num_points = np.empty(num_sim, dtype=np.float64)
         self._r2_score = np.empty(num_sim, dtype=np.float64)
-        self._mse_score = np.empty(num_sim, dtype=np.float64)
+        self._mse_score = np.empty(num_sim, dtype=np.float64)       
         
-        self._mc_outlier_threshold = np.random.randint(self.uncertainty_outlier[0] * 10,
-                                                       (self.uncertainty_outlier[1]) * 10, num_sim) / 10.
+        self._mc_max_power_filter = np.random.randint(self.uncertainty_max_power_filter[0]*100, self.uncertainty_max_power_filter[1]*100,
+                                                        self.num_sim) / 100.  
+        self._mc_wind_bin_thresh = np.random.randint(self.uncertainty_wind_bin_thresh[0]*100, self.uncertainty_wind_bin_thresh[1]*100,
+                                                        self.num_sim) / 100.  
         self._mc_metered_energy_fraction = np.random.normal(1, self.uncertainty_meter, num_sim)
         self._mc_loss_fraction = np.random.normal(1, self.uncertainty_losses, num_sim)
         self._mc_num_years_windiness = np.random.randint(self.uncertainty_windiness[0],
@@ -687,90 +686,107 @@ class MonteCarloAEP(object):
 
 
     @logged_method_call
-    def filter_outliers(self, reanal, outlier_thresh, comb_loss_thresh):
+    def filter_outliers(self, n):
         """
-        This function filters outliers based on
-            1. The reanalysis product
-            2. The Huber parameter which controls sensitivity of outlier detection in robust linear regression
-            3. The combined availability and curtailment loss criteria
+        This function filters outliers based on a combination of range filter, unresponsive sensor filter, 
+        and window filter.
 
-        There are only 300 combinations of outlier removals:
-        (3 reanalysis product x 10 outlier threshold values x 10 combined loss thresholds)
-
-        Therefore, we use a memoized funciton to store the regression data in a dictionary for each combination as it
+        We use a memoized funciton to store the regression data in a dictionary for each combination as it
         comes up in the Monte Carlo simulation. This saves significant computational time in not having to run
         robust linear regression for each Monte Carlo iteration
 
         Args:
-            reanal(:obj:`string`): The name of the reanalysis product
-            outlier_thresh(:obj:`float`): The Huber parameter controlling sensitivity of outlier detection
-            comb_loss_thresh(:obj:`float`): The combined availabilty and curtailment monthly loss threshold
+            n(:obj:`float`): Monte Carlo iteration
 
         Returns:
             :obj:`pandas.DataFrame`: Filtered monthly/daily data ready for linear regression
         """
+        
+        reanal = self._mc_reanalysis_product[n]
+        max_power_filter = self._mc_max_power_filter[n]
+        comb_loss_thresh = self._mc_loss_threshold[n]
+        
         # Check if valid data has already been calculated and stored. If so, just return it
-        if (reanal, outlier_thresh, comb_loss_thresh) in self.outlier_filtering:
-            valid_data = self.outlier_filtering[(reanal, outlier_thresh, comb_loss_thresh)]
+        if (reanal, max_power_filter, comb_loss_thresh) in self.outlier_filtering:
+            valid_data = self.outlier_filtering[(reanal, max_power_filter, comb_loss_thresh)]
             return valid_data
 
         # If valid data hasn't yet been stored in dictionary, determine the valid data
         df = self._monthly_daily.df
-        
+                
         # First set of filters checking combined losses and if the Nan data flag was on
         df_sub = df.loc[
-            ((df['availability_pct'] + df['curtailment_pct']) < comb_loss_thresh) & (df['nan_flag'] == False)]
-
-        # Now perform robust linear regression using Huber algorithm to flag outliers
-        X = sm.add_constant(df_sub[reanal])  # Reanalysis data with constant column
-        y = df_sub['gross_energy_gwh']  # Energy data
-
-        # Perform robust linear regression
-        rlm = sm.RLM(y, X, M=sm.robust.norms.HuberT(outlier_thresh))
-        rlm_results = rlm.fit()
-
+            ((df['availability_pct'] + df['curtailment_pct']) < comb_loss_thresh) & (df['nan_flag'] == False),:]
+                
+        # Set maximum range for using bin-filter, convert from MW to GWh
+        if self.time_resolution == 'M':
+            plant_capac = getattr(self._plant, '_plant_capacity')/1000 * 366*24
+        elif self.time_resolution == 'D':
+            plant_capac = getattr(self._plant, '_plant_capacity')/1000 * 1*24
+        
+        # Flag turbine energy data less than zero
+        df_sub.loc[:,'flag_neg'] = filters.range_flag(df_sub['energy_gwh'], below = 0, above = plant_capac)
+        # Apply range filter to wind speed
+        df_sub.loc[:,'flag_range'] = filters.range_flag(df_sub[reanal], below = 0, above = 40)
+        # Apply frozen/unresponsive sensor filter
+        df_sub.loc[:,'flag_frozen'] = filters.unresponsive_flag(df_sub[reanal], threshold = 3)
+        # Apply window range filter
+        df_sub.loc[:,'flag_window'] = filters.window_range_flag(window_col = df_sub[reanal], 
+                                                                    window_start = 5., 
+                                                                    window_end = 40,
+                                                                    value_col = df_sub['energy_gwh'], 
+                                                                    value_min =  0.02*plant_capac,
+                                                                    value_max =  1.2*plant_capac) 
+        
+        # Create a 'final' flag which is true if any of the previous flags are true
+        df_sub.loc[:,'flag_final'] = (df_sub.loc[:, 'flag_range']) | (df_sub.loc[:, 'flag_frozen']) #| \
+                                          #(df_sub.loc[:, 'flag_window']) 
+        
+        # Set negative turbine data to zero
+        df_sub.loc[df_sub['flag_neg'], 'energy_gwh'] = 0
+                
         # Define valid data as points in which the Huber algorithm returned a value of 1
         if self.time_resolution == 'M':
             if (self.reg_winddirection == 'Y') & (self.reg_temperature == 'Y'):
-                valid_data = df_sub.loc[rlm_results.weights == 1, [reanal, reanal + '_wd', reanal + '_temp',
+                valid_data = df_sub.loc[df_sub.loc[:, 'flag_final'] == False, [reanal, reanal + '_wd', reanal + '_temp',
                                                                reanal + '_u', reanal + '_v',
                                                                'energy_gwh', 'availability_gwh',
                                                                'curtailment_gwh', 'num_days_expected']]
             elif (self.reg_winddirection == 'Y') & (self.reg_temperature == 'N'):
-                valid_data = df_sub.loc[rlm_results.weights == 1, [reanal, reanal + '_wd',
+                valid_data = df_sub.loc[df_sub.loc[:, 'flag_final'] == False, [reanal, reanal + '_wd',
                                                                reanal + '_u', reanal + '_v',
                                                                'energy_gwh', 'availability_gwh',
                                                                'curtailment_gwh', 'num_days_expected']]
             elif (self.reg_winddirection == 'N') & (self.reg_temperature == 'Y'):
-                valid_data = df_sub.loc[rlm_results.weights == 1, [reanal, reanal + '_temp',
+                valid_data = df_sub.loc[df_sub.loc[:, 'flag_final'] == False, [reanal, reanal + '_temp',
                                                                'energy_gwh', 'availability_gwh',
                                                                'curtailment_gwh', 'num_days_expected']]
             else:
-                valid_data = df_sub.loc[rlm_results.weights == 1, [reanal,
+                valid_data = df_sub.loc[df_sub.loc[:, 'flag_final'] == False, [reanal,
                                                                'energy_gwh', 'availability_gwh',
                                                                'curtailment_gwh', 'num_days_expected']]
         elif self.time_resolution == 'D': 
             if (self.reg_winddirection == 'Y') & (self.reg_temperature == 'Y'):
-                valid_data = df_sub.loc[rlm_results.weights == 1, [reanal, reanal + '_wd', reanal + '_temp',
+                valid_data = df_sub.loc[df_sub.loc[:, 'flag_final'] == False, [reanal, reanal + '_wd', reanal + '_temp',
                                                                reanal + '_u', reanal + '_v',
                                                                'energy_gwh', 'availability_gwh',
                                                                'curtailment_gwh']]
             elif (self.reg_winddirection == 'Y') & (self.reg_temperature == 'N'):
-                valid_data = df_sub.loc[rlm_results.weights == 1, [reanal, reanal + '_wd',
+                valid_data = df_sub.loc[df_sub.loc[:, 'flag_final'] == False, [reanal, reanal + '_wd',
                                                                reanal + '_u', reanal + '_v',
                                                                'energy_gwh', 'availability_gwh',
                                                                'curtailment_gwh']]
             elif (self.reg_winddirection == 'N') & (self.reg_temperature == 'Y'):
-                valid_data = df_sub.loc[rlm_results.weights == 1, [reanal, reanal + '_temp',
+                valid_data = df_sub.loc[df_sub.loc[:, 'flag_final'] == False, [reanal, reanal + '_temp',
                                                                'energy_gwh', 'availability_gwh',
                                                                'curtailment_gwh']]
             else:
-                valid_data = df_sub.loc[rlm_results.weights == 1, [reanal,
+                valid_data = df_sub.loc[df_sub.loc[:, 'flag_final'] == False, [reanal,
                                                                'energy_gwh', 'availability_gwh',
                                                                'curtailment_gwh']]
               
         # Update the dictionary
-        self.outlier_filtering[(reanal, outlier_thresh, comb_loss_thresh)] = valid_data
+        self.outlier_filtering[(reanal, max_power_filter, comb_loss_thresh)] = valid_data
 
         # Return result
         return valid_data
@@ -797,9 +813,7 @@ class MonteCarloAEP(object):
 
         """
         # Get data to use in regression based on filtering result
-        reg_data = self.filter_outliers(self._mc_reanalysis_product[n],
-                                        self._mc_outlier_threshold[n],
-                                        self._mc_loss_threshold[n])
+        reg_data = self.filter_outliers(n)
 
         # Now monte carlo sample the data
         mc_energy = reg_data['energy_gwh'] * self._mc_metered_energy_fraction[
@@ -831,7 +845,7 @@ class MonteCarloAEP(object):
             reg_inputs = pd.concat([reg_inputs,mc_wind_direction_cos], axis = 1)
    
         reg_inputs = pd.concat([reg_inputs,mc_gross_norm], axis = 1)
-        # Return values needed for linear regression
+        # Return values needed for regression
         return reg_inputs  # Return randomly sampled wind speed, wind direction, temperature and normalized gross energy
 
     @logged_method_call
@@ -849,33 +863,47 @@ class MonteCarloAEP(object):
             :obj:`float`: Monte-carlo sampled slope
             :obj:`float`: Monte-carlo sampled intercept
         """
-        reg_data = np.array(self.set_regression_data(n))  # Get regression data
-             
+        reg_data = self.set_regression_data(n)  # Get regression data
+        
+        # Randomly select 80% of the data to perform regression and incorporate some regression uncertainty
+        reg_data = np.array(reg_data.sample(frac = 0.8))
+        
         # Update Monte Carlo tracker fields
         self._mc_num_points[n] = np.shape(reg_data)[0]
         
         # Linear regression
-        if (self.reg_temperature == 'N') & (self.reg_winddirection == 'N'):
-            reg = LinearRegression().fit(np.array(reg_data[:,0].reshape(-1,1)), reg_data[:,-1])
-            predicted_y = reg.predict(np.array(reg_data[:,0].reshape(-1,1)))
-        else:
-            reg = LinearRegression().fit(np.array(reg_data[:,0:-1]), reg_data[:,-1])
-            predicted_y = reg.predict(np.array(reg_data[:,0:-1]))
-        # MC sampling of slope, intercept is removed in this version
-        mc_slope = reg.coef_
-        mc_intercept = reg.intercept_        
-        
-        self._r2_score[n] = r2_score(reg_data[:,-1], predicted_y)
-        self._mse_score[n] = mean_squared_error(reg_data[:,-1], predicted_y)
-        
-        if (self.reg_temperature == 'N') & (self.reg_winddirection == 'N'):
-            self._mc_slope[n] = (mc_slope)
-        else:
-            self._mc_slope[n,:] = (mc_slope)
-        self._mc_intercept[n] = np.float(mc_intercept)
-        
-        # Return slope and intercept values
-        return mc_slope, mc_intercept
+        if self.reg_model == 'lin':
+            if (self.reg_temperature == 'N') & (self.reg_winddirection == 'N'):
+                reg = LinearRegression().fit(np.array(reg_data[:,0].reshape(-1,1)), reg_data[:,-1])
+                predicted_y = reg.predict(np.array(reg_data[:,0].reshape(-1,1)))
+            else:
+                reg = LinearRegression().fit(np.array(reg_data[:,0:-1]), reg_data[:,-1])
+                predicted_y = reg.predict(np.array(reg_data[:,0:-1]))
+            mc_slope = reg.coef_
+            mc_intercept = reg.intercept_  
+            if (self.reg_temperature == 'N') & (self.reg_winddirection == 'N'):
+                self._mc_slope[n] = (mc_slope)
+            else:
+                self._mc_slope[n,:] = (mc_slope)
+            self._mc_intercept[n] = np.float(mc_intercept)
+            
+            self._r2_score[n] = r2_score(reg_data[:,-1], predicted_y)
+            self._mse_score[n] = mean_squared_error(reg_data[:,-1], predicted_y)
+            return mc_slope, mc_intercept
+        # Machine learning models
+        else: 
+            ml = MachineLearningSetup(self.reg_model)
+            if (self.reg_temperature == 'N') & (self.reg_winddirection == 'N'):
+                ml.hyper_optimize(np.array(reg_data[:,0].reshape(-1,1)), reg_data[:,-1], n_iter_search = 5, report = False, cv = KFold(n_splits = 2))
+                predicted_y = ml.random_search.predict(np.array(reg_data[:,0].reshape(-1,1)))
+            else:
+                ml.hyper_optimize(np.array(reg_data[:,0:-1]), reg_data[:,-1], n_iter_search = 5, report = False, cv = KFold(n_splits = 2))
+                predicted_y = ml.random_search.predict(np.array(reg_data[:,0:-1]))
+                 
+            self._r2_score[n] = r2_score(reg_data[:,-1], predicted_y)
+            self._mse_score[n] = mean_squared_error(reg_data[:,-1], predicted_y)
+            return ml.random_search
+
 
     @logged_method_call
     def run_AEP_monte_carlo(self):
@@ -893,88 +921,97 @@ class MonteCarloAEP(object):
         curt_pct =  np.empty(num_sim)
         lt_por_ratio =  np.empty(num_sim)
 
-        if self.time_resolution == 'M':
+        # Linear regression
+        if self.reg_model == 'lin':
             # Loop through number of simulations, run regression each time, store AEP results
             for n in tqdm(np.arange(num_sim)):
                 slope, intercept = self.run_regression(n)  # Get slope, intercept from regression
                 reg_inputs_lt = self.sample_long_term_reanalysis(self._mc_num_years_windiness[n],
-                                                         self._mc_reanalysis_product[n])  # Get long-term wind speeds
-                
+                                                             self._mc_reanalysis_product[n])  # Get long-term wind speeds
+                    
                 # Get long-term normalized gross energy by applying regression result to long-term monthly wind speeds
                 if (self.reg_temperature == 'N') & (self.reg_winddirection == 'N'):
                     gross_norm_lt = reg_inputs_lt.multiply(slope[0]) + intercept
                 else:
                     gross_norm_lt = reg_inputs_lt.multiply(slope.reshape(-1,1).T, axis='columns').sum(axis='columns') + intercept
-                gross_lt = gross_norm_lt*self.num_days_lt/30 # Undo normalization to 30-day months
-            
+                if self.time_resolution == 'M':
+                    gross_lt = gross_norm_lt*self.num_days_lt/30 # Undo normalization to 30-day months
+                else:
+                    gross_lt = gross_norm_lt
+                        
                 # Get POR gross energy by applying regression result to POR regression inputs                                                                    
                 if (self.reg_temperature == 'N') & (self.reg_winddirection == 'N'):
                     gross_norm_por = self._reanalysis_por_avg[self._mc_reanalysis_product[n]].multiply(slope[0]) + intercept
                 elif (self.reg_temperature == 'Y') & (self.reg_winddirection == 'N'):
                     gross_norm_por = self._reanalysis_por_avg[self._mc_reanalysis_product[n]].multiply(slope[0]) + \
-                                self._reanalysis_por_avg[self._mc_reanalysis_product[n] + '_temp'].multiply(slope[1]) + intercept
+                                    self._reanalysis_por_avg[self._mc_reanalysis_product[n] + '_temp'].multiply(slope[1]) + intercept
                 elif (self.reg_temperature == 'N') & (self.reg_winddirection == 'Y'):
                     wd_sin = np.sin(2*np.pi* self._reanalysis_por_avg[self._mc_reanalysis_product[n] + '_wd']/360)
                     wd_cos = np.cos(2*np.pi* self._reanalysis_por_avg[self._mc_reanalysis_product[n] + '_wd']/360)
                     gross_norm_por = self._reanalysis_por_avg[self._mc_reanalysis_product[n]].multiply(slope[0]) + \
-                                wd_sin * slope[1] + wd_cos * slope[2] + intercept
+                                    wd_sin * slope[1] + wd_cos * slope[2] + intercept
                 else:
                     wd_sin = np.sin(2*np.pi* self._reanalysis_por_avg[self._mc_reanalysis_product[n] + '_wd']/360)
                     wd_cos = np.cos(2*np.pi* self._reanalysis_por_avg[self._mc_reanalysis_product[n] + '_wd']/360)
                     gross_norm_por = self._reanalysis_por_avg[self._mc_reanalysis_product[n]].multiply(slope[0]) + \
-                                self._reanalysis_por_avg[self._mc_reanalysis_product[n] + '_temp'].multiply(slope[1]) + \
-                                wd_sin * slope[2] + wd_cos * slope[3] + intercept
-                
-                gross_por=gross_norm_por*self.num_days_lt/30 # Undo normalization to 30-day months 
-                
+                                    self._reanalysis_por_avg[self._mc_reanalysis_product[n] + '_temp'].multiply(slope[1]) + \
+                                    wd_sin * slope[2] + wd_cos * slope[3] + intercept
+                if self.time_resolution == 'M':
+                    gross_por=gross_norm_por*self.num_days_lt/30 # Undo normalization to 30-day months 
+                else:
+                    gross_por=gross_norm_por
+                        
                 # Get long-term availability and curtailment losses by month
                 [avail_lt_losses, curt_lt_losses] = self.sample_long_term_losses(n)  
-    
+        
                 # Assign AEP, long-term availability, and long-term curtailment to output data frame
                 aep_GWh[n] = gross_lt.sum() * (1 - avail_lt_losses)
                 avail_pct[n] = avail_lt_losses
                 curt_pct[n] = curt_lt_losses
                 lt_por_ratio[n] = gross_lt.sum() / gross_por.sum()                    
-        
-        elif self.time_resolution == 'D':   
+         
+        # Machine learning models
+        else: 
             # Loop through number of simulations, run regression each time, store AEP results
             for n in tqdm(np.arange(num_sim)):
-                slope, intercept = self.run_regression(n)  # Get slope, intercept from regression
                 reg_inputs_lt = self.sample_long_term_reanalysis(self._mc_num_years_windiness[n],
-                                                         self._mc_reanalysis_product[n])  # Get long-term regression inputs
-                
-                # Get long-term normalized gross energy by applying regression result to long-term daily regression inputs
+                                                             self._mc_reanalysis_product[n])  # Get long-term regression inputs
+                    
+                ml_model_cv = self.run_regression(n)
+
+                # Get long-term normalized gross energy by applying regression result to long-term monthly wind speeds
                 if (self.reg_temperature == 'N') & (self.reg_winddirection == 'N'):
-                    gross_lt = reg_inputs_lt.multiply(slope[0]) + intercept
+                    gross_lt = ml_model_cv.predict(np.array(reg_inputs_lt).reshape(-1, 1))
                 else:
-                    gross_lt = reg_inputs_lt.multiply(slope.reshape(-1,1).T, axis='columns').sum(axis='columns') + intercept
-         
-                # Get POR gross energy by applying regression result to POR regression inputs                                                                    
+                    gross_lt = ml_model_cv.predict(np.array(reg_inputs_lt))
+                    
+                # Get POR gross energy by applying regression result to POR regression inputs                                                                        
                 if (self.reg_temperature == 'N') & (self.reg_winddirection == 'N'):
-                    gross_por = self._reanalysis_por_avg[self._mc_reanalysis_product[n]].multiply(slope[0]) + intercept
+                    reg_inputs_por = self._reanalysis_por_avg[self._mc_reanalysis_product[n]]
+                    gross_por = ml_model_cv.predict(np.array(reg_inputs_por).reshape(-1, 1))
                 elif (self.reg_temperature == 'Y') & (self.reg_winddirection == 'N'):
-                    gross_por = self._reanalysis_por_avg[self._mc_reanalysis_product[n]].multiply(slope[0]) + \
-                                self._reanalysis_por_avg[self._mc_reanalysis_product[n] + '_temp'].multiply(slope[1]) + intercept
+                    reg_inputs_por = pd.concat([self._reanalysis_por_avg[self._mc_reanalysis_product[n]], self._reanalysis_por_avg[self._mc_reanalysis_product[n] + '_temp']], axis = 1)
+                    gross_por = ml_model_cv.predict(np.array(reg_inputs_por))
                 elif (self.reg_temperature == 'N') & (self.reg_winddirection == 'Y'):
                     wd_sin = np.sin(2*np.pi* self._reanalysis_por_avg[self._mc_reanalysis_product[n] + '_wd']/360)
                     wd_cos = np.cos(2*np.pi* self._reanalysis_por_avg[self._mc_reanalysis_product[n] + '_wd']/360)
-                    gross_por = self._reanalysis_por_avg[self._mc_reanalysis_product[n]].multiply(slope[0]) + \
-                                wd_sin * slope[1] + wd_cos * slope[2] + intercept
+                    reg_inputs_por = pd.concat([self._reanalysis_por_avg[self._mc_reanalysis_product[n]], wd_sin, wd_cos], axis = 1)
+                    gross_por = ml_model_cv.predict(np.array(reg_inputs_por))
                 else:
                     wd_sin = np.sin(2*np.pi* self._reanalysis_por_avg[self._mc_reanalysis_product[n] + '_wd']/360)
                     wd_cos = np.cos(2*np.pi* self._reanalysis_por_avg[self._mc_reanalysis_product[n] + '_wd']/360)
-                    gross_por = self._reanalysis_por_avg[self._mc_reanalysis_product[n]].multiply(slope[0]) + \
-                                self._reanalysis_por_avg[self._mc_reanalysis_product[n] + '_temp'].multiply(slope[1]) + \
-                                wd_sin * slope[2] + wd_cos * slope[3] + intercept
-                # Get long-term availability and curtailment losses by day
+                    reg_inputs_por = pd.concat([self._reanalysis_por_avg[self._mc_reanalysis_product[n]], self._reanalysis_por_avg[self._mc_reanalysis_product[n] + '_temp'], wd_sin, wd_cos], axis = 1)
+                    gross_por = ml_model_cv.predict(np.array(reg_inputs_por))
+                                        
+                # Get long-term availability and curtailment losses by month
                 [avail_lt_losses, curt_lt_losses] = self.sample_long_term_losses(n)  
-                
+        
                 # Assign AEP, long-term availability, and long-term curtailment to output data frame
                 aep_GWh[n] = gross_lt.sum() * (1 - avail_lt_losses)
                 avail_pct[n] = avail_lt_losses
                 curt_pct[n] = curt_lt_losses
-                lt_por_ratio[n] = gross_lt.sum() / gross_por.sum()            
-
+                lt_por_ratio[n] = gross_lt.sum() / gross_por.sum()
+            
         # Return final output
         sim_results = pd.DataFrame(index=np.arange(num_sim), data={'aep_GWh': aep_GWh,                                                                                                        
                                                                    'avail_pct': avail_pct,                                                                                                      
@@ -983,16 +1020,15 @@ class MonteCarloAEP(object):
         return sim_results
 
     @logged_method_call
+    def sample_normal(self,unc):
+        return np.random.normal(1,unc,1)
+
+    @logged_method_call
     def sample_long_term_reanalysis(self, n, r):
         """
         This function returns the windiness-corrected monthly wind speeds based on the Monte-Carlo generated sample of:
             1. The reanalysis product
             2. The number of years to use in the long-term correction
-
-        A memoized approach is used here since there are a finite combination of long-term wind speeds:
-            (3 reanalysis products x 10 different year combinations) = 30 total combinations
-
-        This memoized approach saves significant computaitonal time in the Monte Carlo simulation
 
         Args:
            n(:obj:`integer`): The number of years for the windiness correction
@@ -1002,17 +1038,7 @@ class MonteCarloAEP(object):
            :obj:`pandas.DataFrame`: the windiness-corrected or 'long-term' annualized monthly/daily wind speeds
 
         """
-        # Check if valid data has already been calculated and stored. If so, just return it
-        if (r, n) in self.long_term_sampling:
-            long_term_reg_inputs = self.long_term_sampling[(r, n)]
-            if self.reg_temperature == 'Y': 
-                long_term_reg_inputs = pd.concat([long_term_reg_inputs, self.long_term_sampling_temp[(r, n)]], axis=1)
-            if self.reg_winddirection == 'Y':
-                long_term_reg_inputs = pd.concat([long_term_reg_inputs, self.long_term_sampling_wd_sin[(r, n)]], axis=1)
-                long_term_reg_inputs = pd.concat([long_term_reg_inputs, self.long_term_sampling_wd_cos[(r, n)]], axis=1)
-            return long_term_reg_inputs
 
-        # If data hasn't yet been computed, peform the calculation
         ws_df = self._reanalysis_monthly_daily[r].to_frame().dropna()  # Drop NA values from monthly/daily reanalysis data series
         if self.reg_winddirection == 'Y': 
             u_df = self._reanalysis_monthly_daily[r + '_u'].to_frame().dropna()
@@ -1023,6 +1049,13 @@ class MonteCarloAEP(object):
         if self.time_resolution == 'M':
             ws_data = ws_df.tail(n * 12)  # Get last 'x' years of data from reanalysis product
             ws_monthly_daily = ws_data.groupby(ws_data.index.month)[r].mean()  # Get long-term annualized monthly wind speeds
+            # IAV
+            ws_monthly_daily_sd = ws_data.groupby(ws_data.index.month)[r].std() # Get long-term annualized stdev of monthly wind speeds            
+            iav_df = ws_monthly_daily_sd/ws_monthly_daily
+            iav_df = iav_df.to_frame()
+            iav_df['sample'] = iav_df.apply(lambda row: self.sample_normal(row[r]), axis=1)
+            mc_ws_monthly_daily = ws_monthly_daily * iav_df['sample']  
+            
             if self.reg_temperature == 'Y': 
                 temp_data = temp_df.tail(n * 12)
                 temp_monthly_daily = temp_data.groupby(temp_data.index.month)[r + '_temp'].mean()
@@ -1036,6 +1069,17 @@ class MonteCarloAEP(object):
         elif self.time_resolution == 'D':   
             ws_data = ws_df.tail(n * 366)  # Get last 'x' years of data from reanalysis product
             ws_monthly_daily = ws_data.groupby([(ws_data.index.month),(ws_data.index.day)])[r].mean()  # Get long-term annualized daily wind speeds
+            ws_monthly_daily.reset_index(drop=True, inplace=True)
+            # IAV
+            ws_monthly_daily_sd_12 = ws_data.groupby(ws_data.index.month)[r].std() # Get long-term annualized stdev of daily wind speeds            
+            num_days_lt = (31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
+            ws_monthly_daily_sd = np.repeat(ws_monthly_daily_sd_12, num_days_lt)
+            ws_monthly_daily_sd.reset_index(drop=True, inplace=True)
+            iav_df = ws_monthly_daily_sd/ws_monthly_daily
+            iav_df = iav_df.to_frame()
+            iav_df['sample'] = iav_df.apply(lambda row: self.sample_normal(row[r]), axis=1)
+            mc_ws_monthly_daily = ws_monthly_daily * iav_df['sample']  
+                        
             if self.reg_temperature == 'Y':
                 temp_data = temp_df.tail(n * 366)
                 temp_monthly_daily = temp_data.groupby([(temp_data.index.month),(temp_data.index.day)])[r + '_temp'].mean()
@@ -1047,21 +1091,16 @@ class MonteCarloAEP(object):
                 wd_monthly_daily = 180-np.rad2deg(np.arctan2(-u_monthly_daily,v_monthly_daily))
         
         # Store result in dictionary
-        self.long_term_sampling[(r, n)] = ws_monthly_daily
-        long_term_reg_inputs = ws_monthly_daily
+        long_term_reg_inputs = mc_ws_monthly_daily.astype(float).reset_index(drop=True)
         if self.reg_temperature == 'Y': 
-            self.long_term_sampling_temp[(r, n)] = temp_monthly_daily
-            long_term_reg_inputs = pd.concat([long_term_reg_inputs, temp_monthly_daily], axis=1)
+            long_term_reg_inputs = pd.concat([mc_ws_monthly_daily.astype(float).reset_index(drop=True), temp_monthly_daily.astype(float).reset_index(drop=True)], axis=1)
         if self.reg_winddirection == 'Y':
             wd_sin_monthly_daily = np.sin(2*np.pi*wd_monthly_daily/360)
             wd_cos_monthly_daily = np.cos(2*np.pi*wd_monthly_daily/360)
-            self.long_term_sampling_wd[(r, n)] = wd_monthly_daily
-            self.long_term_sampling_wd_sin[(r, n)] = wd_sin_monthly_daily
-            self.long_term_sampling_wd_cos[(r, n)] = wd_cos_monthly_daily
-            long_term_reg_inputs = pd.concat([long_term_reg_inputs, wd_sin_monthly_daily], axis=1)
-            long_term_reg_inputs = pd.concat([long_term_reg_inputs, wd_cos_monthly_daily], axis=1)
+            long_term_reg_inputs = pd.concat([long_term_reg_inputs.astype(float).reset_index(drop=True), wd_sin_monthly_daily.astype(float).reset_index(drop=True)], axis=1)
+            long_term_reg_inputs = pd.concat([long_term_reg_inputs.astype(float).reset_index(drop=True), wd_cos_monthly_daily.astype(float).reset_index(drop=True)], axis=1)
 
-        # Return result
+        # Return result            
         return long_term_reg_inputs
 
     @logged_method_call
