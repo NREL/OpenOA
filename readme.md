@@ -120,6 +120,7 @@ pip install -e ./OpenOA
 
 Alphabetically:
 Nathan Agarwal,
+Nicola Bodini,
 Anna Craig,
 Jason Fields,
 Travis Kemper,
