@@ -18,7 +18,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         self.analysis = TurbineLongTermGrossEnergy(self.project, UQ = 'N')
         self.analysis.run(reanal_subset = ['erai', 'merra2', 'ncep2'], enable_plotting = False)
 
-        self.analysis_uq = TurbineLongTermGrossEnergy(self.project, UQ = 'Y', num_sim = 500)
+        self.analysis_uq = TurbineLongTermGrossEnergy(self.project, UQ = 'Y', num_sim = 100)
         self.analysis_uq.run(reanal_subset = ['erai', 'merra2', 'ncep2'], enable_plotting = False)
 
     def test_longterm_gross_energy_results(self):
