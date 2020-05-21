@@ -187,7 +187,7 @@ def compute_shear(df, windspeed_heights, ref_col='empty'):
 
             t = (df_norm.loc[time]  # Take the row as a series, the index will be the column names,
                  .reset_index()  # Resetting the index yields the heights as a column
-                 .as_matrix())  # Numpy array: each row a sensor, column 0 the heights, column 1 the measurment
+                 .to_numpy())  # Numpy array: each row a sensor, column 0 the heights, column 1 the measurment
             t = t[~np.isnan(t).any(axis=1)]  # Drop rows (sensors) for which the measurement was nan
             h = t[:, 0]  # The measurement heights
             u = t[:, 1]  # The measurements
