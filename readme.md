@@ -1,6 +1,6 @@
 OpenOA ![](https://github.com/NREL/OpenOA/workflows/Tests/badge.svg?branch=master) ![](https://readthedocs.org/projects/openoa/badge/?version=latest)
 ======
-
+ 
 This library provides a framework for working with large timeseries data from wind plants, such as SCADA.
 Its development has been motivated by the WP3 Benchmarking (PRUF) project,
 which aims to provide a reference implementation for plant-level performance assessment.
