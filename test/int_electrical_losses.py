@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import numpy.testing as npt
 
-from operational_analysis.methods.electrical_losses_uq import ElectricalLosses
+from operational_analysis.methods.electrical_losses import ElectricalLosses
 from examples.turbine_analysis.turbine_project import TurbineExampleProject
 
 class TestElectricalLosses(unittest.TestCase):

@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import numpy.testing as npt
 
-from operational_analysis.methods.turbine_long_term_gross_energy_uq import TurbineLongTermGrossEnergy
+from operational_analysis.methods.turbine_long_term_gross_energy import TurbineLongTermGrossEnergy
 from examples.turbine_analysis.turbine_project import TurbineExampleProject
 
 
