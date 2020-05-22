@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 from numpy import testing as nptest
 
-from operational_analysis.types import plant
 from operational_analysis.methods import plant_analysis
 from examples.operational_AEP_analysis.project_EIA import Project_EIA
 
@@ -14,7 +13,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         np.random.seed(42)
 
         # Set up data to use for testing (EIA example plant)
-        self.project = Project_EIA('./examples/operational_AEP_analysis/data')
+        self.project = Project_EIA('../examples/operational_AEP_analysis/data')
         self.project.prepare()
         self.analysis = plant_analysis.MonteCarloAEP(self.project)
 
@@ -24,15 +23,12 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
 
     def test_plant_analysis(self):
 
-        df = self.analysis._monthly.df
+        df = self.analysis._aggregate.df
 
         # Check the pre-processing functions
         self.check_process_revenue_meter_energy(df)
         self.check_process_loss_estimates(df)
         self.check_process_reanalysis_data(df)
-
-        # Check outlier filtering
-        self.check_filter_outliers()
 
         # Run Monte Carlo AEP analysis, confirm the results are consistent
         self.analysis.run(num_sim=2000, reanal_subset=['ncep2', 'merra2', 'erai'])
@@ -42,7 +38,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
 
     def check_process_revenue_meter_energy(self, df):
         # Energy Nan flags are all zero
-        nptest.assert_array_equal(df['energy_nan_perc'].as_matrix(), np.repeat(0.0, df.shape[0]))
+        nptest.assert_array_equal(df['energy_nan_perc'].values, np.repeat(0.0, df.shape[0]))
 
         # Expected number of days per month are equal to number of actual days
         nptest.assert_array_equal(df['num_days_expected'], df['num_days_actual'])
@@ -54,9 +50,9 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
 
     def check_process_loss_estimates(self, df):
         # Availablity, curtailment nan fields both 0, NaN flag is all False
-        nptest.assert_array_equal(df['avail_nan_perc'].as_matrix(), np.repeat(0.0, df.shape[0]))
-        nptest.assert_array_equal(df['curt_nan_perc'].as_matrix(), np.repeat(0.0, df.shape[0]))
-        nptest.assert_array_equal(df['nan_flag'].as_matrix(), np.repeat(False, df.shape[0]))
+        nptest.assert_array_equal(df['avail_nan_perc'].values, np.repeat(0.0, df.shape[0]))
+        nptest.assert_array_equal(df['curt_nan_perc'].values, np.repeat(0.0, df.shape[0]))
+        nptest.assert_array_equal(df['nan_flag'].values, np.repeat(False, df.shape[0]))
 
         # Check a few reported availabilty and curtailment values
         expected_avail_gwh = pd.Series([0.236601, 0.161961, 0.724330])
@@ -82,17 +78,6 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         nptest.assert_array_almost_equal(expected_merra2, df.loc[date_ind, 'merra2'])
         nptest.assert_array_almost_equal(expected_erai, df.loc[date_ind, 'erai'])
         nptest.assert_array_almost_equal(expected_ncep2, df.loc[date_ind, 'ncep2'])
-
-    def check_filter_outliers(self):
-        # Run a few combinations of outlier criteria, count number of data points remaining
-        filt_params = {'a': ('merra2', 2, 0.15, 130),
-                       'b': ('merra2', 3, 0.15, 144),
-                       'c': ('merra2', 2, 0.25, 135),
-                       'd': ('ncep2', 2, 0.25, 136),
-                       'e': ('erai', 3, 0.25, 146)}
-
-        for key, values in filt_params.items():
-            nptest.assert_equal((self.analysis.filter_outliers(values[0], values[1], values[2])).shape[0], values[3])
 
     def check_simulation_results(self, s):
         # Make sure AEP results are consistent to one decimal place
