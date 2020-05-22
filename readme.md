@@ -1,9 +1,5 @@
-OpenOA
+OpenOA ![](https://github.com/NREL/OpenOA/workflows/Tests/badge.svg?branch=master) ![](https://readthedocs.org/projects/openoa/badge/?version=latest)
 ======
-
-[![Build Status](https://travis-ci.org/NREL/OpenOA.svg?branch=master)](https://travis-ci.org/NREL/OpenOA) (Master), [![Build Status](https://travis-ci.org/NREL/OpenOA.svg?branch=develop)](https://travis-ci.org/NREL/OpenOA) (Develop)
-
-[![Documentation Status](https://readthedocs.org/projects/openoa/badge/?version=latest)](https://openoa.readthedocs.io/en/latest/?badge=latest) (Develop)
 
 This library provides a framework for working with large timeseries data from wind plants, such as SCADA.
 Its development has been motivated by the WP3 Benchmarking (PRUF) project,
@@ -21,7 +17,7 @@ such as Dask and Spark, in the future.
 
 ### Requirements
 
-  * Python 3.6+ (e.g., from Anaconda) with pip
+  * Python 3.6+ (e.g., from Anaconda) with pip.
 
 We recommend creating a new virtual environment or Anaconda environment before attempting to install
 OpenOA. To create and activate such a new environment with the name "openoa-env" using Anaconda:
@@ -62,39 +58,30 @@ python
 >>> import operational_analysis
 ```
 
+### Extracting Example Data
+
+```
+unzip examples/operational_AEP_analysis/data/eia_example_data.zip -d examples/operational_AEP_analysis/data/
+
+unzip examples/turbine_analysis/data/example_20180829.zip -d examples/turbine_analysis/data/
+
+cp examples/turbine_analysis/data/example_20180829/scada_10min_4cols.csv examples/turbine_analysis/data/scada_10min_4cols.csv
+```
+
 ### Testing
 
-All tests are runnable from setuptools. They are written in the Python unittest framework.
+All tests are runnable using pytest. They are written in the Python unittest framework.
 
-To run unit tests with code coverage reporting:
-
-```
-cd ./OpenOA
-python setup.py test
-```
-
-To run integration tests (longer running, requires data) first unzip the example data:
+To run all tests with code coverage reporting:
 
 ```
-cd OpenOA/examples/operational_AEP_analysis/data
-unzip eia_example_data.zip
-
-cd OpenOA/examples/turbine_analysis/data
-unzip example_20180829.zip
-
-cd OpenOA
+pytest -o python_files=test/*.py --cov=operational_analysis
 ```
 
-Then, you can run the integration test:
+To run unit tests only (does not require example data)
 
 ```
-python setup.py integrate
-```
-
-To output junit xml from integration test (used for Jenkins testing):
-
-```
-python setup.py integrate -a "--junitxml=./path_to_outputfile.xml"
+pytest -o python_files=test/test_*.py --cov=operational_analysis
 ```
 
 
@@ -133,6 +120,7 @@ pip install -e ./OpenOA
 
 Alphabetically:
 Nathan Agarwal,
+Nicola Bodini,
 Anna Craig,
 Jason Fields,
 Travis Kemper,
