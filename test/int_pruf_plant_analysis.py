@@ -13,7 +13,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         np.random.seed(42)
 
         # Set up data to use for testing (EIA example plant)
-        self.project = Project_EIA('../examples/operational_AEP_analysis/data')
+        self.project = Project_EIA('./examples/operational_AEP_analysis/data')
         self.project.prepare()
         self.analysis = plant_analysis.MonteCarloAEP(self.project)
 
