@@ -39,12 +39,12 @@ class TestElectricalLosses(unittest.TestCase):
 
         # Create electrical loss method object and run
         # NO UQ case
-        self.analysis = ElectricalLosses(self.project, UQ = 'N')
+        self.analysis = ElectricalLosses(self.project, UQ = False)
         self.analysis.run()
 
         # Create electrical loss method object and run
         # WITH UQ
-        self.analysis_uq = ElectricalLosses(self.project, UQ = 'Y', num_sim = 3000)
+        self.analysis_uq = ElectricalLosses(self.project, UQ = True, num_sim = 3000)
         self.analysis_uq.run()
 
     def test_electrical_losses_results(self):

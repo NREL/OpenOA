@@ -47,7 +47,7 @@ class TurbineLongTermGrossEnergy(object):
     """
 
     @logged_method_call
-    def __init__(self, plant, UQ = 'Y', num_sim = 100, uncertainty_scada=0.005,
+    def __init__(self, plant, UQ = True, num_sim = 100, uncertainty_scada=0.005,
                   uncertainty_wind_bin_thresh=(1, 3), uncertainty_max_power_filter=(0.8, 0.9), 
                   uncertainty_correction_threshold=(0.85, 0.95)):
     
@@ -55,26 +55,26 @@ class TurbineLongTermGrossEnergy(object):
         Initialize turbine long-term gross energy analysis with data and parameters.
         Args:
          plant(:obj:`PlantData object`): PlantData object from which TurbineLongTermGrossEnergy should draw data.
-         UQ:(:obj:`str`): choice whether to perform ('Y') or not ('N') uncertainty quantification
+         UQ:(:obj:`bool`): choice whether to perform ('Y') or not ('N') uncertainty quantification
          num_sim:(:obj:`int`): number of Monte Carlo simulations
          uncertainty_scada(:obj:`float`): uncertainty imposed to scada data
-         uncertainty_max_power_filter(:obj:`float`): Maximum power threshold (fraction) to which the bin filter 
+         uncertainty_max_power_filter(:obj:`tuple`): Maximum power threshold (fraction) to which the bin filter 
                                             should be applied (default 0.85)
-         uncertainty_wind_bin_thresh(:obj:`float`): The filter threshold for each bin (default is 2 m/s)
-         uncertainty_correction_threshold(:obj:`float`): The threshold (fraction) above which daily scada energy data
+         uncertainty_wind_bin_thresh(:obj:`tuple`): The filter threshold for each bin (default is 2 m/s)
+         uncertainty_correction_threshold(:obj:`tuple`): The threshold (fraction) above which daily scada energy data
                                                 should be corrected (default is 0.90)
         """
         logger.info("Initializing TurbineLongTermGrossEnergy Object")
         
         # Check that selected UQ is allowed
-        if UQ == 'Y':
+        if UQ == True:
             logger.info("Note: uncertainty quantification will be performed in the calculation")
             self.num_sim = num_sim
-        elif UQ == 'N':    
+        elif UQ == False:    
             logger.info("Note: uncertainty quantification will NOT be performed in the calculation")
             self.num_sim = 1
         else:   
-            raise ValueError("UQ has to either be Y (uncertainty quantification performed, default) or N (uncertainty quantification NOT performed)")
+            raise ValueError("UQ has to either be True (uncertainty quantification performed, default) or False (uncertainty quantification NOT performed)")
         self.UQ = UQ
         
         self._plant = plant  # Set plant as attribute of analysis object
@@ -133,7 +133,7 @@ class TurbineLongTermGrossEnergy(object):
         self.plot_dir = plot_dir
         
         # Setup and run Monte Carlo
-        if self.UQ == 'Y':
+        if self.UQ == True:
             self.setup_TIE_monte_carlo_inputs()
         self.run_TIE_monte_carlo()
         
@@ -178,9 +178,9 @@ class TurbineLongTermGrossEnergy(object):
             turb_capac = dic[t].wtur_W_avg.max()
             
             # Monte Carlo sample max_power_filter
-            if self.UQ == 'Y':
+            if self.UQ == True:
                 self._max_power_filter = self._mc_max_power_filter[n]
-            elif self.UQ == 'N':
+            elif self.UQ == False:
                 self._max_power_filter = np.mean(self.uncertainty_max_power_filter)
             max_bin = self._max_power_filter * turb_capac # Set maximum range for using bin-filter
             
@@ -200,9 +200,9 @@ class TurbineLongTermGrossEnergy(object):
                                                                     value_min =  0.02*turb_capac,
                                                                     value_max =  1.2*turb_capac) 
             
-            if self.UQ == 'Y':
+            if self.UQ == True:
                 threshold_wind_bin = self._mc_wind_bin_thresh[n]
-            elif self.UQ == 'N':
+            elif self.UQ == False:
                 threshold_wind_bin = np.mean(self.uncertainty_wind_bin_thresh)
             # Apply bin-based filter
             dic[t].loc[:,'flag_bin'] = filters.bin_filter(bin_col = dic[t].loc[:, 'wtur_W_avg'], 
@@ -311,7 +311,7 @@ class TurbineLongTermGrossEnergy(object):
         """
         dic = self._daily_reanal_dict
         
-        if self.UQ == 'Y':
+        if self.UQ == True:
             # Monte Carlo: pick a single reanalysis product   
             reanal = self._plant._reanalysis._product[self._mc_reanalysis_product[n]].df # gives name of reanalysis product to use
                     
@@ -324,7 +324,7 @@ class TurbineLongTermGrossEnergy(object):
             dic = df_daily # Assign result to dictionary        
             self._daily_reanal_dict = dic
         
-        elif self.UQ == 'N':
+        elif self.UQ == False:
             for r in self._reanal:
                 reanal = self._plant._reanalysis._product[r].df
                 reanal['u_ms'], reanal['v_ms'] = met_data_processing.compute_u_v_components(reanal['windspeed_ms'], reanal['winddirection_deg'])
@@ -353,9 +353,9 @@ class TurbineLongTermGrossEnergy(object):
         scada = self._scada_dict
         
         # Monte Carlo sample _correction_threshold
-        if self.UQ == 'Y':
+        if self.UQ == True:
             self._correction_threshold = self._mc_correction_threshold[n]
-        elif self.UQ == 'N':
+        elif self.UQ == False:
             self._correction_threshold = np.mean(self.uncertainty_correction_threshold)
         num_thres = self._correction_threshold * self._num_valid_daily # Number of permissible reported timesteps
         
@@ -413,7 +413,7 @@ class TurbineLongTermGrossEnergy(object):
         reanal = self._daily_reanal_dict
         mod = self._model_dict        
         
-        if self.UQ == 'Y':
+        if self.UQ == True:
             # Store the valid data to be used for fitting in a separate dictionary                          
             for t in self._turbs:
                 daily_valid = self._scada_daily_valid.loc[self._scada_daily_valid['id'] == t]
@@ -424,7 +424,7 @@ class TurbineLongTermGrossEnergy(object):
                 mod[t].dropna(subset = ['energy_imputed', 'windspeed_ms'], inplace = True) # Drop any remaining NaNs (e.g., reanalysis does not cover full POR)
             self._model_dict = mod
             
-        elif self.UQ == 'N':
+        elif self.UQ == False:
             # Store the valid data to be used for fitting in a separate dictionary                          
             for t in self._turbs:    
                 daily_valid = self._scada_daily_valid.loc[self._scada_daily_valid['id'] == t]
@@ -448,7 +448,7 @@ class TurbineLongTermGrossEnergy(object):
         mod_dict = self._model_dict
         mod_results = self._model_results
         
-        if self.UQ == 'Y':
+        if self.UQ == True:
             for t in self._turbs: # Loop throuh turbines            
                 df = mod_dict[t]
                 # Add Monte-Carlo sampled uncertainty to SCADA data
@@ -460,7 +460,7 @@ class TurbineLongTermGrossEnergy(object):
                                                       power_column = df['energy_imputed'])   
             self._model_results = mod_results
             
-        elif self.UQ == 'N':
+        elif self.UQ == False:
             for t in self._turbs: # Loop throuh turbines            
                 for r in self._reanal: # Loop through reanalysis products
                     df = mod_dict[t, r]
@@ -487,7 +487,7 @@ class TurbineLongTermGrossEnergy(object):
         # Create a data frame to store final results
         self._summary_results = pd.DataFrame(index = self._reanal, columns = self._turbs)
         
-        if self.UQ == 'Y':
+        if self.UQ == True:
             daily_reanal = self._daily_reanal_dict
             turb_gross = pd.DataFrame(index = daily_reanal.index) # Set empty data frame to store results
             X_long_term = daily_reanal['windspeed_ms'], daily_reanal['winddirection_deg'], daily_reanal['rho_kgm-3']
@@ -499,7 +499,7 @@ class TurbineLongTermGrossEnergy(object):
             turb_mo_avg = turb_mo.groupby(turb_mo.index.month).mean() # get average sum by calendar month
             self._plant_gross[n] = turb_mo_avg.sum(axis=1).sum(axis=0) # Store sum of turbine gross energy
             
-        elif self.UQ == 'N':
+        elif self.UQ == False:
             for r in self._reanal: # Loop throuh reanalysis products
                 daily_reanal = self._daily_reanal_dict[r]
                 turb_gross[r] = pd.DataFrame(index = daily_reanal.index) # Set empty data frame to store results
