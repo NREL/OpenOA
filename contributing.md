@@ -1,5 +1,5 @@
 
-Contributing 
+Contributing
 ============
 
 ## Issue Tracking
@@ -16,19 +16,16 @@ The OpenOA repository is hosted on Github, and located here: http://github.com/N
 
 This repository is organized using a modified git-flow system. Branches are organized as follows:
 
-- release/xxx: Development branches targeting a specific release. Tests should pass, but code may be unstable.
-- feature/issue-xxx: Branch of active release branch, must reference a github issue number.
+- master: Stable release version. Must have good test coverage and may not have all the newest features.
+- develop: Development branch which contains the newest features. Tests must pass, but code may be unstable.
+- feature/xxx: Branch from develop, must reference a github issue number.
 Features branches are not automatically tested and may contain broken code. Feel free to commit broken code to your own branch.
 
-Please note that our public repository does not have a master or a develop branch. Those branches are hosted on a
-separate, private repository for the NREL team.
-
-To work on a feature, please make a new feature branch based on the target release branch. If you're working externally
-to NREL, please fork OpenOA first and then create a feature branch in your own copy of the repository.
-Work out of the feature branch before submitting a pull request. Be sure to periodically merge the target release
+To work on a feature, please fork OpenOA first and then create a feature branch in your own fork.
+Work out of this feature branch before submitting a pull request. Be sure to periodically merge the target release
 branch into your feature branch to avoid conflicts in the pull request.
 
-When the feature branch is ready, make a pull request through the Github.com UI.
+When the feature branch is ready, make a pull request to NREL/OpenOA through the Github.com UI.
 
 ## Pull Request
 
@@ -65,9 +62,10 @@ create new tickets in this repository towards implementing the change.
 
 ## Testing
 
-OpenOA uses pytest and the built in unittest framework. To run tests, navigate to the OpenOA directory and run:
+All code should be paired with a corresponding unit or integration test.
+OpenOA uses pytest and the built in unittest framework.
+To run tests, navigate to the OpenOA directory and run:
 
 ```
 python setup.py test
 ```
-

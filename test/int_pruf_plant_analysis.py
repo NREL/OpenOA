@@ -42,7 +42,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
 
     def check_process_revenue_meter_energy(self, df):
         # Energy Nan flags are all zero
-        nptest.assert_array_equal(df['energy_nan_perc'].as_matrix(), np.repeat(0.0, df.shape[0]))
+        nptest.assert_array_equal(df['energy_nan_perc'].to_numpy(), np.repeat(0.0, df.shape[0]))
 
         # Expected number of days per month are equal to number of actual days
         nptest.assert_array_equal(df['num_days_expected'], df['num_days_actual'])
@@ -54,9 +54,9 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
 
     def check_process_loss_estimates(self, df):
         # Availablity, curtailment nan fields both 0, NaN flag is all False
-        nptest.assert_array_equal(df['avail_nan_perc'].as_matrix(), np.repeat(0.0, df.shape[0]))
-        nptest.assert_array_equal(df['curt_nan_perc'].as_matrix(), np.repeat(0.0, df.shape[0]))
-        nptest.assert_array_equal(df['nan_flag'].as_matrix(), np.repeat(False, df.shape[0]))
+        nptest.assert_array_equal(df['avail_nan_perc'].to_numpy(), np.repeat(0.0, df.shape[0]))
+        nptest.assert_array_equal(df['curt_nan_perc'].to_numpy(), np.repeat(0.0, df.shape[0]))
+        nptest.assert_array_equal(df['nan_flag'].to_numpy(), np.repeat(False, df.shape[0]))
 
         # Check a few reported availabilty and curtailment values
         expected_avail_gwh = pd.Series([0.236601, 0.161961, 0.724330])
