@@ -92,14 +92,9 @@ class TurbineLongTermGrossEnergy(object):
         self._model_results = {}
         self._turb_lt_gross = {}
         self._scada_daily_valid = pd.DataFrame()
-
-        # Dictionary to convert time interval indicator into minutes
-        self._time_conversion = {'10T': 10.,
-                                 '5T': 5.,
-                                 '1H': 60.}
         
         # Set number of 'valid' counts required when summing data to daily values
-        self._num_valid_daily = 60. / self._time_conversion[self._plant._scada_freq] * 24
+        self._num_valid_daily = 60. / (pd.to_timedelta(self._plant._scada_freq).seconds/60) * 24
         
         # Define relevant uncertainties, to be applied in Monte Carlo sampling
         self.uncertainty_scada = np.float64(uncertainty_scada)
@@ -132,13 +127,44 @@ class TurbineLongTermGrossEnergy(object):
         self.enable_plotting = enable_plotting 
         self.plot_dir = plot_dir
         
-        # Setup and run Monte Carlo
-        if self.UQ == True:
-            self.setup_TIE_monte_carlo_inputs()
-        self.run_TIE_monte_carlo()
+        self.setup_inputs()
+        
+        # Loop through number of simulations, store TIE results
+        for n in tqdm(np.arange(self.num_sim)):
+            
+            # MC-sampled parameter in this function!
+            logger.info("Filtering turbine data")
+            self.filter_turbine_data(n) # Filter turbine data
+            
+            if self.enable_plotting:
+                logger.info("Plotting filtered power curves")
+                self.plot_filtered_power_curves(self.plot_dir)
+            
+            # MC-sampled parameter in this function!
+            logger.info("Processing reanalysis data to daily averages")
+            self.setup_daily_reanalysis_data(n) # Setup daily reanalysis products
+            
+            # MC-sampled parameter in this function!
+            logger.info("Processing scada data to daily sums")
+            self.filter_sum_impute_scada(n) # Setup daily scada data
+            
+            logger.info("Setting up daily data for model fitting")
+            self.setup_model_dict() # Setup daily data to be fit using the GAM
+            
+            # MC-sampled parameter in this function!
+            logger.info("Fitting model data")
+            self.fit_model(n) # Fit daily turbine energy to atmospheric data
+            
+            logger.info("Applying fitting results to calculate long-term gross energy")
+            self.apply_model_to_lt(n) # Apply fitting result to long-term reanalysis data
+            
+            if self.enable_plotting:
+                logger.info("Plotting daily fitted power curves")
+                self.plot_daily_fitting_result(self.plot_dir) # Setup daily reanalysis products
         
         # Log the completion of the run
         logger.info("Run completed")
+        
 
     def sort_scada_by_turbine(self):
         """
@@ -177,12 +203,7 @@ class TurbineLongTermGrossEnergy(object):
         for t in self._turbs:
             turb_capac = dic[t].wtur_W_avg.max()
             
-            # Monte Carlo sample max_power_filter
-            if self.UQ == True:
-                self._max_power_filter = self._mc_max_power_filter[n]
-            elif self.UQ == False:
-                self._max_power_filter = np.mean(self.uncertainty_max_power_filter)
-            max_bin = self._max_power_filter * turb_capac # Set maximum range for using bin-filter
+            max_bin = self._input[n,"max_power_filter"] * turb_capac # Set maximum range for using bin-filter
             
             dic[t].dropna(subset = ['wmet_wdspd_avg', 'energy_kwh'], inplace = True) # Drop any data where scada wind speed or energy is NaN
             
@@ -200,10 +221,7 @@ class TurbineLongTermGrossEnergy(object):
                                                                     value_min =  0.02*turb_capac,
                                                                     value_max =  1.2*turb_capac) 
             
-            if self.UQ == True:
-                threshold_wind_bin = self._mc_wind_bin_thresh[n]
-            elif self.UQ == False:
-                threshold_wind_bin = np.mean(self.uncertainty_wind_bin_thresh)
+            threshold_wind_bin = self._input[n,"threshold_wind_bin"]
             # Apply bin-based filter
             dic[t].loc[:,'flag_bin'] = filters.bin_filter(bin_col = dic[t].loc[:, 'wtur_W_avg'], 
                                                           value_col = dic[t].loc[:, 'wmet_wdspd_avg'], 
@@ -310,31 +328,15 @@ class TurbineLongTermGrossEnergy(object):
             (None)
         """
         dic = self._daily_reanal_dict
+        reanal = self._plant._reanalysis._product[self._inputs[n,"reanalysis_product"]]
+        reanal['u_ms'], reanal['v_ms'] = met_data_processing.compute_u_v_components(reanal['windspeed_ms'], reanal['winddirection_deg'])
+        df_daily = reanal.resample('D')['u_ms', 'v_ms', 'windspeed_ms', 'rho_kgm-3'].mean() # Get daily means
         
-        if self.UQ == True:
-            # Monte Carlo: pick a single reanalysis product   
-            reanal = self._plant._reanalysis._product[self._mc_reanalysis_product[n]].df # gives name of reanalysis product to use
-                    
-            reanal['u_ms'], reanal['v_ms'] = met_data_processing.compute_u_v_components(reanal['windspeed_ms'], reanal['winddirection_deg'])
-            df_daily = reanal.resample('D')['u_ms', 'v_ms', 'windspeed_ms', 'rho_kgm-3'].mean() # Get daily means
-            
-            # Recalculate daily average wind direction
-            df_daily['winddirection_deg'] = met_data_processing.compute_wind_direction(u = df_daily['u_ms'],
-                                                                                            v = df_daily['v_ms'])
-            dic = df_daily # Assign result to dictionary        
-            self._daily_reanal_dict = dic
-        
-        elif self.UQ == False:
-            for r in self._reanal:
-                reanal = self._plant._reanalysis._product[r].df
-                reanal['u_ms'], reanal['v_ms'] = met_data_processing.compute_u_v_components(reanal['windspeed_ms'], reanal['winddirection_deg'])
-                df_daily = reanal.resample('D')['u_ms', 'v_ms', 'windspeed_ms', 'rho_kgm-3'].mean() # Get daily means
-            
-                # Recalculate daily average wind direction
-                df_daily['winddirection_deg'] = met_data_processing.compute_wind_direction(u = df_daily['u_ms'],
-                                                                                       v = df_daily['v_ms'])
-                dic[r] = df_daily # Assign result to dictionary
-            self._daily_reanal_dict = dic
+        # Recalculate daily average wind direction
+        df_daily['winddirection_deg'] = met_data_processing.compute_wind_direction(u = df_daily['u_ms'],
+                                                                                        v = df_daily['v_ms'])
+        self._daily_reanal_dict = df_daily    
+
            
     def filter_sum_impute_scada(self,n):
         """
@@ -452,7 +454,7 @@ class TurbineLongTermGrossEnergy(object):
             for t in self._turbs: # Loop throuh turbines            
                 df = mod_dict[t]
                 # Add Monte-Carlo sampled uncertainty to SCADA data
-                df['energy_imputed'] = df['energy_imputed'] * self._mc_scada_data_fraction[n]
+                df['energy_imputed'] = df['energy_imputed'] * self._mc_scada_data_fraction[n] 
                 # Consider wind speed, wind direction, and air density as features           
                 mod_results[t] = functions.gam_3param(windspeed_column = df['windspeed_ms'],
                                                       winddir_column = df['winddirection_deg'],
@@ -514,9 +516,10 @@ class TurbineLongTermGrossEnergy(object):
                 self._plant_gross = self._summary_results.sum(axis=1).mean() # Store sum of turbine gross energy
 
     @logged_method_call
-    def setup_TIE_monte_carlo_inputs(self):
+    def setup_inputs(self):
         """
-        Perform Monte Carlo sampling for reported data
+        Create and populate the data frame defining the simulation parameters.
+        This data frame is stored as self._inputs
 
         Args:
             (None)
@@ -524,66 +527,26 @@ class TurbineLongTermGrossEnergy(object):
         Returns:
             (None)
         """
-        
-        # Monte Carlo random sets
-        self._mc_scada_data_fraction = np.random.normal(1, self.uncertainty_scada, self.num_sim)     
-        self._mc_wind_bin_thresh = np.random.randint(self.uncertainty_wind_bin_thresh[0]*100, self.uncertainty_wind_bin_thresh[1]*100,
-                                                        self.num_sim) / 100.  
-        self._mc_max_power_filter = np.random.randint(self.uncertainty_max_power_filter[0]*100, self.uncertainty_max_power_filter[1]*100,
-                                                        self.num_sim) / 100.  
-        self._mc_correction_threshold = np.random.randint(self.uncertainty_correction_threshold[0]*100, self.uncertainty_correction_threshold[1]*100,
-                                                        self.num_sim) / 100.  
+        if self.UQ == True:
+            reanal_list = list(np.repeat(self._reanal, self.num_sim))  # Create extra long list of renanalysis product names to sample from
+            inputs = {
+                "reanalysis_product": np.asarray(random.sample(reanal_list, self.num_sim)),
+                "scada_data_fraction": np.random.normal(1, self.uncertainty_scada, self.num_sim),
+                "wind_bin_thresh": np.random.randint(self.uncertainty_wind_bin_thresh[0]*100, self.uncertainty_wind_bin_thresh[1]*100, self.num_sim) / 100.,
+                "max_power_filter": np.random.randint(self.uncertainty_max_power_filter[0]*100, self.uncertainty_max_power_filter[1]*100, self.num_sim) / 100.,
+                "correction_threshold": np.random.randint(self.uncertainty_correction_threshold[0]*100, self.uncertainty_correction_threshold[1]*100, self.num_sim) / 100.,
+                "plant_gross": np.empty([self.num_sim,1]) 
+            }
 
-        reanal_list = list(np.repeat(self._reanal, self.num_sim))  # Create extra long list of renanalysis product names to sample from
-        self._mc_reanalysis_product = np.asarray(random.sample(reanal_list, self.num_sim))
+        if self.UQ == False:
+            inputs = {
+                "reanalysis_product": self._reanal,
+                "scada_data_fraction": 1,
+                "wind_bin_thresh": 2,
+                "max_power_filter": 0.85,
+                "correction_threshold": 0.90,
+                "plant_gross": 
+            }
 
-        # Variable to store results
-        self._plant_gross = np.empty([self.num_sim,1])
-
-    @logged_method_call
-    def run_TIE_monte_carlo(self):
-        """
-        Loop through OA process a number of times and return array of TIE results each time
-        
-        Args:
-            (None)
-            
-        Returns:
-            (None)
-
-        """
-
-        # Loop through number of simulations, store TIE results
-        for n in tqdm(np.arange(self.num_sim)):
-            
-            # MC-sampled parameter in this function!
-            logger.info("Filtering turbine data")
-            self.filter_turbine_data(n) # Filter turbine data
-            
-            if self.enable_plotting:
-                logger.info("Plotting filtered power curves")
-                self.plot_filtered_power_curves(self.plot_dir)
-            
-            # MC-sampled parameter in this function!
-            logger.info("Processing reanalysis data to daily averages")
-            self.setup_daily_reanalysis_data(n) # Setup daily reanalysis products
-            
-            # MC-sampled parameter in this function!
-            logger.info("Processing scada data to daily sums")
-            self.filter_sum_impute_scada(n) # Setup daily scada data
-            
-            logger.info("Setting up daily data for model fitting")
-            self.setup_model_dict() # Setup daily data to be fit using the GAM
-            
-            # MC-sampled parameter in this function!
-            logger.info("Fitting model data")
-            self.fit_model(n) # Fit daily turbine energy to atmospheric data
-            
-            logger.info("Applying fitting results to calculate long-term gross energy")
-            self.apply_model_to_lt(n) # Apply fitting result to long-term reanalysis data
-            
-            if self.enable_plotting:
-                logger.info("Plotting daily fitted power curves")
-                self.plot_daily_fitting_result(self.plot_dir) # Setup daily reanalysis products
-                
+        self._inputs = pd.DataFrame(inputs)
 

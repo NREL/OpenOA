@@ -28,12 +28,12 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         check = np.ones_like(res)*1.35
         npt.assert_almost_equal(res/1000000, check, decimal=1)
 
-        # Test not-UQ case, mean value
+        # Test UQ case, mean value
         res_uq = self.analysis_uq._plant_gross.mean()
         check_uq = np.ones_like(res)*1.35
         npt.assert_almost_equal(res_uq/1000000, check_uq, decimal=1)
 
-        # Test not-UQ case, stdev
+        # Test UQ case, stdev
         res_std_uq = self.analysis_uq._plant_gross.std()
         check_std_uq = 0.05
         npt.assert_almost_equal(res_std_uq/1000000, check_std_uq, decimal=1)
