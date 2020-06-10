@@ -167,7 +167,6 @@ class TurbineLongTermGrossEnergy(object):
         # Log the completion of the run
         logger.info("Run completed")
     
-    @logged_method_call
     def setup_inputs(self):
         """
         Create and populate the data frame defining the simulation parameters.
