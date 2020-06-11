@@ -289,7 +289,13 @@ class TurbineLongTermGrossEnergy(object):
         Returns:
             (None)
         """
-        dic = self._daily_reanal_dict
+        # Memoize the function so you don't have to recompute the same reanalysis product twice
+        if not hasattr(self, "_setup_daily_reanalysis_data_memo"):
+            self._setup_daily_reanalysis_data_memo = {}
+        if self._run.reanalysis_product in self._setup_daily_reanalysis_data_memo.keys():
+            self._daily_reanal_dict = self._setup_daily_reanalysis_data_memo[self._run.reanalysis_product]
+            return
+
         reanal = self._plant._reanalysis._product[self._run.reanalysis_product].df
         reanal['u_ms'], reanal['v_ms'] = met_data_processing.compute_u_v_components(reanal['windspeed_ms'], reanal['winddirection_deg'])
         df_daily = reanal.resample('D')['u_ms', 'v_ms', 'windspeed_ms', 'rho_kgm-3'].mean() # Get daily means
@@ -297,7 +303,10 @@ class TurbineLongTermGrossEnergy(object):
         # Recalculate daily average wind direction
         df_daily['winddirection_deg'] = met_data_processing.compute_wind_direction(u = df_daily['u_ms'],
                                                                                         v = df_daily['v_ms'])
-        self._daily_reanal_dict = df_daily    
+        self._daily_reanal_dict = df_daily
+
+        # Store memo
+        self._setup_daily_reanalysis_data_memo[self._run.reanalysis_product] = df_daily
 
            
     def filter_sum_impute_scada(self,n):
