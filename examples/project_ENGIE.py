@@ -78,7 +78,7 @@ class Project_Engie(PlantData):
         logger.info("Timestamp QC and conversion to UTC")
         # Get 'time' field in datetime format. Local time zone information is
         # encoded, so convert to UTC
-        self._scada.df['time'] = pd.to_datetime(self._scada.df['Date_time'],utc=True)
+        self._scada.df['time'] = pd.to_datetime(self._scada.df['Date_time'],utc=True).dt.tz_localize(None)
         
         # Remove duplicated timestamps and turbine id
         self._scada.df = self._scada.df.drop_duplicates(subset=['time','Wind_turbine_name'],keep='first')
@@ -145,7 +145,7 @@ class Project_Engie(PlantData):
         self._meter.load(self._path, "plant_data", "csv")  # Load Meter data
         
         # Create datetime field
-        self._meter.df['time'] = pd.to_datetime(self._meter.df.time_utc) 
+        self._meter.df['time'] = pd.to_datetime(self._meter.df.time_utc).dt.tz_localize(None) 
         self._meter.df.set_index('time',inplace=True,drop=False)
 
         # Drop the fields we don't need
@@ -161,7 +161,7 @@ class Project_Engie(PlantData):
         self._curtail.load(self._path, "plant_data", "csv")  # Load Meter data
         
         # Create datetime field
-        self._curtail.df['time'] = pd.to_datetime(self._curtail.df.time_utc) 
+        self._curtail.df['time'] = pd.to_datetime(self._curtail.df.time_utc).dt.tz_localize(None) 
         self._curtail.df.set_index('time',inplace=True,drop=False)
         
         # Already have availability and curtailment in kwh, so not much to do.
