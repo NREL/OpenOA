@@ -72,7 +72,7 @@ class TurbineLongTermGrossEnergy(object):
             self.num_sim = num_sim
         elif UQ == False:    
             logger.info("Note: uncertainty quantification will NOT be performed in the calculation")
-            self.num_sim = 1
+            self.num_sim = None
         else:   
             raise ValueError("UQ has to either be True (uncertainty quantification performed, default) or False (uncertainty quantification NOT performed)")
         self.UQ = UQ
@@ -132,7 +132,7 @@ class TurbineLongTermGrossEnergy(object):
         # Loop through number of simulations, store TIE results
         for n in tqdm(np.arange(self.num_sim)):
             
-            self._run = self._inputs[n]
+            self._run = self._inputs.loc[n]
 
             # MC-sampled parameter in this function!
             logger.info("Filtering turbine data")
@@ -197,7 +197,8 @@ class TurbineLongTermGrossEnergy(object):
                 "max_power_filter": 0.85,
                 "correction_threshold": 0.90,
             }
-            self._plant_gross = np.empty([len(self._reanal),1]) 
+            self._plant_gross = np.empty([len(self._reanal),1])
+            self.num_sim = len(self._reanal)
 
         self._inputs = pd.DataFrame(inputs)
 
@@ -239,7 +240,7 @@ class TurbineLongTermGrossEnergy(object):
         for t in self._turbs:
             turb_capac = dic[t].wtur_W_avg.max()
             
-            max_bin = self._input[n,"max_power_filter"] * turb_capac # Set maximum range for using bin-filter
+            max_bin = self._run.max_power_filter * turb_capac # Set maximum range for using bin-filter
             
             dic[t].dropna(subset = ['wmet_wdspd_avg', 'energy_kwh'], inplace = True) # Drop any data where scada wind speed or energy is NaN
             
@@ -257,7 +258,7 @@ class TurbineLongTermGrossEnergy(object):
                                                                     value_min =  0.02*turb_capac,
                                                                     value_max =  1.2*turb_capac) 
             
-            threshold_wind_bin = self._input[n,"threshold_wind_bin"]
+            threshold_wind_bin = self._run.wind_bin_thresh
             # Apply bin-based filter
             dic[t].loc[:,'flag_bin'] = filters.bin_filter(bin_col = dic[t].loc[:, 'wtur_W_avg'], 
                                                           value_col = dic[t].loc[:, 'wmet_wdspd_avg'], 
@@ -278,7 +279,7 @@ class TurbineLongTermGrossEnergy(object):
             # Set negative turbine data to zero
             dic[t].loc[dic[t]['flag_neg'], 'wtur_W_avg'] = 0
     
-    def setup_daily_reanalysis_data(self):
+    def setup_daily_reanalysis_data(self, n):
         """
         Process reanalysis data to daily means for later use in the GAM model
         
@@ -289,7 +290,7 @@ class TurbineLongTermGrossEnergy(object):
             (None)
         """
         dic = self._daily_reanal_dict
-        reanal = self._plant._reanalysis._product[self._run["reanalysis_product"]]
+        reanal = self._plant._reanalysis._product[self._run.reanalysis_product].df
         reanal['u_ms'], reanal['v_ms'] = met_data_processing.compute_u_v_components(reanal['windspeed_ms'], reanal['winddirection_deg'])
         df_daily = reanal.resample('D')['u_ms', 'v_ms', 'windspeed_ms', 'rho_kgm-3'].mean() # Get daily means
         
@@ -316,10 +317,7 @@ class TurbineLongTermGrossEnergy(object):
         scada = self._scada_dict
         
         # Monte Carlo sample _correction_threshold
-        if self.UQ == True:
-            self._correction_threshold = self._mc_correction_threshold[n]
-        elif self.UQ == False:
-            self._correction_threshold = np.mean(self.uncertainty_correction_threshold)
+        self._correction_threshold = self._run.correction_threshold
         num_thres = self._correction_threshold * self._num_valid_daily # Number of permissible reported timesteps
         
         self._scada_daily_valid = pd.DataFrame()
@@ -403,7 +401,7 @@ class TurbineLongTermGrossEnergy(object):
         for t in self._turbs: # Loop throuh turbines            
             df = mod_dict[t]
             # Add Monte-Carlo sampled uncertainty to SCADA data
-            df['energy_imputed'] = df['energy_imputed'] * self._mc_scada_data_fraction[n] 
+            df['energy_imputed'] = df['energy_imputed'] * self._run.scada_data_fraction
             # Consider wind speed, wind direction, and air density as features           
             mod_results[t] = functions.gam_3param(windspeed_column = df['windspeed_ms'],
                                                     winddir_column = df['winddirection_deg'],
