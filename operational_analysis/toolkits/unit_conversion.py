@@ -50,11 +50,11 @@ def compute_gross_energy(net_energy, avail_losses, curt_losses, avail_type='frac
     elif (avail_type == 'energy') & (curt_type == 'energy'):
         gross = net_energy + curt_losses + avail_losses
 
-    if (len(gross[gross < 0]) > 0) | (len(gross[gross < net_energy]) > 0):
-        raise Exception('Gross energy cannot be negative or less than net energy. Check your input values')
-    if (len(net_energy[net_energy < 0]) > 0) | (len(avail_losses[avail_losses < 0]) > 0) | (
+    if (len(gross[gross < net_energy]) > 0):
+        raise Exception('Gross energy cannot be less than net energy. Check your input values')
+    if (len(avail_losses[avail_losses < 0]) > 0) | (
             len(curt_losses[curt_losses < 0]) > 0):
-        raise Exception('Cannot have negative input values. Check your data')
+        raise Exception('Cannot have negative availability or curtailment input values. Check your data')
 
     return gross
 
