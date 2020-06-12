@@ -15,8 +15,8 @@ class TestLongTermGrossEnergy(unittest.TestCase):
         self.project = TurbineExampleProject('./examples/turbine_analysis/data')
         self.project.prepare()
         
-        self.analysis = TurbineLongTermGrossEnergy(self.project, UQ = False)
-        self.analysis.run(reanal_subset = ['erai', 'merra2', 'ncep2'], enable_plotting = False)
+        self.analysis = TurbineLongTermGrossEnergy(self.project, UQ = False, reanal_subset = ['erai', 'merra2', 'ncep2'])
+        self.analysis.run(enable_plotting = False)
 
     def test_longterm_gross_energy_results(self):
 
@@ -37,8 +37,8 @@ class TestLongTermGrossEnergyUQ(unittest.TestCase):
         self.project = TurbineExampleProject('./examples/turbine_analysis/data')
         self.project.prepare()
 
-        self.analysis_uq = TurbineLongTermGrossEnergy(self.project, UQ = True, num_sim = 100)
-        self.analysis_uq.run(reanal_subset = ['erai', 'merra2', 'ncep2'], enable_plotting = False)
+        self.analysis_uq = TurbineLongTermGrossEnergy(self.project, UQ = True, num_sim = 100, reanal_subset = ['erai', 'merra2', 'ncep2'])
+        self.analysis_uq.run(enable_plotting = False)
 
     def test_longterm_gross_energy_results(self):
 

@@ -47,16 +47,17 @@ class TurbineLongTermGrossEnergy(object):
     """
 
     @logged_method_call
-    def __init__(self, plant, UQ = True, num_sim = 100, uncertainty_scada=0.005,
-                  uncertainty_wind_bin_thresh=(1, 3), uncertainty_max_power_filter=(0.8, 0.9), 
-                  uncertainty_correction_threshold=(0.85, 0.95)):
+    def __init__(self, plant, UQ = False, num_sim = 2000, reanal_subset = ['erai', 'ncep2', 'merra2'],
+                 uncertainty_scada=0.005, uncertainty_wind_bin_thresh=(1, 3), 
+                 uncertainty_max_power_filter=(0.8, 0.9), uncertainty_correction_threshold=(0.85, 0.95)):
     
         """
         Initialize turbine long-term gross energy analysis with data and parameters.
         Args:
          plant(:obj:`PlantData object`): PlantData object from which TurbineLongTermGrossEnergy should draw data.
          UQ:(:obj:`bool`): choice whether to perform ('Y') or not ('N') uncertainty quantification
-         num_sim:(:obj:`int`): number of Monte Carlo simulations
+         num_sim:(:obj:`int`): number of Monte Carlo simulations. Please note that this script is somewhat computationally heavy so the default num_sim value has been adjusted accordingly.
+         reanal_subset(:obj:`list`): Which reanalysis products to use for long-term correction
          uncertainty_scada(:obj:`float`): uncertainty imposed to scada data
          uncertainty_max_power_filter(:obj:`tuple`): Maximum power threshold (fraction) to which the bin filter 
                                             should be applied (default 0.85)
@@ -70,6 +71,11 @@ class TurbineLongTermGrossEnergy(object):
         if UQ == True:
             logger.info("Note: uncertainty quantification will be performed in the calculation")
             self.num_sim = num_sim
+            # Define relevant uncertainties, to be applied in Monte Carlo sampling
+            self.uncertainty_scada = uncertainty_scada
+            self.uncertainty_wind_bin_thresh = np.array(uncertainty_wind_bin_thresh, dtype=np.float64)
+            self.uncertainty_max_power_filter = np.array(uncertainty_max_power_filter, dtype=np.float64)
+            self.uncertainty_correction_threshold = np.array(uncertainty_correction_threshold, dtype=np.float64)
         elif UQ == False:    
             logger.info("Note: uncertainty quantification will NOT be performed in the calculation")
             self.num_sim = None
@@ -79,6 +85,7 @@ class TurbineLongTermGrossEnergy(object):
         
         self._plant = plant  # Set plant as attribute of analysis object
         self._turbs = self._plant._scada.df['id'].unique() # Store turbine names
+        self._reanal = reanal_subset # Reanalysis data to consider in fitting
         
         # Get start and end of POR days in SCADA
         self._por_start = format(plant._scada.df.index.min(), '%Y-%m-%d')
@@ -96,25 +103,18 @@ class TurbineLongTermGrossEnergy(object):
         # Set number of 'valid' counts required when summing data to daily values
         self._num_valid_daily = 60. / (pd.to_timedelta(self._plant._scada_freq).seconds/60) * 24
         
-        # Define relevant uncertainties, to be applied in Monte Carlo sampling
-        self.uncertainty_scada = np.float64(uncertainty_scada)
-        self.uncertainty_wind_bin_thresh = np.array(uncertainty_wind_bin_thresh, dtype=np.float64)
-        self.uncertainty_max_power_filter = np.array(uncertainty_max_power_filter, dtype=np.float64)
-        self.uncertainty_correction_threshold = np.array(uncertainty_correction_threshold, dtype=np.float64)
-        
         # Initially sort the different turbine data into dictionary entries
         logger.info("Processing SCADA data into dictionaries by turbine (this can take a while)")
         self.sort_scada_by_turbine()
         
 
     @logged_method_call
-    def run(self, reanal_subset = ['erai', 'ncep2', 'merra2'], enable_plotting = False,
+    def run(self, enable_plotting = False,
             plot_dir = None):
         """
         Perform pre-processing of data into an internal representation for which the analysis can run more quickly.
         
         Args:
-            reanal_subset(:obj:`list`): Which reanalysis products to use for long-term correction
             enable_plotting(:obj:`boolean`): Indicate whether to output plots
             plot_dir(:obj:`string`): Location to save figures
             
@@ -123,7 +123,6 @@ class TurbineLongTermGrossEnergy(object):
         """
         
         # Assign parameters as object attributes
-        self._reanal = reanal_subset # Reanalysis data to consider in fitting
         self.enable_plotting = enable_plotting 
         self.plot_dir = plot_dir
         
@@ -136,7 +135,7 @@ class TurbineLongTermGrossEnergy(object):
 
             # MC-sampled parameter in this function!
             logger.info("Filtering turbine data")
-            self.filter_turbine_data(n) # Filter turbine data
+            self.filter_turbine_data() # Filter turbine data
             
             if self.enable_plotting:
                 logger.info("Plotting filtered power curves")
@@ -144,18 +143,18 @@ class TurbineLongTermGrossEnergy(object):
             
             # MC-sampled parameter in this function!
             logger.info("Processing reanalysis data to daily averages")
-            self.setup_daily_reanalysis_data(n) # Setup daily reanalysis products
+            self.setup_daily_reanalysis_data() # Setup daily reanalysis products
             
             # MC-sampled parameter in this function!
             logger.info("Processing scada data to daily sums")
-            self.filter_sum_impute_scada(n) # Setup daily scada data
+            self.filter_sum_impute_scada() # Setup daily scada data
             
             logger.info("Setting up daily data for model fitting")
             self.setup_model_dict() # Setup daily data to be fit using the GAM
             
             # MC-sampled parameter in this function!
             logger.info("Fitting model data")
-            self.fit_model(n) # Fit daily turbine energy to atmospheric data
+            self.fit_model() # Fit daily turbine energy to atmospheric data
             
             logger.info("Applying fitting results to calculate long-term gross energy")
             self.apply_model_to_lt(n) # Apply fitting result to long-term reanalysis data
@@ -223,7 +222,7 @@ class TurbineLongTermGrossEnergy(object):
             dic[t] = df.loc[df['id'] == t, ['wmet_wdspd_avg', 'wtur_W_avg', 'energy_kwh']]
             dic[t].sort_index(inplace=True)            
         
-    def filter_turbine_data(self,n):
+    def filter_turbine_data(self):
         """
         Apply a set of filtering algorithms to the turbine wind speed vs power curve to flag
         data not representative of normal turbine operation
@@ -279,12 +278,12 @@ class TurbineLongTermGrossEnergy(object):
             # Set negative turbine data to zero
             dic[t].loc[dic[t]['flag_neg'], 'wtur_W_avg'] = 0
     
-    def setup_daily_reanalysis_data(self, n):
+    def setup_daily_reanalysis_data(self):
         """
         Process reanalysis data to daily means for later use in the GAM model
         
         Args:
-            n(:obj:`int`): The Monte Carlo iteration number
+            (None)
             
         Returns:
             (None)
@@ -309,7 +308,7 @@ class TurbineLongTermGrossEnergy(object):
         self._setup_daily_reanalysis_data_memo[self._run.reanalysis_product] = df_daily
 
            
-    def filter_sum_impute_scada(self,n):
+    def filter_sum_impute_scada(self):
         """
         Filter SCADA data for unflagged data, gather SCADA energy data into daily sums, and correct daily summed
         energy based on amount of missing data and a threshold limit. Finally impute missing data for each turbine
@@ -393,7 +392,7 @@ class TurbineLongTermGrossEnergy(object):
         self._model_dict = mod
     
     
-    def fit_model(self,n):
+    def fit_model(self):
         """
         Fit the daily turbine energy sum and atmospheric variable averages using a GAM model
         
@@ -445,9 +444,6 @@ class TurbineLongTermGrossEnergy(object):
         turb_mo = turb_gross.resample('MS').sum() # Calculate monthly sums of energy from long-term estimate
         turb_mo_avg = turb_mo.groupby(turb_mo.index.month).mean() # get average sum by calendar month
         self._plant_gross[n] = turb_mo_avg.sum(axis=1).sum(axis=0) # Store sum of turbine gross energy
-        
-        # In UQ=False, self._plant_gross was _plant_gross.mean()
-
 
     def plot_filtered_power_curves(self, save_folder, output_to_terminal = False):
         """
