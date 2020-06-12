@@ -32,6 +32,7 @@ def logged_method_call(the_method, msg="call"):
         logger.debug("{}#{}.{}: {}".format(self.__class__.__name__, id(self), the_method.__name__, msg))
         return the_method(self, *args, **kwargs)
 
+    _wrapper.__doc__ = the_method.__doc__
     return _wrapper
 
 

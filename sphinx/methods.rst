@@ -22,3 +22,11 @@ Turbine Level Analysis
     :members:
     :undoc-members:
     :show-inheritance:
+
+Electrical Losses Analysis
+-----------------------
+
+.. automodule:: operational_analysis.methods.electrical_losses
+    :members:
+    :undoc-members:
+    :show-inheritance:

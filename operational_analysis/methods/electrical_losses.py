@@ -5,19 +5,28 @@
 
 from operational_analysis import logged_method_call
 from operational_analysis import logging
+import numpy as np
+from tqdm import tqdm
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
 class ElectricalLosses(object):
     """
     A serial (Pandas-driven) implementation of calculating the average monthly and annual
-    electrical losses at a wind plant. Energy output from the turbine SCADA meter and the 
-    wind plant revenue meter are used to estimate electrical losses.
+    electrical losses at a wind plant, and their uncertainty. 
+    Energy output from the turbine SCADA meter and the wind plant revenue 
+    meter are used to estimate electrical losses.
     
     The approach is to first calculate daily sums of turbine and revenue meter energy over the 
     plant period of record. Only those days where all turbines and the revenue meter were 
     reporting for all timesteps are considered. Electrical loss is then the difference in 
     total turbine energy production and meter production over those concurrent days. 
+    
+    A Monte Carlo approach is applied to sample revenue meter data and SCADA data
+    with a 0.5% imposed uncertainty, and one filtering parameter is sampled too.
+    The uncertainty in estimated electrical losses is quantified as standard deviation
+    of the distribution of losses obtained from the MC sampling.
     
     In the case that meter data is not provided on a daily or sub-daily basis (e.g. monthly), a
     different approach is implemented. The sum of daily turbine energy is corrected for any missing 
@@ -28,29 +37,41 @@ class ElectricalLosses(object):
     """ 
 
     @logged_method_call
-    def __init__(self, plant, correction_thresh=.95):
+    def __init__(self, plant, UQ = False, num_sim = 20000, uncertainty_meter=0.005, uncertainty_scada=0.005,
+                 uncertainty_correction_thresh=(0.9,0.995)):
         """
         Initialize electrical losses class with input parameters
-
         Args:
          plant(:obj:`PlantData object`): PlantData object from which EYAGapAnalysis should draw data.
-
+         num_sim:(:obj:`int`): number of Monte Carlo simulations
+         UQ:(:obj:`bool`): choice whether to perform ('Y') or not ('N') uncertainty quantification
+         uncertainty_meter(:obj:`float`): uncertainty imposed to revenue meter data (for UQ = True case)
+         uncertainty_scada(:obj:`float`): uncertainty imposed to scada data (for UQ = True case)
+         uncertainty_correction_threshold(:obj:`tuple`): The interval of data availability thresholds (fractions) 
+                                                         under which months should be eliminated (for UQ = True case)                                       
         """
         logger.info("Initializing Electrical Losses Object")
         
-        self._plant = plant
+        # Check that selected UQ is allowed
+        if UQ == True:
+            logger.info("Note: uncertainty quantification will be performed in the calculation")
+            self.num_sim = num_sim
+            # Define relevant uncertainties, to be applied in Monte Carlo sampling
+            self.uncertainty_meter = uncertainty_meter
+            self.uncertainty_scada = uncertainty_scada
+            self.uncertainty_correction_thresh = np.array(uncertainty_correction_thresh, dtype=np.float64)  
+        elif UQ == False:
+            logger.info("Note: uncertainty quantification will NOT be performed in the calculation")
+            self.num_sim = 1
+        else:
+            raise ValueError("UQ has to either be True (uncertainty quantification performed, default) or False (uncertainty quantification NOT performed)")
+        self.UQ = UQ
         
-        self._time_conversion = {'1T': 1.,
-                                 '5T': 5.,
-                                 '10T': 10.,
-                                 '30T': 30.,
-                                 '1H': 60.,
-                                 'D': 60 * 24}
+        self._plant = plant
         
         self._min_per_hour = 60 # Mintues per hour converter
         self._hours_per_day= 24 # Hours per day converter
-        self._correction_thresh = correction_thresh
-
+    
     @logged_method_call
     def run(self):
         """
@@ -73,9 +94,42 @@ class ElectricalLosses(object):
             self.process_meter()
             self._monthly_meter = False # Set to false if sub-monthly frequency
         
-        # Calculate electrical losses
+        # Setup Monte Carlo approach
+        self.setup_inputs()
+        
+        # Calculate electrical losses, Monte Carlo approach
         self.calculate_electrical_losses()
-       
+ 
+    def setup_inputs(self):
+        """
+        Create and populate the data frame defining the simulation parameters.
+        This data frame is stored as self._inputs
+
+        Args:
+            (None)
+            
+        Returns:
+            (None)
+        """
+        if self.UQ == True:
+            inputs = {
+                "meter_data_fraction": np.random.normal(1, self.uncertainty_meter, self.num_sim),
+                "scada_data_fraction": np.random.normal(1, self.uncertainty_scada, self.num_sim),
+                "correction_threshold": np.random.randint(self.uncertainty_correction_thresh[0]*1000, self.uncertainty_correction_thresh[1]*1000,
+                                                        self.num_sim) / 1000.  
+            } 
+            self._inputs = pd.DataFrame(inputs)
+
+        if self.UQ == False:
+            inputs = {
+                "meter_data_fraction": 1,
+                "scada_data_fraction": 1,
+                "correction_threshold": 0.90,
+            }
+            self._inputs = pd.DataFrame(inputs,index=[0])
+
+        self._electrical_losses = np.empty([self.num_sim,1]) 
+        
     @logged_method_call
     def process_scada(self):
         """
@@ -104,7 +158,7 @@ class ElectricalLosses(object):
         
         # Specify expected count provided all turbines reporting
         expected_count = self._hours_per_day * self._min_per_hour / \
-                         self._time_conversion[self._plant._scada_freq] * self._plant._num_turbines
+                         (pd.to_timedelta(self._plant._scada_freq).seconds/60) * self._plant._num_turbines
 
         # Correct sum of turbine energy for cases with missing reported data
         self._scada_daily['corrected_energy'] = self._scada_daily['turbine_energy_kwh'] * expected_count / \
@@ -114,6 +168,7 @@ class ElectricalLosses(object):
         # Store daily SCADA data where all turbines reporting for every time step during the day
         self._scada_sub = self._scada_daily[self._scada_daily['count'] == expected_count]
        
+        
     @logged_method_call
     def process_meter(self):
         """
@@ -135,16 +190,17 @@ class ElectricalLosses(object):
         
         # Specify expected count provided all timestamps reporting
         expected_mcount = self._hours_per_day * self._min_per_hour / \
-                          self._time_conversion[self._plant._meter_freq]
+                          (pd.to_timedelta(self._plant._meter_freq).seconds/60)
         
         # Keep only data with all turbines reporting for every time step during the day
         self._meter_daily = self._meter_daily[self._meter_daily['mcount'] == expected_mcount]
-
+            
     @logged_method_call
     def calculate_electrical_losses(self):                
         """
-        Calculate electrical losses based on the difference in the sum of turbine and metered energy over the
-        compiled days.
+        Apply Monte Carlo approach to calculate electrical losses and their
+        uncertainty based on the difference in the sum of turbine and metered 
+        energy over the compiled days.
         
         Args:
             (None)
@@ -154,35 +210,47 @@ class ElectricalLosses(object):
         """
         
         logger.info("Calculating electrical losses")
-        
-        meter_df = self._plant._meter.df
-          
-        # If monthly meter data, sum the corrected daily turbine energy to monthly and merge with meter
-        if self._monthly_meter:
-            scada_monthly = self._scada_daily.resample('MS')['corrected_energy'].sum().to_frame()
-            scada_monthly.columns = ['turbine_energy_kwh']
 
-            # Determine availability for each month represented
-            scada_monthly['count'] = self._scada_sum.resample('MS')['count'].sum()
-            scada_monthly['expected_count_monthly'] = scada_monthly.index.daysinmonth * self._hours_per_day * self._min_per_hour / \
-                         self._time_conversion[self._plant._scada_freq] * self._plant._num_turbines 
-            scada_monthly['perc'] = scada_monthly['count']/scada_monthly['expected_count_monthly']
-            
-            # Filter out months in which there was less than 95% of total running (all turbines at all timesteps)
-            scada_monthly = scada_monthly.loc[scada_monthly['perc']>= self._correction_thresh, :]
-            merge_df = meter_df.join(scada_monthly)
+        # Loop through number of simulations, calculate losses each time, store results
+        for n in tqdm(np.arange(self.num_sim)):
         
-        # If sub-monthly meter data, merge the daily data for which all turbines are reporting at all timestamps
-        else:
-            # Note 'self._scada_sub' only contains full reported data
-            merge_df = self._meter_daily.join(self._scada_sub)
+            self._run = self._inputs.loc[n]
             
-        # Drop non-concurrent timestamps and get total sums over concurrent period of record
-        merge_df.dropna(inplace = True)
-        self._merge_df = merge_df
-        merge_sum = merge_df.sum(axis = 0)
+            meter_df = self._plant._meter.df
+              
+            # If monthly meter data, sum the corrected daily turbine energy to monthly and merge with meter
+            if self._monthly_meter:
+                
+                scada_monthly = self._scada_daily.resample('MS')['corrected_energy'].sum().to_frame()
+                scada_monthly.columns = ['turbine_energy_kwh']
+    
+                # Determine availability for each month represented
+                scada_monthly['count'] = self._scada_sum.resample('MS')['count'].sum()
+                scada_monthly['expected_count_monthly'] = scada_monthly.index.daysinmonth * self._hours_per_day * self._min_per_hour / \
+                             (pd.to_timedelta(self._plant._scada_freq).seconds/60) * self._plant._num_turbines 
+                scada_monthly['perc'] = scada_monthly['count']/scada_monthly['expected_count_monthly']
+                                
+                # Filter out months in which there was less than x% of total running (all turbines at all timesteps)  
+                scada_monthly = scada_monthly.loc[scada_monthly['perc']>= self._run.correction_threshold, :]
+                merge_df = meter_df.join(scada_monthly)
+            
+            # If sub-monthly meter data, merge the daily data for which all turbines are reporting at all timestamps
+            else:
+                # Note 'self._scada_sub' only contains full reported data
+                merge_df = self._meter_daily.join(self._scada_sub)
+            
+            # Drop non-concurrent timestamps and get total sums over concurrent period of record
+            merge_df.dropna(inplace = True)
+            self._merge_df = merge_df
+            merge_sum = merge_df.sum(axis = 0)
         
-        # Calculate electrical loss from difference of sum of turbine and meter energy 
-        self._total_turbine_energy = merge_sum['turbine_energy_kwh']
-        self._total_meter_energy = merge_sum['energy_kwh']
-        self._electrical_losses = 1 - self._total_meter_energy/self._total_turbine_energy
+            # Calculate electrical loss from difference of sum of turbine and meter energy 
+            self._total_turbine_energy = merge_sum['turbine_energy_kwh'] * self._run.scada_data_fraction
+            self._total_meter_energy = merge_sum['energy_kwh'] * self._run.meter_data_fraction
+
+            self._electrical_losses[n] = 1 - self._total_meter_energy/self._total_turbine_energy
+
+
+
+
+
