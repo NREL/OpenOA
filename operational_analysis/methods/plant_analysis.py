@@ -46,20 +46,23 @@ class MonteCarloAEP(object):
     """
 
     @logged_method_call
-    def __init__(self, plant, uncertainty_meter=0.005, uncertainty_losses=0.05,
-                 uncertainty_loss_max=(10, 20), uncertainty_windiness=(10, 20), uncertainty_outlier=(2, 3.1),
-                 uncertainty_nan_energy=0.01):
+    def __init__(self, plant, reanal_products=["merra2", "ncep2", "erai"],
+                 uncertainty_meter=0.005, uncertainty_losses=0.05,
+                 uncertainty_loss_max=(10, 20), uncertainty_windiness=(10, 20),
+                 uncertainty_outlier=(2, 3.1), uncertainty_nan_energy=0.01):
         """
         Initialize APE_MC analysis with data and parameters.
 
         Args:
          plant(:obj:`PlantData object`): PlantData object from which PlantAnalysis should draw data.
+         reanal_products(list): List of reanalysis products to use for Monte Carlo sampling. Defaults to ["merra2", "ncep2", "erai"].
 
         """
         logger.info("Initializing MonteCarloAEP Analysis Object")
 
         self._monthly = timeseries_table.TimeseriesTable.factory(plant._engine)
         self._plant = plant  # defined at runtime
+        self._reanal_products = reanal_products # set of reanalysis products to use
 
         # Memo dictionaries help speed up computation
         self.long_term_sampling = {}  # Combinations of long-term reanalysis data sampling
@@ -89,7 +92,7 @@ class MonteCarloAEP(object):
     
 
     @logged_method_call
-    def run(self, num_sim, reanal_subset):
+    def run(self, num_sim, reanal_subset=None):
         """
         Perform pre-processing of data into an internal representation for which the analysis can run more quickly.
 
@@ -97,7 +100,10 @@ class MonteCarloAEP(object):
         """
 
         self.num_sim = num_sim
-        self.reanal_subset = reanal_subset
+        if reanal_subset is None:
+            self.reanal_subset = self._reanal_products
+        else:    
+            self.reanal_subset = reanal_subset
 
         # Write parameters of run to the log file
         logged_self_params = ["uncertainty_meter", "uncertainty_losses","uncertainty_loss_max", "uncertainty_windiness",
@@ -130,7 +136,7 @@ class MonteCarloAEP(object):
         por_end = self._monthly.df.index[-1]  # End of plant POR
 
         plt.figure(figsize=(14, 6))
-        for key, items in project._reanalysis._product.items():
+        for key in self._reanal_products:
             rean_df = project._reanalysis._product[key].df  # Set reanalysis product
             ann_mo_ws = rean_df.resample('MS')['ws_dens_corr'].mean().to_frame()  # Take monthly average wind speed
             ann_roll = ann_mo_ws.rolling(12).mean()  # Calculate rolling 12-month average
@@ -174,8 +180,8 @@ class MonteCarloAEP(object):
         plt.figure(figsize=(9, 9))
 
         # Loop through each reanalysis product and make a scatterplot of monthly wind speed vs plant energy
-        for p in np.arange(0, len(list(project._reanalysis._product.keys()))):
-            col_name = list(project._reanalysis._product.keys())[p]  # Reanalysis column in monthly data frame
+        for p in np.arange(0, len(list(self._reanal_products))):
+            col_name = self._reanal_products[p]  # Reanalysis column in monthly data frame
 
             x = sm.add_constant(valid_monthly[col_name])  # Define 'x'-values (constant needed for regression function)
             y = valid_monthly['gross_energy_gwh'] * 30 / valid_monthly[
@@ -310,10 +316,8 @@ class MonteCarloAEP(object):
         self.trim_monthly_df()
 
         # Drop any data that have NaN gross energy values or NaN reanalysis data
-        self._monthly.df = self._monthly.df.loc[np.isfinite(self._monthly.df.gross_energy_gwh) & 
-                                                np.isfinite(self._monthly.df.ncep2) & 
-                                                np.isfinite(self._monthly.df.merra2) & 
-                                                np.isfinite(self._monthly.df.erai)]
+        self._monthly.df = self._monthly.df.dropna(subset=['gross_energy_gwh']
+                                +[product for product in self._reanal_products])
 
     @logged_method_call
     def process_revenue_meter_energy(self):
@@ -424,7 +428,7 @@ class MonteCarloAEP(object):
                                                                     freq='MS'))
 
         # Now loop through the different reanalysis products, density-correct wind speeds, and take monthly averages
-        for key, items in self._plant._reanalysis._product.items():
+        for key in self._reanal_products:
             rean_df = self._plant._reanalysis._product[key].df
             rean_df['ws_dens_corr'] = mt.air_density_adjusted_wind_speed(rean_df, 'windspeed_ms',
                                                                          'rho_kgm-3')  # Density correct wind speeds
