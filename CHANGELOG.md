@@ -2,10 +2,14 @@
 All notable changes to this project will be documented in this file. If you make a notable change to the project, please add a line describing the change to the "unreleased" section. The maintainers will make an effort to keep the [Github Releases](https://github.com/NREL/OpenOA/releases) page up to date with this changelog. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
-### Added
 - EYA Gap Analysis
 - Uncertainty quantification
 - Engie example data, and complete update of example notebooks
+- Switch to standard BSD-3 Clause license
+- Automated quality control method
+- Electrical losses method
+- User-facing CI pipeline using Github Actions
+- Automatically built documentation using ReadTheDocs
 
 ## [1.1] - 2019-01-29
 - Python3 Support
