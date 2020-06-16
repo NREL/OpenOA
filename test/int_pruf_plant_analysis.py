@@ -6,7 +6,6 @@ from numpy import testing as nptest
 from operational_analysis.methods import plant_analysis
 from examples.project_ENGIE import Project_Engie
 
-
 class TestPandasPrufPlantAnalysis(unittest.TestCase):
     
     def setUp(self):
