@@ -9,7 +9,7 @@ class ReanalysisData(object):
     """
 
     def __init__(self, engine="pandas"):
-        self._products = ["merra2", "ncep2", "erai"]
+        self._products = ["merra2", "ncep2", "erai", "era5"]
         self._engine = engine
         self._product = {}
         for product in self._products:
