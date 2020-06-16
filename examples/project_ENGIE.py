@@ -48,7 +48,7 @@ class Project_Engie(PlantData):
     """This class loads data for the ENGIE La Haute Borne site into a PlantData
     object"""
 
-    def __init__(self, path="data/la_haute_borne", name="Engie",
+    def __init__(self, path="data", name="Engie",
                 engine="pandas", toolkit=["pruf_plant_analysis"]):
 
         super(Project_Engie, self).__init__(path, name, engine, toolkit)
