@@ -98,6 +98,11 @@ class MonteCarloAEP(object):
         if time_resolution not in ['M','D']:
             raise ValueError("time_res has to either be M (monthly, default) or D (daily)")
         self.time_resolution = time_resolution
+        
+        self._resample_freq = {"M": 'MS', "D": 'D'}[self.time_resolution]
+        self._hours_in_res = {"M": 366*24, "D": 1*24}[self.time_resolution]
+        if self.time_resolution == 'M':
+            self.num_days_lt= (31, 28.25, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
 
         # Check that choices for regression inputs are allowed
         if reg_temperature not in ['Y', 'N']:
@@ -128,11 +133,8 @@ class MonteCarloAEP(object):
                                                     (self._aggregate.df.index <= self._end_por)]
         if self.time_resolution == 'M':
             self._reanalysis_por_avg = self._reanalysis_por.groupby(self._reanalysis_por.index.month).mean()
-            self._resample_freq = 'MS'
-            self.num_days_lt= (31, 28.25, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
         elif self.time_resolution == 'D':
             self._reanalysis_por_avg = self._reanalysis_por.groupby([(self._reanalysis_por.index.month),(self._reanalysis_por.index.day)]).mean()
-            self._resample_freq = 'D'
             
     @logged_method_call
     def run(self, num_sim, reanal_subset=None):
@@ -667,10 +669,7 @@ class MonteCarloAEP(object):
             ((df['availability_pct'] + df['curtailment_pct']) < comb_loss_thresh) & (df['nan_flag'] == False),:]
                 
         # Set maximum range for using bin-filter, convert from MW to GWh
-        if self.time_resolution == 'M':
-            plant_capac = getattr(self._plant, '_plant_capacity')/1000 * 366*24
-        elif self.time_resolution == 'D':
-            plant_capac = getattr(self._plant, '_plant_capacity')/1000 * 1*24
+        plant_capac = self._plant._plant_capacity/1000 * self._hours_in_res
         
         # Flag turbine energy data less than zero
         df_sub.loc[:,'flag_neg'] = filters.range_flag(df_sub['energy_gwh'], below = 0, above = plant_capac)

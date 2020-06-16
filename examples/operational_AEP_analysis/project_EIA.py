@@ -3,11 +3,8 @@
 ##############################################
 
 """
-
 This script imports the EIA energy data and reanalysis data needed to perform an operational AEP estimate.
-
 Reported net energy data are real but reported availablity and curtailment losses were synthesized
-
 """
 
 import pandas as pd
@@ -76,11 +73,8 @@ class Project_EIA(PlantData):
         self._reanalysis._product['merra2'].load(self._path, "merra2_data", "csv")
         self._reanalysis._product['merra2'].rename_columns({"time": "datetime",
                                                             "windspeed_ms": "ws_50m",
-                                                            "u_ms": "u_50m",
-                                                            "v_ms": "v_50m",
                                                             "rho_kgm-3": "dens_50m",
-                                                            "winddirection_deg":"wd_50m",
-                                                            "temperature_K":"wd_50m"})  # TO CHANGE!
+                                                            "winddirection_deg": "wd_50m"})
         self._reanalysis._product['merra2'].normalize_time_to_datetime("%Y-%m-%d %H:%M:%S")
         self._reanalysis._product['merra2'].df.set_index('time', inplace=True, drop=False)
 
@@ -88,11 +82,8 @@ class Project_EIA(PlantData):
         self._reanalysis._product['ncep2'].load(self._path, "ncep2_data", "csv")
         self._reanalysis._product['ncep2'].rename_columns({"time": "datetime",
                                                            "windspeed_ms": "ws_10m",
-                                                           "u_ms": "u_10m",
-                                                            "v_ms": "v_10m",
-                                                            "rho_kgm-3": "dens_10m",
-                                                            "winddirection_deg":"wd_10m",
-                                                            "temperature_K":"t_2m"})
+                                                           "rho_kgm-3": "dens_10m",
+                                                           "winddirection_deg": "wd_10m"})
         self._reanalysis._product['ncep2'].normalize_time_to_datetime("%Y%m%d %H%M")
         self._reanalysis._product['ncep2'].df.set_index('time', inplace=True, drop=False)
 
@@ -100,10 +91,7 @@ class Project_EIA(PlantData):
         self._reanalysis._product['erai'].load(self._path, "erai_data", "csv")
         self._reanalysis._product['erai'].rename_columns({"time": "datetime",
                                                           "windspeed_ms": "ws_58",
-                                                           "u_ms": "u_58",
-                                                            "v_ms": "v_58",
-                                                            "rho_kgm-3": "dens_58",
-                                                            "winddirection_deg":"wd_58",
-                                                            "temperature_K":"temp_58"})
+                                                          "rho_kgm-3": "dens_58",
+                                                          "winddirection_deg": "wd_58"})
         self._reanalysis._product['erai'].normalize_time_to_datetime("%Y-%m-%d %H:%M:%S")
         self._reanalysis._product['erai'].df.set_index('time', inplace=True, drop=False)
