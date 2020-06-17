@@ -18,12 +18,11 @@ This repository is organized using a modified git-flow system. Branches are orga
 
 - master: Stable release version. Must have good test coverage and may not have all the newest features.
 - develop: Development branch which contains the newest features. Tests must pass, but code may be unstable.
-- feature/xxx: Branch from develop, must reference a github issue number.
-Features branches are not automatically tested and may contain broken code. Feel free to commit broken code to your own branch.
+- feature/xxx: Branch from develop, should reference a github issue number.
 
 To work on a feature, please fork OpenOA first and then create a feature branch in your own fork.
-Work out of this feature branch before submitting a pull request. Be sure to periodically merge the target release
-branch into your feature branch to avoid conflicts in the pull request.
+Work out of this feature branch before submitting a pull request.
+Be sure to periodically synchronize the upstream develop branch into your feature branch to avoid conflicts in the pull request.
 
 When the feature branch is ready, make a pull request to NREL/OpenOA through the Github.com UI.
 
@@ -45,6 +44,8 @@ located in /sphinx.
 **Coverage:** The testing framework (described below) will generate a coverage report. Please ensure that your
 work is fully covered.
 
+**Changelog:** For pull requests that encapsulate a user-facing feature, or is significant to users of OpenOA for some other reason, please add a line to CHANGELOG.md in the [Unreleased] section.
+
 ## Coding Style
 
 This code follows the PEP 8 style guide and uses the ``pycodestyle`` linter to check for compliance.
@@ -64,8 +65,4 @@ create new tickets in this repository towards implementing the change.
 
 All code should be paired with a corresponding unit or integration test.
 OpenOA uses pytest and the built in unittest framework.
-To run tests, navigate to the OpenOA directory and run:
-
-```
-python setup.py test
-```
+For instructions on running tests, please see the [Readme](https://github.com/NREL/OpenOA/tree/develop#Testing).
