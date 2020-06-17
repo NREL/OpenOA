@@ -32,11 +32,12 @@ Pull requests must be made for any changes to be merged into release branches.
 They must include updated documentation and pass all unit tests and integration tests.
 In addition, code coverage should not be negatively affected by the pull request.
 
-**Scope:** Encapsulate the changes of ideally one, or potentially a couple, issues. It is greatly preferable
-to submit three small pull requests than it is to submit one large pull request. Write a complete description of these
-changes in the pull request body.
+**Scope:** Encapsulate the changes of ideally one, or potentially a couple, issues.
+It is greatly preferable to submit three small pull requests than it is to submit one large pull request.
+Write a complete description of these changes in the pull request body.
 
 **Tests:** Must pass all tests. Pull requests will be rejected if tests do not pass.
+Tests are automatically run through Github Actions for any pull request or push to the master or develop branches.
 
 **Documentation:** Include any relevant changes to inline documentation, as well as any changes to the RST files
 located in /sphinx.
@@ -66,3 +67,9 @@ create new tickets in this repository towards implementing the change.
 All code should be paired with a corresponding unit or integration test.
 OpenOA uses pytest and the built in unittest framework.
 For instructions on running tests, please see the [Readme](https://github.com/NREL/OpenOA/tree/develop#Testing).
+
+## Deploying a Package to PyPi
+
+The repository is equipped with a github action to build and publish new versions to PyPi.
+A maintainer can invoke this workflow by pushing a tag to the NREL/OpenOA reposiory with prefix "v", such as "v1.1.0".
+The action is defined in `.github/workflows/tags-to-pypi.yml`.
