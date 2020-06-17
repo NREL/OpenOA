@@ -3,13 +3,14 @@ All notable changes to this project will be documented in this file. If you make
 
 ## [Unreleased]
 - Energy Yield Analysis (EYA) to Operational Assessment(OA) Gap Analysis method
-- Uncertainty quantification
+- Uncertainty quantification for electrical losses and longterm turbine gross energy
 - Implemented open source Engie example data, and complete update of example notebooks
 - Switch to standard BSD-3 Clause license
 - Automated quality control method to assist with data ingestion. Tools in this method include daylight savings time change detection and identification of the diurnal cycle.
 - Electrical losses method
+- Method for estimating long-term turbine gross energy (excluding downtime and underperformance losses)
 - User-facing CI pipeline using Github Actions
-- Automatically built documentation using ReadTheDocs
+- Automatic documentation using ReadTheDocs
 
 ## [1.1] - 2019-01-29
 - Python3 Support
