@@ -15,9 +15,9 @@ jobs:
               uses: actions/setup-python@v1
               with:
                 python-version: 3.7
-            - name: Build binary tarball
+            - name: Build tarballs
+              run: pip install wheel
               run: python setup.py bdist_wheel
-            - name: Build source tarball
               run: python setup.py sdist --formats=gztar,zip
             - name: Publish artifacts to PyPI
               uses: pypa/gh-action-pypi-publish@master
