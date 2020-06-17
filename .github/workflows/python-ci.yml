@@ -26,6 +26,8 @@ jobs:
         pip install -r requirements.txt
     - name: Unzip example data
       run: |
+        mkdir -p examples/operational_AEP_analysis/data/
+        mkdir -p examples/turbine_analysis/data/
         yes | unzip examples/old/operational_AEP_analysis/data/eia_example_data.zip -d examples/operational_AEP_analysis/data/
         yes | unzip examples/old/turbine_analysis/data/example_20180829.zip -d examples/turbine_analysis/data/
         cp examples/turbine_analysis/data/example_20180829/scada_10min_4cols.csv examples/turbine_analysis/data/scada_10min_4cols.csv
