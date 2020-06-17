@@ -19,7 +19,7 @@ jobs:
               run: |
                 pip install wheel
                 python setup.py bdist_wheel
-                python setup.py sdist --formats=gztar,zip
+                python setup.py sdist --formats=gztar
             - name: Publish artifacts to PyPI
               uses: pypa/gh-action-pypi-publish@master
               with:
