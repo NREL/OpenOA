@@ -48,11 +48,11 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         # ____________________________________________________________________
         # Test linear regression model, at monthly time resolution
         self.analysis = plant_analysis.MonteCarloAEP(self.project, 
-                                                     reanal_products=['merra2', 'era5'],
-                                                     time_resolution = 'M',
-                                                     reg_model = 'lin',
-                                                     reg_temperature = 'N', 
-                                                     reg_winddirection = 'N')
+                                                      reanal_products=['merra2', 'era5'],
+                                                      time_resolution = 'M',
+                                                      reg_model = 'lin',
+                                                      reg_temperature = 'N', 
+                                                      reg_winddirection = 'N')
         # Run Monte Carlo AEP analysis, confirm the results are consistent
         self.analysis.run(num_sim=200)
         sim_results = self.analysis.results
@@ -61,11 +61,11 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         # ____________________________________________________________________
         # Test linear regression model, at daily time resolution
         self.analysis = plant_analysis.MonteCarloAEP(self.project, 
-                                                     reanal_products=['merra2', 'era5'],
-                                                     time_resolution = 'D',
-                                                     reg_model = 'lin',
-                                                     reg_temperature = 'N', 
-                                                     reg_winddirection = 'N')
+                                                      reanal_products=['merra2', 'era5'],
+                                                      time_resolution = 'D',
+                                                      reg_model = 'lin',
+                                                      reg_temperature = 'N', 
+                                                      reg_winddirection = 'N')
         # Run Monte Carlo AEP analysis, confirm the results are consistent
         self.analysis.run(num_sim=200)
         sim_results = self.analysis.results
@@ -74,11 +74,11 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         # ____________________________________________________________________
         # Test GAM regression model (can be used at daily time resolution only)
         self.analysis = plant_analysis.MonteCarloAEP(self.project, 
-                                                     reanal_products=['merra2', 'era5'],
-                                                     time_resolution = 'D',
-                                                     reg_model = 'gam',
-                                                     reg_temperature = 'N', 
-                                                     reg_winddirection = 'Y')
+                                                      reanal_products=['merra2', 'era5'],
+                                                      time_resolution = 'D',
+                                                      reg_model = 'gam',
+                                                      reg_temperature = 'N', 
+                                                      reg_winddirection = 'Y')
         # Run Monte Carlo AEP analysis, confirm the results are consistent
         self.analysis.run(num_sim=200)
         sim_results = self.analysis.results
@@ -87,11 +87,11 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         # ____________________________________________________________________
         # Test GBM regression model (can be used at daily time resolution only)
         self.analysis = plant_analysis.MonteCarloAEP(self.project, 
-                                                     reanal_products=['merra2', 'era5'],
-                                                     time_resolution = 'D',
-                                                     reg_model = 'gbm',
-                                                     reg_temperature = 'Y', 
-                                                     reg_winddirection = 'Y')
+                                                      reanal_products=['merra2', 'era5'],
+                                                      time_resolution = 'D',
+                                                      reg_model = 'gbm',
+                                                      reg_temperature = 'Y', 
+                                                      reg_winddirection = 'Y')
         # Run Monte Carlo AEP analysis, confirm the results are consistent
         self.analysis.run(num_sim=100)
         sim_results = self.analysis.results
@@ -100,11 +100,11 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         # ____________________________________________________________________
         # Test ETR regression model (can be used at daily time resolution only)
         self.analysis = plant_analysis.MonteCarloAEP(self.project, 
-                                                     reanal_products=['merra2', 'era5'],
-                                                     time_resolution = 'D',
-                                                     reg_model = 'etr',
-                                                     reg_temperature = 'N', 
-                                                     reg_winddirection = 'N')
+                                                      reanal_products=['merra2', 'era5'],
+                                                      time_resolution = 'D',
+                                                      reg_model = 'etr',
+                                                      reg_temperature = 'N', 
+                                                      reg_winddirection = 'N')
         # Run Monte Carlo AEP analysis, confirm the results are consistent
         self.analysis.run(num_sim=100)
         sim_results = self.analysis.results
