@@ -24,7 +24,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-    - name: Unzip OLD example data
+    - name: Unzip example data
       run: |
         yes | unzip examples/old/operational_AEP_analysis/data/eia_example_data.zip -d examples/operational_AEP_analysis/data/
         yes | unzip examples/old/turbine_analysis/data/example_20180829.zip -d examples/turbine_analysis/data/
