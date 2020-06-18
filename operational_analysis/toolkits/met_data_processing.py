@@ -45,7 +45,7 @@ def compute_u_v_components(wind_speed, wind_dir):
     return u, v
 
 
-def compute_air_density(df, temp_col, pres_col, humi_col = None):
+def compute_air_density(temp_col, pres_col, humi_col = None):
     """
     Calculate air density from the ideal gas law based on the definition provided by IEC 61400-12
     given pressure, temperature and relative humidity.
@@ -54,27 +54,29 @@ def compute_air_density(df, temp_col, pres_col, humi_col = None):
     Humidity values are optional. According to the IEC a humiditiy of 50% (0.5) is set as default value. 
 
     Args:
-        df(:obj:`pandas.DataFrame`): the input data frame with temperature and pressure data
-        temp_col(:obj:`string`): column in <df> with temperature values; units of Kelvin
-        pres_col(:obj:`string`): column in <df> with pressure values; units of Pascals
-        humi_col(:obj:`string`): optional column in <df> with relative humidity values; dimensionless (range 0 to 1) 
+        temp_col(:obj:`array-like`): array with temperature values; units of Kelvin
+        pres_col(:obj:`array-like`): array with pressure values; units of Pascals
+        humi_col(:obj:`array-like`): optional array with relative humidity values; dimensionless (range 0 to 1) 
 
     Returns:
         :obj:`pandas.Series`: Rho, calcualted air density; units of kg/m3
     """
-    # Check if humidity column is provided and create default df (0.5) if necessary
-    if humi_col in df and humi_col != None:
-        rel_humidity = df.loc[:, [humi_col]]
+    # Check if humidity column is provided and create default humidity array with values of 0.5 if necessary
+    if humi_col != None:
+        rel_humidity = humi_col
     else:
-        humi_col = 'relative_humidity'
-        rel_humidity = pd.DataFrame([0.5]*df[temp_col].shape[0],columns=[humi_col], index=df.index)
+        rel_humidity = np.repeat(.5, temp_col.shape[0])
     # Send exception if any negative data found
-    if (df[temp_col] < 0).any() | (df[pres_col] < 0).any() | (rel_humidity[humi_col] < 0).any():
+    if np.any(temp_col < 0) | np.any(pres_col < 0) | np.any(rel_humidity < 0):
         raise Exception('Some of your temperature, pressure or humidity data is negative. Check your data.')
+
+    #protect against python 2 integer division rules
+    temp_col = temp_col.astype(float)
+    pres_col = pres_col.astype(float)
 
     R_const = 287.05  # Gas constant for dry air, units of J/kg/K
     Rw_const = 461.5   # Gas constant of water vapour, unit J/kg/K
-    rho = ((1/df[temp_col])*(df[pres_col]/R_const-rel_humidity[humi_col]*(0.0000205*np.exp(0.0631846*df[temp_col]))*
+    rho = ((1/temp_col)*(pres_col/R_const-rel_humidity*(0.0000205*np.exp(0.0631846*temp_col))*
             (1/R_const-1/Rw_const)))
 
     return rho
@@ -104,37 +106,35 @@ def pressure_vertical_extrapolation(p0, temp_avg, z0, z1):
     return p1
 
 
-def air_density_adjusted_wind_speed(df, wind_col, density_col):
+def air_density_adjusted_wind_speed(wind_col, density_col):
     """
     Apply air density correction to wind speed measurements following IEC-61400-12-1 standard
 
     Args:
-        df(:obj:`pandas.DataFrame`): dataframe with wind speed and air density columns
-        wind_col(:obj:`str`): column name in <df> containing the wind speed data; units of m/s
-        density_col(:obj:`str`): column name in <df> containing the air density data; units of kg/m3
+        wind_col(:obj:`str`): array containing the wind speed data; units of m/s
+        density_col(:obj:`str`): array containing the air density data; units of kg/m3
 
     Returns:
         :obj:`pandas.Series`: density-adjusted wind speeds; units of m/s
     """
-    rho_mean = df[density_col].mean()  # Mean air density across sample
-    dens_adjusted_ws = df[wind_col] * np.power(df[density_col] / rho_mean, 1. / 3)  # Density adjusted wind speeds
+    rho_mean = density_col.mean()  # Mean air density across sample
+    dens_adjusted_ws = wind_col * np.power(density_col / rho_mean, 1. / 3)  # Density adjusted wind speeds
 
     return dens_adjusted_ws
 
 
-def compute_turbulence_intensity(df, mean_col, std_col):
+def compute_turbulence_intensity(mean_col, std_col):
     """
     Compute turbulence intensity
 
     Args:
-        df(:obj:`pandas.DataFrame`): dataframe with wind speed mean and standard deviation columns
-        mean_col(:obj:`str`): column name in <df> containing the wind speed mean  data; units of m/s
-        std_col(:obj:`str`): column name in <df> containing the wind speed standard deviation data; units of m/s
+        mean_col(:obj:`array`): array containing the wind speed mean  data; units of m/s
+        std_col(:obj:`array`): array containing the wind speed standard deviation data; units of m/s
 
     Returns:
-        :obj:`pandas series`: turbulence intensity, (unitless ratio)
+        :obj:`array`: turbulence intensity, (unitless ratio)
     """
-    return df[std_col] / df[mean_col]
+    return std_col / mean_col
 
 
 def compute_shear(df, windspeed_heights, ref_col='empty'):
@@ -199,25 +199,20 @@ def compute_shear(df, windspeed_heights, ref_col='empty'):
         return alpha['alpha']
 
 
-def compute_veer(df, wind_a, height_a, wind_b, height_b):
+def compute_veer(wind_a, height_a, wind_b, height_b):
     """
     Compute veer between wind direction measurements
 
     Args:
-        df(:obj:`pandas.DataFrame`): dataframe with wind direction columns
-        wind_a, wind_b(:obj:`str`): column names in <df> containing the wind direction mean data; units of deg
-        height_a, height_b(:obj:`dict`): sensor heights (m)
+        wind_a, wind_b(:obj:`array`): arrays containing the wind direction mean data; units of deg
+        height_a, height_b(:obj:`array`): sensor heights (m)
 
     Returns:
-        :obj:`pandas.Series`: veer (deg/m)
+        veer(:obj:`array`): veer (deg/m)
    """
 
-    # Convert heights to float
-    height_a = float(height_a)
-    height_b = float(height_b)
-
     # Calculate wind direction change
-    delta_dir = df[wind_b] - df[wind_a]
+    delta_dir = wind_b - wind_a
 
     # Convert absolute values greater than 180 to normal range
     delta_dir[delta_dir > 180] = delta_dir[delta_dir > 180] - 360.
