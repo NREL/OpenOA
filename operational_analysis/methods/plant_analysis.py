@@ -504,7 +504,8 @@ class MonteCarloAEP(object):
         # Now loop through the different reanalysis products, density-correct wind speeds, and take monthly averages
         for key in self._reanal_products:
             rean_df = self._plant._reanalysis._product[key].df
-            rean_df['ws_dens_corr'] = mt.air_density_adjusted_wind_speed(rean_df, 'windspeed_ms','rho_kgm-3')  # Density correct wind speeds
+            rean_df['ws_dens_corr'] = mt.air_density_adjusted_wind_speed(rean_df['windspeed_ms'],
+                                                                         rean_df['rho_kgm-3'])  # Density correct wind speeds
             self._reanalysis_aggregate[key] = rean_df.resample(self._resample_freq)['ws_dens_corr'].mean()  # .to_frame() # Get average wind speed by year-month
 
             if self.reg_temperature == 'Y': # if temperature is considered as regression variable
