@@ -32,7 +32,7 @@ def logistic5param(x, a, b, c, d, g):
         Function[pandas.Series[real]] -> pandas.Series[real]
 
     """
-    return np.where(x!=0, d + (a - d) / (1 + (x / c) ** b) ** g, 0)
+    return np.where(x!=0.0, d + (a - d) / (1 + (x / c) ** b) ** g, d)
 
 
 def logistic5param_capped(x, a, b, c, d, g, lower, upper):
