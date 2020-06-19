@@ -54,7 +54,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
                                                       reg_temperature = 'N', 
                                                       reg_winddirection = 'N')
         # Run Monte Carlo AEP analysis, confirm the results are consistent
-        self.analysis.run(num_sim=200)
+        self.analysis.run(num_sim=10)
         sim_results = self.analysis.results
         self.check_simulation_results_lin_monthly(sim_results)
 
@@ -67,7 +67,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
                                                       reg_temperature = 'N', 
                                                       reg_winddirection = 'N')
         # Run Monte Carlo AEP analysis, confirm the results are consistent
-        self.analysis.run(num_sim=200)
+        self.analysis.run(num_sim=10)
         sim_results = self.analysis.results
         self.check_simulation_results_lin_daily(sim_results)
 
@@ -80,7 +80,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
                                                       reg_temperature = 'N', 
                                                       reg_winddirection = 'Y')
         # Run Monte Carlo AEP analysis, confirm the results are consistent
-        self.analysis.run(num_sim=200)
+        self.analysis.run(num_sim=10)
         sim_results = self.analysis.results
         self.check_simulation_results_gam_daily(sim_results)
 
@@ -93,7 +93,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
                                                       reg_temperature = 'Y', 
                                                       reg_winddirection = 'Y')
         # Run Monte Carlo AEP analysis, confirm the results are consistent
-        self.analysis.run(num_sim=100)
+        self.analysis.run(num_sim=10)
         sim_results = self.analysis.results
         self.check_simulation_results_gbm_daily(sim_results)
 
@@ -106,7 +106,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
                                                       reg_temperature = 'N', 
                                                       reg_winddirection = 'N')
         # Run Monte Carlo AEP analysis, confirm the results are consistent
-        self.analysis.run(num_sim=100)
+        self.analysis.run(num_sim=10)
         sim_results = self.analysis.results
         self.check_simulation_results_etr_daily(sim_results)
 
