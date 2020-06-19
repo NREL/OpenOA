@@ -32,7 +32,16 @@ def logistic5param(x, a, b, c, d, g):
         Function[pandas.Series[real]] -> pandas.Series[real]
 
     """
-    return np.where(x!=0.0, d + (a - d) / (1 + (x / c) ** b) ** g, d)
+
+    # In the case where b<0, x==0, there is a divide by zero error. The answer should be "d" when x==0 and b<0.
+    if b < 0:
+        res = np.ones_like(x)*d
+        idx = (x!=0.0)
+        res[idx] =  d + (a - d) / (1 + (x[idx] / c) ** b) ** g
+    else:
+        res = d + (a - d) / (1 + (x / c) ** b) ** g
+
+    return res
 
 
 def logistic5param_capped(x, a, b, c, d, g, lower, upper):
