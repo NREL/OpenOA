@@ -73,9 +73,6 @@ class TurbineLongTermGrossEnergy(object):
             self.num_sim = num_sim
             # Define relevant uncertainties, to be applied in Monte Carlo sampling
             self.uncertainty_scada = uncertainty_scada
-            self.uncertainty_wind_bin_thresh = np.array(uncertainty_wind_bin_thresh, dtype=np.float64)
-            self.uncertainty_max_power_filter = np.array(uncertainty_max_power_filter, dtype=np.float64)
-            self.uncertainty_correction_threshold = np.array(uncertainty_correction_threshold, dtype=np.float64)
         elif UQ == False:    
             logger.info("Note: uncertainty quantification will NOT be performed in the calculation")
             self.num_sim = None
@@ -86,6 +83,11 @@ class TurbineLongTermGrossEnergy(object):
         self._plant = plant  # Set plant as attribute of analysis object
         self._turbs = self._plant._scada.df['id'].unique() # Store turbine names
         self._reanal = reanal_subset # Reanalysis data to consider in fitting
+        
+        # Define relevant uncertainties, to be applied in Monte Carlo sampling
+        self.uncertainty_wind_bin_thresh = np.array(uncertainty_wind_bin_thresh, dtype=np.float64)
+        self.uncertainty_max_power_filter = np.array(uncertainty_max_power_filter, dtype=np.float64)
+        self.uncertainty_correction_threshold = np.array(uncertainty_correction_threshold, dtype=np.float64)
         
         # Get start and end of POR days in SCADA
         self._por_start = format(plant._scada.df.index.min(), '%Y-%m-%d')
@@ -192,9 +194,9 @@ class TurbineLongTermGrossEnergy(object):
             inputs = {
                 "reanalysis_product": self._reanal,
                 "scada_data_fraction": 1,
-                "wind_bin_thresh": 2,
-                "max_power_filter": 0.85,
-                "correction_threshold": 0.90,
+                "wind_bin_thresh": self.uncertainty_wind_bin_thresh,
+                "max_power_filter": self.uncertainty_max_power_filter,
+                "correction_threshold": self.uncertainty_correction_threshold,
             }
             self._plant_gross = np.empty([len(self._reanal),1])
             self.num_sim = len(self._reanal)
