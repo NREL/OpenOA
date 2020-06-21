@@ -751,15 +751,14 @@ class MonteCarloAEP(object):
         """
         Run robust linear regression between Monte-Carlo generated monthly/daily gross energy, 
         wind speed, temperature and wind direction (if used)
-        Return Monte-Carlo sampled slope and intercept values (based on their covariance) and report
-        the number of outliers based on the robust linear regression result.
 
         Args:
             n(:obj:`int`): The Monte Carlo iteration number
 
         Returns:
-            :obj:`float`: Monte-carlo sampled slope
-            :obj:`float`: Monte-carlo sampled intercept
+            :obj:`float`: Monte-carlo sampled slope (for linear regression)
+            :obj:`float`: Monte-carlo sampled intercept (for linear regression)
+            :obj:`?`: trained ML model (for ML regression)
         """
         reg_data = self.set_regression_data(n)  # Get regression data
         
