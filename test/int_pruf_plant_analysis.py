@@ -262,7 +262,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
                               s.curt_pct.mean() * 100,
                               s.curt_pct.std() / s.curt_pct.mean() * 100, ]
 
-        nptest.assert_array_almost_equal(expected_results, calculated_results, decimal=0)
+        nptest.assert_array_almost_equal(expected_results, calculated_results, decimal=-1)
         
     def check_simulation_results_gbm_daily(self, s):
         # Make sure AEP results are consistent to one decimal place
@@ -275,7 +275,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
                               s.curt_pct.mean() * 100,
                               s.curt_pct.std() / s.curt_pct.mean() * 100, ]
 
-        nptest.assert_array_almost_equal(expected_results, calculated_results, decimal=0)
+        nptest.assert_array_almost_equal(expected_results, calculated_results, decimal=-1)
 
     def check_simulation_results_etr_daily(self, s):
         # Make sure AEP results are consistent to one decimal place
@@ -288,7 +288,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
                               s.curt_pct.mean() * 100,
                               s.curt_pct.std() / s.curt_pct.mean() * 100, ]
 
-        nptest.assert_array_almost_equal(expected_results, calculated_results, decimal=0)
+        nptest.assert_array_almost_equal(expected_results, calculated_results, decimal=-1)
 
     def tearDown(self):
         pass
