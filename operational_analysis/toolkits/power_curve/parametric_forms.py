@@ -32,7 +32,20 @@ def logistic5param(x, a, b, c, d, g):
         Function[pandas.Series[real]] -> pandas.Series[real]
 
     """
-    return d + (a - d) / (1 + (x / c) ** b) ** g
+
+    res = np.ones_like(x, dtype=np.float)
+    # In the case where b<0, x==0, there is a divide by zero error. The answer should be "d" when x==0 and b<0.
+    if b < 0:
+        res *= d # Initialize result, default value is d
+        dom = (x!=0.0) # Only nonzero elements in domain
+    else:
+        dom = slice(None) # All elements in domain
+
+    # Apply power curve definition to point within domain
+    l5p = lambda xx: d + (a - d) / (1 + (xx / c) ** b) ** g
+    res[dom] =  l5p(x[dom])
+
+    return res
 
 
 def logistic5param_capped(x, a, b, c, d, g, lower, upper):
