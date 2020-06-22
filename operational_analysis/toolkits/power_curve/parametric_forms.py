@@ -35,10 +35,10 @@ def logistic5param(x, a, b, c, d, g):
 
     # In the case where b<0, x==0, there is a divide by zero error. The answer should be "d" when x==0 and b<0.
     if b < 0:
-        res = np.ones_like(x)*d # Initialize result, default value is d
+        res = np.ones_like(x, dtype=np.float)*d # Initialize result, default value is d
         dom = (x!=0.0) # Only nonzero elements in domain
     else:
-        res = np.ones_like(x) # Initialize result, this default value is arbitrary
+        res = np.ones_like(x, dtype=np.float) # Initialize result, this default value is arbitrary
         dom = slice(None) # All elements in domain
 
     # Apply power curve definition to point within domain
