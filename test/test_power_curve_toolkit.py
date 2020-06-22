@@ -58,7 +58,18 @@ class TestParametricForms(unittest.TestCase):
         y_pred = logistic5param(np.array([1., 2., 3.]), *[1300., -7., 11., 2., 0.5])
         y = np.array([2.29403585, 5.32662505, 15.74992462])
         nptest.assert_allclose(y, y_pred, err_msg="Power curve did not properly fit.")
-        pass
+
+        y_pred = logistic5param(np.array([1, 2, 3]), *[1300., -7., 11., 2., 0.5])
+        y = np.array([2.29403585, 5.32662505, 15.74992462])
+        nptest.assert_allclose(y, y_pred, err_msg="Power curve did not handle integer inputs properly.")
+
+        y_pred = logistic5param(np.array([0.01, 0.0]), 1300, 7, 11, 2, 0.5)
+        y = np.array([ 1300.0 , 1300.0 ])
+        nptest.assert_allclose(y, y_pred, err_msg="Power curve did not handle zero properly (b>0).")
+
+        y_pred = logistic5param(np.array([0.01, 0.0]), 1300, -7, 11, 2, 0.5)
+        y = np.array([ 2.0 , 2.0 ])
+        nptest.assert_allclose(y, y_pred, err_msg="Power curve did not handle zero properly (b<0).")
 
     def test_logistic5parameter_capped(self):
         # Numpy array + Lower Bound
