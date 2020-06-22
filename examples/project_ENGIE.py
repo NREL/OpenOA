@@ -124,7 +124,7 @@ class Project_Engie(PlantData):
                     "time"                 : "time",
                     "Wind_turbine_name"    : "id",
                     "Power_W"              : "wtur_W_avg",
-                    "Ws_avg"               : "wmet_HorWdSpd_avg", 
+                    "Ws_avg"               : "wmet_wdspd_avg", 
                     "Wa_avg"               : "wmet_HorWdDir_avg",
                     "Va_avg"               : "wmet_VaneDir_avg", 
                     "Ya_avg"               : "wyaw_YwAng_avg",
