@@ -11,8 +11,6 @@
 import random
 import numpy as np
 import pandas as pd
-import matplotlib
-matplotlib.use('Agg')
 import statsmodels.api as sm
 from tqdm import tqdm
 from sklearn.linear_model import LinearRegression
@@ -52,7 +50,7 @@ class MonteCarloAEP(object):
     @logged_method_call
     def __init__(self, plant, reanal_products=["merra2", "ncep2", "erai"], uncertainty_meter=0.005, uncertainty_losses=0.05,
                  uncertainty_windiness=(10, 20), uncertainty_loss_max=(10, 20),
-                 uncertainty_nan_energy=0.01, time_resolution = 'M', reg_model = 'lin', 
+                 uncertainty_nan_energy=0.01, time_resolution = 'M', reg_model = 'lin', ml_setup_kwargs={},
                  reg_temperature = 'N', reg_winddirection = 'N'):
         """
         Initialize APE_MC analysis with data and parameters.
@@ -66,7 +64,8 @@ class MonteCarloAEP(object):
          uncertainty_loss_max(:obj:`float`): threshold for the combined availabilty and curtailment monthly loss threshold
          uncertainty_nan_energy(:obj:`float`): threshold to flag days/months based on NaNs
          time_resolution(:obj:`string`): whether to perform the AEP calculation at monthly ('M') or daily ('D') time resolution
-         reg_model(:obj:`string`): which model to use for the regression ('lin' for linear, 'gam', 'gbm', 'etr')
+         reg_model(:obj:`string`): which model to use for the regression ('lin' for linear, 'gam', 'gbm', 'etr'). At monthly time resolution only linear regression is allowed because of the reduced number of data points.
+         ml_setup_kwargs(:obj:`kwargs`): keyword arguments to MachineLearningSetup class
          reg_temperature(:obj:`string`): whether to include temperature ('Y') or not ('N') as regression input
          reg_winddirection(:obj:`string`): whether to include wind direction ('Y') or not ('N') as regression input
 
@@ -91,12 +90,10 @@ class MonteCarloAEP(object):
         if time_resolution not in ['M','D']:
             raise ValueError("time_res has to either be M (monthly, default) or D (daily)")
         self.time_resolution = time_resolution
-        
         self._resample_freq = {"M": 'MS', "D": 'D'}[self.time_resolution]
         self._hours_in_res = {"M": 366*24, "D": 1*24}[self.time_resolution]
         self._calendar_samples = {"M": 12, "D": 365}[self.time_resolution]
-        if self.time_resolution == 'M':
-            self.num_days_lt = (31, 28.25, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
+        self.num_days_lt = (31, 28.25, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
 
         # Check that choices for regression inputs are allowed
         if reg_temperature not in ['Y', 'N']:
@@ -110,8 +107,9 @@ class MonteCarloAEP(object):
         if reg_model not in ['lin', 'gbm','etr','gam']:
             raise ValueError("reg_model has to either be lin (Linear regression, default), gbm (Gradient boosting model), etr (Extra trees regressor) or gam (Generalized additive model)")
         self.reg_model = reg_model
+        self.ml_setup_kwargs = ml_setup_kwargs
         
-        # Monthly data can only use robus linear regression
+        # Monthly data can only use robust linear regression because of limited number of data
         if (time_resolution == 'M') & (reg_model != 'lin'):
             raise ValueError("For monthly time resolution, only linear regression is allowed!")
 
@@ -142,9 +140,9 @@ class MonteCarloAEP(object):
         self.num_sim = num_sim
         
         if reanal_subset is None:
-             self.reanal_subset = self._reanal_products
+            self.reanal_subset = self._reanal_products
         else:
-             self.reanal_subset = reanal_subset
+            self.reanal_subset = reanal_subset
         
         # Write parameters of run to the log file
         logged_self_params = ["uncertainty_meter", "uncertainty_losses", "uncertainty_loss_max", "uncertainty_windiness",
@@ -567,25 +565,15 @@ class MonteCarloAEP(object):
                 raise Exception('Not all calendar days/months represented in long-term availability calculation')
         if (curt_long_term.shape[0] < self._calendar_samples):
                 raise Exception('Not all calendar days/months represented in long-term curtailment calculation')
-                
+
         if self.time_resolution == 'M':
-            # Merge long-term losses and number of long-term days
-            lt_losses_df = pd.DataFrame(data = {'avail': avail_long_term, 'curt': curt_long_term, 'n_days': self.num_days_lt})
-            # Calculate long-term annual availbilty and curtailment losses, weighted by number of days per month
-            lt_losses_df['avail_weighted'] = lt_losses_df['avail'].multiply(lt_losses_df['n_days'])
-            lt_losses_df['curt_weighted'] = lt_losses_df['curt'].multiply(lt_losses_df['n_days'])
-            # Calculate long-term annual availbilty and curtailment losses
-            avail_annual = lt_losses_df['avail_weighted'].sum()/days_year_lt
-            curt_annual = lt_losses_df['curt_weighted'].sum()/days_year_lt
-        
-        elif self.time_resolution == 'D':
-            # Merge long-term losses
-            lt_losses_df = pd.DataFrame(data = {'avail': avail_long_term, 'curt': curt_long_term})
-            # Calculate long-term annual availbilty and curtailment losses
-            avail_annual = lt_losses_df['avail'].sum()/days_year_lt
-            curt_annual = lt_losses_df['curt'].sum()/days_year_lt
-            
-        # Assign long-term annual losses to plant analysis object
+            # Weight monthly totals by number of days in month
+            avail_long_term *= self.num_days_lt
+            curt_long_term *= self.num_days_lt
+
+        avail_annual = avail_long_term.sum()/days_year_lt
+        curt_annual = curt_long_term.sum()/days_year_lt
+
         self.long_term_losses = (avail_annual, curt_annual)
 
     def setup_monte_carlo_inputs(self):
@@ -756,9 +744,7 @@ class MonteCarloAEP(object):
             n(:obj:`int`): The Monte Carlo iteration number
 
         Returns:
-            :obj:`float`: Monte-carlo sampled slope (for linear regression)
-            :obj:`float`: Monte-carlo sampled intercept (for linear regression)
-            :obj:`?`: trained ML model (for ML regression)
+            :obj:`?`: trained regression model
         """
         reg_data = self.set_regression_data(n)  # Get regression data
         
@@ -778,10 +764,10 @@ class MonteCarloAEP(object):
             
             self._r2_score[n] = r2_score(reg_data[:,-1], predicted_y)
             self._mse_score[n] = mean_squared_error(reg_data[:,-1], predicted_y)
-            return reg.coef_, reg.intercept_
+            return reg
         # Machine learning models
         else: 
-            ml = MachineLearningSetup(self.reg_model)
+            ml = MachineLearningSetup(self.reg_model, **self.ml_setup_kwargs)
             ml.hyper_optimize(np.array(reg_data[:,0:-1]), reg_data[:,-1], n_iter_search = 5, report = False, cv = KFold(n_splits = 2))
             predicted_y = ml.random_search.predict(np.array(reg_data[:,0:-1]))
                  
@@ -825,60 +811,29 @@ class MonteCarloAEP(object):
             
             self._run = self._inputs.loc[n]
             
+            # Run regression
+            fitted_model = self.run_regression(n)
+            
+            # Get long-term regression inputs
             reg_inputs_lt = self.sample_long_term_reanalysis(self._run.num_years_windiness,
-                                                             self._run.reanalysis_product)  # Get long-term wind speeds
-            # Linear regression
-            if self.reg_model == 'lin':
-                slope, intercept = self.run_regression(n)  # Get slope, intercept from regression
-                # Get long-term normalized gross energy by applying regression result to long-term monthly wind speeds
-                if num_vars == 1:
-                    gross_lt = reg_inputs_lt.multiply(slope[0]) + intercept
-                else:
-                    gross_lt = reg_inputs_lt.multiply(slope.reshape(-1,1).T, axis='columns').sum(axis='columns') + intercept
+                                                             self._run.reanalysis_product)
 
-                # Get POR gross energy by applying regression result to POR regression inputs                                                                    
-                if (self.reg_temperature == 'N') & (self.reg_winddirection == 'N'):
-                    gross_por = self._reanalysis_por_avg[self._run.reanalysis_product].multiply(slope[0]) + intercept
-                elif (self.reg_temperature == 'Y') & (self.reg_winddirection == 'N'):
-                    gross_por = self._reanalysis_por_avg[self._run.reanalysis_product].multiply(slope[0]) + \
-                                    self._reanalysis_por_avg[self._run.reanalysis_product + '_temp'].multiply(slope[1]) + intercept
-                elif (self.reg_temperature == 'N') & (self.reg_winddirection == 'Y'):
-                    wd_sin = np.sin(2*np.pi* self._reanalysis_por_avg[self._run.reanalysis_product + '_wd']/360)
-                    wd_cos = np.cos(2*np.pi* self._reanalysis_por_avg[self._run.reanalysis_product + '_wd']/360)
-                    gross_por = self._reanalysis_por_avg[self._run.reanalysis_product].multiply(slope[0]) + \
-                                    wd_sin * slope[1] + wd_cos * slope[2] + intercept
-                else:
-                    wd_sin = np.sin(2*np.pi* self._reanalysis_por_avg[self._run.reanalysis_product + '_wd']/360)
-                    wd_cos = np.cos(2*np.pi* self._reanalysis_por_avg[self._run.reanalysis_product + '_wd']/360)
-                    gross_por = self._reanalysis_por_avg[self._run.reanalysis_product].multiply(slope[0]) + \
-                                    self._reanalysis_por_avg[self._run.reanalysis_product + '_temp'].multiply(slope[1]) + \
-                                    wd_sin * slope[2] + wd_cos * slope[3] + intercept    
-            # Machine learning models
-            else:                    
-                ml_model_cv = self.run_regression(n)
-                # Get long-term normalized gross energy by applying regression result to long-term monthly wind speeds
-                if num_vars == 1:
-                    gross_lt = ml_model_cv.predict(np.array(reg_inputs_lt).reshape(-1, 1))
-                else:
-                    gross_lt = ml_model_cv.predict(np.array(reg_inputs_lt))
-                    
-                # Get POR gross energy by applying regression result to POR regression inputs                                                                        
-                if (self.reg_temperature == 'N') & (self.reg_winddirection == 'N'):
-                    reg_inputs_por = self._reanalysis_por_avg[self._run.reanalysis_product]
-                    gross_por = ml_model_cv.predict(np.array(reg_inputs_por).reshape(-1, 1))
-                elif (self.reg_temperature == 'Y') & (self.reg_winddirection == 'N'):
-                    reg_inputs_por = pd.concat([self._reanalysis_por_avg[self._run.reanalysis_product], self._reanalysis_por_avg[self._run.reanalysis_product + '_temp']], axis = 1)
-                    gross_por = ml_model_cv.predict(np.array(reg_inputs_por))
-                elif (self.reg_temperature == 'N') & (self.reg_winddirection == 'Y'):
-                    wd_sin = np.sin(2*np.pi* self._reanalysis_por_avg[self._run.reanalysis_product + '_wd']/360)
-                    wd_cos = np.cos(2*np.pi* self._reanalysis_por_avg[self._run.reanalysis_product + '_wd']/360)
-                    reg_inputs_por = pd.concat([self._reanalysis_por_avg[self._run.reanalysis_product], wd_sin, wd_cos], axis = 1)
-                    gross_por = ml_model_cv.predict(np.array(reg_inputs_por))
-                else:
-                    wd_sin = np.sin(2*np.pi* self._reanalysis_por_avg[self._run.reanalysis_product + '_wd']/360)
-                    wd_cos = np.cos(2*np.pi* self._reanalysis_por_avg[self._run.reanalysis_product + '_wd']/360)
-                    reg_inputs_por = pd.concat([self._reanalysis_por_avg[self._run.reanalysis_product], self._reanalysis_por_avg[self._run.reanalysis_product + '_temp'], wd_sin, wd_cos], axis = 1)
-                    gross_por = ml_model_cv.predict(np.array(reg_inputs_por))
+            # Get long-term normalized gross energy by applying regression result to long-term monthly wind speeds
+            inputs = np.array(reg_inputs_lt)
+            if num_vars == 1:
+                inputs = inputs.reshape(-1,1)
+            gross_lt = fitted_model.predict(inputs)
+            
+            # Get POR gross energy by applying regression result to POR regression inputs                                                                        
+            reg_inputs_por = [self._reanalysis_por_avg[self._run.reanalysis_product]]
+            if self.reg_temperature == 'Y':
+                reg_inputs_por += [self._reanalysis_por_avg[self._run.reanalysis_product + '_temp']]
+            if self.reg_winddirection == 'Y':
+                wd_sin = np.sin(2*np.pi* self._reanalysis_por_avg[self._run.reanalysis_product + '_wd']/360)
+                wd_cos = np.cos(2*np.pi* self._reanalysis_por_avg[self._run.reanalysis_product + '_wd']/360)
+                reg_inputs_por += [wd_sin]
+                reg_inputs_por += [wd_cos]
+            gross_por = fitted_model.predict(np.array(pd.concat(reg_inputs_por, axis = 1)))
 
             if self.time_resolution == 'M': # Undo normalization to 30-day months
                 gross_lt = gross_lt*self.num_days_lt/30 
@@ -915,15 +870,15 @@ class MonteCarloAEP(object):
            :obj:`pandas.DataFrame`: the windiness-corrected or 'long-term' annualized monthly/daily wind speeds
 
         """
+        # Sample long-term wind speed values
         ws_df = self._reanalysis_aggregate[r].to_frame().dropna()  # Drop NA values from monthly/daily reanalysis data series
         ws_data = ws_df.tail(n * self._calendar_samples)  # Get last 'x' years of data from reanalysis product
-        ws_aggregate = self.groupby_time_res(ws_data)[r] # Get long-term annualized daily wind speeds
+        ws_aggregate = self.groupby_time_res(ws_data)[r] # Get long-term annualized monthly/daily wind speeds
         ws_aggregate.reset_index(drop=True, inplace=True)
-        # IAV calculation
+        # Wind speed IAV calculation
         ws_aggregate_sd = ws_data.groupby(ws_data.index.month)[r].std() # Get long-term annualized stdev of daily wind speeds            
         if self.time_resolution == 'D':
-            num_days_lt = (31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
-            ws_aggregate_sd = np.repeat(ws_aggregate_sd, num_days_lt)
+            ws_aggregate_sd = np.repeat(ws_aggregate_sd, np.ceil(self.num_days_lt).astype(int))
         ws_aggregate_sd.reset_index(drop=True,inplace=True)
         iav_df = ws_aggregate_sd/ws_aggregate
         iav_df = iav_df.to_frame()
@@ -931,22 +886,24 @@ class MonteCarloAEP(object):
         mc_ws_aggregate = ws_aggregate * iav_df['sample']  
         long_term_reg_inputs = mc_ws_aggregate.astype(float).reset_index(drop=True)
         
+        # If temperature is an input, sample long-term temperature values
         if self.reg_temperature == 'Y':
-            temp_df = self._reanalysis_aggregate[r + '_temp'].to_frame().dropna()
-            temp_data = temp_df.tail(n * self._calendar_samples)
-            temp_aggregate = self.groupby_time_res(temp_data)[r + '_temp']
+            temp_df = self._reanalysis_aggregate[r + '_temp'].to_frame().dropna() # Drop NA values from monthly/daily reanalysis data series
+            temp_data = temp_df.tail(n * self._calendar_samples) # Get last 'x' years of data from reanalysis product
+            temp_aggregate = self.groupby_time_res(temp_data)[r + '_temp'] # Get long-term annualized monthly/daily temperatures
             long_term_reg_inputs = pd.concat([mc_ws_aggregate.astype(float).reset_index(drop=True), temp_aggregate.astype(float).reset_index(drop=True)], axis=1)
         
+        # If wind direction is an input, sample long-term wind direction values
         if self.reg_winddirection == 'Y':
-            u_df = self._reanalysis_aggregate[r + '_u'].to_frame().dropna()
-            v_df = self._reanalysis_aggregate[r + '_v'].to_frame().dropna()
-            u_data = u_df.tail(n * self._calendar_samples)
-            v_data = v_df.tail(n * self._calendar_samples)
-            u_aggregate = self.groupby_time_res(u_data)[r + '_u']
-            v_aggregate = self.groupby_time_res(v_data)[r + '_v']
-            wd_aggregate = 180-np.rad2deg(np.arctan2(-u_aggregate,v_aggregate))
-            wd_sin_aggregate = np.sin(2*np.pi*wd_aggregate/360)
-            wd_cos_aggregate = np.cos(2*np.pi*wd_aggregate/360)
+            u_df = self._reanalysis_aggregate[r + '_u'].to_frame().dropna() # Drop NA values from monthly/daily reanalysis data series
+            v_df = self._reanalysis_aggregate[r + '_v'].to_frame().dropna() # Drop NA values from monthly/daily reanalysis data series
+            u_data = u_df.tail(n * self._calendar_samples) # Get last 'x' years of data from reanalysis product
+            v_data = v_df.tail(n * self._calendar_samples) # Get last 'x' years of data from reanalysis product
+            u_aggregate = self.groupby_time_res(u_data)[r + '_u'] # Get long-term annualized monthly/daily wind components
+            v_aggregate = self.groupby_time_res(v_data)[r + '_v'] # Get long-term annualized monthly/daily wind components
+            wd_aggregate = 180-np.rad2deg(np.arctan2(-u_aggregate,v_aggregate)) # Calculate wind direction
+            wd_sin_aggregate = np.sin(2*np.pi*wd_aggregate/360) # Calculate sine of wind direction
+            wd_cos_aggregate = np.cos(2*np.pi*wd_aggregate/360) # Calculate cosine of wind direction
             long_term_reg_inputs = pd.concat([long_term_reg_inputs.astype(float).reset_index(drop=True), wd_sin_aggregate.astype(float).reset_index(drop=True)], axis=1)
             long_term_reg_inputs = pd.concat([long_term_reg_inputs.astype(float).reset_index(drop=True), wd_cos_aggregate.astype(float).reset_index(drop=True)], axis=1)
         
