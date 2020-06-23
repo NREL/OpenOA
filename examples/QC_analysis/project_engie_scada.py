@@ -89,7 +89,7 @@ class Project_Engie(PlantData):
                      "ID"       : "id",
                      "Power_W"              : "wtur_W_avg",
                      "wmet_wdspd_avg"    : "wmet_wdspd_avg", 
-                     "wmet_wDir_avg"    : "wmet_HorWd_Dir"
+                     "wmet_wDir_avg"    : "wmet_wDir_avg"
                      }
 
         self._scada.df.rename(scada_map, axis="columns", inplace=True)

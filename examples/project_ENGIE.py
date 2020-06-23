@@ -125,11 +125,11 @@ class Project_Engie(PlantData):
                     "Wind_turbine_name"    : "id",
                     "Power_W"              : "wtur_W_avg",
                     "Ws_avg"               : "wmet_wdspd_avg", 
-                    "Wa_avg"               : "wmet_HorWdDir_avg",
-                    "Va_avg"               : "wmet_VaneDir_avg", 
-                    "Ya_avg"               : "wyaw_YwAng_avg",
-                    "Ot_avg"               : "wmet_EnvTmp_avg",
-                    "Ba_avg"               : "wrot_BlPthAngVal1_avg",
+                    "Wa_avg"               : "wmet_wDir_avg",
+                    "Va_avg"               : "wmet_vanedir_avg", 
+                    "Ya_avg"               : "wyaw_ywang_avg",
+                    "Ot_avg"               : "wmet_envtmp_avg",
+                    "Ba_avg"               : "wrot_blpthangval1_avg",
                     "energy_kwh"           : "energy_kwh"
                     }
 
