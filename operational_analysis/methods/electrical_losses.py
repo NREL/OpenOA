@@ -65,7 +65,7 @@ class ElectricalLosses(object):
     
     @logged_method_call
     def run(self, uncertainty_meter=0.005, uncertainty_scada=0.005,
-                 uncertainty_correction_thresh=(0.9,0.995)):
+                 uncertainty_correction_thresh=0.95):
         """
         Run the electrical loss calculation in order by calling this function.
         
