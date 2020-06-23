@@ -45,7 +45,7 @@ class TestElectricalLossesUQ(unittest.TestCase):
         # Create electrical loss method object and run
         # WITH UQ
         self.analysis_uq = ElectricalLosses(self.project, UQ = True, num_sim = 3000)
-        self.analysis_uq.run()
+        self.analysis_uq.run(uncertainty_correction_thresh = (0.9, 0.995))
 
     def test_electrical_losses_results(self):
         
