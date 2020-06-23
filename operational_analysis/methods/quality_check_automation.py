@@ -280,12 +280,16 @@ class WindToolKitQualityControlDiagnosticSuite(object):
             plt.subplot(num_years, 2, 2*y + 1)
             if np.sum(~np.isnan(data_spring[self._w])) > 0:
                 plt.plot(data_spring[self._w])
-            plt.title(years[y])
+            plt.title(str(years[y]) + ', Spring')
+            plt.ylabel('Power')
+            plt.xlabel('Date')
 
             plt.subplot(num_years, 2, 2*y + 2)
             if np.sum(~np.isnan(data_fall[self._w])) > 0:
                 plt.plot(data_fall[self._w])
-            plt.title(years[y])
+            plt.title(str(years[y]) + ', Fall')
+            plt.ylabel('Power')
+            plt.xlabel('Date')
 
         plt.tight_layout()
         plt.show()
@@ -337,6 +341,8 @@ class WindToolKitQualityControlDiagnosticSuite(object):
             plt.scatter(scada_sub[x_axis], scada_sub[y_axis], s = 5)
             n = n + 1
             plt.title(t)
+            plt.xlabel(x_axis)
+            plt.ylabel(y_axis)
         plt.tight_layout()
         plt.show()
 
@@ -357,4 +363,5 @@ class WindToolKitQualityControlDiagnosticSuite(object):
                 plt.hist(self._df[c].dropna(), 40)
                 #n = n + 1
                 plt.title(c)
+                plt.ylabel('Count')
                 plt.show()

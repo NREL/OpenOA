@@ -79,11 +79,7 @@ class Project_Engie(PlantData):
         # Get 'time' field in datetime format. Local time zone information is
         # encoded, so convert to UTC
 
-        #self._scada.df['time'] = pd.to_datetime(self._scada.df['Date_time'],utc=True).dt.tz_localize(None)
-        date = [s[0:10] for s in self._scada.df['Date_time']]
-        time = [s[11:19] for s in self._scada.df['Date_time']]
-        datetime = [date[s] + ' ' + time[s] for s in np.arange(len(date))]
-        self._scada.df['time'] = pd.to_datetime(datetime, format = "%Y-%m-%d %H:%M:%S")
+        self._scada.df['time'] = pd.to_datetime(self._scada.df['Date_time'],utc=True).dt.tz_localize(None)
 
         # Remove duplicated timestamps and turbine id
         self._scada.df = self._scada.df.drop_duplicates(subset=['time','Wind_turbine_name'],keep='first')
