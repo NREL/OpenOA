@@ -43,7 +43,7 @@ class ElectricalLosses(object):
         Args:
          plant(:obj:`PlantData object`): PlantData object from which EYAGapAnalysis should draw data.
          num_sim:(:obj:`int`): number of Monte Carlo simulations
-         UQ:(:obj:`bool`): choice whether to perform ('Y') or not ('N') uncertainty quantification                                      
+         UQ:(:obj:`bool`): choice whether to perform (True) or not (False) uncertainty quantification                                      
         """
         logger.info("Initializing Electrical Losses Object")
         
@@ -72,9 +72,10 @@ class ElectricalLosses(object):
         Args:
          uncertainty_meter(:obj:`float`): uncertainty imposed to revenue meter data (for UQ = True case)
          uncertainty_scada(:obj:`float`): uncertainty imposed to scada data (for UQ = True case)
-         uncertainty_correction_threshold(:obj:`tuple`): The interval of data availability thresholds (fractions) 
-                                                         under which months should be eliminated (for UQ = True case) 
-            
+         uncertainty_correction_threshold(:obj:`tuple`): Data availability thresholds (fractions) 
+                                                         under which months should be eliminated. 
+                                                         This should be a tuple in the UQ = True case, 
+                                                         a single value when UQ = False.
         Returns:
             (None)
         """
@@ -125,7 +126,7 @@ class ElectricalLosses(object):
             inputs = {
                 "meter_data_fraction": 1,
                 "scada_data_fraction": 1,
-                "correction_threshold": 0.90,
+                "correction_threshold": self.uncertainty_correction_threshold,
             }
             self._inputs = pd.DataFrame(inputs,index=[0])
 

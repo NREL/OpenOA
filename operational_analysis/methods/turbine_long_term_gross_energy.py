@@ -106,10 +106,13 @@ class TurbineLongTermGrossEnergy(object):
          reanal_subset(:obj:`list`): Which reanalysis products to use for long-term correction
          uncertainty_scada(:obj:`float`): uncertainty imposed to scada data (used in UQ = True case only)
          max_power_filter(:obj:`tuple`): Maximum power threshold (fraction) to which the bin filter 
-                                         should be applied (default 0.85)
-         wind_bin_thresh(:obj:`tuple`): The filter threshold for each bin (default is 2 m/s)
+                                         should be applied (default 0.85). This should be a tuple in the UQ = True case, 
+                                         a single value when UQ = False.
+         wind_bin_thresh(:obj:`tuple`): The filter threshold for each bin (default is 2 m/s). 
+                                         This should be a tuple in the UQ = True case, a single value when UQ = False.
          correction_threshold(:obj:`tuple`): The threshold (fraction) above which daily scada energy data
-                                                should be corrected (default is 0.90)
+                                             hould be corrected (default is 0.90). 
+                                             This should be a tuple in the UQ = True case, a single value when UQ = False.
          enable_plotting(:obj:`boolean`): Indicate whether to output plots
          plot_dir(:obj:`string`): Location to save figures
             
