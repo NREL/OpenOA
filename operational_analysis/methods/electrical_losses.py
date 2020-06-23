@@ -72,7 +72,7 @@ class ElectricalLosses(object):
         Args:
          uncertainty_meter(:obj:`float`): uncertainty imposed to revenue meter data (for UQ = True case)
          uncertainty_scada(:obj:`float`): uncertainty imposed to scada data (for UQ = True case)
-         uncertainty_correction_threshold(:obj:`tuple`): Data availability thresholds (fractions) 
+         uncertainty_correction_thresh(:obj:`tuple`): Data availability thresholds (fractions) 
                                                          under which months should be eliminated. 
                                                          This should be a tuple in the UQ = True case, 
                                                          a single value when UQ = False.
@@ -126,7 +126,7 @@ class ElectricalLosses(object):
             inputs = {
                 "meter_data_fraction": 1,
                 "scada_data_fraction": 1,
-                "correction_threshold": self.uncertainty_correction_threshold,
+                "correction_threshold": self.uncertainty_correction_thresh,
             }
             self._inputs = pd.DataFrame(inputs,index=[0])
 
