@@ -32,4 +32,12 @@ jobs:
         yes | unzip examples/data/la_haute_borne.zip -d examples/data/la_haute_borne/
     - name: Test with pytest
       run: |
-        pytest -o python_files=test/*.py --cov=operational_analysis
+        pytest -o python_files=test/*.py --cov=operational_analysis --cov-report=xml
+    - name: Upload coverage to Codecov
+          uses: codecov/codecov-action@v1
+          with:
+            token: ${{ secrets.CODECOV_TOKEN }}
+            file: ./coverage.xml
+            env_vars: OS,PYTHON
+            name: gh-action-python-ci
+            fail_ci_if_error: false
