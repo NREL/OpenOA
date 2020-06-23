@@ -1,4 +1,4 @@
-OpenOA ![](https://github.com/NREL/OpenOA/workflows/Tests/badge.svg?branch=develop) ![](https://readthedocs.org/projects/openoa/badge/?version=latest)
+OpenOA ![](https://github.com/NREL/OpenOA/workflows/Tests/badge.svg?branch=develop) ![](https://readthedocs.org/projects/openoa/badge/?version=latest) [![codecov](https://codecov.io/gh/NREL/OpenOA/branch/master/graph/badge.svg)](https://codecov.io/gh/NREL/OpenOA)
 ======
 
 This library provides a framework for working with large timeseries data from wind plants, such as SCADA.
