@@ -30,6 +30,9 @@ steps taken to correct the raw data for use in the PRUF OA code.
 - Wind speed, wind direction, temperature, and density
 
 """
+from zipfile import ZipFile
+import os
+
 from operational_analysis.types import PlantData
 
 import numpy as np
@@ -53,10 +56,21 @@ class Project_Engie(PlantData):
 
         super(Project_Engie, self).__init__(path, name, engine, toolkit)
 
+    def extract_data(self):
+        """
+        Extract data from zip files if they don't already exist.
+        """
+        if not os.path.exists(self._path):
+            with ZipFile(self._path+".zip") as zipfile:
+                zipfile.extractall(self._path)
+
     def prepare(self):
         """
         Do all loading and preparation of the data for this plant.
-        """     
+        """
+        # Extract data if necessary
+        self.extract_data()
+
         # Set time frequencies of data in minutes
         self._meter_freq = '10T'  # Daily meter data
         self._curtail_freq = '10T'  # Daily curtailment data
