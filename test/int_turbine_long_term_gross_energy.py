@@ -18,7 +18,7 @@ class TestLongTermGrossEnergy(unittest.TestCase):
         
         self.analysis.run(reanal_subset = ['era5', 'merra2'],
                                                    max_power_filter = 0.85,
-                                                   wind_bin_thresh = 1,
+                                                   wind_bin_thresh = 1.,
                                                    correction_threshold = 0.9,
                                                    enable_plotting = False)
 
