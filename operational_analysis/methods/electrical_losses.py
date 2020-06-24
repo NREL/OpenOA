@@ -79,13 +79,17 @@ class ElectricalLosses(object):
         Returns:
             (None)
         """
-        # Define uncertainties
+        # Define uncertainties and check types
+        if self.UQ == False:
+            if type(uncertainty_correction_thresh) != float:
+                logger.info("uncertainty_correction_thresh needs to be a float if UQ is False!")
         self.uncertainty_correction_thresh = np.array(uncertainty_correction_thresh, dtype=np.float64)  
         if self.UQ == True:
+            if type(uncertainty_correction_thresh) != tuple:
+                logger.info("uncertainty_correction_thresh needs to be a tuple if UQ is True!")
             self.uncertainty_meter = uncertainty_meter
             self.uncertainty_scada = uncertainty_scada
         
-               
         # Process SCADA data to daily sums
         self.process_scada()
         

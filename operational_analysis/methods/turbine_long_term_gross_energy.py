@@ -126,6 +126,21 @@ class TurbineLongTermGrossEnergy(object):
         
         self._reanal = reanal_subset # Reanalysis data to consider in fitting
         
+        # Check uncertainty types
+        if self.UQ == False:
+            if type(wind_bin_thresh) != float:
+                logger.info("wind_bin_thresh needs to be a float if UQ is False!")
+            if type(max_power_filter) != float:
+                logger.info("max_power_filter needs to be a float if UQ is False!")
+            if type(correction_threshold) != float:
+                logger.info("correction_threshold needs to be a float if UQ is False!")
+        if self.UQ == True:
+            if type(wind_bin_thresh) != tuple:
+                logger.info("wind_bin_thresh needs to be a tuple if UQ is True!")
+            if type(max_power_filter) != tuple:
+                logger.info("max_power_filter needs to be a tuple if UQ is True!")
+            if type(correction_threshold) != tuple:
+                logger.info("correction_threshold needs to be a tuple if UQ is True!")        
         # Define relevant uncertainties, to be applied in Monte Carlo sampling
         self.uncertainty_wind_bin_thresh = np.array(wind_bin_thresh, dtype=np.float64)
         self.uncertainty_max_power_filter = np.array(max_power_filter, dtype=np.float64)
