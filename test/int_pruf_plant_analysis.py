@@ -23,8 +23,8 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         self.analysis = plant_analysis.MonteCarloAEP(self.project, 
                                                       reanal_products=['merra2', 'era5'],
                                                       time_resolution = 'M',
-                                                      reg_temperature = 'Y', 
-                                                      reg_winddirection = 'Y')
+                                                      reg_temperature = True, 
+                                                      reg_winddirection = True)
         df = self.analysis._aggregate.df
 
         # Check the pre-processing functions
@@ -37,8 +37,8 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         self.analysis = plant_analysis.MonteCarloAEP(self.project, 
                                                       reanal_products=['merra2', 'era5'],
                                                       time_resolution = 'D',
-                                                      reg_temperature = 'Y', 
-                                                      reg_winddirection = 'Y')
+                                                      reg_temperature = True, 
+                                                      reg_winddirection = True)
         df = self.analysis._aggregate.df
         # Check the pre-processing functions
         self.check_process_revenue_meter_energy_daily(df)
@@ -51,10 +51,10 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
                                                       reanal_products=['merra2', 'era5'],
                                                       time_resolution = 'M',
                                                       reg_model = 'lin',
-                                                      reg_temperature = 'N', 
-                                                      reg_winddirection = 'N')
+                                                      reg_temperature = False, 
+                                                      reg_winddirection = False)
         # Run Monte Carlo AEP analysis, confirm the results are consistent
-        self.analysis.run(num_sim=10)
+        self.analysis.run(num_sim=30)
         sim_results = self.analysis.results
         self.check_simulation_results_lin_monthly(sim_results)
 
@@ -64,10 +64,10 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
                                                       reanal_products=['merra2', 'era5'],
                                                       time_resolution = 'D',
                                                       reg_model = 'lin',
-                                                      reg_temperature = 'N', 
-                                                      reg_winddirection = 'N')
+                                                      reg_temperature = False, 
+                                                      reg_winddirection = False)
         # Run Monte Carlo AEP analysis, confirm the results are consistent
-        self.analysis.run(num_sim=10)
+        self.analysis.run(num_sim=30)
         sim_results = self.analysis.results
         self.check_simulation_results_lin_daily(sim_results)
 
@@ -77,8 +77,8 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
                                                       reanal_products=['merra2', 'era5'],
                                                       time_resolution = 'D',
                                                       reg_model = 'gam',
-                                                      reg_temperature = 'N', 
-                                                      reg_winddirection = 'Y')
+                                                      reg_temperature = False, 
+                                                      reg_winddirection = True)
         # Run Monte Carlo AEP analysis, confirm the results are consistent
         self.analysis.run(num_sim=10)
         sim_results = self.analysis.results
@@ -90,8 +90,8 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
                                                       reanal_products=['merra2', 'era5'],
                                                       time_resolution = 'D',
                                                       reg_model = 'gbm',
-                                                      reg_temperature = 'Y', 
-                                                      reg_winddirection = 'Y')
+                                                      reg_temperature = True, 
+                                                      reg_winddirection = True)
         # Run Monte Carlo AEP analysis, confirm the results are consistent
         self.analysis.run(num_sim=10)
         sim_results = self.analysis.results
@@ -103,8 +103,8 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
                                                       reanal_products=['merra2', 'era5'],
                                                       time_resolution = 'D',
                                                       reg_model = 'etr',
-                                                      reg_temperature = 'N', 
-                                                      reg_winddirection = 'N')
+                                                      reg_temperature = False, 
+                                                      reg_winddirection = False)
         # Run Monte Carlo AEP analysis, confirm the results are consistent
         self.analysis.run(num_sim=10)
         sim_results = self.analysis.results
@@ -227,7 +227,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
  
     def check_simulation_results_lin_monthly(self, s):
         # Make sure AEP results are consistent to one decimal place
-        expected_results = [12.41, 8.29, 0.04, 5.37, 0.003, 5.37]
+        expected_results = [12.41, 8.29, 1.30, 3.57, 0.09, 3.57]
 
         calculated_results = [s.aep_GWh.mean(),
                               s.aep_GWh.std() / s.aep_GWh.mean() * 100,

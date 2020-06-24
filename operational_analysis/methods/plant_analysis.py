@@ -51,7 +51,7 @@ class MonteCarloAEP(object):
     def __init__(self, plant, reanal_products=["merra2", "ncep2", "erai"], uncertainty_meter=0.005, uncertainty_losses=0.05,
                  uncertainty_windiness=(10, 20), uncertainty_loss_max=(10, 20),
                  uncertainty_nan_energy=0.01, time_resolution = 'M', reg_model = 'lin', ml_setup_kwargs={},
-                 reg_temperature = 'N', reg_winddirection = 'N'):
+                 reg_temperature = False, reg_winddirection = False):
         """
         Initialize APE_MC analysis with data and parameters.
 
@@ -66,8 +66,8 @@ class MonteCarloAEP(object):
          time_resolution(:obj:`string`): whether to perform the AEP calculation at monthly ('M') or daily ('D') time resolution
          reg_model(:obj:`string`): which model to use for the regression ('lin' for linear, 'gam', 'gbm', 'etr'). At monthly time resolution only linear regression is allowed because of the reduced number of data points.
          ml_setup_kwargs(:obj:`kwargs`): keyword arguments to MachineLearningSetup class
-         reg_temperature(:obj:`string`): whether to include temperature ('Y') or not ('N') as regression input
-         reg_winddirection(:obj:`string`): whether to include wind direction ('Y') or not ('N') as regression input
+         reg_temperature(:obj:`bool`): whether to include temperature (True) or not (False) as regression input
+         reg_winddirection(:obj:`bool`): whether to include wind direction (True) or not (False) as regression input
 
         """
         logger.info("Initializing MonteCarloAEP Analysis Object")
@@ -96,10 +96,10 @@ class MonteCarloAEP(object):
         self.num_days_lt = (31, 28.25, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
 
         # Check that choices for regression inputs are allowed
-        if reg_temperature not in ['Y', 'N']:
-            raise ValueError("reg_temperature has to either be Y (if temperature is considered in the regression), or N (if temperature is omitted")
-        if reg_winddirection not in ['Y', 'N']:
-            raise ValueError("reg_winddirection has to either be Y (if wind direction is considered in the regression), or N (if wind direction is omitted")
+        if reg_temperature not in [True, False]:
+            raise ValueError("reg_temperature has to either be True (if temperature is considered in the regression), or False (if temperature is omitted")
+        if reg_winddirection not in [True, False]:
+            raise ValueError("reg_winddirection has to either be True (if wind direction is considered in the regression), or False (if wind direction is omitted")
         self.reg_winddirection = reg_winddirection
         self.reg_temperature = reg_temperature
         
@@ -217,7 +217,6 @@ class MonteCarloAEP(object):
         """
         import matplotlib.pyplot as plt
         valid_aggregate = self._aggregate.df
-        project = self._plant
         plt.figure(figsize=(9, 9))
 
         # Loop through each reanalysis product and make a scatterplot of monthly wind speed vs plant energy
@@ -506,10 +505,10 @@ class MonteCarloAEP(object):
                                                                          rean_df['rho_kgm-3'])  # Density correct wind speeds
             self._reanalysis_aggregate[key] = rean_df.resample(self._resample_freq)['ws_dens_corr'].mean()  # .to_frame() # Get average wind speed by year-month
 
-            if self.reg_temperature == 'Y': # if temperature is considered as regression variable
+            if self.reg_temperature == True: # if temperature is considered as regression variable
                 self._reanalysis_aggregate[key + '_temp'] = pd.to_numeric(rean_df['temperature_K']).resample(self._resample_freq).mean()  # .to_frame() # Get average temperature by year-month
             
-            if self.reg_winddirection == 'Y': # if wind direction is considered as regression variable
+            if self.reg_winddirection == True: # if wind direction is considered as regression variable
                 u_avg = pd.to_numeric(rean_df['u_ms']).resample(self._resample_freq).mean()  # .to_frame() # Get average u component by year-month
                 v_avg = pd.to_numeric(rean_df['v_ms']).resample(self._resample_freq).mean()  # .to_frame() # Get average v component by year-month
                 self._reanalysis_aggregate[key + '_u'] = u_avg 
@@ -634,11 +633,9 @@ class MonteCarloAEP(object):
         
         # Set maximum range for using bin-filter, convert from MW to GWh
         plant_capac = self._plant._plant_capacity/1000 * self._hours_in_res
-        
-        # Flag turbine energy data less than zero
-        df_sub.loc[:,'flag_neg'] = filters.range_flag(df_sub['energy_gwh'], below = 0, above = plant_capac)
+
         # Apply range filter to wind speed
-        df_sub.loc[:,'flag_range'] = filters.range_flag(df_sub[reanal], below = 0, above = 40)
+        df_sub = df_sub.assign(flag_range=filters.range_flag(df_sub[reanal], below = 0, above = 40))
         # Apply frozen/unresponsive sensor filter
         df_sub.loc[:,'flag_frozen'] = filters.unresponsive_flag(df_sub[reanal], threshold = 3)
         # Apply window range filter
@@ -650,22 +647,19 @@ class MonteCarloAEP(object):
                                                                     value_max =  1.2*plant_capac) 
         
         # Create a 'final' flag which is true if any of the previous flags are true
-        df_sub.loc[:,'flag_final'] = (df_sub.loc[:, 'flag_range']) | (df_sub.loc[:, 'flag_frozen']) #| \
-                                          #(df_sub.loc[:, 'flag_window']) 
-        
-        # Set negative turbine data to zero
-        df_sub.loc[df_sub['flag_neg'], 'energy_gwh'] = 0
+        df_sub.loc[:,'flag_final'] = (df_sub.loc[:, 'flag_range']) | (df_sub.loc[:, 'flag_frozen']) | \
+                                          (df_sub.loc[:, 'flag_window']) 
                 
         # Define valid data
         valid_data = df_sub.loc[df_sub.loc[:, 'flag_final'] == False, [reanal, 
                                                                'energy_gwh', 'availability_gwh',
                                                                'curtailment_gwh']]
-        if self.reg_winddirection == 'Y':
+        if self.reg_winddirection == True:
             valid_data_to_add = df_sub.loc[df_sub.loc[:, 'flag_final'] == False, [reanal + '_wd',
                                                                reanal + '_u', reanal + '_v']]
             valid_data = pd.concat([valid_data, valid_data_to_add], axis=1)
             
-        if self.reg_temperature == 'Y':
+        if self.reg_temperature == True:
             valid_data_to_add = df_sub.loc[df_sub.loc[:, 'flag_final'] == False, [reanal + '_temp']]
             valid_data = pd.concat([valid_data, valid_data_to_add], axis=1)
             
@@ -719,11 +713,11 @@ class MonteCarloAEP(object):
         # Set reanalysis product
         reg_inputs = reg_data[self._run.reanalysis_product]  # Copy wind speed data to Monte Carlo data frame
         
-        if self.reg_temperature == 'Y': # if temperature is considered as regression variable
+        if self.reg_temperature == True: # if temperature is considered as regression variable
             mc_temperature = reg_data[self._run.reanalysis_product + "_temp"]  # Copy temperature data to Monte Carlo data frame
             reg_inputs = pd.concat([reg_inputs,mc_temperature], axis = 1)
             
-        if self.reg_winddirection == 'Y': # if wind direction is considered as regression variable
+        if self.reg_winddirection == True: # if wind direction is considered as regression variable
             mc_wind_direction = reg_data[self._run.reanalysis_product + "_wd"]  # Copy wind direction data to Monte Carlo data frame
             mc_wind_direction_sin = np.sin(2*np.pi*mc_wind_direction/360)
             mc_wind_direction_cos = np.cos(2*np.pi*mc_wind_direction/360)
@@ -792,9 +786,9 @@ class MonteCarloAEP(object):
         self._mse_score = np.empty(num_sim, dtype=np.float64)
         
         num_vars = 1
-        if self.reg_winddirection == 'Y' :
+        if self.reg_winddirection == True :
             num_vars = num_vars + 2
-        if self.reg_temperature == 'Y':
+        if self.reg_temperature == True:
             num_vars = num_vars + 1
                 
         if self.reg_model == 'lin':
@@ -813,7 +807,7 @@ class MonteCarloAEP(object):
             
             # Run regression
             fitted_model = self.run_regression(n)
-            
+ 
             # Get long-term regression inputs
             reg_inputs_lt = self.sample_long_term_reanalysis(self._run.num_years_windiness,
                                                              self._run.reanalysis_product)
@@ -826,9 +820,9 @@ class MonteCarloAEP(object):
             
             # Get POR gross energy by applying regression result to POR regression inputs                                                                        
             reg_inputs_por = [self._reanalysis_por_avg[self._run.reanalysis_product]]
-            if self.reg_temperature == 'Y':
+            if self.reg_temperature == True:
                 reg_inputs_por += [self._reanalysis_por_avg[self._run.reanalysis_product + '_temp']]
-            if self.reg_winddirection == 'Y':
+            if self.reg_winddirection == True:
                 wd_sin = np.sin(2*np.pi* self._reanalysis_por_avg[self._run.reanalysis_product + '_wd']/360)
                 wd_cos = np.cos(2*np.pi* self._reanalysis_por_avg[self._run.reanalysis_product + '_wd']/360)
                 reg_inputs_por += [wd_sin]
@@ -852,7 +846,7 @@ class MonteCarloAEP(object):
         sim_results = pd.DataFrame(index=np.arange(num_sim), data={'aep_GWh': aep_GWh,                                                                                                        
                                                                    'avail_pct': avail_pct,                                                                                                      
                                                                    'curt_pct': curt_pct,                                                                                                    
-                                                                   'lt_por_ratio': lt_por_ratio})      
+                                                                  'lt_por_ratio': lt_por_ratio})      
         return sim_results
 
     @logged_method_call
@@ -864,7 +858,7 @@ class MonteCarloAEP(object):
 
         Args:
            n(:obj:`integer`): The number of years for the windiness correction
-           r(:obj:`string`): The reanalysis product used for Monte Carlo sample 'n'
+           r(:obj:`string`): The reanalysis product used for Monte Carlo sample False
 
         Returns:
            :obj:`pandas.DataFrame`: the windiness-corrected or 'long-term' annualized monthly/daily wind speeds
@@ -887,14 +881,14 @@ class MonteCarloAEP(object):
         long_term_reg_inputs = mc_ws_aggregate.astype(float).reset_index(drop=True)
         
         # If temperature is an input, sample long-term temperature values
-        if self.reg_temperature == 'Y':
+        if self.reg_temperature == True:
             temp_df = self._reanalysis_aggregate[r + '_temp'].to_frame().dropna() # Drop NA values from monthly/daily reanalysis data series
             temp_data = temp_df.tail(n * self._calendar_samples) # Get last 'x' years of data from reanalysis product
             temp_aggregate = self.groupby_time_res(temp_data)[r + '_temp'] # Get long-term annualized monthly/daily temperatures
             long_term_reg_inputs = pd.concat([mc_ws_aggregate.astype(float).reset_index(drop=True), temp_aggregate.astype(float).reset_index(drop=True)], axis=1)
         
         # If wind direction is an input, sample long-term wind direction values
-        if self.reg_winddirection == 'Y':
+        if self.reg_winddirection == True:
             u_df = self._reanalysis_aggregate[r + '_u'].to_frame().dropna() # Drop NA values from monthly/daily reanalysis data series
             v_df = self._reanalysis_aggregate[r + '_v'].to_frame().dropna() # Drop NA values from monthly/daily reanalysis data series
             u_data = u_df.tail(n * self._calendar_samples) # Get last 'x' years of data from reanalysis product
