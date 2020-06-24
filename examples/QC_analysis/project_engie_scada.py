@@ -67,14 +67,14 @@ class Project_Engie(PlantData):
         #Handle extrema values
         self._scada.df = self._scada.df[(self._scada.df["wmet_wdspd_avg"]>=0.0) & (self._scada.df["wmet_wdspd_avg"]<=40.0)]
         self._scada.df = self._scada.df[(self._scada.df["wtur_W_avg"]>=-1000.0) & (self._scada.df["wtur_W_avg"]<=2200.0)]
-        self._scada.df = self._scada.df[(self._scada.df["wmet_wDir_avg"]>=0.0) & (self._scada.df["wmet_wDir_avg"]<=360.0)]            
+        self._scada.df = self._scada.df[(self._scada.df["wmet_wdir_avg"]>=0.0) & (self._scada.df["wmet_wdir_avg"]<=360.0)]            
 
         logger.info("Flagging unresponsive sensors")
         #Flag repeated values from frozen sensors
         temp_flag = filters.unresponsive_flag(self._scada.df["wmet_wdspd_avg"], 3)
         self._scada.df.loc[temp_flag, 'wmet_wdspd_avg'] = np.nan
-        temp_flag = filters.unresponsive_flag(self._scada.df["wmet_wDir_avg"], 3)
-        self._scada.df.loc[temp_flag, 'wmet_wDir_avg'] = np.nan
+        temp_flag = filters.unresponsive_flag(self._scada.df["wmet_wdir_avg"], 3)
+        self._scada.df.loc[temp_flag, 'wmet_wdir_avg'] = np.nan
         
         # Put power in watts; note although the field name suggests 'watts', it was really reporting in kw
         self._scada.df["Power_W"] = self._scada.df["wtur_W_avg"] * 1000
@@ -89,7 +89,7 @@ class Project_Engie(PlantData):
                      "ID"       : "id",
                      "Power_W"              : "wtur_W_avg",
                      "wmet_wdspd_avg"    : "wmet_wdspd_avg", 
-                     "wmet_wDir_avg"    : "wmet_wDir_avg"
+                     "wmet_wdir_avg"    : "wmet_wdir_avg"
                      }
 
         self._scada.df.rename(scada_map, axis="columns", inplace=True)
