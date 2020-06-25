@@ -33,9 +33,7 @@ class MonteCarloAEP(object):
     A serial (Pandas-driven) implementation of the benchmark PRUF operational
     analysis implementation. This module collects standard processing and
     analysis methods for estimating plant level operational AEP and uncertainty.
-
     The preprocessing should run in this order:
-
         1. Process revenue meter energy - creates monthly/daily data frame, gets revenue meter on monthly/daily basis, and adds
            data flag
         2. Process loss estimates - add monthly/daily curtailment and availabilty losses to monthly/daily data frame
@@ -43,7 +41,6 @@ class MonteCarloAEP(object):
             from several reanalysis products to the monthly data frame
         4. Set up Monte Carlo - create the necessary Monte Carlo inputs to the OA process
         5. Run AEP Monte Carlo - run the OA process iteratively to get distribution of AEP results
-
     The end result is a distribution of AEP results which we use to assess expected AEP and associated uncertainty
     """
 
@@ -54,21 +51,19 @@ class MonteCarloAEP(object):
                  reg_temperature = False, reg_winddirection = False):
         """
         Initialize APE_MC analysis with data and parameters.
-
         Args:
          plant(:obj:`PlantData object`): PlantData object from which PlantAnalysis should draw data.
          reanal_products(obj:`list`) : List of reanalysis products to use for Monte Carlo sampling. Defaults to ["merra2", "ncep2", "erai"].
          uncertainty_meter(:obj:`float`): uncertainty on revenue meter data
          uncertainty_losses(:obj:`float`): uncertainty on long-term losses
-         uncertainty_windiness(:obj:`float`): number of years to use for the windiness correction
-         uncertainty_loss_max(:obj:`float`): threshold for the combined availabilty and curtailment monthly loss threshold
+         uncertainty_windiness(:obj:`tuple`): number of years to use for the windiness correction
+         uncertainty_loss_max(:obj:`tuple`): threshold for the combined availabilty and curtailment monthly loss threshold
          uncertainty_nan_energy(:obj:`float`): threshold to flag days/months based on NaNs
          time_resolution(:obj:`string`): whether to perform the AEP calculation at monthly ('M') or daily ('D') time resolution
          reg_model(:obj:`string`): which model to use for the regression ('lin' for linear, 'gam', 'gbm', 'etr'). At monthly time resolution only linear regression is allowed because of the reduced number of data points.
          ml_setup_kwargs(:obj:`kwargs`): keyword arguments to MachineLearningSetup class
          reg_temperature(:obj:`bool`): whether to include temperature (True) or not (False) as regression input
          reg_winddirection(:obj:`bool`): whether to include wind direction (True) or not (False) as regression input
-
         """
         logger.info("Initializing MonteCarloAEP Analysis Object")
 
@@ -91,7 +86,7 @@ class MonteCarloAEP(object):
             raise ValueError("time_res has to either be M (monthly, default) or D (daily)")
         self.time_resolution = time_resolution
         self._resample_freq = {"M": 'MS', "D": 'D'}[self.time_resolution]
-        self._hours_in_res = {"M": 366*24, "D": 1*24}[self.time_resolution]
+        self._hours_in_res = {"M": 30*24, "D": 1*24}[self.time_resolution]
         self._calendar_samples = {"M": 12, "D": 365}[self.time_resolution]
         self.num_days_lt = (31, 28.25, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
 
@@ -130,7 +125,6 @@ class MonteCarloAEP(object):
     def run(self, num_sim, reanal_subset=None):
         """
         Perform pre-processing of data into an internal representation for which the analysis can run more quickly.
-
         Args:
             reanal_subset(:obj:`list`): list of str data indicating which reanalysis products to use in OA
             num_sim(:obj:`int`): number of simulations to perform        
@@ -164,7 +158,6 @@ class MonteCarloAEP(object):
         """
         Make a plot of annual average wind speeds from reanalysis data to show general trends for each
         Highlight the period of record for plant data
-
         :return: matplotlib.pyplot object
         """
         import matplotlib.pyplot as plt
@@ -209,10 +202,8 @@ class MonteCarloAEP(object):
     def plot_reanalysis_gross_energy_data(self, outlier_thres):
         """
         Make a plot of normalized 30-day gross energy vs wind speed for each reanalysis product, include R2 measure
-
         :param outlier_thres (float): outlier threshold (typical range of 1 to 4) which adjusts outlier sensitivity
         detection
-
         :return: matplotlib.pyplot object
         """
         import matplotlib.pyplot as plt
@@ -253,7 +244,6 @@ class MonteCarloAEP(object):
     def plot_result_aep_distributions(self):
         """
         Plot a distribution of AEP values from the Monte-Carlo OA method
-
         :return: matplotlib.pyplot object
         """
         import matplotlib.pyplot as plt
@@ -287,7 +277,6 @@ class MonteCarloAEP(object):
     def plot_aep_boxplot(self, param, lab):
         """                                                                                                                                                                                        
         Plot box plots of AEP results sliced by a specified Monte Carlo parameter                                                                                                                  
-
         Args:                                                                                                                                                                                      
            param(:obj:`list'): The Monte Carlo parameter on which to split the AEP results
            lab(:obj:'str'): The name to use for the parameter when producing the figure
@@ -311,7 +300,6 @@ class MonteCarloAEP(object):
     def plot_aggregate_plant_data_timeseries(self):
         """
         Plot timeseries of monthly/daily gross energy, availability and curtailment
-
         :return: matplotlib.pyplot object
         """
         import matplotlib.pyplot as plt
@@ -342,7 +330,6 @@ class MonteCarloAEP(object):
     def groupby_time_res(self, df):
         """
         Group pandas dataframe based on the time resolution chosen in the calculation.
-
         Args:
             df(:obj:`dataframe`): dataframe that needs to be grouped based on time resolution used
          
@@ -362,7 +349,6 @@ class MonteCarloAEP(object):
         Perform pre-processing of the plant data to produce a monthly/daily data frame to be used in AEP analysis.
         Args:
             (None)
-
         Returns:
             (None)
         """
@@ -392,13 +378,10 @@ class MonteCarloAEP(object):
             1. Populate monthly/daily data frame with energy data summed from 10-min QC'd data
             2. For each monthly/daily value, find percentage of NaN data used in creating it and flag if percentage is
             greater than 0
-
         Args:
             (None)
-
         Returns:
             (None)
-
         """
         df = getattr(self._plant, 'meter').df  # Get the meter data frame
 
@@ -429,13 +412,10 @@ class MonteCarloAEP(object):
     def process_loss_estimates(self):
         """
         Append availability and curtailment losses to monthly data frame
-
         Args:
             (None)
-
         Returns:
             (None)
-
         """
         df = getattr(self._plant, 'curtail').df
 
@@ -486,10 +466,8 @@ class MonteCarloAEP(object):
             - calculate monthly/daily average wind direction
             - calculate monthly/daily average temperature
             - append monthly/daily averages to monthly/daily energy data frame
-
         Args:
             (None)
-
         Returns:
             (None)
         """
@@ -522,10 +500,8 @@ class MonteCarloAEP(object):
     def trim_monthly_df(self):
         """
         Remove first and/or last month of data if the raw data had an incomplete number of days
-
         Args:
             (None)
-
         Returns:
             (None)
         """
@@ -538,10 +514,8 @@ class MonteCarloAEP(object):
         """
         This function calculates long-term availability and curtailment losses based on the reported data,
         filtering for those data that are deemed representative of average plant performance
-
         Args:
             (None)
-
         Returns:
             (tuple):
                 :obj:`float`: long-term annual availability loss expressed as fraction
@@ -579,7 +553,6 @@ class MonteCarloAEP(object):
         """
         Create and populate the data frame defining the simulation parameters.
         This data frame is stored as self._inputs
-
         Args:
             (None)
             
@@ -605,14 +578,11 @@ class MonteCarloAEP(object):
         """
         This function filters outliers based on a combination of range filter, unresponsive sensor filter, 
         and window filter.
-
         We use a memoized funciton to store the regression data in a dictionary for each combination as it
         comes up in the Monte Carlo simulation. This saves significant computational time in not having to run
         robust linear regression for each Monte Carlo iteration
-
         Args:
             n(:obj:`float`): Monte Carlo iteration
-
         Returns:
             :obj:`pandas.DataFrame`: Filtered monthly/daily data ready for linear regression
         """
@@ -685,14 +655,11 @@ class MonteCarloAEP(object):
             5. Filter results to remove months/days with NaN data and with combined losses that exceed the Monte Carlo
             sampled max threhold
             6. Return the wind speed and normalized gross energy to be used in the regression relationship
-
         Args:
             n(:obj:`int`): The Monte Carlo iteration number
-
         Returns:
             :obj:`pandas.Series`: Monte-Carlo sampled wind speeds and other variables (temperature, wind direction) if used in the regression
             :obj:`pandas.Series`: Monte-Carlo sampled normalized gross energy
-
         """
         # Get data to use in regression based on filtering result
         reg_data = self.filter_outliers(n)
@@ -733,10 +700,8 @@ class MonteCarloAEP(object):
         """
         Run robust linear regression between Monte-Carlo generated monthly/daily gross energy, 
         wind speed, temperature and wind direction (if used)
-
         Args:
             n(:obj:`int`): The Monte Carlo iteration number
-
         Returns:
             :obj:`?`: trained regression model
         """
@@ -764,7 +729,7 @@ class MonteCarloAEP(object):
             ml = MachineLearningSetup(self.reg_model, **self.ml_setup_kwargs)
             ml.hyper_optimize(np.array(reg_data[:,0:-1]), reg_data[:,-1], n_iter_search = 5, report = False, cv = KFold(n_splits = 2))
             predicted_y = ml.random_search.predict(np.array(reg_data[:,0:-1]))
-                 
+            
             self._r2_score[n] = r2_score(reg_data[:,-1], predicted_y)
             self._mse_score[n] = mean_squared_error(reg_data[:,-1], predicted_y)
             return ml.random_search
@@ -773,7 +738,6 @@ class MonteCarloAEP(object):
     def run_AEP_monte_carlo(self):
         """
         Loop through OA process a number of times and return array of AEP results each time
-
         Returns:
             :obj:`numpy.ndarray` Array of AEP, long-term avail, long-term curtailment calculations
         """
@@ -817,7 +781,7 @@ class MonteCarloAEP(object):
             if num_vars == 1:
                 inputs = inputs.reshape(-1,1)
             gross_lt = fitted_model.predict(inputs)
-            
+
             # Get POR gross energy by applying regression result to POR regression inputs                                                                        
             reg_inputs_por = [self._reanalysis_por_avg[self._run.reanalysis_product]]
             if self.reg_temperature == True:
@@ -855,14 +819,11 @@ class MonteCarloAEP(object):
         This function returns the windiness-corrected monthly wind speeds based on the Monte-Carlo generated sample of:
             1. The reanalysis product
             2. The number of years to use in the long-term correction
-
         Args:
            n(:obj:`integer`): The number of years for the windiness correction
-           r(:obj:`string`): The reanalysis product used for Monte Carlo sample False
-
+           r(:obj:`string`): The reanalysis product used for the current Monte Carlo iteration
         Returns:
            :obj:`pandas.DataFrame`: the windiness-corrected or 'long-term' annualized monthly/daily wind speeds
-
         """
         # Sample long-term wind speed values
         ws_df = self._reanalysis_aggregate[r].to_frame().dropna()  # Drop NA values from monthly/daily reanalysis data series
@@ -909,10 +870,8 @@ class MonteCarloAEP(object):
         """
         This function calculates long-term availability and curtailment losses based on the Monte Carlo sampled
         historical availability and curtailment data
-
         Args:
             n(:obj:`integer`): The Monte Carlo iteration number
-
         Returns:
             :obj:`float`: annualized monthly/daily availability loss expressed as fraction
             :obj:`float`: annualized monthly/daily curtailment loss expressed as fraction
