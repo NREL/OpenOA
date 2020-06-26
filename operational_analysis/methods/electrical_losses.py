@@ -37,29 +37,20 @@ class ElectricalLosses(object):
     """ 
 
     @logged_method_call
-    def __init__(self, plant, UQ = False, num_sim = 20000, uncertainty_meter=0.005, uncertainty_scada=0.005,
-                 uncertainty_correction_thresh=(0.9,0.995)):
+    def __init__(self, plant, UQ = False, num_sim = 20000):
         """
         Initialize electrical losses class with input parameters
         Args:
          plant(:obj:`PlantData object`): PlantData object from which EYAGapAnalysis should draw data.
          num_sim:(:obj:`int`): number of Monte Carlo simulations
-         UQ:(:obj:`bool`): choice whether to perform ('Y') or not ('N') uncertainty quantification
-         uncertainty_meter(:obj:`float`): uncertainty imposed to revenue meter data (for UQ = True case)
-         uncertainty_scada(:obj:`float`): uncertainty imposed to scada data (for UQ = True case)
-         uncertainty_correction_threshold(:obj:`tuple`): The interval of data availability thresholds (fractions) 
-                                                         under which months should be eliminated (for UQ = True case)                                       
+         UQ:(:obj:`bool`): choice whether to perform (True) or not (False) uncertainty quantification                                      
         """
         logger.info("Initializing Electrical Losses Object")
         
         # Check that selected UQ is allowed
         if UQ == True:
             logger.info("Note: uncertainty quantification will be performed in the calculation")
-            self.num_sim = num_sim
-            # Define relevant uncertainties, to be applied in Monte Carlo sampling
-            self.uncertainty_meter = uncertainty_meter
-            self.uncertainty_scada = uncertainty_scada
-            self.uncertainty_correction_thresh = np.array(uncertainty_correction_thresh, dtype=np.float64)  
+            self.num_sim = num_sim 
         elif UQ == False:
             logger.info("Note: uncertainty quantification will NOT be performed in the calculation")
             self.num_sim = 1
@@ -73,16 +64,29 @@ class ElectricalLosses(object):
         self._hours_per_day= 24 # Hours per day converter
     
     @logged_method_call
-    def run(self):
+    def run(self, uncertainty_meter=0.005, uncertainty_scada=0.005,
+                 uncertainty_correction_thresh=0.95):
         """
         Run the electrical loss calculation in order by calling this function.
         
         Args:
-            (None)
-            
+         uncertainty_meter(:obj:`float`): uncertainty imposed to revenue meter data (for UQ = True case)
+         uncertainty_scada(:obj:`float`): uncertainty imposed to scada data (for UQ = True case)
+         uncertainty_correction_thresh(:obj:`tuple`): Data availability thresholds (fractions) 
+                                                         under which months should be eliminated. 
+                                                         This should be a tuple in the UQ = True case, 
+                                                         a single value when UQ = False.
         Returns:
             (None)
         """
+        # Define uncertainties and check types
+        expected_type = float if self.UQ == False else tuple
+        assert type(uncertainty_correction_thresh) == expected_type,  f"uncertainty_correction_thresh must be {expected_type} for UQ={self.UQ}"
+
+        self.uncertainty_correction_thresh = np.array(uncertainty_correction_thresh, dtype=np.float64)  
+        if self.UQ == True:
+            self.uncertainty_meter = uncertainty_meter
+            self.uncertainty_scada = uncertainty_scada
         
         # Process SCADA data to daily sums
         self.process_scada()
@@ -124,7 +128,7 @@ class ElectricalLosses(object):
             inputs = {
                 "meter_data_fraction": 1,
                 "scada_data_fraction": 1,
-                "correction_threshold": 0.90,
+                "correction_threshold": self.uncertainty_correction_thresh,
             }
             self._inputs = pd.DataFrame(inputs,index=[0])
 
