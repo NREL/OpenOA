@@ -3,8 +3,6 @@ import numpy as np
 import pandas as pd
 from numpy import testing as nptest
 
-import sys
-sys.path.append('/Users/nbodini/Documents/GitHub/OpenOA/')
 from operational_analysis.methods import plant_analysis
 from examples.project_ENGIE import Project_Engie
 
@@ -14,7 +12,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         np.random.seed(42)
 
         # Set up data to use for testing (ENGIE example plant)
-        self.project = Project_Engie('../examples/data/la_haute_borne')
+        self.project = Project_Engie('./examples/data/la_haute_borne')
         self.project.prepare()
 
     # Test inputs to the regression model, at monthly time resolution
