@@ -490,8 +490,10 @@ class MonteCarloAEP(object):
                                                                          rean_df['rho_kgm-3'])  # Density correct wind speeds
             self._reanalysis_aggregate[key] = rean_df.resample(self._resample_freq)['ws_dens_corr'].mean()  # .to_frame() # Get average wind speed by year-month
             
-            namescol = [key + '_' + var for var in self._rean_vars]
-            self._reanalysis_aggregate[namescol] = rean_df[self._rean_vars].resample(self._resample_freq).mean()
+            
+            if self.reg_winddirection | self.reg_temperature:
+                namescol = [key + '_' + var for var in self._rean_vars]
+                self._reanalysis_aggregate[namescol] = rean_df[self._rean_vars].resample(self._resample_freq).mean()
 
             if self.reg_winddirection: # if wind direction is considered as regression variable
                 self._reanalysis_aggregate[key + '_wd'] = np.pi-(np.arctan2(-self._reanalysis_aggregate[key + '_u_ms'],self._reanalysis_aggregate[key + '_v_ms'])) # Calculate wind direction

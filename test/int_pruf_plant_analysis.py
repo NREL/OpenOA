@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 from numpy import testing as nptest
 
+import sys
+sys.path.append('/Users/nbodini/Documents/GitHub/OpenOA/')
 from operational_analysis.methods import plant_analysis
 from examples.project_ENGIE import Project_Engie
 
@@ -12,7 +14,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         np.random.seed(42)
 
         # Set up data to use for testing (ENGIE example plant)
-        self.project = Project_Engie('./examples/data/la_haute_borne')
+        self.project = Project_Engie('../examples/data/la_haute_borne')
         self.project.prepare()
 
     # Test inputs to the regression model, at monthly time resolution
@@ -157,8 +159,8 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
 
         date_ind = pd.to_datetime(['2014-06-01', '2014-12-01', '2015-10-01'])
 
-        nptest.assert_array_almost_equal(expected_merra2_wd, df.loc[date_ind, 'merra2_wd'], decimal = 1)
-        nptest.assert_array_almost_equal(expected_era5_wd, df.loc[date_ind, 'era5_wd'], decimal = 1)
+        nptest.assert_array_almost_equal(expected_merra2_wd*2*np.pi/360, df.loc[date_ind, 'merra2_wd'], decimal = 1)
+        nptest.assert_array_almost_equal(expected_era5_wd*2*np.pi/360, df.loc[date_ind, 'era5_wd'], decimal = 1)
         
         # Check a few temperature values
         expected_merra2_temp = pd.Series([289.9, 275.3, 281.7])
@@ -166,8 +168,8 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
 
         date_ind = pd.to_datetime(['2014-06-01', '2014-12-01', '2015-10-01'])
 
-        nptest.assert_array_almost_equal(expected_merra2_temp, df.loc[date_ind, 'merra2_temp'],decimal = 1)
-        nptest.assert_array_almost_equal(expected_era5_temp, df.loc[date_ind, 'era5_temp'], decimal = 1)       
+        nptest.assert_array_almost_equal(expected_merra2_temp, df.loc[date_ind, 'merra2_temperature_K'],decimal = 1)
+        nptest.assert_array_almost_equal(expected_era5_temp, df.loc[date_ind, 'era5_temperature_K'], decimal = 1)       
 
     def check_process_revenue_meter_energy_daily(self, df):
         # Energy Nan flags are all zero
@@ -213,8 +215,8 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
 
         date_ind = pd.to_datetime(['2014-01-02', '2014-10-12', '2015-12-28'])
 
-        nptest.assert_array_almost_equal(expected_merra2_wd, df.loc[date_ind, 'merra2_wd'], decimal = 1)
-        nptest.assert_array_almost_equal(expected_era5_wd, df.loc[date_ind, 'era5_wd'], decimal = 1)
+        nptest.assert_array_almost_equal(expected_merra2_wd*2*np.pi/360, df.loc[date_ind, 'merra2_wd'], decimal = 1)
+        nptest.assert_array_almost_equal(expected_era5_wd*2*np.pi/360, df.loc[date_ind, 'era5_wd'], decimal = 1)
         
         # Check a few temperature values
         expected_merra2_temp = pd.Series([279.7, 285.7, 278.2])
@@ -222,8 +224,8 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
 
         date_ind = pd.to_datetime(['2014-01-02', '2014-10-12', '2015-12-28'])
 
-        nptest.assert_array_almost_equal(expected_merra2_temp, df.loc[date_ind, 'merra2_temp'], decimal = 1)
-        nptest.assert_array_almost_equal(expected_era5_temp, df.loc[date_ind, 'era5_temp'], decimal = 1)       
+        nptest.assert_array_almost_equal(expected_merra2_temp, df.loc[date_ind, 'merra2_temperature_K'], decimal = 1)
+        nptest.assert_array_almost_equal(expected_era5_temp, df.loc[date_ind, 'era5_temperature_K'], decimal = 1)       
  
     def check_simulation_results_lin_monthly(self, s):
         # Make sure AEP results are consistent to one decimal place
