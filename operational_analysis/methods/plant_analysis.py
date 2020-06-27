@@ -97,6 +97,13 @@ class MonteCarloAEP(object):
             raise ValueError("reg_winddirection has to either be True (if wind direction is considered in the regression), or False (if wind direction is omitted")
         self.reg_winddirection = reg_winddirection
         self.reg_temperature = reg_temperature
+
+        # Build list of regression variables
+        self._rean_vars = []
+        if self.reg_temperature:
+            self._rean_vars += ["temperature_K"]
+        if self.reg_winddirection:
+            self._rean_vars += ["u_ms", "v_ms"]
         
         # Check that selected regression model is allowed
         if reg_model not in ['lin', 'gbm','etr','gam']:
@@ -137,7 +144,7 @@ class MonteCarloAEP(object):
             self.reanal_subset = self._reanal_products
         else:
             self.reanal_subset = reanal_subset
-        
+                
         # Write parameters of run to the log file
         logged_self_params = ["uncertainty_meter", "uncertainty_losses", "uncertainty_loss_max", "uncertainty_windiness",
                               "uncertainty_nan_energy", "num_sim", "reanal_subset"]
@@ -482,16 +489,12 @@ class MonteCarloAEP(object):
             rean_df['ws_dens_corr'] = mt.air_density_adjusted_wind_speed(rean_df['windspeed_ms'],
                                                                          rean_df['rho_kgm-3'])  # Density correct wind speeds
             self._reanalysis_aggregate[key] = rean_df.resample(self._resample_freq)['ws_dens_corr'].mean()  # .to_frame() # Get average wind speed by year-month
-
-            if self.reg_temperature == True: # if temperature is considered as regression variable
-                self._reanalysis_aggregate[key + '_temp'] = pd.to_numeric(rean_df['temperature_K']).resample(self._resample_freq).mean()  # .to_frame() # Get average temperature by year-month
             
-            if self.reg_winddirection == True: # if wind direction is considered as regression variable
-                u_avg = pd.to_numeric(rean_df['u_ms']).resample(self._resample_freq).mean()  # .to_frame() # Get average u component by year-month
-                v_avg = pd.to_numeric(rean_df['v_ms']).resample(self._resample_freq).mean()  # .to_frame() # Get average v component by year-month
-                self._reanalysis_aggregate[key + '_u'] = u_avg 
-                self._reanalysis_aggregate[key + '_v'] = v_avg
-                self._reanalysis_aggregate[key + '_wd'] = 180-np.rad2deg(np.arctan2(-u_avg,v_avg)) # Calculate wind direction
+            namescol = [key + '_' + var for var in self._rean_vars]
+            self._reanalysis_aggregate[namescol] = rean_df[self._rean_vars].resample(self._resample_freq).mean()
+
+            if self.reg_winddirection: # if wind direction is considered as regression variable
+                self._reanalysis_aggregate[key + '_wd'] = np.pi-(np.arctan2(-self._reanalysis_aggregate[key + '_u_ms'],self._reanalysis_aggregate[key + '_v_ms'])) # Calculate wind direction
         
         self._aggregate.df = self._aggregate.df.join(
                 self._reanalysis_aggregate)  # Merge monthly reanalysis data to monthly energy data frame
@@ -624,13 +627,13 @@ class MonteCarloAEP(object):
         valid_data = df_sub.loc[df_sub.loc[:, 'flag_final'] == False, [reanal, 
                                                                'energy_gwh', 'availability_gwh',
                                                                'curtailment_gwh']]
-        if self.reg_winddirection == True:
+        if self.reg_winddirection:
             valid_data_to_add = df_sub.loc[df_sub.loc[:, 'flag_final'] == False, [reanal + '_wd',
-                                                               reanal + '_u', reanal + '_v']]
+                                                               reanal + '_u_ms', reanal + '_v_ms']]
             valid_data = pd.concat([valid_data, valid_data_to_add], axis=1)
             
-        if self.reg_temperature == True:
-            valid_data_to_add = df_sub.loc[df_sub.loc[:, 'flag_final'] == False, [reanal + '_temp']]
+        if self.reg_temperature:
+            valid_data_to_add = df_sub.loc[df_sub.loc[:, 'flag_final'] == False, [reanal + '_temperature_K']]
             valid_data = pd.concat([valid_data, valid_data_to_add], axis=1)
             
         if self.time_resolution == 'M':   
@@ -680,16 +683,14 @@ class MonteCarloAEP(object):
         # Set reanalysis product
         reg_inputs = reg_data[self._run.reanalysis_product]  # Copy wind speed data to Monte Carlo data frame
         
-        if self.reg_temperature == True: # if temperature is considered as regression variable
-            mc_temperature = reg_data[self._run.reanalysis_product + "_temp"]  # Copy temperature data to Monte Carlo data frame
+        if self.reg_temperature: # if temperature is considered as regression variable
+            mc_temperature = reg_data[self._run.reanalysis_product + "_temperature_K"]  # Copy temperature data to Monte Carlo data frame
             reg_inputs = pd.concat([reg_inputs,mc_temperature], axis = 1)
             
-        if self.reg_winddirection == True: # if wind direction is considered as regression variable
+        if self.reg_winddirection: # if wind direction is considered as regression variable
             mc_wind_direction = reg_data[self._run.reanalysis_product + "_wd"]  # Copy wind direction data to Monte Carlo data frame
-            mc_wind_direction_sin = np.sin(2*np.pi*mc_wind_direction/360)
-            mc_wind_direction_cos = np.cos(2*np.pi*mc_wind_direction/360)
-            reg_inputs = pd.concat([reg_inputs,mc_wind_direction_sin], axis = 1)
-            reg_inputs = pd.concat([reg_inputs,mc_wind_direction_cos], axis = 1)
+            reg_inputs = pd.concat([reg_inputs,np.sin(mc_wind_direction)], axis = 1)
+            reg_inputs = pd.concat([reg_inputs,np.cos(mc_wind_direction)], axis = 1)
    
         reg_inputs = pd.concat([reg_inputs,mc_gross_norm], axis = 1)
         # Return values needed for regression
@@ -750,9 +751,9 @@ class MonteCarloAEP(object):
         self._mse_score = np.empty(num_sim, dtype=np.float64)
         
         num_vars = 1
-        if self.reg_winddirection == True :
+        if self.reg_winddirection:
             num_vars = num_vars + 2
-        if self.reg_temperature == True:
+        if self.reg_temperature:
             num_vars = num_vars + 1
                 
         if self.reg_model == 'lin':
@@ -784,13 +785,11 @@ class MonteCarloAEP(object):
 
             # Get POR gross energy by applying regression result to POR regression inputs                                                                        
             reg_inputs_por = [self._reanalysis_por_avg[self._run.reanalysis_product]]
-            if self.reg_temperature == True:
-                reg_inputs_por += [self._reanalysis_por_avg[self._run.reanalysis_product + '_temp']]
-            if self.reg_winddirection == True:
-                wd_sin = np.sin(2*np.pi* self._reanalysis_por_avg[self._run.reanalysis_product + '_wd']/360)
-                wd_cos = np.cos(2*np.pi* self._reanalysis_por_avg[self._run.reanalysis_product + '_wd']/360)
-                reg_inputs_por += [wd_sin]
-                reg_inputs_por += [wd_cos]
+            if self.reg_temperature:
+                reg_inputs_por += [self._reanalysis_por_avg[self._run.reanalysis_product + '_temperature_K']]
+            if self.reg_winddirection:
+                reg_inputs_por += [np.sin(self._reanalysis_por_avg[self._run.reanalysis_product + '_wd'])]
+                reg_inputs_por += [np.cos(self._reanalysis_por_avg[self._run.reanalysis_product + '_wd'])]
             gross_por = fitted_model.predict(np.array(pd.concat(reg_inputs_por, axis = 1)))
 
             if self.time_resolution == 'M': # Undo normalization to 30-day months
@@ -841,26 +840,15 @@ class MonteCarloAEP(object):
         mc_ws_aggregate = ws_aggregate * iav_df['sample']  
         long_term_reg_inputs = mc_ws_aggregate.astype(float).reset_index(drop=True)
         
-        # If temperature is an input, sample long-term temperature values
-        if self.reg_temperature == True:
-            temp_df = self._reanalysis_aggregate[r + '_temp'].to_frame().dropna() # Drop NA values from monthly/daily reanalysis data series
-            temp_data = temp_df.tail(n * self._calendar_samples) # Get last 'x' years of data from reanalysis product
-            temp_aggregate = self.groupby_time_res(temp_data)[r + '_temp'] # Get long-term annualized monthly/daily temperatures
-            long_term_reg_inputs = pd.concat([mc_ws_aggregate.astype(float).reset_index(drop=True), temp_aggregate.astype(float).reset_index(drop=True)], axis=1)
-        
-        # If wind direction is an input, sample long-term wind direction values
-        if self.reg_winddirection == True:
-            u_df = self._reanalysis_aggregate[r + '_u'].to_frame().dropna() # Drop NA values from monthly/daily reanalysis data series
-            v_df = self._reanalysis_aggregate[r + '_v'].to_frame().dropna() # Drop NA values from monthly/daily reanalysis data series
-            u_data = u_df.tail(n * self._calendar_samples) # Get last 'x' years of data from reanalysis product
-            v_data = v_df.tail(n * self._calendar_samples) # Get last 'x' years of data from reanalysis product
-            u_aggregate = self.groupby_time_res(u_data)[r + '_u'] # Get long-term annualized monthly/daily wind components
-            v_aggregate = self.groupby_time_res(v_data)[r + '_v'] # Get long-term annualized monthly/daily wind components
-            wd_aggregate = 180-np.rad2deg(np.arctan2(-u_aggregate,v_aggregate)) # Calculate wind direction
-            wd_sin_aggregate = np.sin(2*np.pi*wd_aggregate/360) # Calculate sine of wind direction
-            wd_cos_aggregate = np.cos(2*np.pi*wd_aggregate/360) # Calculate cosine of wind direction
-            long_term_reg_inputs = pd.concat([long_term_reg_inputs.astype(float).reset_index(drop=True), wd_sin_aggregate.astype(float).reset_index(drop=True)], axis=1)
-            long_term_reg_inputs = pd.concat([long_term_reg_inputs.astype(float).reset_index(drop=True), wd_cos_aggregate.astype(float).reset_index(drop=True)], axis=1)
+        # Temperature and wind direction
+        namescol = [r + '_' + var for var in self._rean_vars]
+        long_term_temp = self._reanalysis_aggregate[namescol].dropna().tail(n * self._calendar_samples).apply(self.groupby_time_res)
+        if self.reg_temperature:
+            long_term_reg_inputs = pd.concat([long_term_reg_inputs.astype(float).reset_index(drop=True), long_term_temp[r + '_temperature_K'].astype(float).reset_index(drop=True)], axis=1)        
+        if self.reg_winddirection:
+            wd_aggregate = np.pi-np.arctan2(-long_term_temp[r + '_u_ms'],long_term_temp[r + '_v_ms']) # Calculate wind direction
+            long_term_reg_inputs = pd.concat([long_term_reg_inputs.astype(float).reset_index(drop=True), np.sin(wd_aggregate).astype(float).reset_index(drop=True)], axis=1)
+            long_term_reg_inputs = pd.concat([long_term_reg_inputs.astype(float).reset_index(drop=True), np.cos(wd_aggregate).astype(float).reset_index(drop=True)], axis=1)
         
         # Return result            
         return long_term_reg_inputs
