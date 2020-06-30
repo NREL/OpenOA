@@ -197,6 +197,8 @@ class Project_Engie(PlantData):
 
         self._reanalysis._product['merra2'].rename_columns({"time":"datetime",
                                     "windspeed_ms": "ws_50m",
+                                    "u_ms": "u_50",
+                                    "v_ms": "v_50",
                                     "temperature_K": "temp_2m",
                                     "rho_kgm-3": "dens_50m"})
         self._reanalysis._product['merra2'].normalize_time_to_datetime("%Y-%m-%d %H:%M:%S")
@@ -216,6 +218,8 @@ class Project_Engie(PlantData):
 
         self._reanalysis._product['era5'].rename_columns({"time":"datetime",
                                     "windspeed_ms": "ws_100m",
+                                    "u_ms": "u_100",
+                                    "v_ms": "v_100",
                                     "temperature_K": "t_2m",
                                     "rho_kgm-3": "dens_100m"})
         self._reanalysis._product['era5'].normalize_time_to_datetime("%Y-%m-%d %H:%M:%S")
