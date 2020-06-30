@@ -830,27 +830,29 @@ class MonteCarloAEP(object):
         ws_df = self._reanalysis_aggregate[r].to_frame().dropna()  # Drop NA values from monthly/daily reanalysis data series
         ws_data = ws_df.tail(n * self._calendar_samples)  # Get last 'x' years of data from reanalysis product
         ws_aggregate = self.groupby_time_res(ws_data)[r] # Get long-term annualized monthly/daily wind speeds
-        ws_aggregate.reset_index(drop=True, inplace=True)
+        ws_aggregate.reset_index(drop=True, inplace=True) # TODO: This rectifies a 0-indexing issue. Needs refactoring.
         # Wind speed IAV calculation
         ws_aggregate_sd = ws_data.groupby(ws_data.index.month)[r].std() # Get long-term annualized stdev of daily wind speeds            
         if self.time_resolution == 'D':
             ws_aggregate_sd = np.repeat(ws_aggregate_sd, np.ceil(self.num_days_lt).astype(int))
-        ws_aggregate_sd.reset_index(drop=True,inplace=True)
-        iav_df = ws_aggregate_sd/ws_aggregate
-        iav_df = iav_df.to_frame()
-        iav_df['sample'] = iav_df.apply(lambda row: np.random.normal(1,row[r],1), axis=1)
-        mc_ws_aggregate = ws_aggregate * iav_df['sample']  
-        long_term_reg_inputs = mc_ws_aggregate.astype(float).reset_index(drop=True)
+        ws_aggregate_sd.reset_index(drop=True,inplace=True) # TODO: This rectifies a 0-indexing issue. Needs refactoring.
+        iav = np.random.normal(1, ws_aggregate_sd/ws_aggregate)
+        mc_ws_aggregate = ws_aggregate * iav
+
+        long_term_reg_inputs = mc_ws_aggregate
         
+        #import pdb
+        #pdb.set_trace()
+
         # Temperature and wind direction
         namescol = [r + '_' + var for var in self._rean_vars]
-        long_term_temp = self._reanalysis_aggregate[namescol].dropna().tail(n * self._calendar_samples).apply(self.groupby_time_res)
+        # TODO: The result of this call has a multi-index, which is blown away with "reset_index" to match the index of mc_ws_aggregate. Needs refactoring.
+        long_term_temp = self._reanalysis_aggregate[namescol].dropna().tail(n * self._calendar_samples).apply(self.groupby_time_res).reset_index(drop=True)
         if self.reg_temperature:
-            long_term_reg_inputs = pd.concat([long_term_reg_inputs.astype(float).reset_index(drop=True), long_term_temp[r + '_temperature_K'].astype(float).reset_index(drop=True)], axis=1)        
+            long_term_reg_inputs = pd.concat([long_term_reg_inputs, long_term_temp[r + '_temperature_K']], axis=1)
         if self.reg_winddirection:
             wd_aggregate = np.pi-np.arctan2(-long_term_temp[r + '_u_ms'],long_term_temp[r + '_v_ms']) # Calculate wind direction
-            long_term_reg_inputs = pd.concat([long_term_reg_inputs.astype(float).reset_index(drop=True), np.sin(wd_aggregate).astype(float).reset_index(drop=True)], axis=1)
-            long_term_reg_inputs = pd.concat([long_term_reg_inputs.astype(float).reset_index(drop=True), np.cos(wd_aggregate).astype(float).reset_index(drop=True)], axis=1)
+            long_term_reg_inputs = pd.concat([long_term_reg_inputs, np.sin(wd_aggregate), np.cos(wd_aggregate)], axis=1)
         
         # Return result            
         return long_term_reg_inputs
