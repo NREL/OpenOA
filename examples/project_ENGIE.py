@@ -68,12 +68,10 @@ class Project_Engie(PlantData):
         """
         Do all loading and preparation of the data for this plant.
         """
-<<<<<<< HEAD
-=======
+
         # Extract data if necessary
         self.extract_data()
 
->>>>>>> nrel/develop
         # Set time frequencies of data in minutes
         self._meter_freq = '10T'  # Daily meter data
         self._curtail_freq = '10T'  # Daily curtailment data
@@ -142,22 +140,13 @@ class Project_Engie(PlantData):
                     "time"                 : "time",
                     "Wind_turbine_name"    : "id",
                     "Power_W"              : "wtur_W_avg",
-<<<<<<< HEAD
+
                     "Ws_avg"               : "wmet_wdspd_avg",
                     "Wa_avg"               : "wmet_HorWdDir_avg",
                     "Va_avg"               : "wmet_VaneDir_avg",
                     "Ya_avg"               : "wyaw_YwAng_avg",
                     "Ot_avg"               : "wmet_EnvTmp_avg",
                     "Ba_avg"               : "wrot_BlPthAngVal1_avg",
-=======
-                    "Ws_avg"               : "wmet_wdspd_avg", 
-                    "Wa_avg"               : "wmet_wdir_avg",
-                    "Va_avg"               : "wmet_vanedir_avg", 
-                    "Ya_avg"               : "wyaw_ywang_avg",
-                    "Ot_avg"               : "wmet_envtmp_avg",
-                    "Ba_avg"               : "wrot_blpthangval1_avg",
->>>>>>> nrel/develop
-                    "energy_kwh"           : "energy_kwh"
                     }
 
         self._scada.df.rename(scada_map, axis="columns", inplace=True)
