@@ -3,11 +3,8 @@
 ##############################################
 
 """
-
 This script imports the EIA energy data and reanalysis data needed to perform an operational AEP estimate.
-
 Reported net energy data are real but reported availablity and curtailment losses were synthesized
-
 """
 
 import pandas as pd

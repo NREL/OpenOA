@@ -1,3 +1,5 @@
+<img src="https://github.com/NREL/OpenOA/blob/develop/Open%20OA%20Final%20Logos/Color/Open%20OA%20Color%20Transparent%20Background.png?raw=true" alt="OpenOA" width="300"/>
+
 Project Goals
 =============
 OpenOA is an open source software project started at the

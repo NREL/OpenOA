@@ -30,6 +30,9 @@ steps taken to correct the raw data for use in the PRUF OA code.
 - Wind speed, wind direction, temperature, and density
 
 """
+from zipfile import ZipFile
+import os
+
 from operational_analysis.types import PlantData
 
 import numpy as np
@@ -53,10 +56,24 @@ class Project_Engie(PlantData):
 
         super(Project_Engie, self).__init__(path, name, engine, toolkit)
 
+    def extract_data(self):
+        """
+        Extract data from zip files if they don't already exist.
+        """
+        if not os.path.exists(self._path):
+            with ZipFile(self._path+".zip") as zipfile:
+                zipfile.extractall(self._path)
+
     def prepare(self):
         """
         Do all loading and preparation of the data for this plant.
         """
+<<<<<<< HEAD
+=======
+        # Extract data if necessary
+        self.extract_data()
+
+>>>>>>> nrel/develop
         # Set time frequencies of data in minutes
         self._meter_freq = '10T'  # Daily meter data
         self._curtail_freq = '10T'  # Daily curtailment data
@@ -125,12 +142,21 @@ class Project_Engie(PlantData):
                     "time"                 : "time",
                     "Wind_turbine_name"    : "id",
                     "Power_W"              : "wtur_W_avg",
+<<<<<<< HEAD
                     "Ws_avg"               : "wmet_wdspd_avg",
                     "Wa_avg"               : "wmet_HorWdDir_avg",
                     "Va_avg"               : "wmet_VaneDir_avg",
                     "Ya_avg"               : "wyaw_YwAng_avg",
                     "Ot_avg"               : "wmet_EnvTmp_avg",
                     "Ba_avg"               : "wrot_BlPthAngVal1_avg",
+=======
+                    "Ws_avg"               : "wmet_wdspd_avg", 
+                    "Wa_avg"               : "wmet_wdir_avg",
+                    "Va_avg"               : "wmet_vanedir_avg", 
+                    "Ya_avg"               : "wyaw_ywang_avg",
+                    "Ot_avg"               : "wmet_envtmp_avg",
+                    "Ba_avg"               : "wrot_blpthangval1_avg",
+>>>>>>> nrel/develop
                     "energy_kwh"           : "energy_kwh"
                     }
 
@@ -184,6 +210,8 @@ class Project_Engie(PlantData):
 
         self._reanalysis._product['merra2'].rename_columns({"time":"datetime",
                                     "windspeed_ms": "ws_50m",
+                                    "u_ms": "u_50",
+                                    "v_ms": "v_50",
                                     "temperature_K": "temp_2m",
                                     "rho_kgm-3": "dens_50m"})
         self._reanalysis._product['merra2'].normalize_time_to_datetime("%Y-%m-%d %H:%M:%S")
@@ -203,6 +231,8 @@ class Project_Engie(PlantData):
 
         self._reanalysis._product['era5'].rename_columns({"time":"datetime",
                                     "windspeed_ms": "ws_100m",
+                                    "u_ms": "u_100",
+                                    "v_ms": "v_100",
                                     "temperature_K": "t_2m",
                                     "rho_kgm-3": "dens_100m"})
         self._reanalysis._product['era5'].normalize_time_to_datetime("%Y-%m-%d %H:%M:%S")
