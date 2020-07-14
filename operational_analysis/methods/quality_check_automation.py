@@ -20,7 +20,9 @@ class WindToolKitQualityControlDiagnosticSuite(object):
     the user can make informed decisions about how to handle the data."""
 
     @logged_method_call
-    def __init__(self,df, ws_field='wmet_wdspd_avg', power_field= 'wtur_W_avg', time_field= 'datetime', id_field= None, freq = '10T', lat_lon= (0,0), dst_subset = 'American'):
+    def __init__(self,df, ws_field='wmet_wdspd_avg', power_field= 'wtur_W_avg', time_field= 'datetime',
+                 id_field= None, freq = '10T', lat_lon= (0,0), dst_subset = 'American',
+                 check_tz = False):
         """
         Initialize QCAuto object with data and parameters.
 
@@ -33,9 +35,10 @@ class WindToolKitQualityControlDiagnosticSuite(object):
          freq(:obj: 'String'): String representation of the resolution for the time field to df
          lat_lon(:obj: 'tuple'): latitude and longitude of farm represented as a tuple
          dst_subset(:obj: 'String'): Set of Daylight Savings Time transitions to use (currently American or France)
+         check_tz(:obj: 'boolean'): Boolean on whether to use WIND Toolkit data to assess timezone of data
         """
         logger.info("Initializing QC_Automation Object")
-        
+
         self._df = df
         self._ws = ws_field
         self._w = power_field
@@ -44,6 +47,7 @@ class WindToolKitQualityControlDiagnosticSuite(object):
         self._freq = freq
         self._lat_lon = lat_lon
         self._dst_subset = dst_subset
+        self._check_tz = check_tz
 
         if self._id==None:
             self._id = 'ID'
@@ -53,10 +57,10 @@ class WindToolKitQualityControlDiagnosticSuite(object):
     def run(self):
         """
         Run the QC analysis functions in order by calling this function.
-        
+
         Args:
             (None)
-            
+
         Returns:
             (None)
         """
@@ -67,14 +71,17 @@ class WindToolKitQualityControlDiagnosticSuite(object):
         self.gap_time_identification()
         logger.info('Grabbing DST Transition Times')
         self.create_dst_df()
-        logger.info("Evaluating timezone deviation from UTC")
-        self.ws_diurnal_prep()
-        self.corr_df_calc()
+
+        if self._check_tz:
+            logger.info("Evaluating timezone deviation from UTC")
+            self.ws_diurnal_prep()
+            self.corr_df_calc()
+
         logger.info("Isolating Extrema Values")
         self.max_min()
         logger.info("QC Diagnostic Complete")
 
-        
+
     def dup_time_identification(self):
         """
         This function identifies any time duplications in the dataset.
@@ -102,7 +109,7 @@ class WindToolKitQualityControlDiagnosticSuite(object):
     def indicesForCoord(self,f):
 
         """
-        This function finds the nearest x/y indices for a given lat/lon. 
+        This function finds the nearest x/y indices for a given lat/lon.
         Rather than fetching the entire coordinates database, which is 500+ MB, this
         uses the Proj4 library to find a nearby point and then converts to x/y indices.
         This function relies on the Wind Toolkit HSDS API.
@@ -112,9 +119,9 @@ class WindToolKitQualityControlDiagnosticSuite(object):
         """
 
         dset_coords = f['coordinates']
-        projstring = """+proj=lcc +lat_1=30 +lat_2=60 
-                    +lat_0=38.47240422490422 +lon_0=-96.0 
-                    +x_0=0 +y_0=0 +ellps=sphere 
+        projstring = """+proj=lcc +lat_1=30 +lat_2=60
+                    +lat_0=38.47240422490422 +lon_0=-96.0
+                    +x_0=0 +y_0=0 +ellps=sphere
                     +units=m +no_defs """
         projectLcc = Proj(projstring)
         origin_ll = reversed(dset_coords[0][0])  # Grab origin directly from database
@@ -130,8 +137,8 @@ class WindToolKitQualityControlDiagnosticSuite(object):
     def ws_diurnal_prep(self, start_date = '2007-01-01', end_date = '2013-12-31'):
 
         """
-        This method links into Wind Toolkit data on AWS as a data source, grabs wind speed data, and calculates diurnal hourly averages. 
-        These diurnal hourly averages are returned as a Pandas series. 
+        This method links into Wind Toolkit data on AWS as a data source, grabs wind speed data, and calculates diurnal hourly averages.
+        These diurnal hourly averages are returned as a Pandas series.
 
         Args:
         start_date(:obj:'String'): start date to diurnal analysis (optional)
@@ -158,11 +165,11 @@ class WindToolKitQualityControlDiagnosticSuite(object):
         # Get wind speed at 80m from the specified lat/lon
         ws = f['windspeed_80m']
         t_range = dt.loc[(dt.datetime >= start_date) & (dt.datetime < end_date)].index
-    
+
         # Convert to dataframe
         ws_tseries = ws[min(t_range):max(t_range)+1, project_idx[0], project_idx[1]]
         ws_df=pd.DataFrame(index=dt.loc[t_range,'datetime'],data={'ws':ws_tseries})
-    
+
         # Calculate diurnal profile of wind speed
         ws_diurnal=ws_df.groupby(ws_df.index.hour).mean()
 
@@ -186,7 +193,7 @@ class WindToolKitQualityControlDiagnosticSuite(object):
 
         ws_norm = self._wtk_ws_diurnal/self._wtk_ws_diurnal.mean()
         df_norm = df_diurnal/df_diurnal.mean()
-    
+
         plt.figure(figsize=(8,5))
         plt.plot(ws_norm, label = 'WTK wind speed (UTC)')
         plt.plot(df_norm, label = 'QC power')
@@ -213,10 +220,10 @@ class WindToolKitQualityControlDiagnosticSuite(object):
 
         for i in np.arange(24):
             return_corr[i] = np.corrcoef(self._wtk_ws_diurnal['ws'], np.roll(self._df_diurnal,i))[0,1]
-        
+
         self._hour_shift = pd.DataFrame(index = np.arange(24), data = {'corr_by_hour': return_corr})
 
-    
+
     def create_dst_df(self):
         if self._dst_subset == 'American':
         # American DST Transition Dates (Local Time)
@@ -230,9 +237,9 @@ class WindToolKitQualityControlDiagnosticSuite(object):
             self._dst_dates['year'] = [2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019]
             self._dst_dates['start'] = ['3/30/08 2:00', '3/29/09 2:00', '3/28/10 2:00', '3/27/11 2:00', '3/25/12 2:00', '3/31/13 2:00', '3/30/14 2:00', '3/29/15 2:00', '3/27/16 2:00', '3/26/17 2:00', '3/25/18 2:00' , '3/31/19 2:00']
             self._dst_dates['end'] = ['10/26/08 3:00', '10/25/09 3:00', '10/31/10 3:00', '10/30/11 3:00', '10/28/12 3:00', '10/27/13 3:00', '10/26/14 3:00', '10/25/15 3:00', '10/30/16 3:00', '10/29/17 3:00', '10/28/18 3:00', '10/27/19 3:00']
-    
+
     def daylight_savings_plot(self, hour_window = 3):
-          
+
         """
         Produce a timeseries plot showing daylight savings events for each year using the passed data.
 
@@ -248,23 +255,23 @@ class WindToolKitQualityControlDiagnosticSuite(object):
         df_full = timeseries.gap_fill_data_frame(self._df_dst, self._t, self._freq) # Gap fill so spring ahead is visible
         df_full.set_index(self._t, inplace=True)
         self._df_full = df_full
-    
+
         years = df_full.index.year.unique() # Years in data record
         num_years = len(years)
-    
+
         plt.figure(figsize = (12,20))
 
         for y in np.arange(num_years):
             dst_data = self._dst_dates.loc[self._dst_dates['year'] == years[y]]
-        
+
             # Set spring ahead window to plot
             spring_start = pd.to_datetime(dst_data['start']) - pd.Timedelta(hours = hour_window)
             spring_end = pd.to_datetime(dst_data['start']) + pd.Timedelta(hours = hour_window)
-        
+
             # Set fall back window to plot
             fall_start = pd.to_datetime(dst_data['end']) - pd.Timedelta(hours = hour_window)
             fall_end = pd.to_datetime(dst_data['end']) + pd.Timedelta(hours = hour_window)
-        
+
             # Get data corresponding to each
             data_spring = df_full.loc[(df_full.index > spring_start.values[0]) & (df_full.index < spring_end.values[0])]
             data_fall = df_full.loc[(df_full.index > fall_start.values[0]) & (df_full.index < fall_end.values[0])]
@@ -273,13 +280,17 @@ class WindToolKitQualityControlDiagnosticSuite(object):
             plt.subplot(num_years, 2, 2*y + 1)
             if np.sum(~np.isnan(data_spring[self._w])) > 0:
                 plt.plot(data_spring[self._w])
-            plt.title(years[y])
-        
+            plt.title(str(years[y]) + ', Spring')
+            plt.ylabel('Power')
+            plt.xlabel('Date')
+
             plt.subplot(num_years, 2, 2*y + 2)
             if np.sum(~np.isnan(data_fall[self._w])) > 0:
                 plt.plot(data_fall[self._w])
-            plt.title(years[y])
-    
+            plt.title(str(years[y]) + ', Fall')
+            plt.ylabel('Power')
+            plt.xlabel('Date')
+
         plt.tight_layout()
         plt.show()
 
@@ -314,7 +325,7 @@ class WindToolKitQualityControlDiagnosticSuite(object):
         """
         if x_axis is None:
             x_axis = self._ws
-        
+
         if y_axis is None:
             y_axis = self._w
 
@@ -330,6 +341,8 @@ class WindToolKitQualityControlDiagnosticSuite(object):
             plt.scatter(scada_sub[x_axis], scada_sub[y_axis], s = 5)
             n = n + 1
             plt.title(t)
+            plt.xlabel(x_axis)
+            plt.ylabel(y_axis)
         plt.tight_layout()
         plt.show()
 
@@ -342,17 +355,13 @@ class WindToolKitQualityControlDiagnosticSuite(object):
         Returns:
         (None)
         """
-        plt.figure(figsize=(12,8))
 
-        n = 1
         for c in self._df.columns:
             if (self._df[c].dtype==float) | (self._df[c].dtype==int):
-                plt.subplot(2,2,n)
+                #plt.subplot(2,2,n)
+                plt.figure(figsize=(8,6))
                 plt.hist(self._df[c].dropna(), 40)
-                n = n + 1
+                #n = n + 1
                 plt.title(c)
-            plt.show()
-        
-
-        
-    
+                plt.ylabel('Count')
+                plt.show()
