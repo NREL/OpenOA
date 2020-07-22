@@ -17,7 +17,8 @@ class WindToolKitQualityControlDiagnosticSuite(object):
 
     """This class defines key analytical procedures in a quality check process for turbine data.
     After analyzing the data for missing and duplicate timestamps, timezones, Daylight Savings Time corrections, and extrema values,
-    the user can make informed decisions about how to handle the data."""
+    the user can make informed decisions about how to handle the data.
+    """
 
     @logged_method_call
     def __init__(self,df, ws_field='wmet_wdspd_avg', power_field= 'wtur_W_avg', time_field= 'datetime',
@@ -113,9 +114,12 @@ class WindToolKitQualityControlDiagnosticSuite(object):
         Rather than fetching the entire coordinates database, which is 500+ MB, this
         uses the Proj4 library to find a nearby point and then converts to x/y indices.
         This function relies on the Wind Toolkit HSDS API.
+        
         Args:
-        f (h5 file): file to be read in
-        Returns: x and y coordinates corresponding to a given lat/lon as a tuple
+            f (h5 file): file to be read in
+        
+        Returns:
+            x and y coordinates corresponding to a given lat/lon as a tuple
         """
 
         dset_coords = f['coordinates']
@@ -141,12 +145,12 @@ class WindToolKitQualityControlDiagnosticSuite(object):
         These diurnal hourly averages are returned as a Pandas series.
 
         Args:
-        start_date(:obj:'String'): start date to diurnal analysis (optional)
-        end_date(:obj:'String'): end date to diurnal analysis (optional)
+            start_date(:obj:'String'): start date to diurnal analysis (optional)
+            end_date(:obj:'String'): end date to diurnal analysis (optional)
 
 
         Returns:
-        ws_diurnal (Pandas Series): Series where each index corresponds to a different hour of the day and each value corresponds to the average windspeed
+            ws_diurnal (Pandas Series): Series where each index corresponds to a different hour of the day and each value corresponds to the average windspeed
         """
 
         f = h5pyd.File("/nrel/wtk-us.h5", 'r')
@@ -179,9 +183,12 @@ class WindToolKitQualityControlDiagnosticSuite(object):
 
         """
         This method plots the WTK diurnal plot alongisde the hourly power averages of the df across all turbines
+        
         Args:
-        (None)
-        Returns: (None)
+            (None)
+        
+        Returns:
+            (None)
         """
 
         sum_df = self._df.groupby(self._df[self._t])[self._w].sum().to_frame()
@@ -209,10 +216,10 @@ class WindToolKitQualityControlDiagnosticSuite(object):
         This method creates a correlation series that compares the current power data (with different shift thresholds) to wind speed data from the WTK with hourly resolution.
 
         Args:
-        (None)
+            (None)
 
         Returns:
-        (None)
+            (None)
         """
 
         self._df_diurnal = self._df.groupby(self._df[self._t].dt.hour)[self._w].mean()
@@ -244,10 +251,10 @@ class WindToolKitQualityControlDiagnosticSuite(object):
         Produce a timeseries plot showing daylight savings events for each year using the passed data.
 
         Args:
-        hour_window(:obj: 'int'): number of hours outside of the Daylight Savings Time transitions to view in the plot (optional)
+            hour_window(:obj: 'int'): number of hours outside of the Daylight Savings Time transitions to view in the plot (optional)
 
         Returns:
-        None
+            (None)
         """
 
         self._df_dst =  self._df.loc[self._df[self._id]==self._df[self._id].unique()[0], :]
@@ -317,11 +324,11 @@ class WindToolKitQualityControlDiagnosticSuite(object):
         For scada data, this function produces turbine plots and for meter data, this will return a single plot.
 
         Args:
-        x_axis(:obj:'String'): Independent variable to plot (default is windspeed field)
-        y_axis(:obj:'String'): Dependent variable to plot (default is power field)
+            x_axis(:obj:'String'): Independent variable to plot (default is windspeed field)
+            y_axis(:obj:'String'): Dependent variable to plot (default is power field)
 
         Returns:
-        (None)
+            (None)
         """
         if x_axis is None:
             x_axis = self._ws
@@ -349,11 +356,12 @@ class WindToolKitQualityControlDiagnosticSuite(object):
     def column_histograms(self):
         """
         Produces histogram plot for each numeric column.
+        
         Args:
-        (None)
+            (None)
 
         Returns:
-        (None)
+            (None)
         """
 
         for c in self._df.columns:

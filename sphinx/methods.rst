@@ -8,7 +8,7 @@ the more abstract toolkit modules with specific PlantData classes to create a re
 respect the engine parameter of PlantData objects to support multi-platform, scalable analysis.
 
 Plant Level Analysis
------------------------
+--------------------
 
 .. automodule:: operational_analysis.methods.plant_analysis
     :members:
@@ -16,7 +16,7 @@ Plant Level Analysis
     :show-inheritance:
 
 Turbine Level Analysis
------------------------
+----------------------
 
 .. automodule:: operational_analysis.methods.turbine_long_term_gross_energy
     :members:
@@ -24,7 +24,7 @@ Turbine Level Analysis
     :show-inheritance:
 
 Electrical Losses Analysis
------------------------
+--------------------------
 
 .. automodule:: operational_analysis.methods.electrical_losses
     :members:

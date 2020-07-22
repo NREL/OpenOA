@@ -63,6 +63,7 @@ def plot_array(project):
         project(:obj:`plant object`): project to be plotted
 
     Returns:
+        (None)
     """
     # Plot
     fig = plt.figure()
@@ -114,6 +115,7 @@ def subplot_powerRose_array(project, turbine_ids,
         aspect(:obj:`scalar`): aspect ratio for subplots
 
     Returns:
+        (None)
     """
     if columns is None:
         if len(turbine_ids) > 3:

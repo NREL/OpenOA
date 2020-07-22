@@ -49,8 +49,10 @@ def compute_air_density(temp_col, pres_col, humi_col = None):
     """
     Calculate air density from the ideal gas law based on the definition provided by IEC 61400-12
     given pressure, temperature and relative humidity.
+    
     This function assumes temperature and pressure are reported in standard units of measurement
     (i.e. Kelvin for temperature, Pascal for pressure, humidity has no dimension).
+    
     Humidity values are optional. According to the IEC a humiditiy of 50% (0.5) is set as default value. 
 
     Args:
@@ -144,9 +146,9 @@ def compute_shear(df, windspeed_heights, ref_col='empty'):
     Args:
         df(:obj:`pandas.DataFrame`): dataframe with wind speed columns
         windspeed_heights(:obj:`dict`): keys are strings of columns in <df> containing wind speed data, values are
-        associated sensor heights (m)
+            associated sensor heights (m)
         ref_col(:obj:`str`): data column name for the data to use as the normalization value; only pertinent if
-        optimizing over multiple measurements
+            optimizing over multiple measurements
 
     Returns:
         :obj:`pandas.Series`: shear coefficient (unitless)
