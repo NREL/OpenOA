@@ -22,7 +22,19 @@ import nbmerge
 
 
 #Merge example Notebooks into one notebook to keep the required structure
-new_nb = nbmerge.merge_notebooks('./',('./examples.ipynb','../examples/operational_AEP_analysis/operational_AEP_analysis.ipynb','../examples/turbine_analysis/Turbine_Toolkit_Examples.ipynb','../examples/turbine_analysis/EngieTurbineData_Example.ipynb'))
+new_nb = nbmerge.merge_notebooks(
+    './',
+    (
+        './examples.ipynb',
+        '../examples/00_toolkit_examples.ipynb',
+        '../examples/01_qc_data.ipynb',
+        '../examples/02_plant_aep_analysis.ipynb',
+        '../examples/02b_augmented_plant_aep_analysis.ipynb',
+        '../examples/03_turbine_ideal_energy.ipynb',
+        '../examples/04_electrical_losses.ipynb',
+        '../examples/05_eya_gap_analysis.ipynb',
+    )
+)
 nbmerge.write_notebook(new_nb,'./examplesout.ipynb')
 
 sys.path.insert(0, os.path.abspath('..'))
