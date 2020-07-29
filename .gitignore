@@ -28,3 +28,5 @@ examples/operational_AEP_analysis/data/*.csv
 examples/turbine_analysis/data/*.csv
 
 sphinx/examplesout.ipynb
+
+.devcontainer

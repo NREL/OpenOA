@@ -63,12 +63,11 @@ python
 
 ### Extracting Example Data
 
+The integration tests and example notebooks require the example data to be extracted from a zip archive and to be placed in a specific folder.
+You can do this using the following command:
+
 ```
-unzip examples/operational_AEP_analysis/data/eia_example_data.zip -d examples/operational_AEP_analysis/data/
-
-unzip examples/turbine_analysis/data/example_20180829.zip -d examples/turbine_analysis/data/
-
-cp examples/turbine_analysis/data/example_20180829/scada_10min_4cols.csv examples/turbine_analysis/data/scada_10min_4cols.csv
+unzip examples/data/la_haute_borne.zip -d examples/data/la_haute_borne/
 ```
 
 ### Testing

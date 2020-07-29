@@ -26,9 +26,6 @@ jobs:
         pip install -r requirements.txt
     - name: Unzip example data
       run: |
-        yes | unzip examples/operational_AEP_analysis/data/eia_example_data.zip -d examples/operational_AEP_analysis/data/
-        yes | unzip examples/turbine_analysis/data/example_20180829.zip -d examples/turbine_analysis/data/
-        cp examples/turbine_analysis/data/example_20180829/scada_10min_4cols.csv examples/turbine_analysis/data/scada_10min_4cols.csv
         yes | unzip examples/data/la_haute_borne.zip -d examples/data/la_haute_borne/
     - name: Test with pytest
       run: |
