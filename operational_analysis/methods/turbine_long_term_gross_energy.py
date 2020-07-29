@@ -25,25 +25,35 @@ class TurbineLongTermGrossEnergy(object):
     A serial (Pandas-driven) implementation of calculating long-term gross energy 
     for each turbine in a wind farm. This module collects standard processing and
     analysis methods for estimating this metric.
+
     The method proceeds as follows:
+    
         1. Filter turbine data for normal operation
+    
         2. Calculate daily means of wind speed, wind direction, and air density from reanalysis products
+    
         3. Calculate daily sums of energy from each turbine
+    
         4. Fit daily data (features are atmospheric variables, response is turbine power) using a
            generalized additive model (GAM)
+    
         5. Apply model results to long-term atmospheric varaibles to calculate long term
            gross energy for each turbine
+    
     A Monte Carlo approach is implemented to repeat the procedure multiple times
     to get a distribution of results, from which deriving uncertainty quantification
     for the long-term gross energy estimate.
+    
     The end result is a table of long-term gross energy values for each turbine in the wind farm. Note
     that this gross energy metric does not back out losses associated with waking or turbine performance.
     Rather, gross energy in this context is what turbine would have produced under normal operation 
     (i.e. excluding downtime and underperformance).
+    
     Required schema of PlantData:
-            - _scada_freq
-            - reanalysis products ['merra2', 'erai', 'ncep2'] with columns ['time', 'u_ms', 'v_ms', 'windspeed_ms', 'rho_kgm-3']
-            - scada with columns: ['time', 'id', 'wmet_wdspd_avg', 'wtur_W_avg', 'energy_kwh']
+
+        - _scada_freq
+        - reanalysis products ['merra2', 'erai', 'ncep2'] with columns ['time', 'u_ms', 'v_ms', 'windspeed_ms', 'rho_kgm-3']
+        - scada with columns: ['time', 'id', 'wmet_wdspd_avg', 'wtur_W_avg', 'energy_kwh']
     """
 
     @logged_method_call
@@ -51,6 +61,7 @@ class TurbineLongTermGrossEnergy(object):
     
         """
         Initialize turbine long-term gross energy analysis with data and parameters.
+        
         Args:
          plant(:obj:`PlantData object`): PlantData object from which TurbineLongTermGrossEnergy should draw data.
          UQ:(:obj:`bool`): choice whether to perform ('Y') or not ('N') uncertainty quantification

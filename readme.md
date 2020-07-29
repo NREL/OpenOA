@@ -92,7 +92,9 @@ pytest -o python_files=test/test_*.py --cov=operational_analysis
 
 Documentation is automatically built by, and visible through, [Read The Docs](http://openoa.readthedocs.io/).
 
-You can build the documentation with [sphinx](http://www.sphinx-doc.org/en/stable/):
+You can build the documentation with [sphinx](http://www.sphinx-doc.org/en/stable/), but
+will need to ensure [Pandoc is installed](https://pandoc.org/installing.html) on your
+computer first:
 
 ```
 cd sphinx

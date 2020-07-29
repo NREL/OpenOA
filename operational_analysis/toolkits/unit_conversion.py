@@ -37,7 +37,7 @@ def compute_gross_energy(net_energy, avail_losses, curt_losses, avail_type='frac
         avail (numpy array of Pandas series): reported availability losses for wind plant or turbine
         curt (numpy array of Pandas series): reported curtailment losses for wind plant or turbine
 
-    Return:
+    Returns:
         gross (numpy array of Pandas series): calculated gross energy for wind plant or turbine
     """
 
@@ -69,7 +69,6 @@ def convert_feet_to_meter(variable):
 
     Returns:
         :obj:`pandas.Series`: variable in meters of the input data frame 'df'
-
     """
 
     out = variable * 0.3048

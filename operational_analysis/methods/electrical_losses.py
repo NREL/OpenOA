@@ -40,6 +40,7 @@ class ElectricalLosses(object):
     def __init__(self, plant, UQ = False, num_sim = 20000):
         """
         Initialize electrical losses class with input parameters
+        
         Args:
          plant(:obj:`PlantData object`): PlantData object from which EYAGapAnalysis should draw data.
          num_sim:(:obj:`int`): number of Monte Carlo simulations

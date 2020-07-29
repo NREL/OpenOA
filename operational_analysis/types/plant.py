@@ -105,7 +105,7 @@ class PlantData(object):
             stop_time(string): stop time
 
         Returns:
-            Nothing
+            (None)
         """
         self._start_time = parse(start_time)
         self._stop_time = parse(stop_time)
@@ -113,12 +113,12 @@ class PlantData(object):
     def save(self, path=None):
         """Save out the project and all JSON serializeable attributes to a file path.
 
-            Args:
-                path(string): Location of new directory into which plant will be saved. The directory should not
-                already exist. Defaults to self._path
+        Args:
+            path(string): Location of new directory into which plant will be saved. The directory should not
+            already exist. Defaults to self._path
 
-            Returns:
-                Nothing
+        Returns:
+            (None)
         """
         if path is None:
             raise RuntimeError("Path not specified.")
@@ -140,11 +140,11 @@ class PlantData(object):
     def load(self, path=None):
         """Load this project and all associated data from a file path
 
-            Args:
-                path(string): Location of plant data directory. Defaults to self._path
+        Args:
+            path(string): Location of plant data directory. Defaults to self._path
 
-            Returns:
-                Nothing
+        Returns:
+            (None)
         """
         if not path:
             path = self._path

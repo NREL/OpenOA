@@ -71,9 +71,9 @@ def logistic_5_parametric(windspeed_column, power_column):
         Renew. Sust. Energy Rev., 30 (2014), pp. 452-460
 
     In this case, the function fits the 5 parameter logistics function to
-     observed data via a least-squares optimization
-     (i.e. minimizing the sum of the squares of the residual between the points
-     as evaluated by the parameterized function and the points of observed data).
+    observed data via a least-squares optimization (i.e. minimizing the sum of
+    the squares of the residual between the points as evaluated by the
+    parameterized function and the points of observed data).
 
 
     Args:
