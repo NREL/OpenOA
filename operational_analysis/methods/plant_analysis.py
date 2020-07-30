@@ -844,7 +844,7 @@ class MonteCarloAEP(object):
         ws_aggregate = self.groupby_time_res(ws_data)[r] # Get long-term annualized monthly/daily wind speeds
         ws_aggregate.reset_index(drop=True, inplace=True) # TODO: This rectifies a 0-indexing issue. Needs refactoring.
         long_term_reg_inputs = pd.DataFrame(ws_aggregate)
-        # Wind speed IAV calculation
+        # Wind speed stdev for later IAV calculation
         ws_aggregate_sd = ws_data.groupby(ws_data.index.month)[r].std() # Get long-term annualized stdev of daily wind speeds            
         
         #import pdb
@@ -870,7 +870,7 @@ class MonteCarloAEP(object):
     @logged_method_call
     def apply_IAV(self, long_term_reg_inputs, ws_aggregate_sd_IAV, r):
         """
-        This function calculates IAV for the long-term wind speed data
+        This function calculates and apply IAV for the long-term wind speed data
         
         Args:
            long_term_reg_inputs(:obj:`pandas.DataFrame`): Long-term regression inputs
