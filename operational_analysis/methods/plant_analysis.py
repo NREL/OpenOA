@@ -834,9 +834,9 @@ class MonteCarloAEP(object):
         """
         # Check if valid data has already been calculated and stored. If so, just return it
         if (r, n) in self.long_term_sampling:
-            long_term_reg_inputs = self.long_term_sampling[(r, n)].copy()
-            ws_aggregate_sd = self.long_term_sampling_sd[(r, n)].copy()
-            return [long_term_reg_inputs,ws_aggregate_sd]
+            long_term_reg_inputs = self.long_term_sampling[(r, n)]
+            ws_aggregate_sd = self.long_term_sampling_sd[(r, n)]
+            return [long_term_reg_inputs.copy(),ws_aggregate_sd.copy()]
         
         # Sample long-term wind speed values
         ws_df = self._reanalysis_aggregate[r].to_frame().dropna()  # Drop NA values from monthly/daily reanalysis data series
@@ -865,7 +865,7 @@ class MonteCarloAEP(object):
         self.long_term_sampling_sd[(r, n)] = ws_aggregate_sd
         
         # Return result            
-        return [long_term_reg_inputs,ws_aggregate_sd]
+        return [long_term_reg_inputs.copy(),ws_aggregate_sd.copy()]
 
     @logged_method_call
     def apply_IAV(self, long_term_reg_inputs, ws_aggregate_sd_IAV, r):
