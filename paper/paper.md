@@ -77,9 +77,11 @@ acquisition (SCADA) systems, on-site meteorological towers, and modeled atmosphe
 
 # Built In Analysis Methods
 
+OpenOA includes three built in analysis methods, which operate on PlantData objects to produce analysis results. The three methods are: Long term corrected anualized energy production (AEP), Electrical Losses, and Turbine Ideal Energy. 
+
 ## Long Term Corrected AEP
 
-The AEP analysis implemented in OpenOA is based on a relatively standard approach within the wind resource assessment
+This analysis is based on a relatively standard approach within the wind resource assessment
 industry, where monthly gross energy for the wind plant (reported energy at the revenue meter corrected for availability
 and curtailment losses) is related to a monthly long-term wind resource through a linear regression relationship.
 Calculation of AEP involves several steps:
