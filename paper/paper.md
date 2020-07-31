@@ -15,6 +15,9 @@ authors:
     affiliation: 1
   - name: Jason M. Fields
     affiliation: 1
+  - name: Nicola Bodini
+    orcid: 0000-0002-2550-9853
+    affiliation: 1
   - name: Lindy Williams
     affiliation: 1
   - name: Joseph C.Y. Lee
@@ -64,7 +67,7 @@ OpenOA was originally scoped to calculate the operational annual energy producti
 OpenOA has since expanded its scope to support additional types of analyses including turbine performance and electrical losses and to support data from wind plants outside the initial set of test projects.
 Released publicly in September 2018, the OpenOA repository contains numerous examples demonstrated in Jupyter notebooks along with publicly available data which can be used to run the built in unit and integration tests. The software has also been used in study on the impact of analyst choice in the outcome of OAs [@craig2018].
 
-# Importance of Operational Analysis
+## Importance of Operational Analysis
 Operational analysis uses collected data from wind farms to perform assessments ranging from the diagnosis of
 faults and underperformance, benchmarking of performance improvements (e.g., wind sector management,
 vortex generators), long-term estimates of AEP, and building
@@ -72,7 +75,9 @@ statistical or physics-based models for various applications (e.g.,, wake model 
 forecasting). Data sources include the wind farm revenue meter, turbine supervisory, control and data
 acquisition (SCADA) systems, on-site meteorological towers, and modeled atmospheric data (e.g., reanalysis data).
 
-## Long Term AEP Calculation
+# Built In Analysis Methods
+
+## Long Term Corrected AEP
 
 The AEP analysis implemented in OpenOA is based on a relatively standard approach within the wind resource assessment
 industry, where monthly gross energy for the wind plant (reported energy at the revenue meter corrected for availability
@@ -99,7 +104,41 @@ The details of this particular example are provided in a Jupyter notebook on the
 In this example, revenue meter and reanalysis data are processed using the data flagging, time series analysis,
 and plotting tools module to produce the graphs in the figure.*
 
-## Low Level Toolkits
+## Electrical Losses
+Electrical losses are calculated by comparing energy production measured by the turbine SCADA data with what is recorded at the revenue meter:
+
+Electrical Losses=1-(Revenue Meter Energy)/(Turbine SCADA Energy)
+
+For those projects that report data at daily or sub-daily time resolution, we calculate daily sums of energy production from the turbine SCADA and from the revenue meter data, only for days when all turbines within the wind farm are reporting at all time steps. We then calculate the average electrical losses, using the sum of the selected daily sums of revenue meter and turbine SCADA data over the period of record of each wind farm. When revenue meter data are only available at monthly time resolution (two projects in the set considered in our analysis), we filter out months in which there were less than an imposed percentage threshold (whose value is Monte Carlo sampled, as detailed below) of timestamps with all turbines within the wind farm running. The sum of filtered monthly revenue meter and turbine SCADA data over the period of record for each wind farm is then calculated and used to compute the average electrical loss.
+
+We quantify the uncertainty connected to the electrical loss calculation for each project by taking the standard deviation of the distribution of electrical losses created from a Monte Carlo simulation. For each project, the Monte Carlo simulation is run 10,000 times, and the following uncertainty components are included:
+
+- Revenue meter accuracy, which is incorporated into the Monte Carlo simulation by sampling monthly revenue meter data from a normal distribution centered on the reported value and with a standard deviation equal to 0.5% of the reported value. We consider 0.5% to be representative of what is typically assumed by wind energy consultants for revenue meter uncertainty.
+- SCADA data accuracy, also included in the Monte Carlo approach by sampling the data from a normal distribution centered on the recorded values and with a 0.5% uncertainty imposed.
+- Choice of threshold for filtering monthly data. The uncertainty connected with this filter is incorporated in the Monte Carlo approach by sampling the filter threshold from a uniform distribution between 90% and 97%.
+
+
+## Turbine Ideal Energy
+
+Pure gross energy data cannot be obtained from operational data because wake losses, turbine performance losses, and blade degradation losses are inherently present within the reported SCADA data from each wind turbine. To circumvent this limitation, we define the Turbine Ideal Energy (TIE) as the difference between gross energy and the sum of wake, turbine performance, and blade degradation losses. We then consider here TIE as the total energy in the context of what the wind turbine would have produced under normal operation (i.e. excluding downtime and underperformance).
+
+To calculate the long-term TIE, a regression is performed between TIE values and atmospheric variables taken from reanalysis products during the period of record of the wind farm. Then, the regression results are applied to long-term atmospheric reanalysis data to obtain a time series of long-term TIE values. In detail, we implement the following method:
+
+- A set of filtering algorithms (Perr-Sauer et al. 2020) are applied to the turbine operational power curve to flag data not representative of normal turbine operation.
+- Daily means of wind speed, wind direction, and air density from three reanalysis products (MERRA-2, NCEP-2, and ERA-I) are calculated.
+- Daily sums of energy from each turbine from the SCADA data are computed. The daily data are linearly corrected based on the amount of missing data or discarded if the missing data are above a threshold limit, whose value is Monte Carlo sampled, as detailed below. Finally, missing data for each turbine are imputed based on reported energy data from other highly correlated turbines within the wind farm.
+- A regression is performed at a daily time resolution using a generalized additive model (GAM) to predict turbine power using concurrent wind speed, wind direction, and air density from the reanalysis products.
+- The results of the regression are applied to long-term (20-year) atmospheric variables to calculate long-term turbine ideal energy for each turbine within the wind farm. The sum of the TIE values for all the wind turbines gives the total long-term TIE for each wind farm.
+
+As with the electrical loss calculation, we incorporate uncertainty quantification in the turbine ideal energy method with a Monte Carlo approach, which is run 500 times to obtain a distribution of long-term turbine ideal energy at each wind farm. Uncertainty is calculated in terms of the standard deviation. We include the following uncertainty components in the calculation:
+
+-	SCADA data accuracy, included in the Monte Carlo method by sampling the data from a normal distribution centered on the recorded values and with a standard deviation equal to 0.5% of the recorded values.
+- Reanalysis data accuracy. Assessing the uncertainty connected with the long-term atmospheric variables is a challenging task, especially when considering spatial variations. As a proxy for this complex uncertainty component, we randomly select atmospheric data from one of the three considered reanalysis products at each Monte Carlo iteration at each site.
+- Choice of threshold for filtering daily sums of SCADA data. We incorporate the uncertainty connected with the choice of this threshold by sampling its value from a uniform distribution between 85% and 95% of available data.
+- Choice of thresholds for filtering the turbine operational power curves. The main filter applied to the turbine wind speed vs power curve is based on a binning principle. Data points in the turbine power curve are binned based on power, up to a percentage of the turbine rated power. Data points which are not within a threshold from the median wind speed value in each bin are filtered out. Within this filtering process, we Monte-Carlo sample two imposed thresholds. The first is the percentage of turbine rated power that corresponds to the upper boundary of the last bin used in the filter. We sample this threshold from a uniform distribution between 80% and 90% of the turbine rated power. The second is the threshold from the wind speed median value in each bin. We sample this value from a uniform distribution between 1 and 2 m/s.
+
+
+# Low Level Toolkits
 As of October 2019, there are seven low level modules in OpenOA called Toolkits, which are listed here along with a
 general description of their functions.
 These modules range from general data processing (flagging, imputation, unit conversion, and time series modules)
@@ -131,7 +170,7 @@ raw SCADA data are filtered for outlier data (shown in red) using a bin filter f
 Three power curves are computed using the power curve toolkit and are plotted against the filtered data in the bottom
 right figure.*
 
-# Towards Industry Standards
+# Towards an Industry Standard Data Model
 OpenOA provides an internal data model which is based on a data standard for wind plant SCADA data from the
 International Electrotechnical Commission (IEC) standard 61400-25 [@iec25].
 The standard defines naming conventions and data types for variables which are encountered in wind plant data.
