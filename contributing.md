@@ -73,3 +73,8 @@ For instructions on running tests, please see the [Readme](https://github.com/NR
 The repository is equipped with a github action to build and publish new versions to PyPi.
 A maintainer can invoke this workflow by pushing a tag to the NREL/OpenOA reposiory with prefix "v", such as "v1.1.0".
 The action is defined in `.github/workflows/tags-to-pypi.yml`.
+
+```
+git tag -a v1.2.3 -m "Tag messgae for v1.2.3"
+git push origin v1.2.3
+```
