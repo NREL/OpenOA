@@ -825,7 +825,7 @@ class MonteCarloAEP(object):
             1. The reanalysis product
             2. The number of years to use in the long-term correction
         Args:
-            (None)
+           (None)
         Returns:
            :obj:`pandas.DataFrame`: the windiness-corrected or 'long-term' annualized monthly/daily wind speeds
            :obj:`pandas.DataFrame`: Long-term wind speed stdev, from which IAV will be derived
