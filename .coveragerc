@@ -1,0 +1,9 @@
+[report]
+exclude_lines =
+    pragma: no cover
+    def .+_plot
+    def plot_.+
+
+[run]
+omit =
+    operational_analysis/toolkits/pandas_plotting.py

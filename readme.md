@@ -1,5 +1,8 @@
-OpenOA ![](https://github.com/NREL/OpenOA/workflows/Tests/badge.svg?branch=develop) ![](https://readthedocs.org/projects/openoa/badge/?version=latest)
-======
+<img src="https://github.com/NREL/OpenOA/blob/develop/Open%20OA%20Final%20Logos/Color/Open%20OA%20Color%20Transparent%20Background.png?raw=true" alt="OpenOA" width="300"/>
+
+![](https://github.com/NREL/OpenOA/workflows/Tests/badge.svg?branch=develop) ![](https://readthedocs.org/projects/openoa/badge/?version=latest) [![codecov](https://codecov.io/gh/NREL/OpenOA/branch/develop/graph/badge.svg)](https://codecov.io/gh/NREL/OpenOA)
+
+-----
 
 This library provides a framework for working with large timeseries data from wind plants, such as SCADA.
 Its development has been motivated by the WP3 Benchmarking (PRUF) project,
@@ -60,12 +63,11 @@ python
 
 ### Extracting Example Data
 
+The integration tests and example notebooks require the example data to be extracted from a zip archive and to be placed in a specific folder.
+You can do this using the following command:
+
 ```
-unzip examples/operational_AEP_analysis/data/eia_example_data.zip -d examples/operational_AEP_analysis/data/
-
-unzip examples/turbine_analysis/data/example_20180829.zip -d examples/turbine_analysis/data/
-
-cp examples/turbine_analysis/data/example_20180829/scada_10min_4cols.csv examples/turbine_analysis/data/scada_10min_4cols.csv
+unzip examples/data/la_haute_borne.zip -d examples/data/la_haute_borne/
 ```
 
 ### Testing
@@ -90,7 +92,9 @@ pytest -o python_files=test/test_*.py --cov=operational_analysis
 
 Documentation is automatically built by, and visible through, [Read The Docs](http://openoa.readthedocs.io/).
 
-You can build the documentation with [sphinx](http://www.sphinx-doc.org/en/stable/):
+You can build the documentation with [sphinx](http://www.sphinx-doc.org/en/stable/), but
+will need to ensure [Pandoc is installed](https://pandoc.org/installing.html) on your
+computer first:
 
 ```
 cd sphinx
