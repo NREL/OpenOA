@@ -81,7 +81,9 @@ class MonteCarloAEP(object):
     
         # Memo dictionaries help speed up computation
         self.outlier_filtering = {}  # Combinations of outlier filter results
-
+        self.long_term_sampling = {}  # Combinations of long-term reanalysis data sampling
+        self.long_term_sampling_sd = {}  # Combinations of long-term reanalysis data sampling stdev of wind speed
+        
         # Define relevant uncertainties, data ranges and max thresholds to be applied in Monte Carlo sampling
         self.uncertainty_meter = np.float64(uncertainty_meter)
         self.uncertainty_losses = np.float64(uncertainty_losses)
@@ -821,9 +823,11 @@ class MonteCarloAEP(object):
             fitted_model = self.run_regression(n)
  
             # Get long-term regression inputs
-            reg_inputs_lt = self.sample_long_term_reanalysis(self._run.num_years_windiness,
-                                                             self._run.reanalysis_product)
+            [reg_inputs_lt_noIAV, reg_lt_stdev] = self.sample_long_term_reanalysis()
 
+            # Apply IAV to long-term regression inputs
+            reg_inputs_lt = self.apply_IAV(reg_inputs_lt_noIAV, reg_lt_stdev)
+            
             # Get long-term normalized gross energy by applying regression result to long-term monthly wind speeds
             inputs = np.array(reg_inputs_lt)
             if num_vars == 1:
@@ -860,7 +864,7 @@ class MonteCarloAEP(object):
         return sim_results
 
     @logged_method_call
-    def sample_long_term_reanalysis(self, n, r):
+    def sample_long_term_reanalysis(self):
         """
         This function returns the windiness-corrected monthly wind speeds based on the Monte-Carlo generated sample of:
             
@@ -868,42 +872,66 @@ class MonteCarloAEP(object):
             2. The number of years to use in the long-term correction
         
         Args:
-           n(:obj:`integer`): The number of years for the windiness correction
-           r(:obj:`string`): The reanalysis product used for the current Monte Carlo iteration
-        
+           (None)
+
         Returns:
            :obj:`pandas.DataFrame`: the windiness-corrected or 'long-term' annualized monthly/daily wind speeds
+           :obj:`pandas.DataFrame`: Long-term wind speed stdev, from which IAV will be derived
         """
+        # Check if valid data has already been calculated and stored. If so, just return it
+        if (self._run.reanalysis_product,self. _run.num_years_windiness) in self.long_term_sampling:
+            long_term_reg_inputs = self.long_term_sampling[(self._run.reanalysis_product,self. _run.num_years_windiness)]
+            ws_aggregate_sd = self.long_term_sampling_sd[(self._run.reanalysis_product,self. _run.num_years_windiness)]
+            return [long_term_reg_inputs.copy(),ws_aggregate_sd.copy()]
+        
         # Sample long-term wind speed values
-        ws_df = self._reanalysis_aggregate[r].to_frame().dropna()  # Drop NA values from monthly/daily reanalysis data series
-        ws_data = ws_df.tail(n * self._calendar_samples)  # Get last 'x' years of data from reanalysis product
-        ws_aggregate = self.groupby_time_res(ws_data)[r] # Get long-term annualized monthly/daily wind speeds
+        ws_df = self._reanalysis_aggregate[self._run.reanalysis_product].to_frame().dropna()  # Drop NA values from monthly/daily reanalysis data series
+        ws_data = ws_df.tail(self. _run.num_years_windiness * self._calendar_samples)  # Get last 'x' years of data from reanalysis product
+        ws_aggregate = self.groupby_time_res(ws_data)[self._run.reanalysis_product] # Get long-term annualized monthly/daily wind speeds
         ws_aggregate.reset_index(drop=True, inplace=True) # TODO: This rectifies a 0-indexing issue. Needs refactoring.
-        # Wind speed IAV calculation
-        ws_aggregate_sd = ws_data.groupby(ws_data.index.month)[r].std() # Get long-term annualized stdev of daily wind speeds            
-        if self.time_resolution == 'D':
-            ws_aggregate_sd = np.repeat(ws_aggregate_sd, np.ceil(self.num_days_lt).astype(int))
-        ws_aggregate_sd.reset_index(drop=True,inplace=True) # TODO: This rectifies a 0-indexing issue. Needs refactoring.
-        iav = np.random.normal(1, ws_aggregate_sd/ws_aggregate)
-        mc_ws_aggregate = ws_aggregate * iav
-
-        long_term_reg_inputs = mc_ws_aggregate
+        long_term_reg_inputs = pd.DataFrame(ws_aggregate)
+        # Wind speed stdev for later IAV calculation
+        ws_aggregate_sd = ws_data.groupby(ws_data.index.month)[self._run.reanalysis_product].std() # Get long-term annualized stdev of daily wind speeds            
         
         #import pdb
         #pdb.set_trace()
 
         # Temperature and wind direction
-        namescol = [r + '_' + var for var in self._rean_vars]
+        namescol = [self._run.reanalysis_product + '_' + var for var in self._rean_vars]
         # TODO: The result of this call has a multi-index, which is blown away with "reset_index" to match the index of mc_ws_aggregate. Needs refactoring.
-        long_term_temp = self._reanalysis_aggregate[namescol].dropna().tail(n * self._calendar_samples).apply(self.groupby_time_res).reset_index(drop=True)
+        long_term_temp = self._reanalysis_aggregate[namescol].dropna().tail(self. _run.num_years_windiness * self._calendar_samples).apply(self.groupby_time_res).reset_index(drop=True)
         if self.reg_temperature:
-            long_term_reg_inputs = pd.concat([long_term_reg_inputs, long_term_temp[r + '_temperature_K']], axis=1)
+            long_term_reg_inputs = pd.concat([long_term_reg_inputs, long_term_temp[self._run.reanalysis_product + '_temperature_K']], axis=1)
         if self.reg_winddirection:
-            wd_aggregate = np.pi-np.arctan2(-long_term_temp[r + '_u_ms'],long_term_temp[r + '_v_ms']) # Calculate wind direction
+            wd_aggregate = np.pi-np.arctan2(-long_term_temp[self._run.reanalysis_product + '_u_ms'],long_term_temp[self._run.reanalysis_product + '_v_ms']) # Calculate wind direction
             long_term_reg_inputs = pd.concat([long_term_reg_inputs, np.sin(wd_aggregate), np.cos(wd_aggregate)], axis=1)
         
+        # Store result in dictionary
+        self.long_term_sampling[(self._run.reanalysis_product, self. _run.num_years_windiness)] = long_term_reg_inputs
+        self.long_term_sampling_sd[(self._run.reanalysis_product, self. _run.num_years_windiness)] = ws_aggregate_sd
+        
         # Return result            
-        return long_term_reg_inputs
+        return [long_term_reg_inputs.copy(),ws_aggregate_sd.copy()]
+
+    @logged_method_call
+    def apply_IAV(self, long_term_reg_inputs, ws_aggregate_sd_IAV):
+        """
+        This function calculates and apply IAV for the long-term wind speed data
+        
+        Args:
+           long_term_reg_inputs(:obj:`pandas.DataFrame`): Long-term regression inputs
+           ws_aggregate_sd(:obj:`pandas.DataFrame`): Long-term wind speed stdev, from which IAV will be derived
+        Returns:
+           :obj:`pandas.DataFrame`: the IAV-sampled monthly/daily regression inputs
+        """
+    
+        if self.time_resolution == 'D':
+            ws_aggregate_sd_IAV = np.repeat(ws_aggregate_sd_IAV, np.ceil(self.num_days_lt).astype(int))
+        ws_aggregate_sd_IAV.reset_index(drop=True,inplace=True) # TODO: This rectifies a 0-indexing issue. Needs refactoring.
+        iav = np.random.normal(1, ws_aggregate_sd_IAV/long_term_reg_inputs[self._run.reanalysis_product])        
+        long_term_reg_inputs_IAV = long_term_reg_inputs.copy()
+        long_term_reg_inputs_IAV[self._run.reanalysis_product] = long_term_reg_inputs_IAV[self._run.reanalysis_product] * iav
+        return long_term_reg_inputs_IAV
 
     @logged_method_call
     def sample_long_term_losses(self):
