@@ -118,9 +118,9 @@ def percent_nan(s):
 
     Args:
         s(:obj:`pandas.Series`): The data to be checked for 'na' values
+    
     Returns:
         :obj:`float`: Percentage of NaN data in the data series
-
     """
     if len(s) > 0:
         perc = np.float((s.isnull().sum())) / np.float(len(s))
@@ -135,9 +135,9 @@ def num_days(s):
 
     Args:
         s(:obj:`pandas.Series`): The data to be checked for number of days.
+    
     Returns:
         :obj:`int`: Number of days in the data
-
     """
     n_days = len(s.resample('D'))
 
@@ -152,7 +152,6 @@ def num_hours(s):
         s(:obj:`pandas.Series`): The data to be checked for number of data points
     Returns:
         :obj:`int`: Number of hours in the data
-
     """
     n_hours = len(s.resample('H'))
 

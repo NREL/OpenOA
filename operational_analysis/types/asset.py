@@ -82,7 +82,6 @@ class AssetData(object):
 
         Returns: None
             Sets asset 'geometry' column.
-
         """
         if zone is None:
             # calculate zone
@@ -109,7 +108,6 @@ class AssetData(object):
 
         Returns: None
             Sets asset 'nearest_turbine_id' and 'nearest_tower_id' column.
-
         """
         self._asset['nearest_turbine_id'] = None
         if active_turbine_ids is not None and len(active_turbine_ids) > 0:
