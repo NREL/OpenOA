@@ -1,6 +1,6 @@
 <img src="https://github.com/NREL/OpenOA/blob/develop/Open%20OA%20Final%20Logos/Color/Open%20OA%20Color%20Transparent%20Background.png?raw=true" alt="OpenOA" width="300"/>
 
-![](https://github.com/NREL/OpenOA/workflows/Tests/badge.svg?branch=develop) ![](https://readthedocs.org/projects/openoa/badge/?version=latest) [![codecov](https://codecov.io/gh/NREL/OpenOA/branch/develop/graph/badge.svg)](https://codecov.io/gh/NREL/OpenOA)
+![](https://github.com/NREL/OpenOA/workflows/Tests/badge.svg?branch=develop) [![](https://readthedocs.org/projects/openoa/badge/?version=latest)](https://openoa.readthedocs.io) [![codecov](https://codecov.io/gh/NREL/OpenOA/branch/develop/graph/badge.svg)](https://codecov.io/gh/NREL/OpenOA)
 
 -----
 
@@ -20,21 +20,20 @@ such as Dask and Spark, in the future.
 
 ### Requirements
 
-  * Python 3.6+ (e.g., from Anaconda) with pip.
+  * Python 3.6+ with pip.
 
-We recommend creating a new virtual environment or Anaconda environment before attempting to install
-OpenOA. To create and activate such a new environment with the name "openoa-env" using Anaconda:
+We strongly recommend using the Anaconda Python distribution and creating a new conda environment for OpenOA. You can download Anaconda through [their website.](https://www.anaconda.com/products/individual)
+
+After installing Anaconda, create and activate a new conda environment with the name "openoa-env":
 
 ```
 conda create --name openoa-env python=3
 conda activate openoa-env
 ```
 
-#### Microsoft Windows:
+#### Special Note for users of Microsoft Windows:
 
-For users Microsoft Windows, the Anaconda python distribution is required. The reason is that pip on windows requires
-Visual Studio libraries to compile some of the dependencies. This can be resolved by manually installing the following
-packages via conda, which installs pre-built binaries of these dependencies, before attempting a pip install of OpenOA.
+The Anaconda python distribution is *required* for users of Microsoft Windows. This is because the pip package of GDAL for Windows requires Visual Studio to compile some of the dependencies. While advanced users are welcome to explore this option, we find it is easier to install the following packages via Anaconda:
 
 ```
 conda install shapely
@@ -42,7 +41,7 @@ conda install geos
 conda install fiona
 ```
 
-If errors about Visual Studio persist, you can try downloading the Microsoft Visual Studio compiler for Python: https://www.microsoft.com/en-us/download/details.aspx?id=44266
+If errors about Visual Studio persist, you can try downloading the [Microsoft Visual Studio compiler for Python](https://www.microsoft.com/en-us/download/details.aspx?id=44266) and compiling GDAL yourself.
 
 
 ### Installation:
@@ -61,53 +60,11 @@ python
 >>> import operational_analysis
 ```
 
-### Extracting Example Data
-
-The integration tests and example notebooks require the example data to be extracted from a zip archive and to be placed in a specific folder.
-You can do this using the following command:
-
-```
-unzip examples/data/la_haute_borne.zip -d examples/data/la_haute_borne/
-```
-
-### Testing
-
-All tests are runnable using pytest. They are written in the Python unittest framework.
-
-To run all tests with code coverage reporting:
-
-```
-pytest -o python_files=test/*.py --cov=operational_analysis
-```
-
-To run unit tests only (does not require example data)
-
-```
-pytest -o python_files=test/test_*.py --cov=operational_analysis
-```
-
-
-
-### Documentation
-
-Documentation is automatically built by, and visible through, [Read The Docs](http://openoa.readthedocs.io/).
-
-You can build the documentation with [sphinx](http://www.sphinx-doc.org/en/stable/), but
-will need to ensure [Pandoc is installed](https://pandoc.org/installing.html) on your
-computer first:
-
-```
-cd sphinx
-pip install -r requirements.txt
-make html
-```
-
-
 ### Development
 
-We provide a frozen environment in a requirements.txt file which can be used to install the precise versions
-of each dependency present in our own development environment. We recommend utilizing a fresh virtual environment or
-Anaconda root before installing these requirements. To use requirements.txt:
+Development dependencies are provided in a requirements.txt file.
+
+We recommend utilizing a fresh virtual environment or Anaconda root before installing these requirements. To use requirements.txt:
 
 ```
 pip install -r ./OpenOA/requirements.txt
@@ -117,6 +74,39 @@ Next, we recommend installing OpenOA in editable mode:
 
 ```
 pip install -e ./OpenOA
+```
+
+#### Extracting Example Data
+
+The example data will be automaticaly extracted as needed by the tests. The following command is provided for reference:
+
+```
+unzip examples/data/la_haute_borne.zip -d examples/data/la_haute_borne/
+```
+
+#### Testing
+Tests are written in the Python unittest framework and are runnable using pytest. To run all tests with code coverage reporting:
+
+```
+pytest -o python_files=test/*.py --cov=operational_analysis
+```
+
+To run unit tests only:
+
+```
+pytest -o python_files=test/test_*.py --cov=operational_analysis
+```
+
+#### Documentation
+
+Documentation is automatically built by, and visible through, [Read The Docs](http://openoa.readthedocs.io/).
+
+You can build the documentation with [sphinx](http://www.sphinx-doc.org/en/stable/), but will need to ensure [Pandoc is installed](https://pandoc.org/installing.html) on your computer first:
+
+```
+cd sphinx
+pip install -r requirements.txt
+make html
 ```
 
 

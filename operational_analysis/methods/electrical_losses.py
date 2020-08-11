@@ -163,7 +163,7 @@ class ElectricalLosses(object):
         
         # Specify expected count provided all turbines reporting
         expected_count = self._hours_per_day * self._min_per_hour / \
-                         (pd.to_timedelta(self._plant._scada_freq).seconds/60) * self._plant._num_turbines
+                         (pd.to_timedelta(self._plant._scada_freq).total_seconds()/60) * self._plant._num_turbines
 
         # Correct sum of turbine energy for cases with missing reported data
         self._scada_daily['corrected_energy'] = self._scada_daily['turbine_energy_kwh'] * expected_count / \
@@ -195,7 +195,7 @@ class ElectricalLosses(object):
         
         # Specify expected count provided all timestamps reporting
         expected_mcount = self._hours_per_day * self._min_per_hour / \
-                          (pd.to_timedelta(self._plant._meter_freq).seconds/60)
+                          (pd.to_timedelta(self._plant._meter_freq).total_seconds()/60)
         
         # Keep only data with all turbines reporting for every time step during the day
         self._meter_daily = self._meter_daily[self._meter_daily['mcount'] == expected_mcount]
@@ -232,7 +232,7 @@ class ElectricalLosses(object):
                 # Determine availability for each month represented
                 scada_monthly['count'] = self._scada_sum.resample('MS')['count'].sum()
                 scada_monthly['expected_count_monthly'] = scada_monthly.index.daysinmonth * self._hours_per_day * self._min_per_hour / \
-                             (pd.to_timedelta(self._plant._scada_freq).seconds/60) * self._plant._num_turbines 
+                             (pd.to_timedelta(self._plant._scada_freq).total_seconds()/60) * self._plant._num_turbines 
                 scada_monthly['perc'] = scada_monthly['count']/scada_monthly['expected_count_monthly']
                                 
                 # Filter out months in which there was less than x% of total running (all turbines at all timesteps)  
