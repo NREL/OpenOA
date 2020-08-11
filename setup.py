@@ -26,43 +26,19 @@ def find_version(*file_paths):
     raise RuntimeError("Unable to find version string.")
 
 
-# PyTest Runners ##########
-
-class PyTest(TestCommand):
-    user_options = [('pytest-args=', 'a', "Arguments to pass to pytest")]
-
-    def initialize_options(self):
-        TestCommand.initialize_options(self)
-        self.pytest_args = ''
-
-    def run_tests(self):
-        import shlex
-        import pytest
-        errno = pytest.main(shlex.split(self.pytest_args + " -o python_files=test/*.py --cov=operational_analysis"))
-        sys.exit(errno)
-
-class PyTestIntegrate(PyTest):
-
-    def run_tests(self):
-        import shlex
-        import pytest
-        errno = pytest.main(shlex.split(self.pytest_args + " -o python_files=int_*.py --cov=operational_analysis"))
-        sys.exit(errno)
-
-class PyTestUnit(PyTest):
-
-    def run_tests(self):
-        import shlex
-        import pytest
-        errno = pytest.main(shlex.split(self.pytest_args + " -o python_files=test_*.py --cov=operational_analysis"))
-        sys.exit(errno)
-
+def read_file(filename):
+    this_directory = os.path.abspath(os.path.dirname(__file__))
+    with open(os.path.join(this_directory, filename), encoding='utf-8') as f:
+        f_text = f.read()
+    return f_text
 
 # setup.py main ##########
 
 setup(name='OpenOA',
       version=find_version("operational_analysis", "__init__.py"),
       description='A package for collecting and assigning wind turbine metrics',
+      long_description=read_file('readme.md'),
+      long_description_content_type='text/markdown',
       author='NREL PRUF OA Team',
       author_email='openoa@nrel.gov',
       url='https://github.com/NREL/OpenOA',
@@ -80,7 +56,5 @@ setup(name='OpenOA',
                         "EIA-python",
                         "requests"],
       tests_require=['pytest', 'pytest-cov'],
-      python_requires='>=3.6',
-      cmdclass={'test': PyTest, 'integrate':PyTestIntegrate, 'unit':PyTestUnit},
-      license='None'
+      python_requires='>=3.6'
       )
