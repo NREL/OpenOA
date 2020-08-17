@@ -72,41 +72,39 @@ References: Is the list of references complete, and is everything cited appropri
 
 -->
 
-This paper announces OpenOA version 2.0.0, which was released in August of 2020. Originally released to the public in 2018, OpenOA is implemented in the Python programming language [cite python] and provides a framework and set of convenience functions that engineers, analysts, and researchers in the wind energy industry can use to facilitate big data analysis of operational data sets from wind energy plants. With over 50 stars on github, a dozen contributors, and an active Github issues forum, OpenOA is a mature and active project that provides a high level interface to practical problems in this field.
+This paper announces OpenOA version 2.0.0, which was released in August of 2020. Originally released to the public in 2018 [@osti_1478526], OpenOA is an open source framework for operational data analysis of wind energy plants, implemented in the Python programming language [@Rossum2009]. OpenOA provides a common data model, high level analysis workflows, and low-level convenience functions that engineers, analysts, and researchers in the wind energy industry can use to facilitate anlytics workflows on operational data sets. With over 50 stars on Github, a dozen contributors, and an active issues forum, OpenOA is becoming a mature project that provides a high level interface to solve practical problems in the wind energy industry.
 
 # Statement of Need
 
-Operational analyses are 
+OpenOA was created by and primarily developed by researchers at the National Renewable Energy Laboratory [^nrelwebsite] (NREL) through the Performance, Risk Uncertainty Finance [^wp3website] (PRUF) project, when the team recognized the need to compute a 20-year long term correced AEP metric from operational data as part of a benchmarking study [WP3 benchmark citation]. Due to restrictions on the input SCADA data, the team recognized that open source publication of the code was necessary to foster trust in the results by the participants of the benchmarking study. Furthermore, after talking with our industry partners, it became clear that there was no industry standard code for computing a 20-year long term corrected AEP.
 
-OpenOA was created by and primarily developed by researchers at the National Renewable Energy Laboratory [nrel footnote] through the Performance, Risk Uncertainty Finance (PRUF) project. 
+[^nrelwebsite]: \url{https://nrel.gov}
+[^wp3website]: \url{https://a2e.energy.gov/projects/wp3}
 
-OpenOA has also been used to calculate long-term operational AEP from over 470 wind farms in the US to assess correlation between uncertainty components [Bodini2020].
+**Figure 1: Overview of Operational Analysis**
 
-Reproducible research is an important goal of OpenOA.
+Operational analysis involves obtaining time-series data from an industrial plant's SCADA system, performing ETL and QC processes on these data, and then computing various metrics that might inform decisions by the plant operator. Since its inception, OpenOA has been used in several published studies at NREL. In one study, it is used to calculate long-term operational AEP from over 470 wind farms in the US to assess correlation between uncertainty components [@Bodini2020].
 
-OpenOA serves as a conduit to deliver state-of-the-art analysis methods between researchers and practitioners.
-
-We believe the reproducibility and efficiency of scientific research will increase if common, open source tools such as OpenOA are utilized.
-
-[Diagram of OA analysis]
+By forming an open source software project, OpenOA hopes to improve the reproducibility of research in this field, provide benchmark implementations of commonly performed data transformation and analysis tasks (to lower the barrier to entry), and finally to serve as a conduit that can deliver state-of-the-art analysis methods from researchers to practitioners.
 
 # Summary
 
-OpenOA V2 is released as a Python package and is freely available under a business-friendly, open-source, BSD license. OpenOA contains documentation, worked out examples in Jupyter notebooks, and an example dataset from Engie [cite engie].
+OpenOA V2 is released as a Python package and is freely available under a business-friendly, open-source, BSD license. OpenOA contains documentation, worked out examples in Jupyter notebooks, and a corresponding example dataset from Engie Renewable's La Haute Borne Dataset [@EngieDataset].
 
 The typical user interfaces with OpenOA through its "analysis methods" API. These are Python classes which conform to a common interface (e.g., they implement `__init__`, `prepare`, and `run` methods). Version 2 of OpenOA implements three high level analysis methods. (1) Long term corrected AEP. (2) Electrical losses, and (3) Turbine level losses. Uncertainty quantification is achieved in each analysis using a monte carlo approach. A more detailed description of these analyses are provided in the documentation.
 
-The OpenOA data model is implemented using wrapper classes, called PlantData, that have at least one Pandas data frame [cite pandas]. These classes add convenience functions and a domain-specific schema based on the IEC 6400-25 standard. OpenOA is part of the ENTR alliance consortium, which aims to produce a software ecosystem around an implementation of this standard. It is a vision of the OpenOA project, as well as the ENTR alliance, to provide an implementation of this industry standard. To the author's knowledge, OpenOA offers the first known implementation of this standard published as open source software.
+The OpenOA data model is implemented using wrapper classes, called PlantData, that have at least one Pandas data frame [@Mckinney2010]. These classes add convenience functions and a domain-specific schema based on the IEC 6400-25 standard. OpenOA is part of the ENTR alliance consortium, which envisions a complete software stack centered around an open source implementation of this standard. To the author's knowledge, OpenOA offers the first known implementation of this standard published as open source software.
 
-OpenOA depends on scikit-learn [cite sklearn] and numpy [cite numpy], with graphing functions implemented using matplotlib [cite matplotlib]. Low level functions are organized in toolkit modules, which operate on Pandas series objects, and be used outside of the analysis methods. 
+**Figure 2: Diagram of OpenOA software architecture**
 
-[Diagram of OpenOA software architecture]
+OpenOA depends on scikit-learn [@Pedregosa2011] and numpy [@oliphant2006guide], with graphing functions implemented using matplotlib [@hunter2007matplotlib]. Low level functions are organized in toolkit modules, which operate on Pandas series objects, and are general enough to use across multiple domains. The OpenOA development team prioriotizes the use of best software development practices. Documentation is compiled from the source code and automatically published to ReadTheDocs [^rtdwebsite]. We use Github actions to implement our continuous integration pipeline, including automated unit and regression tests, test coverage reporting via CodeCov, automated packaging and publication to the Pypi package index. We utilize a modified git-flow development workflow, with pull requests and issue tracking on Github driving the development.
 
-The OpenOA development team prioriotizes the use of best software development practices. Documentation is built using Sphinx [sphinx citation] and compiled automatically using ReadTheDocs [documentation citation]. We use Github actions to implement our continuous integration pipeline, including automated unit and regression tests, test coverage reporting via codecov, automated packaging and publication to the pypi package index, and the use of a modified git-flow development workflow utilizing pull requests and issue tracking on Github.
+[^nrelwebsite]: \url{https://openoa.readthedocs.io}
 
-The OpenOA development team invites you to collaborate on this project.
+In conclusion, the OpenOA development team is excited about the future of open science in the wind energy industry. We invite all interested readers to contribute to this project through Github.
 
 # Acknowledgements
+The authors would like to acknowledge that Jordan Perr-Sauer and Mike Optis have made an equal contribution to this work.
 This work was authored by the National Renewable Energy Laboratory, operated by Alliance for Sustainable Energy, LLC, for the U.S. Department of Energy (DOE) under Contract No. DE-AC36-08GO28308.
 Funding provided by the U.S. Department of Energy Office of Energy Efficiency and Renewable Energy Wind Energy Technologies Office, within the Atmosphere to Electrons research program.
 The views expressed in the article do not necessarily represent the views of the DOE or the U.S. Government.
