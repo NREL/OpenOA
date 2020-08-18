@@ -1,16 +1,18 @@
 # Changelog
 All notable changes to this project will be documented in this file. If you make a notable change to the project, please add a line describing the change to the "unreleased" section. The maintainers will make an effort to keep the [Github Releases](https://github.com/NREL/OpenOA/releases) page up to date with this changelog. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
-- Energy Yield Analysis (EYA) to Operational Assessment(OA) Gap Analysis method
+## [2.0.0 - 2020-08-11]
+- Switch to [semantic versioning](https://semver.org) from this release forward.
+- Efficiency improvements in AEP calculation
+- Energy Yield Analysis (EYA) added to Operational Assessment (OA) Gap Analysis method
 - Uncertainty quantification for electrical losses and longterm turbine gross energy
-- Implemented open source Engie example data, and complete update of example notebooks
+- Implemented open source Engie example data
+- Complete update of example notebooks
 - Switch to standard BSD-3 Clause license
 - Automated quality control method to assist with data ingestion. Tools in this method include daylight savings time change detection and identification of the diurnal cycle.
-- Electrical losses method
+- Add electrical losses method
 - Method for estimating long-term turbine gross energy (excluding downtime and underperformance losses)
-- User-facing CI pipeline using Github Actions
-- Automatic documentation using ReadTheDocs
+- CI pipeline using Github Actions includes regression testing with Pytest, code coverage reporting via CodeCov, packaging and distribution via Pypi, and automatic documentation using ReadTheDocs.
 
 ## [1.1] - 2019-01-29
 - Python3 Support
