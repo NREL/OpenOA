@@ -30,6 +30,9 @@ authors:
     affiliation: 1
   - name: Travis Kemper
     affiliation: 1
+  - name: Robert Hammond
+    orcid: 0000-0003-4476-6406
+    affiliation: 1
   - name: Shuangwen Sheng
     affiliation: 1
   - name: Eric Simley
