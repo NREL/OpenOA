@@ -81,9 +81,7 @@ OpenOA was created by and primarily developed by researchers at the National Ren
 [^nrelwebsite]: \url{https://nrel.gov}
 [^wp3website]: \url{https://a2e.energy.gov/projects/wp3}
 
-**Figure 1: Overview of Operational Analysis**
-
-Operational analysis involves obtaining time-series data from an industrial plant's SCADA system, performing ETL and QC processes on these data, and then computing various metrics that might inform decisions by the plant operator. Since its inception, OpenOA has been used in several published studies at NREL. In one study, it is used to calculate long-term operational AEP from over 470 wind farms in the US to assess correlation between uncertainty components [@Bodini2020].
+Operational analysis involves obtaining time-series data from an industrial plant's SCADA system, performing ETL and QC processes on these data, and then computing various metrics that might inform decisions by the plant operator. Since its inception, OpenOA has been used in several published studies at NREL. An early version of the code was used in [@Craig2018] to quantify the uncertainty in analyst choices. In one study, it is used to calculate long-term operational AEP from over 470 wind farms in the US to assess correlation between uncertainty components [@Bodini2020]. OpenOA is used in an upcoming paper analysing the gap between preconstruction estimates of energy production, called the P50 bias [cite gap analysis].
 
 By forming an open source software project, OpenOA hopes to improve the reproducibility of research in this field, provide benchmark implementations of commonly performed data transformation and analysis tasks (to lower the barrier to entry), and finally to serve as a conduit that can deliver state-of-the-art analysis methods from researchers to practitioners.
 
@@ -94,8 +92,6 @@ OpenOA V2 is released as a Python package and is freely available under a busine
 The typical user interfaces with OpenOA through its "analysis methods" API. These are Python classes which conform to a common interface (e.g., they implement `__init__`, `prepare`, and `run` methods). Version 2 of OpenOA implements three high level analysis methods. (1) Long term corrected AEP. (2) Electrical losses, and (3) Turbine level losses. Uncertainty quantification is achieved in each analysis using a monte carlo approach. A more detailed description of these analyses are provided in the documentation.
 
 The OpenOA data model is implemented using wrapper classes, called PlantData, that have at least one Pandas data frame [@Mckinney2010]. These classes add convenience functions and a domain-specific schema based on the IEC 6400-25 standard. OpenOA is part of the ENTR alliance consortium, which envisions a complete software stack centered around an open source implementation of this standard. To the author's knowledge, OpenOA offers the first known implementation of this standard published as open source software.
-
-**Figure 2: Diagram of OpenOA software architecture**
 
 OpenOA depends on scikit-learn [@Pedregosa2011] and numpy [@oliphant2006guide], with graphing functions implemented using matplotlib [@hunter2007matplotlib]. Low level functions are organized in toolkit modules, which operate on Pandas series objects, and are general enough to use across multiple domains. The OpenOA development team prioriotizes the use of best software development practices. Documentation is compiled from the source code and automatically published to ReadTheDocs [^rtdwebsite]. We use Github actions to implement our continuous integration pipeline, including automated unit and regression tests, test coverage reporting via CodeCov, automated packaging and publication to the Pypi package index. We utilize a modified git-flow development workflow, with pull requests and issue tracking on Github driving the development.
 

@@ -76,12 +76,19 @@ Next, we recommend installing OpenOA in editable mode:
 pip install -e ./OpenOA
 ```
 
-#### Extracting Example Data
+#### Example Notebooks and Data
 
-The example data will be automaticaly extracted as needed by the tests. The following command is provided for reference:
+The example data will be automaticaly extracted as needed by the tests. To manually extract the example data for use with the example notebooks, use the following command:
 
 ```
 unzip examples/data/la_haute_borne.zip -d examples/data/la_haute_borne/
+```
+
+The example notebooks are located in the `examples` directory. We suggest installing the Jupyter notebook server to run the notebooks interactively. The notebooks can also be viewed statically on [Read The Docs](http://openoa.readthedocs.io/).
+
+```
+pip install jupyter
+jupyter notebook
 ```
 
 #### Testing
