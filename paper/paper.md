@@ -15,6 +15,9 @@ authors:
     affiliation: 1
   - name: Jason M. Fields
     affiliation: 1
+  - name: Nicola Bodini
+    orcid: 0000-0002-2550-9853
+    affiliation: 1
   - name: Lindy Williams
     affiliation: 1
   - name: Joseph C.Y. Lee
@@ -33,7 +36,10 @@ authors:
   - name: Robert Hammond
     orcid: 0000-0003-4476-6406
     affiliation: 1
-  - name: Shuangwen Sheng
+  - name: Nathan Agarwal
+    orcid: 0000-0002-2734-5514
+    affiliation: 1
+  - name: Shawn Sheng
     affiliation: 1
   - name: Eric Simley
     affiliation: 1
@@ -46,111 +52,58 @@ date: 20 December 2019
 bibliography: paper.bib
 ---
 
-# Summary
+<!--
+JOSS welcomes submissions from broadly diverse research areas. For this reason, we require that authors include in the paper some sentences that explain the software functionality and domain of use to a non-specialist reader. We also require that authors explain the research applications of the software. The paper should be between 250-1000 words.
 
-OpenOA is an open source Python package which implements operational analysis (OA) methods for wind energy plants.
-The goal of OpenOA is collaboration and methods sharing in a wind industry that has historically been very protective of methods and data [@McCann2018].
-Over time, we hope that OpenOA will become a reference implementation for OA methods.
+Your paper should include:
 
-The development of OpenOA started internally at the National Renewable Energy Laboratory (NREL) to support the lab's
-efforts in the Wind Plant Performance and Prediction (WP3) benchmarking initiative [^wp3website], which is a key risk reduction
-activity of the Performance, Risk, Uncertainty, and Finance project under the Atmosphere to Electrons initiative.
-The goal of WP3 is to provide an independent benchmark of bias in pre-construction energy yield assessment (EYA),
-and to understand the sources of uncertainty therein
+A list of the authors of the software and their affiliations, using the correct format (see the example below).
+A summary describing the high-level functionality and purpose of the software for a diverse, non-specialist audience.
+A clear Statement of Need that illustrates the research purpose of the software.
+A list of key references, including to other software addressing related needs.
+Mention (if applicable) a representative set of past or ongoing research projects using the software and recent scholarly publications enabled by it.
+Acknowledgement of any financial support.
+As this short list shows, JOSS papers are only expected to contain a limited set of metadata (see example below), a Statement of Need, Summary, Acknowledgements, and References sections. You can look at an example accepted paper. Given this format, a “full length” paper is not permitted, and software documentation such as API (Application Programming Interface) functionality should not be in the paper and instead should be outlined in the software documentation.
 
+
+Review Checklist:
+Summary: Has a clear description of the high-level functionality and purpose of the software for a diverse, non-specialist audience been provided?
+A statement of need: Do the authors clearly state what problems the software is designed to solve and who the target audience is?
+State of the field: Do the authors describe how this software compares to other commonly-used packages?
+Quality of writing: Is the paper well written (i.e., it does not require editing for structure, language, or writing quality)?
+References: Is the list of references complete, and is everything cited appropriately that should be cited (e.g., papers, datasets, software)? Do references in the text use the proper citation syntax?
+
+-->
+
+This paper announces OpenOA version 2.0.0, which was released in August of 2020. Originally released to the public in 2018 [@osti_1478526], OpenOA is an open source framework for operational data analysis of wind energy plants, implemented in the Python programming language [@Rossum2009]. OpenOA provides a common data model, high level analysis workflows, and low-level convenience functions that engineers, analysts, and researchers in the wind energy industry can use to facilitate anlytics workflows on operational data sets. With over 50 stars on Github, a dozen contributors, and an active issues forum, OpenOA is becoming a mature project that provides a high level interface to solve practical problems in the wind energy industry.
+
+# Statement of Need
+
+OpenOA was created by and primarily developed by researchers at the National Renewable Energy Laboratory [^nrelwebsite] (NREL) through the Performance, Risk Uncertainty Finance [^wp3website] (PRUF) project, when the team recognized the need to compute a 20-year long term correced AEP metric from operational data as part of a benchmarking study [WP3 benchmark citation]. Due to restrictions on the input SCADA data, the team recognized that open source publication of the code was necessary to foster trust in the results by the participants of the benchmarking study. Furthermore, after talking with our industry partners, it became clear that there was no industry standard code for computing a 20-year long term corrected AEP.
+
+[^nrelwebsite]: \url{https://nrel.gov}
 [^wp3website]: \url{https://a2e.energy.gov/projects/wp3}
 
-OpenOA was originally scoped to calculate the operational annual energy production (AEP) of case study wind power plants, providing a baseline to which EYA bias can be measured.
-OpenOA has since expanded its scope to support additional types of analyses including turbine performance and electrical losses and to support data from wind plants outside the initial set of test projects.
-Released publicly in September 2018, the OpenOA repository contains numerous examples demonstrated in Jupyter notebooks along with publicly available data which can be used to run the built in unit and integration tests. The software has also been used in study on the impact of analyst choice in the outcome of OAs [@craig2018].
+Operational analysis involves obtaining time-series data from an industrial plant's SCADA system, performing ETL and QC processes on these data, and then computing various metrics that might inform decisions by the plant operator. Since its inception, OpenOA has been used in several published studies at NREL. An early version of the code was used in [@Craig2018] to quantify the uncertainty in analyst choices. In one study, it is used to calculate long-term operational AEP from over 470 wind farms in the US to assess correlation between uncertainty components [@Bodini2020]. OpenOA is used in an upcoming paper analysing the gap between preconstruction estimates of energy production, called the P50 bias [cite gap analysis].
 
-# Importance of Operational Analysis
-Operational analysis uses collected data from wind farms to perform assessments ranging from the diagnosis of
-faults and underperformance, benchmarking of performance improvements (e.g., wind sector management,
-vortex generators), long-term estimates of AEP, and building
-statistical or physics-based models for various applications (e.g.,, wake model validation, wind power
-forecasting). Data sources include the wind farm revenue meter, turbine supervisory, control and data
-acquisition (SCADA) systems, on-site meteorological towers, and modeled atmospheric data (e.g., reanalysis data).
+By forming an open source software project, OpenOA hopes to improve the reproducibility of research in this field, provide benchmark implementations of commonly performed data transformation and analysis tasks (to lower the barrier to entry), and finally to serve as a conduit that can deliver state-of-the-art analysis methods from researchers to practitioners.
 
-## Long Term AEP Calculation
+# Summary
 
-The AEP analysis implemented in OpenOA is based on a relatively standard approach within the wind resource assessment
-industry, where monthly gross energy for the wind plant (reported energy at the revenue meter corrected for availability
-and curtailment losses) is related to a monthly long-term wind resource through a linear regression relationship.
-Calculation of AEP involves several steps:
+OpenOA V2 is released as a Python package and is freely available under a business-friendly, open-source, BSD license. OpenOA contains documentation, worked out examples in Jupyter notebooks, and a corresponding example dataset from Engie Renewable's La Haute Borne Dataset [@EngieDataset].
 
-1. Processing of the revenue meter energy, loss estimates, and long-term reanalysis wind resource data.
-2. Review of different reanalysis data for suitability.
-3. Outlier detection and removal.
-4. Flagging and removal of months with high energy losses.
-5. Application of linear regression between energy and wind resource and the long-term resource to calculate long-term
-gross energy.
-6. Estimation of long-term AEP from long-term gross energy and expected future losses.
-7. Uncertainty quantification through a Monte Carlo approach in which inputs to and intermediate calculations within
-the process are sampled based on their assumed or calculated error distributions.
+The typical user interfaces with OpenOA through its "analysis methods" API. These are Python classes which conform to a common interface (e.g., they implement `__init__`, `prepare`, and `run` methods). Version 2 of OpenOA implements three high level analysis methods. (1) Long term corrected AEP. (2) Electrical losses, and (3) Turbine level losses. Uncertainty quantification is achieved in each analysis using a monte carlo approach. A more detailed description of these analyses are provided in the documentation.
 
-An example usage of this method is shown in Figure 1.
-Here, revenue meter and reanalysis data attributes from plant data are used with several toolkit modules to calculate
-operational AEP for a wind plant.
-The details of this particular example are provided in a Jupyter notebook on the GitHub repository.
+The OpenOA data model is implemented using wrapper classes, called PlantData, that have at least one Pandas data frame [@Mckinney2010]. These classes add convenience functions and a domain-specific schema based on the IEC 6400-25 standard. OpenOA is part of the ENTR alliance consortium, which envisions a complete software stack centered around an open source implementation of this standard. To the author's knowledge, OpenOA offers the first known implementation of this standard published as open source software.
 
-![](aep_analysis_v3.png)
-*Figure 1: Using different OpenOA Toolkits to calculate wind plant AEP using operational data.
-In this example, revenue meter and reanalysis data are processed using the data flagging, time series analysis,
-and plotting tools module to produce the graphs in the figure.*
+OpenOA depends on scikit-learn [@Pedregosa2011] and numpy [@oliphant2006guide], with graphing functions implemented using matplotlib [@hunter2007matplotlib]. Low level functions are organized in toolkit modules, which operate on Pandas series objects, and are general enough to use across multiple domains. The OpenOA development team prioriotizes the use of best software development practices. Documentation is compiled from the source code and automatically published to ReadTheDocs [^rtdwebsite]. We use Github actions to implement our continuous integration pipeline, including automated unit and regression tests, test coverage reporting via CodeCov, automated packaging and publication to the Pypi package index. We utilize a modified git-flow development workflow, with pull requests and issue tracking on Github driving the development.
 
-## Low Level Toolkits
-As of October 2019, there are seven low level modules in OpenOA called Toolkits, which are listed here along with a
-general description of their functions.
-These modules range from general data processing (flagging, imputation, unit conversion, and time series modules)
-and those specifically intended for wind plant data processing (meteorological data processing, power curve fitting, and plotting).
-The value of toolkit modules lies in their generality.
-Each function was written to operate on array-like objects, such as Pandas Series, Data Frames, and NumPy Arrays.
-In this way, the toolkit modules can be applied in a variety of situations, both internal and external to the OpenOA code base.
+[^nrelwebsite]: \url{https://openoa.readthedocs.io}
 
-- Filters: Functions for flagging data based on a range of criteria, such as: Values out of range, frozen signals,
-and criteria based on the variance.
-- Imputing: Functions for filling in null data with interpolated (imputed) values.
-- Meteorological data: Functions for calculating common meteorological variables used in wind resource analysis,
-such as: Air density correction, vertical pressure extrapolation, and computation of shear and veer.
-- Time series: Functions for common time series analysis, such as: Missing time-stamp identification, and gap filling.
-- Unit conversion: Functions for common unit conversions in wind energy, such as power to energy conversion.
-- Power curve: Functions to fit data to a specified wind turbine power curve model
-(including parametric and nonparametric forms) and to then apply the power curve to wind speed data.
-- Plotting tools: Functions to produce common wind resource and energy-related visualizations (e.g., the wind rose).
-
-An example of toolkit use is shown in Figure 2.
-Here, several power curve models are fit to filtered wind speed and power data for a specific turbine.
-As shown in the figure, SCADA data can be processed by several toolkit modules to perform the flagging and
-removal of outlier data, the fitting of the power curve, and the plotting of results.
-The steps of this particular example are provided in detail as a Jupyter notebook on the GitHub repository.
-
-![](pc_analysis_v2.png)
-*Figure 2: Using different OpenOA modules to calculate idealized power curves for a sample wind turbine. In this example,
-raw SCADA data are filtered for outlier data (shown in red) using a bin filter from the data flagging toolkit.
-Three power curves are computed using the power curve toolkit and are plotted against the filtered data in the bottom
-right figure.*
-
-# Towards Industry Standards
-OpenOA provides an internal data model which is based on a data standard for wind plant SCADA data from the
-International Electrotechnical Commission (IEC) standard 61400-25 [@iec25].
-The standard defines naming conventions and data types for variables which are encountered in wind plant data.
-OpenOA aims to boost this adoption by providing an internal data model based upon the 61400-25 standard.
-Users are required to build a mapping of their data source to OpenOA's data model by extending the built in "PlantData" class.
-
-For operational assessments, there are only limited standards covering specific applications: IEC
-61400-12 [@iec12] addresses turbine power curve testing and IEC 61400-26 [@iec26] addresses the derivation
-and categorization of availability loss metrics.
-Notably lacking standards are AEP estimates, reliability and performance metrics, and fault and underperformance diagnosis.
-Little documentation of OA best practices exists beyond these standards, to our knowledge. We are aware of a consultant report [@lindvall2016], an academic thesis [@khatab2017], and some conference proceedings [@lunacek2018].
-
-Moving forward, we see a role for OpenOA in fostering reference methods and standards development for the methods of wind plant OA.
-We believe significant efficiency gains can be achieved by providing a public repository for the collection and
-dissemination of OA methods and best practices.
-Furthermore, we believe that a standard operational analysis will benefit those who rely upon these analyses for
-daily operations management through to investment decisions. A standardized analysis will produce more consistent results across industry and yield better faster decision making.
+In conclusion, the OpenOA development team is excited about the future of open science in the wind energy industry. We invite all interested readers to contribute to this project through Github.
 
 # Acknowledgements
+The authors would like to acknowledge that Jordan Perr-Sauer and Mike Optis have made an equal contribution to this work.
 This work was authored by the National Renewable Energy Laboratory, operated by Alliance for Sustainable Energy, LLC, for the U.S. Department of Energy (DOE) under Contract No. DE-AC36-08GO28308.
 Funding provided by the U.S. Department of Energy Office of Energy Efficiency and Renewable Energy Wind Energy Technologies Office, within the Atmosphere to Electrons research program.
 The views expressed in the article do not necessarily represent the views of the DOE or the U.S. Government.
