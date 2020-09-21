@@ -2,9 +2,9 @@
 # In addition to main requirements
 
 ipython
-m2r
-sphinx
-sphinxcontrib-napoleon
-sphinx_rtd_theme
+m2r==0.2.1
+sphinx==2.0.0
+sphinxcontrib-napoleon==0.6.1
+sphinx_rtd_theme==0.2.4
 nbmerge
 nbsphinx
