@@ -12,10 +12,11 @@ class AssetData(object):
     metadata about the plant assets. It provides some useful functions
     to work with this data (e.g., calculating nearest neighbors, etc.). 
     
-    This class requires the geopandas package, which can be installed using:
-        pip install geopandas
+    Note:
+        This class requires the geopandas package, which can be installed using:
+            pip install geopandas
 
-    If using Microsoft Windows, please see the 'Requirements' section of the OpenOA readme file for instructions on installing geopandas.
+        If using Microsoft Windows, please see the 'Requirements' section of the OpenOA readme file for instructions on installing geopandas.
     """
 
     def __init__(self, engine="pandas"):
