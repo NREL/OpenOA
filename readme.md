@@ -33,7 +33,7 @@ conda activate openoa-env
 
 #### Special Note for users of Microsoft Windows:
 
-The Anaconda python distribution is *required* for users of Microsoft Windows. This is because the pip package of GDAL for Windows requires Visual Studio to compile some of the dependencies. While advanced users are welcome to explore this option, we find it is easier to install the following packages via Anaconda:
+If using the `AssetData` class, the Anaconda python distribution is *required* for users of Microsoft Windows. This is because of the GDAL package used in this class. The pip package of GDAL for Windows requires Visual Studio to compile some of the dependencies. While advanced users are welcome to explore this option, we find it is easier to install the following packages via Anaconda:
 
 ```
 conda install shapely

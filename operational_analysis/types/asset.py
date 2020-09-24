@@ -1,7 +1,6 @@
 import importlib
 import itertools
 
-import geopandas as gp
 import numpy as np
 import pandas as pd
 from shapely.geometry import Point
@@ -11,7 +10,13 @@ class AssetData(object):
     """
     This class wraps around a GeoPandas dataframe that contains
     metadata about the plant assets. It provides some useful functions
-    to work with this data (e.g., calculating nearest neighbors, etc.)
+    to work with this data (e.g., calculating nearest neighbors, etc.). 
+    
+    Note:
+        This class requires the geopandas package, which can be installed using:
+            pip install geopandas
+
+        If using Microsoft Windows, please see the 'Requirements' section of the OpenOA readme file for instructions on installing geopandas.
     """
 
     def __init__(self, engine="pandas"):
@@ -83,6 +88,9 @@ class AssetData(object):
         Returns: None
             Sets asset 'geometry' column.
         """
+
+        import geopandas as gp
+
         if zone is None:
             # calculate zone
             if longitude is None:
