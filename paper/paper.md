@@ -33,6 +33,9 @@ authors:
     affiliation: 1
   - name: Travis Kemper
     affiliation: 1
+  - name: Robert Hammond
+    orcid: 0000-0003-4476-6406
+    affiliation: 1
   - name: Nathan Agarwal
     orcid: 0000-0002-2734-5514
     affiliation: 1
