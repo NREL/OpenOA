@@ -8,7 +8,7 @@ def convert_power_to_energy(power_col, sample_rate_min='10T'):
     Compute energy [kWh] from power [kw] and return the data column
 
     Args:
-        df(:obj:`pandas.DataFrame`): the existing data frame to append to
+        df(:obj:`array-like`): the existing data frame to append to
         col(:obj:`string`): Power column to use if not power_kw
         sample_rate_min(:obj:`float`): Sampling rate in minutes to use for conversion, if not ten minutes
 
@@ -59,16 +59,16 @@ def compute_gross_energy(net_energy, avail_losses, curt_losses, avail_type='frac
     return gross
 
 
-def convert_feet_to_meter(variable):
+def convert_feet_to_meter(variables):
     """
     Compute variable in [meter] from [feet] and return the data column
 
     Args:
-        df(:obj:`pandas.Series`): the existing data frame to append to
+        df(:obj:`array-like`): the existing data frame to append to
         variable(:obj:`string`): variable in feet
 
     Returns:
-        :obj:`pandas.Series`: variable in meters of the input data frame 'df'
+        :obj:Union[`pandas.Series`]: variable in meters of the input data frame 'df'
     """
 
     out = variable * 0.3048
