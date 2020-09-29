@@ -59,7 +59,7 @@ def compute_gross_energy(net_energy, avail_losses, curt_losses, avail_type='frac
     return gross
 
 
-def convert_feet_to_meter(variables):
+def convert_feet_to_meter(variable):
     """
     Compute variable in [meter] from [feet] and return the data column
 
