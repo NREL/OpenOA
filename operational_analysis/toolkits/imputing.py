@@ -105,7 +105,7 @@ def impute_data(target_value_col, target_align_col, ref_value_col, ref_align_col
     merge_df.loc[impute_df.index, "target_value"] = imputed_data
 
     # Return target data result after imputation
-    return merge_df.target_value
+    return merge_df.target_value.astype(float)
 
 
 def impute_all_assets_by_correlation(
@@ -197,4 +197,4 @@ def impute_all_assets_by_correlation(
                 len(corr_list) - num_neighbors - 1]  # Name of next highest correlated neighbor
             num_nan = ret.loc[imputed_data.index, "imputed_input_col"].isnull().shape[0]
 
-    return ret["imputed_input_col"]
+    return ret["imputed_input_col"].astype(float)

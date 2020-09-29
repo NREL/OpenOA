@@ -155,7 +155,7 @@ class SimpleFilters(unittest.TestCase):
             self.test11_df.time,
             self.test11_df.id,
             0.7,
-            self.test11_df.index.values
+            index_col=self.test11_df.index.values
         ).to_frame()
         ans = pd.Series([0.440789, 3.401316, 14.3677, 42.8312, 62.887218, 96.734818])
         nptest.assert_array_almost_equal((y.loc[self.test11_df['data'].isnull(), 'imputed_input_col']).values, ans.values,
@@ -167,14 +167,22 @@ class SimpleFilters(unittest.TestCase):
             self.test10_df.data,
             self.test10_df.time,
             self.test10_df.id,
-            0.7
+            0.7,
+            self.test10_df.index.values
         ).to_frame()
         nan_ind = self.test10_df.loc[self.test10_df['data'].isnull()].index
         ans = pd.Series([1.589147, np.nan, np.nan, np.nan, np.nan, np.nan, 123.7000])
         nptest.assert_array_almost_equal(y2.loc[nan_ind, 'imputed_input_col'], ans, decimal=4)
 
         # Test 3, 2 poorly correlated data sets, no data should be imputed
-        y3 = imputing.impute_all_assets_by_correlation(self.test12_df, 'data', 'data', 'time', 'id', 0.7).to_frame()
+        y3 = imputing.impute_all_assets_by_correlation(
+            self.test12_df.data,
+            self.test12_df.data,
+            self.test12_df.time,
+            self.test12_df.id,
+            0.7,
+            index_col=self.test12_df.index.values
+        ).to_frame()
         nptest.assert_array_almost_equal(y3['imputed_input_col'], self.test12_df['data'], decimal=4)
 
     def tearDown(self):
