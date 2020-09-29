@@ -381,11 +381,13 @@ class TurbineLongTermGrossEnergy(object):
         self._scada_daily_valid.reset_index(inplace = True)
         
         # Impute missing days for each turbine - provides progress bar
-        self._scada_daily_valid['energy_imputed'] = imputing.impute_all_assets_by_correlation(self._scada_daily_valid, 
-                                                                                              input_col = 'energy_kwh_corr',
-                                                                                              ref_col = 'energy_kwh_corr',
-                                                                                              align_col = 'day',
-                                                                                              id_col = 'id')
+        self._scada_daily_valid['energy_imputed'] = imputing.impute_all_assets_by_correlation(
+            input_col=self._scada_daily_valid.energy_kwh_corr,
+            ref_col=self._scada_daily_valid.energy_kwh_corr,
+            align_col=self._scada_daily_valid.day,
+            id_col=self._scada_daily_valid.id,
+            index_col=self._scada_daily_valid.index.values,
+        )
         
         
         # Drop data that could not be imputed
