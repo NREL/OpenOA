@@ -35,10 +35,8 @@ class MonteCarloAEP(object):
     analysis methods for estimating plant level operational AEP and uncertainty.
     
     The preprocessing should run in this order:
-
         1. Process revenue meter energy - creates monthly/daily data frame, gets revenue meter on monthly/daily basis, and adds
            data flag
-
         2. Process loss estimates - add monthly/daily curtailment and availabilty losses to monthly/daily data frame
         
         3. Process reanalysis data - add monthly/daily density-corrected wind speeds, temperature (if used) and wind direction (if used)
@@ -47,12 +45,11 @@ class MonteCarloAEP(object):
         4. Set up Monte Carlo - create the necessary Monte Carlo inputs to the OA process
         
         5. Run AEP Monte Carlo - run the OA process iteratively to get distribution of AEP results
-
     The end result is a distribution of AEP results which we use to assess expected AEP and associated uncertainty
     """
 
     @logged_method_call
-    def __init__(self, plant, reanal_products=["merra2", "ncep2", "erai"], uncertainty_meter=0.005, uncertainty_losses=0.05,
+    def __init__(self, plant, reanal_products=["merra2", "ncep2", "erai","era5"], uncertainty_meter=0.005, uncertainty_losses=0.05,
                  uncertainty_windiness=(10, 20), uncertainty_loss_max=(10, 20),
                  uncertainty_nan_energy=0.01, time_resolution = 'M', reg_model = 'lin', ml_setup_kwargs={},
                  reg_temperature = False, reg_winddirection = False):
@@ -408,14 +405,12 @@ class MonteCarloAEP(object):
     def process_revenue_meter_energy(self):
         """
         Initial creation of monthly data frame:
-
             1. Populate monthly/daily data frame with energy data summed from 10-min QC'd data
             2. For each monthly/daily value, find percentage of NaN data used in creating it and flag if percentage is
                greater than 0
             
         Args:
             (None)
-
         Returns:
             (None)
         """
@@ -499,7 +494,6 @@ class MonteCarloAEP(object):
     def process_reanalysis_data(self):
         """
         Process reanalysis data for use in PRUF plant analysis:
-
             - calculate density-corrected wind speed and wind components
             - get monthly/daily average wind speeds and components
             - calculate monthly/daily average wind direction
@@ -642,19 +636,19 @@ class MonteCarloAEP(object):
 
         # If valid data hasn't yet been stored in dictionary, determine the valid data
         df = self._aggregate.df
-                
+        
         # First set of filters checking combined losses and if the Nan data flag was on
         df_sub = df.loc[
             ((df['availability_pct'] + df['curtailment_pct']) < self._run.loss_threshold) & (df['nan_flag'] == False),:]
         
         # Set maximum range for using bin-filter, convert from MW to GWh
-        plant_capac = self._plant._plant_capacity/1000 * self._hours_in_res
+        plant_capac = self._plant._plant_capacity/1000. * self._hours_in_res
 
-        # Apply range filter to wind speed
+        #Apply range filter to wind speed
         df_sub = df_sub.assign(flag_range=filters.range_flag(df_sub[reanal], below = 0, above = 40))
-        # Apply frozen/unresponsive sensor filter
+        #Apply frozen/unresponsive sensor filter
         df_sub.loc[:,'flag_frozen'] = filters.unresponsive_flag(df_sub[reanal], threshold = 3)
-        # Apply window range filter
+        #Apply window range filter
         df_sub.loc[:,'flag_window'] = filters.window_range_flag(window_col = df_sub[reanal], 
                                                                     window_start = 5., 
                                                                     window_end = 40,
@@ -662,7 +656,7 @@ class MonteCarloAEP(object):
                                                                     value_min =  0.02*plant_capac,
                                                                     value_max =  1.2*plant_capac) 
         
-        # Create a 'final' flag which is true if any of the previous flags are true
+        #Create a 'final' flag which is true if any of the previous flags are true
         df_sub.loc[:,'flag_final'] = (df_sub.loc[:, 'flag_range']) | (df_sub.loc[:, 'flag_frozen']) | \
                                           (df_sub.loc[:, 'flag_window']) 
                 
@@ -823,10 +817,7 @@ class MonteCarloAEP(object):
             fitted_model = self.run_regression(n)
  
             # Get long-term regression inputs
-            [reg_inputs_lt_noIAV, reg_lt_stdev] = self.sample_long_term_reanalysis()
-
-            # Apply IAV to long-term regression inputs
-            reg_inputs_lt = self.apply_IAV(reg_inputs_lt_noIAV, reg_lt_stdev)
+            reg_inputs_lt = self.sample_long_term_reanalysis()
             
             # Get long-term normalized gross energy by applying regression result to long-term monthly wind speeds
             inputs = np.array(reg_inputs_lt)
@@ -844,14 +835,14 @@ class MonteCarloAEP(object):
             gross_por = fitted_model.predict(np.array(pd.concat(reg_inputs_por, axis = 1)))
 
             if self.time_resolution == 'M': # Undo normalization to 30-day months
-                gross_lt = gross_lt*self.num_days_lt/30 
+                gross_lt = gross_lt*np.tile(self.num_days_lt,self._run.num_years_windiness)/30 
                 gross_por = gross_por*self.num_days_lt/30
             
             # Get long-term availability and curtailment losses by month
             [avail_lt_losses, curt_lt_losses] = self.sample_long_term_losses()  
 
             # Assign AEP, long-term availability, and long-term curtailment to output data frame
-            aep_GWh[n] = gross_lt.sum() * (1 - avail_lt_losses)
+            aep_GWh[n] = gross_lt.sum()/self._run.num_years_windiness * (1 - avail_lt_losses)
             avail_pct[n] = avail_lt_losses
             curt_pct[n] = curt_lt_losses
             lt_por_ratio[n] = gross_lt.sum() / gross_por.sum()
@@ -860,7 +851,10 @@ class MonteCarloAEP(object):
         sim_results = pd.DataFrame(index=np.arange(num_sim), data={'aep_GWh': aep_GWh,                                                                                                        
                                                                    'avail_pct': avail_pct,                                                                                                      
                                                                    'curt_pct': curt_pct,                                                                                                    
-                                                                  'lt_por_ratio': lt_por_ratio})      
+                                                                  'lt_por_ratio': lt_por_ratio,
+                                                                  'r2': self._r2_score,
+                                                                  'mse': self._mse_score,
+                                                                  'n_points': self._mc_num_points})       
         return sim_results
 
     @logged_method_call
@@ -873,7 +867,6 @@ class MonteCarloAEP(object):
         
         Args:
            (None)
-
         Returns:
            :obj:`pandas.DataFrame`: the windiness-corrected or 'long-term' annualized monthly/daily wind speeds
            :obj:`pandas.DataFrame`: Long-term wind speed stdev, from which IAV will be derived
@@ -881,25 +874,18 @@ class MonteCarloAEP(object):
         # Check if valid data has already been calculated and stored. If so, just return it
         if (self._run.reanalysis_product,self. _run.num_years_windiness) in self.long_term_sampling:
             long_term_reg_inputs = self.long_term_sampling[(self._run.reanalysis_product,self. _run.num_years_windiness)]
-            ws_aggregate_sd = self.long_term_sampling_sd[(self._run.reanalysis_product,self. _run.num_years_windiness)]
-            return [long_term_reg_inputs.copy(),ws_aggregate_sd.copy()]
+            return long_term_reg_inputs.copy()
         
         # Sample long-term wind speed values
         ws_df = self._reanalysis_aggregate[self._run.reanalysis_product].to_frame().dropna()  # Drop NA values from monthly/daily reanalysis data series
-        ws_data = ws_df.tail(self. _run.num_years_windiness * self._calendar_samples)  # Get last 'x' years of data from reanalysis product
-        ws_aggregate = self.groupby_time_res(ws_data)[self._run.reanalysis_product] # Get long-term annualized monthly/daily wind speeds
+        ws_aggregate = ws_df.tail(self. _run.num_years_windiness * self._calendar_samples)  # Get last 'x' years of data from reanalysis product
         ws_aggregate.reset_index(drop=True, inplace=True) # TODO: This rectifies a 0-indexing issue. Needs refactoring.
         long_term_reg_inputs = pd.DataFrame(ws_aggregate)
-        # Wind speed stdev for later IAV calculation
-        ws_aggregate_sd = ws_data.groupby(ws_data.index.month)[self._run.reanalysis_product].std() # Get long-term annualized stdev of daily wind speeds            
-        
-        #import pdb
-        #pdb.set_trace()
 
         # Temperature and wind direction
         namescol = [self._run.reanalysis_product + '_' + var for var in self._rean_vars]
         # TODO: The result of this call has a multi-index, which is blown away with "reset_index" to match the index of mc_ws_aggregate. Needs refactoring.
-        long_term_temp = self._reanalysis_aggregate[namescol].dropna().tail(self. _run.num_years_windiness * self._calendar_samples).apply(self.groupby_time_res).reset_index(drop=True)
+        long_term_temp = self._reanalysis_aggregate[namescol].dropna().tail(self. _run.num_years_windiness * self._calendar_samples).reset_index(drop=True)
         if self.reg_temperature:
             long_term_reg_inputs = pd.concat([long_term_reg_inputs, long_term_temp[self._run.reanalysis_product + '_temperature_K']], axis=1)
         if self.reg_winddirection:
@@ -908,30 +894,9 @@ class MonteCarloAEP(object):
         
         # Store result in dictionary
         self.long_term_sampling[(self._run.reanalysis_product, self. _run.num_years_windiness)] = long_term_reg_inputs
-        self.long_term_sampling_sd[(self._run.reanalysis_product, self. _run.num_years_windiness)] = ws_aggregate_sd
         
         # Return result            
-        return [long_term_reg_inputs.copy(),ws_aggregate_sd.copy()]
-
-    @logged_method_call
-    def apply_IAV(self, long_term_reg_inputs, ws_aggregate_sd_IAV):
-        """
-        This function calculates and apply IAV for the long-term wind speed data
-        
-        Args:
-           long_term_reg_inputs(:obj:`pandas.DataFrame`): Long-term regression inputs
-           ws_aggregate_sd(:obj:`pandas.DataFrame`): Long-term wind speed stdev, from which IAV will be derived
-        Returns:
-           :obj:`pandas.DataFrame`: the IAV-sampled monthly/daily regression inputs
-        """
-    
-        if self.time_resolution == 'D':
-            ws_aggregate_sd_IAV = np.repeat(ws_aggregate_sd_IAV, np.ceil(self.num_days_lt).astype(int))
-        ws_aggregate_sd_IAV.reset_index(drop=True,inplace=True) # TODO: This rectifies a 0-indexing issue. Needs refactoring.
-        iav = np.random.normal(1, ws_aggregate_sd_IAV/long_term_reg_inputs[self._run.reanalysis_product])        
-        long_term_reg_inputs_IAV = long_term_reg_inputs.copy()
-        long_term_reg_inputs_IAV[self._run.reanalysis_product] = long_term_reg_inputs_IAV[self._run.reanalysis_product] * iav
-        return long_term_reg_inputs_IAV
+        return long_term_reg_inputs.copy()
 
     @logged_method_call
     def sample_long_term_losses(self):
