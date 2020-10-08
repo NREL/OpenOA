@@ -1,6 +1,6 @@
 # Requirements for the OpenOA software package
 eia-python>=1.22
-geopandas>=0.4.0
+pyproj>=2.6.1
 numpy>=1.15.4
 pandas>=0.23.4
 pygam>=0.8.0
