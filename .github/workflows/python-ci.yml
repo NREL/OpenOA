@@ -25,10 +25,11 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+        yes
       shell: bash
     - name: Unzip example data
       run: |
-        yes | unzip examples/data/la_haute_borne.zip -d examples/data/la_haute_borne/
+        unzip examples/data/la_haute_borne.zip -d examples/data/la_haute_borne/
       shell: bash
     - name: Test with pytest
       run: |
