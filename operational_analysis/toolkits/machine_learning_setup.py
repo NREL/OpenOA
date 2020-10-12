@@ -142,10 +142,10 @@ class MachineLearningSetup(object):
         # Fit the model to each combination of hyperparmeters
         self.random_search.fit(X, y)        
         
-        # Assign optimal parameters to object
+        # Assign optimal parameters and model to object
         self.opt_hyp = self.random_search.best_params_        
+        self.opt_model = self.random_search.best_estimator_
         
         # Output results to terminal
         if report:
             self.hyper_report(self.random_search.cv_results_, n_iter_search)
-        
