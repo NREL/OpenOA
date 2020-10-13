@@ -9,15 +9,9 @@ from shapely.geometry import Point
 
 class AssetData(object):
     """
-    This class wraps around a GeoPandas dataframe that contains
+    This class wraps around a Pandas dataframe that contains
     metadata about the plant assets. It provides some useful functions
     to work with this data (e.g., calculating nearest neighbors, etc.). 
-    
-    Note:
-        This class requires the geopandas package, which can be installed using:
-            pip install geopandas
-
-        If using Microsoft Windows, please see the 'Requirements' section of the OpenOA readme file for instructions on installing geopandas.
     """
 
     def __init__(self, engine="pandas"):
