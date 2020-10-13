@@ -31,19 +31,6 @@ conda create --name openoa-env python=3
 conda activate openoa-env
 ```
 
-#### Special Note for users of Microsoft Windows:
-
-If using the `AssetData` class, the Anaconda python distribution is *required* for users of Microsoft Windows. This is because of the GDAL package used in this class. The pip package of GDAL for Windows requires Visual Studio to compile some of the dependencies. While advanced users are welcome to explore this option, we find it is easier to install the following packages via Anaconda:
-
-```
-conda install shapely
-conda install geos
-conda install fiona
-```
-
-If errors about Visual Studio persist, you can try downloading the [Microsoft Visual Studio compiler for Python](https://www.microsoft.com/en-us/download/details.aspx?id=44266) and compiling GDAL yourself.
-
-
 ### Installation:
 
 Clone the repository and install the library and its dependencies using pip:
