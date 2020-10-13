@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file. If you make
 ## [2.0.1 - 2020-10-13]
 - Replaced `GeoPandas` functionality with `pyproj` and `Shapely` for coordinate
 reference system conversion and distance measurements.
+- Moved and renamed tests and updated the documentation accordingly.
 
 ## [2.0.0 - 2020-08-11]
 - Switch to [semantic versioning](https://semver.org) from this release forward.
