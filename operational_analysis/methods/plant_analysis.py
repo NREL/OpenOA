@@ -869,7 +869,6 @@ class MonteCarloAEP(object):
            (None)
         Returns:
            :obj:`pandas.DataFrame`: the windiness-corrected or 'long-term' annualized monthly/daily wind speeds
-           :obj:`pandas.DataFrame`: Long-term wind speed stdev, from which IAV will be derived
         """
         # Check if valid data has already been calculated and stored. If so, just return it
         if (self._run.reanalysis_product,self. _run.num_years_windiness) in self.long_term_sampling:
