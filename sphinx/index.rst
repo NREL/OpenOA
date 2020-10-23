@@ -31,7 +31,7 @@ anyone can write their own, which is intended to provide natural growth of tools
 
 To interact with how each of these components of OpenOA are used, please visit our examples notebooks on
 `Binder <https://mybinder.org/v2/gh/NREL/OpenOA/master?filepath=examples>`_, or view them statically on the
-`examples page <examples.ipynb>`_.
+`examples page <examplesout.ipynb>`_.
 
 .. toctree::
     :maxdepth: 2
