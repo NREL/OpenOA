@@ -20,7 +20,7 @@ The library is written around Pandas Data Frames, utilizing a flexible backend
 so that data loading, processing, and analysis could be performed using other libraries,
 such as Dask and Spark, in the future.
 
-If you would like to test the code out before installation or simply explore the possibilities, please see our examples on [Binder](https://mybinder.org/v2/gh/NREL/OpenOA/master?filepath=examples).
+If you would like to try out the code before installation or simply explore the possibilities, please see our examples on [Binder](https://mybinder.org/v2/gh/NREL/OpenOA/master?filepath=examples).
 
 ### Requirements
 
