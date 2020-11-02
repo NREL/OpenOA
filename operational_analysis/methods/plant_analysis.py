@@ -756,8 +756,8 @@ class MonteCarloAEP(object):
         """
         reg_data = self.set_regression_data(n)  # Get regression data
         
-        # Randomly select 80% of the data to perform regression and incorporate some regression uncertainty
-        reg_data = np.array(reg_data.sample(frac = 0.8))
+        # Bootstrap input data to incorporate some regression uncertainty
+        reg_data = np.array(reg_data.sample(frac = 1.0, replace = True))
         
         # Update Monte Carlo tracker fields
         self._mc_num_points[n] = np.shape(reg_data)[0]
