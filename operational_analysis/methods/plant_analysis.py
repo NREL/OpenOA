@@ -132,9 +132,7 @@ class MonteCarloAEP(object):
         # Create a data frame to store monthly/daily reanalysis data over plant period of record
         self._reanalysis_por = self._aggregate.df.loc[(self._aggregate.df.index >= self._start_por) & \
                                                     (self._aggregate.df.index <= self._end_por)]
-        
-        self._reanalysis_por_avg = self.groupby_time_res(self._reanalysis_por)
-            
+                    
     @logged_method_call
     def run(self, num_sim, reanal_subset=None):
         """
@@ -826,12 +824,12 @@ class MonteCarloAEP(object):
             gross_lt = fitted_model.predict(inputs)
 
             # Get POR gross energy by applying regression result to POR regression inputs                                                                        
-            reg_inputs_por = [self._reanalysis_por_avg[self._run.reanalysis_product]]
+            reg_inputs_por = [self._reanalysis_por[self._run.reanalysis_product]]
             if self.reg_temperature:
-                reg_inputs_por += [self._reanalysis_por_avg[self._run.reanalysis_product + '_temperature_K']]
+                reg_inputs_por += [self._reanalysis_por[self._run.reanalysis_product + '_temperature_K']]
             if self.reg_winddirection:
-                reg_inputs_por += [np.sin(self._reanalysis_por_avg[self._run.reanalysis_product + '_wd'])]
-                reg_inputs_por += [np.cos(self._reanalysis_por_avg[self._run.reanalysis_product + '_wd'])]
+                reg_inputs_por += [np.sin(self._reanalysis_por[self._run.reanalysis_product + '_wd'])]
+                reg_inputs_por += [np.cos(self._reanalysis_por[self._run.reanalysis_product + '_wd'])]
             gross_por = fitted_model.predict(np.array(pd.concat(reg_inputs_por, axis = 1)))
 
             if self.time_resolution == 'M': # Undo normalization to 30-day months
