@@ -845,7 +845,7 @@ class MonteCarloAEP(object):
             aep_GWh[n] = gross_lt.sum()/self._run.num_years_windiness * (1 - avail_lt_losses)
             avail_pct[n] = avail_lt_losses
             curt_pct[n] = curt_lt_losses
-            lt_por_ratio[n] = gross_lt.sum() / gross_por.sum()
+            lt_por_ratio[n] = (gross_lt.sum()/self._run.num_years_windiness) / gross_por.sum()
             
         # Return final output
         sim_results = pd.DataFrame(index=np.arange(num_sim), data={'aep_GWh': aep_GWh,                                                                                                        
