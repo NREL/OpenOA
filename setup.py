@@ -54,7 +54,7 @@ setup(name='OpenOA',
                         "scikit_learn",
                         "EIA-python",
                         "requests",
-                        "pyproj--only-binary",
+                        "pyproj --only-binary",
                         "shapely"],
       tests_require=['pytest', 'pytest-cov'],
       python_requires='>=3.6'
