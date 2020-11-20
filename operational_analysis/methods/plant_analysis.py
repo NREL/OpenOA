@@ -79,7 +79,6 @@ class MonteCarloAEP(object):
         # Memo dictionaries help speed up computation
         self.outlier_filtering = {}  # Combinations of outlier filter results
         self.long_term_sampling = {}  # Combinations of long-term reanalysis data sampling
-        self.long_term_sampling_sd = {}  # Combinations of long-term reanalysis data sampling stdev of wind speed
         
         # Define relevant uncertainties, data ranges and max thresholds to be applied in Monte Carlo sampling
         self.uncertainty_meter = np.float64(uncertainty_meter)
@@ -94,7 +93,7 @@ class MonteCarloAEP(object):
         self.time_resolution = time_resolution
         self._resample_freq = {"M": 'MS', "D": 'D'}[self.time_resolution]
         self._hours_in_res = {"M": 30*24, "D": 1*24}[self.time_resolution]
-        self._calendar_samples = {"M": 12, "D": 365}[self.time_resolution]
+        self._calendar_samples = {"M": 12, "D": 365.25}[self.time_resolution]
         self.num_days_lt = (31, 28.25, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
 
         # Check that choices for regression inputs are allowed
@@ -877,19 +876,16 @@ class MonteCarloAEP(object):
         
         # Sample long-term wind speed values
         ws_df = self._reanalysis_aggregate[self._run.reanalysis_product].to_frame().dropna()  # Drop NA values from monthly/daily reanalysis data series
-        ws_aggregate = ws_df.tail(self. _run.num_years_windiness * self._calendar_samples)  # Get last 'x' years of data from reanalysis product
-        ws_aggregate.reset_index(drop=True, inplace=True) # TODO: This rectifies a 0-indexing issue. Needs refactoring.
-        long_term_reg_inputs = pd.DataFrame(ws_aggregate)
+        long_term_reg_inputs = ws_df.tail(int(self. _run.num_years_windiness * self._calendar_samples))  # Get last 'x' years of data from reanalysis product
 
         # Temperature and wind direction
         namescol = [self._run.reanalysis_product + '_' + var for var in self._rean_vars]
-        # TODO: The result of this call has a multi-index, which is blown away with "reset_index" to match the index of mc_ws_aggregate. Needs refactoring.
-        long_term_temp = self._reanalysis_aggregate[namescol].dropna().tail(self. _run.num_years_windiness * self._calendar_samples).reset_index(drop=True)
+        long_term_temp = self._reanalysis_aggregate[namescol].dropna().tail(int(self. _run.num_years_windiness * self._calendar_samples))
         if self.reg_temperature:
             long_term_reg_inputs = pd.concat([long_term_reg_inputs, long_term_temp[self._run.reanalysis_product + '_temperature_K']], axis=1)
         if self.reg_winddirection:
             wd_aggregate = np.pi-np.arctan2(-long_term_temp[self._run.reanalysis_product + '_u_ms'],long_term_temp[self._run.reanalysis_product + '_v_ms']) # Calculate wind direction
-            long_term_reg_inputs = pd.concat([long_term_reg_inputs, np.sin(wd_aggregate), np.cos(wd_aggregate)], axis=1)
+            long_term_reg_inputs = pd.concat([long_term_reg_inputs, np.sin(wd_aggregate).rename(self._run.reanalysis_product + '_wd_sine'), np.cos(wd_aggregate).rename(self._run.reanalysis_product + '_wd_cosine')], axis=1)
         
         # Store result in dictionary
         self.long_term_sampling[(self._run.reanalysis_product, self. _run.num_years_windiness)] = long_term_reg_inputs
