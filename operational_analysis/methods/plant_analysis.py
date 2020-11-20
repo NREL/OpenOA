@@ -570,9 +570,9 @@ class MonteCarloAEP(object):
         curt_long_term = self.groupby_time_res(curt_valid)['curtailment_pct']
     
         # Ensure there are 12 or 365 data points in long-term average. If not, throw an exception:
-        if (avail_long_term.shape[0] < self._calendar_samples):
+        if (avail_long_term.shape[0] < int(self._calendar_samples)):
                 raise Exception('Not all calendar days/months represented in long-term availability calculation')
-        if (curt_long_term.shape[0] < self._calendar_samples):
+        if (curt_long_term.shape[0] < int(self._calendar_samples)):
                 raise Exception('Not all calendar days/months represented in long-term curtailment calculation')
 
         if self.time_resolution == 'M':
