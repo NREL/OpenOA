@@ -71,6 +71,12 @@ The example data will be automaticaly extracted as needed by the tests. The foll
 unzip examples/data/la_haute_borne.zip -d examples/data/la_haute_borne/
 ```
 
+In addition, you will need to install the packages required for running the examples with the following command:
+
+```
+pip install -r ./OpenOA/examples/requirements.txt
+```
+
 #### Testing
 Tests are written in the Python unittest framework and are runnable using pytest. To run all tests with code coverage reporting:
 
