@@ -157,8 +157,8 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
 
         date_ind = pd.to_datetime(['2014-06-01', '2014-12-01', '2015-10-01'])
 
-        nptest.assert_array_almost_equal(expected_merra2_wd*2*np.pi/360, df.loc[date_ind, 'merra2_wd'], decimal = 1)
-        nptest.assert_array_almost_equal(expected_era5_wd*2*np.pi/360, df.loc[date_ind, 'era5_wd'], decimal = 1)
+        nptest.assert_array_almost_equal(expected_merra2_wd, df.loc[date_ind, 'merra2_wd'], decimal = 1)
+        nptest.assert_array_almost_equal(expected_era5_wd, df.loc[date_ind, 'era5_wd'], decimal = 1)
         
         # Check a few temperature values
         expected_merra2_temp = pd.Series([289.9, 275.3, 281.7])
@@ -213,8 +213,8 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
 
         date_ind = pd.to_datetime(['2014-01-02', '2014-10-12', '2015-12-28'])
 
-        nptest.assert_array_almost_equal(expected_merra2_wd*2*np.pi/360, df.loc[date_ind, 'merra2_wd'], decimal = 1)
-        nptest.assert_array_almost_equal(expected_era5_wd*2*np.pi/360, df.loc[date_ind, 'era5_wd'], decimal = 1)
+        nptest.assert_array_almost_equal(expected_merra2_wd, df.loc[date_ind, 'merra2_wd'], decimal = 1)
+        nptest.assert_array_almost_equal(expected_era5_wd, df.loc[date_ind, 'era5_wd'], decimal = 1)
         
         # Check a few temperature values
         expected_merra2_temp = pd.Series([279.7, 285.7, 278.2])
