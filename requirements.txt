@@ -1,6 +1,6 @@
 # Requirements for the OpenOA software package
 eia-python>=1.22
-pyproj>=2.6.1--only-binary
+pyproj>=2.6.1
 shapely>=1.7.1
 numpy>=1.15.4
 pandas>=0.23.4
