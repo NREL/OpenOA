@@ -1,7 +1,7 @@
 import numpy as np
 from sklearn.model_selection import KFold
 
-from sklearn.metrics.scorer import make_scorer
+from sklearn.metrics import make_scorer
 from sklearn.metrics import r2_score
 
 """
