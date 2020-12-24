@@ -827,8 +827,8 @@ class MonteCarloAEP(object):
             if self.reg_temperature:
                 reg_inputs_por += [self._reanalysis_por[self._run.reanalysis_product + '_temperature_K']]
             if self.reg_winddirection:
-                reg_inputs_por += [np.sin(np.deg2rad(self._reanalysis_por_avg[self._run.reanalysis_product + '_wd']))]
-                reg_inputs_por += [np.cos(np.deg2rad(self._reanalysis_por_avg[self._run.reanalysis_product + '_wd']))]
+                reg_inputs_por += [np.sin(np.deg2rad(self._reanalysis_por[self._run.reanalysis_product + '_wd']))]
+                reg_inputs_por += [np.cos(np.deg2rad(self._reanalysis_por[self._run.reanalysis_product + '_wd']))]
             gross_por = fitted_model.predict(np.array(pd.concat(reg_inputs_por, axis = 1)))
                 
             # Create padans dataframe for gross_por and group by calendar date to have a single full year
