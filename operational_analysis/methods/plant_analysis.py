@@ -521,7 +521,7 @@ class MonteCarloAEP(object):
                 self._reanalysis_aggregate[namescol] = rean_df[self._rean_vars].resample(self._resample_freq).mean()
 
             if self.reg_winddirection: # if wind direction is considered as regression variable
-                self._reanalysis_aggregate[key + '_wd'] = np.pi-(np.arctan2(-self._reanalysis_aggregate[key + '_u_ms'],self._reanalysis_aggregate[key + '_v_ms'])) # Calculate wind direction
+                self._reanalysis_aggregate[key + '_wd'] = np.rad2deg(np.pi-(np.arctan2(-self._reanalysis_aggregate[key + '_u_ms'],self._reanalysis_aggregate[key + '_v_ms']))) # Calculate wind direction
         
         self._aggregate.df = self._aggregate.df.join(
                 self._reanalysis_aggregate)  # Merge monthly reanalysis data to monthly energy data frame
@@ -726,8 +726,8 @@ class MonteCarloAEP(object):
             
         if self.reg_winddirection: # if wind direction is considered as regression variable
             mc_wind_direction = reg_data[self._run.reanalysis_product + "_wd"]  # Copy wind direction data to Monte Carlo data frame
-            reg_inputs = pd.concat([reg_inputs,np.sin(mc_wind_direction)], axis = 1)
-            reg_inputs = pd.concat([reg_inputs,np.cos(mc_wind_direction)], axis = 1)
+            reg_inputs = pd.concat([reg_inputs,np.sin(np.deg2rad(mc_wind_direction))], axis = 1)
+            reg_inputs = pd.concat([reg_inputs,np.cos(np.deg2rad(mc_wind_direction))], axis = 1)
    
         reg_inputs = pd.concat([reg_inputs,mc_gross_norm], axis = 1)
         # Return values needed for regression
@@ -747,8 +747,8 @@ class MonteCarloAEP(object):
         """
         reg_data = self.set_regression_data(n)  # Get regression data
         
-        # Randomly select 80% of the data to perform regression and incorporate some regression uncertainty
-        reg_data = np.array(reg_data.sample(frac = 0.8))
+        # Bootstrap input data to incorporate some regression uncertainty
+        reg_data = np.array(reg_data.sample(frac = 1.0, replace = True))
         
         # Update Monte Carlo tracker fields
         self._mc_num_points[n] = np.shape(reg_data)[0]
@@ -827,8 +827,8 @@ class MonteCarloAEP(object):
             if self.reg_temperature:
                 reg_inputs_por += [self._reanalysis_por[self._run.reanalysis_product + '_temperature_K']]
             if self.reg_winddirection:
-                reg_inputs_por += [np.sin(self._reanalysis_por[self._run.reanalysis_product + '_wd'])]
-                reg_inputs_por += [np.cos(self._reanalysis_por[self._run.reanalysis_product + '_wd'])]
+                reg_inputs_por += [np.sin(np.deg2rad(self._reanalysis_por_avg[self._run.reanalysis_product + '_wd']))]
+                reg_inputs_por += [np.cos(np.deg2rad(self._reanalysis_por_avg[self._run.reanalysis_product + '_wd']))]
             gross_por = fitted_model.predict(np.array(pd.concat(reg_inputs_por, axis = 1)))
                 
             # Create padans dataframe for gross_por and group by calendar date to have a single full year
@@ -885,8 +885,8 @@ class MonteCarloAEP(object):
         if self.reg_temperature:
             long_term_reg_inputs = pd.concat([long_term_reg_inputs, long_term_temp[self._run.reanalysis_product + '_temperature_K']], axis=1)
         if self.reg_winddirection:
-            wd_aggregate = np.pi-np.arctan2(-long_term_temp[self._run.reanalysis_product + '_u_ms'],long_term_temp[self._run.reanalysis_product + '_v_ms']) # Calculate wind direction
-            long_term_reg_inputs = pd.concat([long_term_reg_inputs, np.sin(wd_aggregate).rename(self._run.reanalysis_product + '_wd_sine'), np.cos(wd_aggregate).rename(self._run.reanalysis_product + '_wd_cosine')], axis=1)
+            wd_aggregate = np.rad2deg(np.pi-np.arctan2(-long_term_temp[self._run.reanalysis_product + '_u_ms'],long_term_temp[self._run.reanalysis_product + '_v_ms'])) # Calculate wind direction
+            long_term_reg_inputs = pd.concat([long_term_reg_inputs, np.sin(np.deg2rad(wd_aggregate)), np.cos(np.deg2rad(wd_aggregate))], axis=1)
         
         # Store result in dictionary
         self.long_term_sampling[(self._run.reanalysis_product, self. _run.num_years_windiness)] = long_term_reg_inputs
