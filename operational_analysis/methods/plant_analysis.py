@@ -641,11 +641,11 @@ class MonteCarloAEP(object):
         # Set maximum range for using bin-filter, convert from MW to GWh
         plant_capac = self._plant._plant_capacity/1000. * self._hours_in_res
 
-        #Apply range filter to wind speed
+        # Apply range filter to wind speed
         df_sub = df_sub.assign(flag_range=filters.range_flag(df_sub[reanal], below = 0, above = 40))
-        #Apply frozen/unresponsive sensor filter
+        # Apply frozen/unresponsive sensor filter
         df_sub.loc[:,'flag_frozen'] = filters.unresponsive_flag(df_sub[reanal], threshold = 3)
-        #Apply window range filter
+        # Apply window range filter
         df_sub.loc[:,'flag_window'] = filters.window_range_flag(window_col = df_sub[reanal], 
                                                                     window_start = 5., 
                                                                     window_end = 40,
@@ -653,7 +653,7 @@ class MonteCarloAEP(object):
                                                                     value_min =  0.02*plant_capac,
                                                                     value_max =  1.2*plant_capac) 
         
-        #Create a 'final' flag which is true if any of the previous flags are true
+        # Create a 'final' flag which is true if any of the previous flags are true
         df_sub.loc[:,'flag_final'] = (df_sub.loc[:, 'flag_range']) | (df_sub.loc[:, 'flag_frozen']) | \
                                           (df_sub.loc[:, 'flag_window']) 
                 
