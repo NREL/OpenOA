@@ -860,7 +860,7 @@ class MonteCarloAEP(object):
     @logged_method_call
     def sample_long_term_reanalysis(self):
         """
-        This function returns the windiness-corrected monthly wind speeds based on the Monte-Carlo generated sample of:
+        This function returns the long-term monthly/daily wind speeds based on the Monte-Carlo generated sample of:
             
             1. The reanalysis product
             2. The number of years to use in the long-term correction
@@ -868,7 +868,7 @@ class MonteCarloAEP(object):
         Args:
            (None)
         Returns:
-           :obj:`pandas.DataFrame`: the windiness-corrected or 'long-term' annualized monthly/daily wind speeds
+           :obj:`pandas.DataFrame`: the windiness-corrected or 'long-term' monthly/daily wind speeds
         """
         # Check if valid data has already been calculated and stored. If so, just return it
         if (self._run.reanalysis_product,self. _run.num_years_windiness) in self.long_term_sampling:
