@@ -775,27 +775,22 @@ class MonteCarloAEP(object):
             self._mse_score[n] = mean_squared_error(reg_data[:,-1], predicted_y)
             return reg
         # Machine learning models
-        else: 
+        else:
             ml = MachineLearningSetup(self.reg_model, **self.ml_setup_kwargs)
             # Memoized approach for optimized hyperparameters
             if self._run.reanalysis_product in self.opt_model:
                 self.opt_model[(self._run.reanalysis_product)].fit(np.array(reg_data[:,0:-1]), reg_data[:,-1])
-                predicted_y = self.opt_model[(self._run.reanalysis_product)].predict(np.array(reg_data[:,0:-1]))
-                
-                self._r2_score[n] = r2_score(reg_data[:,-1], predicted_y)
-                self._mse_score[n] = mean_squared_error(reg_data[:,-1], predicted_y)
-                return self.opt_model[(self._run.reanalysis_product)]
-        
             else: # optimize hyperparameters once for each reanalysis product  
                 ml.hyper_optimize(np.array(reg_data[:,0:-1]), reg_data[:,-1], n_iter_search = 20, report = False, cv = KFold(n_splits = 5))
                 # Store optimized hyperparameters for each reanalysis product
                 self.opt_model[(self._run.reanalysis_product)] = ml.opt_model
-                predicted_y = ml.random_search.predict(np.array(reg_data[:,0:-1]))
             
-                self._r2_score[n] = r2_score(reg_data[:,-1], predicted_y)
-                self._mse_score[n] = mean_squared_error(reg_data[:,-1], predicted_y)
-                return ml.random_search
-
+            predicted_y = self.opt_model[(self._run.reanalysis_product)].predict(np.array(reg_data[:,0:-1]))
+            
+            self._r2_score[n] = r2_score(reg_data[:,-1], predicted_y)
+            self._mse_score[n] = mean_squared_error(reg_data[:,-1], predicted_y)
+            return self.opt_model[(self._run.reanalysis_product)]
+        
     @logged_method_call
     def run_AEP_monte_carlo(self):
         """
