@@ -2,6 +2,8 @@
 
 ![](https://github.com/NREL/OpenOA/workflows/Tests/badge.svg?branch=develop) [![](https://readthedocs.org/projects/openoa/badge/?version=latest)](https://openoa.readthedocs.io) [![codecov](https://codecov.io/gh/NREL/OpenOA/branch/develop/graph/badge.svg)](https://codecov.io/gh/NREL/OpenOA)
 
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/NREL/OpenOA/master?filepath=examples)
+
 -----
 
 This library provides a framework for working with large timeseries data from wind plants, such as SCADA.
@@ -18,6 +20,8 @@ The library is written around Pandas Data Frames, utilizing a flexible backend
 so that data loading, processing, and analysis could be performed using other libraries,
 such as Dask and Spark, in the future.
 
+If you would like to try out the code before installation or simply explore the possibilities, please see our examples on [Binder](https://mybinder.org/v2/gh/NREL/OpenOA/master?filepath=examples).
+
 ### Requirements
 
   * Python 3.6+ with pip.
@@ -30,19 +34,6 @@ After installing Anaconda, create and activate a new conda environment with the 
 conda create --name openoa-env python=3
 conda activate openoa-env
 ```
-
-#### Special Note for users of Microsoft Windows:
-
-The Anaconda python distribution is *required* for users of Microsoft Windows. This is because the pip package of GDAL for Windows requires Visual Studio to compile some of the dependencies. While advanced users are welcome to explore this option, we find it is easier to install the following packages via Anaconda:
-
-```
-conda install shapely
-conda install geos
-conda install fiona
-```
-
-If errors about Visual Studio persist, you can try downloading the [Microsoft Visual Studio compiler for Python](https://www.microsoft.com/en-us/download/details.aspx?id=44266) and compiling GDAL yourself.
-
 
 ### Installation:
 
@@ -84,10 +75,15 @@ The example data will be automaticaly extracted as needed by the tests. To manua
 unzip examples/data/la_haute_borne.zip -d examples/data/la_haute_borne/
 ```
 
+In addition, you will need to install the packages required for running the examples with the following command:
+
+```
+pip install -r ./OpenOA/examples/requirements.txt
+```
+
 The example notebooks are located in the `examples` directory. We suggest installing the Jupyter notebook server to run the notebooks interactively. The notebooks can also be viewed statically on [Read The Docs](http://openoa.readthedocs.io/).
 
 ```
-pip install jupyter
 jupyter notebook
 ```
 
@@ -95,13 +91,13 @@ jupyter notebook
 Tests are written in the Python unittest framework and are runnable using pytest. To run all tests with code coverage reporting:
 
 ```
-pytest -o python_files=test/*.py --cov=operational_analysis
+pytest --cov=operational_analysis
 ```
 
 To run unit tests only:
 
 ```
-pytest -o python_files=test/test_*.py --cov=operational_analysis
+pytest --ignore=test/regression/ --cov=operational_analysis
 ```
 
 #### Documentation
