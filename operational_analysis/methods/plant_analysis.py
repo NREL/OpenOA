@@ -763,6 +763,7 @@ class MonteCarloAEP(object):
         # Update Monte Carlo tracker fields
         self._mc_num_points[n] = np.shape(reg_data)[0]
         
+        # Run regression. Note, the last column of reg_data is the target variable for the regression
         # Linear regression
         if self.reg_model == 'lin':
             reg = LinearRegression().fit(np.array(reg_data[:,0:-1]), reg_data[:,-1])
