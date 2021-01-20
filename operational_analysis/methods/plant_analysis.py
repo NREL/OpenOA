@@ -79,7 +79,6 @@ class MonteCarloAEP(object):
         # Memo dictionaries help speed up computation
         self.outlier_filtering = {}  # Combinations of outlier filter results
         self.long_term_sampling = {}  # Combinations of long-term reanalysis data sampling
-        self.long_term_sampling_sd = {}  # Combinations of long-term reanalysis data sampling stdev of wind speed
         self.opt_model = {} # Optimized ML model hyperparameters for each reanalysis product
         
         # Define relevant uncertainties, data ranges and max thresholds to be applied in Monte Carlo sampling
