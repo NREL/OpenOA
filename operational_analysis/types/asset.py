@@ -1,17 +1,17 @@
 import importlib
 import itertools
 
-import geopandas as gp
 import numpy as np
 import pandas as pd
+from pyproj import Transformer
 from shapely.geometry import Point
 
 
 class AssetData(object):
     """
-    This class wraps around a GeoPandas dataframe that contains
+    This class wraps around a Pandas dataframe that contains
     metadata about the plant assets. It provides some useful functions
-    to work with this data (e.g., calculating nearest neighbors, etc.)
+    to work with this data (e.g., calculating nearest neighbors, etc.). 
     """
 
     def __init__(self, engine="pandas"):
@@ -89,12 +89,10 @@ class AssetData(object):
                 longitude = self.df['longitude'].mean()
             zone = int(np.floor((180 + longitude) / 6.0)) + 1
 
-        self._asset = gp.GeoDataFrame(self._asset)
-        self._asset['geometry'] = self._asset.apply(lambda x: Point(x['longitude'], x['latitude']), 1)
-        self._asset.set_geometry('geometry')
-        self._asset.crs = {'init': srs}
-        self._asset = self._asset.to_crs(
-            "+proj=utm +zone=" + str(zone) + " +ellps=WGS84 +datum=WGS84 +units=m +no_defs")
+        to_crs = f"+proj=utm +zone={zone} +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+        transformer = Transformer.from_crs(srs.upper(), to_crs)
+        lats, lons = transformer.transform(self._asset["latitude"].values, self._asset["longitude"].values)
+        self._asset["geometry"] = [Point(lat, lon) for lat, lon in zip (lats, lons)]
 
     def calculate_nearest(self, active_turbine_ids, active_tower_ids):
         """Create or overwrite a column called 'nearest_turbine_id' or 'nearest_tower_id' which contains the asset id
@@ -124,11 +122,11 @@ class AssetData(object):
 
     def distance_matrix(self):
         ret = np.ones((self._asset.shape[0], self._asset.shape[0])) * -1
-        for i, j in itertools.permutations(self._asset.index, 2):
+        for i, j in itertools.combinations(self._asset.index, 2):
             point1 = self._asset.loc[i, 'geometry']
             point2 = self._asset.loc[j, 'geometry']
             distance = point1.distance(point2)
-            ret[i][j] = distance
+            ret[i, j] = ret[j, i] = distance
         return ret
 
     def asset_ids(self):

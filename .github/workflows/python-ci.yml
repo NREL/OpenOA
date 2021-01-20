@@ -9,10 +9,11 @@ on:
 jobs:
   build:
 
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8]
+        os: [ubuntu-latest, windows-latest]
+        python-version: [3.6, 3.8]
 
     steps:
     - uses: actions/checkout@v2
@@ -24,11 +25,14 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+      shell: bash
     - name: Unzip example data
       run: |
-        yes | unzip examples/data/la_haute_borne.zip -d examples/data/la_haute_borne/
+        unzip examples/data/la_haute_borne.zip -d examples/data/la_haute_borne/
+      shell: bash
     - name: Test with pytest
       run: |
-        pytest -o python_files=test/*.py --cov=operational_analysis --cov-report=xml
+        pytest --cov=operational_analysis --cov-report=xml
+      shell: bash
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1

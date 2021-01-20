@@ -157,8 +157,8 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
 
         date_ind = pd.to_datetime(['2014-06-01', '2014-12-01', '2015-10-01'])
 
-        nptest.assert_array_almost_equal(expected_merra2_wd*2*np.pi/360, df.loc[date_ind, 'merra2_wd'], decimal = 1)
-        nptest.assert_array_almost_equal(expected_era5_wd*2*np.pi/360, df.loc[date_ind, 'era5_wd'], decimal = 1)
+        nptest.assert_array_almost_equal(expected_merra2_wd, df.loc[date_ind, 'merra2_wd'], decimal = 1)
+        nptest.assert_array_almost_equal(expected_era5_wd, df.loc[date_ind, 'era5_wd'], decimal = 1)
         
         # Check a few temperature values
         expected_merra2_temp = pd.Series([289.9, 275.3, 281.7])
@@ -213,8 +213,8 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
 
         date_ind = pd.to_datetime(['2014-01-02', '2014-10-12', '2015-12-28'])
 
-        nptest.assert_array_almost_equal(expected_merra2_wd*2*np.pi/360, df.loc[date_ind, 'merra2_wd'], decimal = 1)
-        nptest.assert_array_almost_equal(expected_era5_wd*2*np.pi/360, df.loc[date_ind, 'era5_wd'], decimal = 1)
+        nptest.assert_array_almost_equal(expected_merra2_wd, df.loc[date_ind, 'merra2_wd'], decimal = 1)
+        nptest.assert_array_almost_equal(expected_era5_wd, df.loc[date_ind, 'era5_wd'], decimal = 1)
         
         # Check a few temperature values
         expected_merra2_temp = pd.Series([279.7, 285.7, 278.2])
@@ -227,7 +227,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
  
     def check_simulation_results_lin_monthly(self, s):
         # Make sure AEP results are consistent to one decimal place
-        expected_results = [12.41, 8.29, 1.30, 3.57, 0.09, 3.57]
+        expected_results = [12.41, 2.29, 1.30, 3.57, 0.09, 3.57]
 
         calculated_results = [s.aep_GWh.mean(),
                               s.aep_GWh.std() / s.aep_GWh.mean() * 100,
@@ -240,7 +240,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
 
     def check_simulation_results_lin_daily(self, s):
         # Make sure AEP results are consistent to one decimal place
-        expected_results = [12.31, 4.76, 1.36, 4.90, 0.09, 4.91]
+        expected_results = [12.31, 2.76, 1.36, 4.90, 0.09, 4.91]
 
         calculated_results = [s.aep_GWh.mean(),
                               s.aep_GWh.std() / s.aep_GWh.mean() * 100,
@@ -253,7 +253,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
 
     def check_simulation_results_gam_daily(self, s):
         # Make sure AEP results are consistent to one decimal place
-        expected_results = [12.68, 4.50, 1.36, 4.44, 0.087, 4.44]
+        expected_results = [12.68, 2.50, 1.36, 4.44, 0.087, 4.44]
 
         calculated_results = [s.aep_GWh.mean(),
                               s.aep_GWh.std() / s.aep_GWh.mean() * 100,
@@ -266,7 +266,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         
     def check_simulation_results_gbm_daily(self, s):
         # Make sure AEP results are consistent to one decimal place
-        expected_results = [12.82, 3.84, 1.35, 5.17, 0.09, 5.17]
+        expected_results = [12.82, 2.84, 1.35, 5.17, 0.09, 5.17]
 
         calculated_results = [s.aep_GWh.mean(),
                               s.aep_GWh.std() / s.aep_GWh.mean() * 100,
@@ -292,7 +292,6 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
 
     def tearDown(self):
         pass
-
 
 if __name__ == '__main__':
     unittest.main()
