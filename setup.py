@@ -57,5 +57,5 @@ setup(name='OpenOA',
                         "pyproj",
                         "shapely"],
       tests_require=['pytest', 'pytest-cov'],
-      python_requires='>=3.6'
+      python_requires='3.6,3.7,3.8'
       )
