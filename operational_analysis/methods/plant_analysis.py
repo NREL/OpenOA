@@ -79,6 +79,7 @@ class MonteCarloAEP(object):
         # Memo dictionaries help speed up computation
         self.outlier_filtering = {}  # Combinations of outlier filter results
         self.long_term_sampling = {}  # Combinations of long-term reanalysis data sampling
+        self.opt_model = {} # Optimized ML model hyperparameters for each reanalysis product
         
         # Define relevant uncertainties, data ranges and max thresholds to be applied in Monte Carlo sampling
         self.uncertainty_meter = np.float64(uncertainty_meter)
@@ -753,6 +754,7 @@ class MonteCarloAEP(object):
         # Update Monte Carlo tracker fields
         self._mc_num_points[n] = np.shape(reg_data)[0]
         
+        # Run regression. Note, the last column of reg_data is the target variable for the regression
         # Linear regression
         if self.reg_model == 'lin':
             reg = LinearRegression().fit(np.array(reg_data[:,0:-1]), reg_data[:,-1])
@@ -765,15 +767,22 @@ class MonteCarloAEP(object):
             self._mse_score[n] = mean_squared_error(reg_data[:,-1], predicted_y)
             return reg
         # Machine learning models
-        else: 
+        else:
             ml = MachineLearningSetup(self.reg_model, **self.ml_setup_kwargs)
-            ml.hyper_optimize(np.array(reg_data[:,0:-1]), reg_data[:,-1], n_iter_search = 5, report = False, cv = KFold(n_splits = 2))
-            predicted_y = ml.random_search.predict(np.array(reg_data[:,0:-1]))
+            # Memoized approach for optimized hyperparameters
+            if self._run.reanalysis_product in self.opt_model:
+                self.opt_model[(self._run.reanalysis_product)].fit(np.array(reg_data[:,0:-1]), reg_data[:,-1])
+            else: # optimize hyperparameters once for each reanalysis product  
+                ml.hyper_optimize(np.array(reg_data[:,0:-1]), reg_data[:,-1], n_iter_search = 20, report = False, cv = KFold(n_splits = 5))
+                # Store optimized hyperparameters for each reanalysis product
+                self.opt_model[(self._run.reanalysis_product)] = ml.opt_model
+            
+            predicted_y = self.opt_model[(self._run.reanalysis_product)].predict(np.array(reg_data[:,0:-1]))
             
             self._r2_score[n] = r2_score(reg_data[:,-1], predicted_y)
             self._mse_score[n] = mean_squared_error(reg_data[:,-1], predicted_y)
-            return ml.random_search
-
+            return self.opt_model[(self._run.reanalysis_product)]
+        
     @logged_method_call
     def run_AEP_monte_carlo(self):
         """
