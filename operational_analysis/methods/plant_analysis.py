@@ -813,6 +813,7 @@ class MonteCarloAEP(object):
         avail_pct =  np.empty(num_sim)
         curt_pct =  np.empty(num_sim)
         lt_por_ratio =  np.empty(num_sim)
+        iav =  np.empty(num_sim)
 
         # Loop through number of simulations, run regression each time, store AEP results
         for n in tqdm(np.arange(num_sim)):
@@ -830,6 +831,11 @@ class MonteCarloAEP(object):
             if num_vars == 1:
                 inputs = inputs.reshape(-1,1)
             gross_lt = fitted_model.predict(inputs)
+
+            # Annual values of lt gross energy, needed for IAV
+            reg_inputs_lt['gross_lt'] = gross_lt
+            gross_lt_annual = reg_inputs_lt['gross_lt'].resample('12MS').sum().values
+            #gross_lt_annual = gross_lt.reshape(-1, int(self._calendar_samples)).sum(1)
 
             # Get POR gross energy by applying regression result to POR regression inputs                                                                        
             reg_inputs_por = [self._reanalysis_por[self._run.reanalysis_product]]
@@ -850,11 +856,20 @@ class MonteCarloAEP(object):
             # Get long-term availability and curtailment losses by month
             [avail_lt_losses, curt_lt_losses] = self.sample_long_term_losses()  
 
-            # Assign AEP, long-term availability, and long-term curtailment to output data frame
+            # Assign AEP, IAV, long-term availability, and long-term curtailment to output data frame
             aep_GWh[n] = gross_lt.sum()/self._run.num_years_windiness * (1 - avail_lt_losses)
+            iav[n] = gross_lt_annual.std()/gross_lt_annual.mean()
             avail_pct[n] = avail_lt_losses
             curt_pct[n] = curt_lt_losses
             lt_por_ratio[n] = (gross_lt.sum()/self._run.num_years_windiness) / gross_por.sum()
+
+        # Calculate mean IAV for gross energy
+        iav_avg = iav.mean()
+        
+        # Apply IAV to AEP from single MC iterations
+        iav_nsim = np.random.normal(1, iav_avg, self.num_sim)
+        aep_GWh = aep_GWh * iav_nsim
+        lt_por_ratio = lt_por_ratio * iav_nsim
             
         # Return final output
         sim_results = pd.DataFrame(index=np.arange(num_sim), data={'aep_GWh': aep_GWh,                                                                                                        
@@ -869,7 +884,7 @@ class MonteCarloAEP(object):
     @logged_method_call
     def sample_long_term_reanalysis(self):
         """
-        This function returns the long-term monthly/daily wind speeds based on the Monte-Carlo generated sample of:
+        This function returns the windiness-corrected monthly wind speeds based on the Monte-Carlo generated sample of:
             
             1. The reanalysis product
             2. The number of years to use in the long-term correction
@@ -877,7 +892,7 @@ class MonteCarloAEP(object):
         Args:
            (None)
         Returns:
-           :obj:`pandas.DataFrame`: the windiness-corrected or 'long-term' monthly/daily wind speeds
+           :obj:`pandas.DataFrame`: the windiness-corrected or 'long-term' annualized monthly/daily wind speeds
         """
         # Check if valid data has already been calculated and stored. If so, just return it
         if (self._run.reanalysis_product,self. _run.num_years_windiness) in self.long_term_sampling:
