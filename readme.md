@@ -24,14 +24,16 @@ If you would like to try out the code before installation or simply explore the 
 
 ### Requirements
 
-  * Python 3.6+ with pip.
+  * Python 3.6-3.8 with pip.
+  
+OpenOA should be compatible with newer versions of Python, but one of its dependencies, Shapely, does not yet have binary wheels in pip for Python 3.9 on Mac.
 
 We strongly recommend using the Anaconda Python distribution and creating a new conda environment for OpenOA. You can download Anaconda through [their website.](https://www.anaconda.com/products/individual)
 
 After installing Anaconda, create and activate a new conda environment with the name "openoa-env":
 
 ```
-conda create --name openoa-env python=3
+conda create --name openoa-env python=3.8
 conda activate openoa-env
 ```
 
