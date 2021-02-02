@@ -17,6 +17,11 @@ ref: https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimiz
 """
 
 
+def _power_curve(x, a, b, c, d, g):
+    """Applies the power curve function at each point in x."""
+    return [d + (a - d) / (1 + (xx / c) ** b) ** g for xx in x]
+
+
 def logistic5param(x, a, b, c, d, g):
     """Create and return a 5 parameter logistic function
 
@@ -43,8 +48,7 @@ def logistic5param(x, a, b, c, d, g):
         dom = slice(None)  # All elements in domain
 
     # Apply power curve definition to point within domain
-    l5p = lambda xx: d + (a - d) / (1 + (xx / c) ** b) ** g
-    res[dom] = l5p(x[dom])
+    res[dom] = _power_curve(x[dom], a, b, c, d, g)
 
     return res
 
