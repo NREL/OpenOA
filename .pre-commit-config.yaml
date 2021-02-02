@@ -7,9 +7,11 @@ repos:
         name: isort (python)
       - id: isort
         name: isort (cython)
+        additional_dependencies: [toml]
         types: [cython]
       - id: isort
         name: isort (pyi)
+        additional_dependencies: [toml]
         types: [pyi]
 
 
