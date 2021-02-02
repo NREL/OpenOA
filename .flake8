@@ -1,0 +1,7 @@
+[flake8]
+; https://github.com/PyCQA/flake8
+max-line-length=100
+select=C,E,F,W,B,B950
+ignore=E203,E501,W503,F401
+exclude=.git,__pycache__,docs/source/conf.py,build,dist
+docstring-convention=google
