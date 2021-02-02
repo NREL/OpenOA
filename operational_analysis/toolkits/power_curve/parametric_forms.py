@@ -1,5 +1,6 @@
 import numpy as np
 
+
 """
 Power Curves
 
@@ -16,8 +17,13 @@ ref: https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimiz
 """
 
 
+def _power_curve(x, a, b, c, d, g):
+    """Calculates the power curve value at each point in x."""
+    return [d + (a - d) / (1 + (xx / c) ** b) ** g for xx in x]
+
+
 def logistic5param(x, a, b, c, d, g):
-    """ Create and return a 5 parameter logistic function
+    """Create and return a 5 parameter logistic function
 
     Args:
         x(numpy.array): input data
@@ -36,20 +42,19 @@ def logistic5param(x, a, b, c, d, g):
     res = np.ones_like(x, dtype=np.float)
     # In the case where b<0, x==0, there is a divide by zero error. The answer should be "d" when x==0 and b<0.
     if b < 0:
-        res *= d # Initialize result, default value is d
-        dom = (x!=0.0) # Only nonzero elements in domain
+        res *= d  # Initialize result, default value is d
+        dom = x != 0.0  # Only nonzero elements in domain
     else:
-        dom = slice(None) # All elements in domain
+        dom = slice(None)  # All elements in domain
 
     # Apply power curve definition to point within domain
-    l5p = lambda xx: d + (a - d) / (1 + (xx / c) ** b) ** g
-    res[dom] =  l5p(x[dom])
+    res[dom] = _power_curve(x[dom], a, b, c, d, g)
 
     return res
 
 
 def logistic5param_capped(x, a, b, c, d, g, lower, upper):
-    """ Create and return a capped 5 parameter logistic function whose output is capped by lower and upper bounds.
+    """Create and return a capped 5 parameter logistic function whose output is capped by lower and upper bounds.
 
     Args:
         x(numpy.array): input data
