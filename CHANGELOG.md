@@ -1,6 +1,9 @@
 # Changelog
 All notable changes to this project will be documented in this file. If you make a notable change to the project, please add a line describing the change to the "unreleased" section. The maintainers will make an effort to keep the [Github Releases](https://github.com/NREL/OpenOA/releases) page up to date with this changelog. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+- Add Python 3.9 support
+
 ## [2.0.1 - 2020-10-13]
 - Replaced `GeoPandas` functionality with `pyproj` and `Shapely` for coordinate
 reference system conversion and distance measurements.
