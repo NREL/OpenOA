@@ -30,6 +30,7 @@ authors:
     affiliation: 1
   - name: Robert Hammond
     orcid: 0000-0003-4476-6406
+    affiliation: 1
   - name: Caleb Phillips
     affiliation: 1
   - name: Monte Lunacek
