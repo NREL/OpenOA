@@ -8,7 +8,8 @@ pygam>=0.8.0
 scipy>=1.1.0
 statsmodels>=0.11
 tqdm>=4.28.1
-h5pyd
+h5pyd>=0.7.0
+
 
 # Not included in docs requirements
 pytest>=5.4.2

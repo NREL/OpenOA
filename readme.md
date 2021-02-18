@@ -1,8 +1,8 @@
 <img src="https://github.com/NREL/OpenOA/blob/develop/Open%20OA%20Final%20Logos/Color/Open%20OA%20Color%20Transparent%20Background.png?raw=true" alt="OpenOA" width="300"/>
 
-![](https://github.com/NREL/OpenOA/workflows/Tests/badge.svg?branch=develop) [![](https://readthedocs.org/projects/openoa/badge/?version=latest)](https://openoa.readthedocs.io) [![codecov](https://codecov.io/gh/NREL/OpenOA/branch/develop/graph/badge.svg)](https://codecov.io/gh/NREL/OpenOA)
+[![Binder Badge](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/NREL/OpenOA/master?filepath=examples) [![Gitter Badge](https://badges.gitter.im/NREL_OpenOA/community.svg)](https://gitter.im/NREL_OpenOA/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge) [![Journal of Open Source Software Badge](https://joss.theoj.org/papers/d635ef3c3784d49f6e81e07a0b35ff6b/status.svg)](https://joss.theoj.org/papers/d635ef3c3784d49f6e81e07a0b35ff6b)
 
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/NREL/OpenOA/main?filepath=examples)
+[![Documentation Badge](https://readthedocs.org/projects/openoa/badge/?version=latest)](https://openoa.readthedocs.io) ![Tests Badge](https://github.com/NREL/OpenOA/workflows/Tests/badge.svg?branch=develop) [![Code Coverage Badge](https://codecov.io/gh/NREL/OpenOA/branch/develop/graph/badge.svg)](https://codecov.io/gh/NREL/OpenOA)
 
 -----
 
@@ -69,9 +69,9 @@ Next, we recommend installing OpenOA in editable mode:
 pip install -e ./OpenOA
 ```
 
-#### Extracting Example Data
+#### Example Notebooks and Data
 
-The example data will be automaticaly extracted as needed by the tests. The following command is provided for reference:
+The example data will be automaticaly extracted as needed by the tests. To manually extract the example data for use with the example notebooks, use the following command:
 
 ```
 unzip examples/data/la_haute_borne.zip -d examples/data/la_haute_borne/
@@ -81,6 +81,12 @@ In addition, you will need to install the packages required for running the exam
 
 ```
 pip install -r ./OpenOA/examples/requirements.txt
+```
+
+The example notebooks are located in the `examples` directory. We suggest installing the Jupyter notebook server to run the notebooks interactively. The notebooks can also be viewed statically on [Read The Docs](http://openoa.readthedocs.io/).
+
+```
+jupyter notebook
 ```
 
 #### Testing
