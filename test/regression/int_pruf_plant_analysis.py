@@ -33,19 +33,6 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         self.check_process_reanalysis_data_monthly(df)
 
         # ____________________________________________________________________
-        # Test inputs to the regression model, at daily time resolution
-        self.analysis = plant_analysis.MonteCarloAEP(self.project, 
-                                                      reanal_products=['merra2', 'era5'],
-                                                      time_resolution = 'D',
-                                                      reg_temperature = True, 
-                                                      reg_winddirection = True)
-        df = self.analysis._aggregate.df
-        # Check the pre-processing functions
-        self.check_process_revenue_meter_energy_daily(df)
-        self.check_process_loss_estimates_daily(df)
-        self.check_process_reanalysis_data_daily(df)
-        
-        # ____________________________________________________________________
         # Test linear regression model, at monthly time resolution
         self.analysis = plant_analysis.MonteCarloAEP(self.project, 
                                                       reanal_products=['merra2', 'era5'],
@@ -54,22 +41,9 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
                                                       reg_temperature = False, 
                                                       reg_winddirection = False)
         # Run Monte Carlo AEP analysis, confirm the results are consistent
-        self.analysis.run(num_sim=30)
+        self.analysis.run(num_sim=10)
         sim_results = self.analysis.results
         self.check_simulation_results_lin_monthly(sim_results)
-
-        # ____________________________________________________________________
-        # Test linear regression model, at daily time resolution
-        self.analysis = plant_analysis.MonteCarloAEP(self.project, 
-                                                      reanal_products=['merra2', 'era5'],
-                                                      time_resolution = 'D',
-                                                      reg_model = 'lin',
-                                                      reg_temperature = False, 
-                                                      reg_winddirection = False)
-        # Run Monte Carlo AEP analysis, confirm the results are consistent
-        self.analysis.run(num_sim=30)
-        sim_results = self.analysis.results
-        self.check_simulation_results_lin_daily(sim_results)
 
         # ____________________________________________________________________
         # Test GAM regression model (can be used at daily time resolution only)
@@ -77,36 +51,36 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
                                                       reanal_products=['merra2', 'era5'],
                                                       time_resolution = 'D',
                                                       reg_model = 'gam',
-                                                      reg_temperature = False, 
+                                                      reg_temperature = True, 
                                                       reg_winddirection = True)
         # Run Monte Carlo AEP analysis, confirm the results are consistent
-        self.analysis.run(num_sim=10)
+        self.analysis.run(num_sim=5)
         sim_results = self.analysis.results
         self.check_simulation_results_gam_daily(sim_results)
 
         # ____________________________________________________________________
         # Test GBM regression model (can be used at daily time resolution only)
         self.analysis = plant_analysis.MonteCarloAEP(self.project, 
-                                                      reanal_products=['merra2', 'era5'],
+                                                      reanal_products=['era5'],
                                                       time_resolution = 'D',
                                                       reg_model = 'gbm',
                                                       reg_temperature = True, 
-                                                      reg_winddirection = True)
+                                                      reg_winddirection = False)
         # Run Monte Carlo AEP analysis, confirm the results are consistent
-        self.analysis.run(num_sim=10)
+        self.analysis.run(num_sim=5)
         sim_results = self.analysis.results
         self.check_simulation_results_gbm_daily(sim_results)
 
         # ____________________________________________________________________
         # Test ETR regression model (can be used at daily time resolution only)
         self.analysis = plant_analysis.MonteCarloAEP(self.project, 
-                                                      reanal_products=['merra2', 'era5'],
+                                                      reanal_products=['merra2'],
                                                       time_resolution = 'D',
                                                       reg_model = 'etr',
                                                       reg_temperature = False, 
                                                       reg_winddirection = False)
         # Run Monte Carlo AEP analysis, confirm the results are consistent
-        self.analysis.run(num_sim=10)
+        self.analysis.run(num_sim=5)
         sim_results = self.analysis.results
         self.check_simulation_results_etr_daily(sim_results)
 
@@ -228,19 +202,6 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
     def check_simulation_results_lin_monthly(self, s):
         # Make sure AEP results are consistent to one decimal place
         expected_results = [12.41, 2.29, 1.30, 3.57, 0.09, 3.57]
-
-        calculated_results = [s.aep_GWh.mean(),
-                              s.aep_GWh.std() / s.aep_GWh.mean() * 100,
-                              s.avail_pct.mean() * 100,
-                              s.avail_pct.std() / s.avail_pct.mean() * 100,
-                              s.curt_pct.mean() * 100,
-                              s.curt_pct.std() / s.curt_pct.mean() * 100, ]
-
-        nptest.assert_array_almost_equal(expected_results, calculated_results, decimal=0)
-
-    def check_simulation_results_lin_daily(self, s):
-        # Make sure AEP results are consistent to one decimal place
-        expected_results = [12.31, 2.76, 1.36, 4.90, 0.09, 4.91]
 
         calculated_results = [s.aep_GWh.mean(),
                               s.aep_GWh.std() / s.aep_GWh.mean() * 100,
