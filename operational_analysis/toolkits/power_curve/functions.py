@@ -46,6 +46,8 @@ def IEC(windspeed_column, power_column, bin_width=0.5, windspeed_start=0, windsp
         for i in range(0, len(bins) - 1):
             idx = np.where((x >= bins[i]) & (x < bins[i + 1]))
             P[idx] = P_bin[i]
+        cutoff_idx = ((x < windspeed_start) | x > windspeed_end)
+        P[cutoff_idx] = 0.0
         return P
 
     return pc_iec
