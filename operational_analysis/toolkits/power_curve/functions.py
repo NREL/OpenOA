@@ -27,7 +27,8 @@ def IEC(windspeed_column, power_column, bin_width=0.5, windspeed_start=0, windsp
     """
 
     # Set up evenly spaced bins of fixed width, with any value over the maximum getting np.inf
-    bins = np.append(np.arange(windspeed_start, windspeed_end, bin_width), [np.inf])
+    n_bins = int(np.ceil((windspeed_end - windspeed_start) / bin_width)) + 1
+    bins = np.append(np.linspace(windspeed_start, windspeed_end, n_bins), [np.inf])
 
     # Initialize an array which will hold the mean values of each bin
     P_bin = np.ones(len(bins) - 1) * np.nan
