@@ -18,7 +18,7 @@ class TestPowerCurveFunctions(unittest.TestCase):
 
         # power curve source: https://github.com/NREL/turbine-models/blob/master/Offshore/2020ATB_NREL_Reference_15MW_240.csv
         self.nrel_15mw_wind = pd.Series(np.arange(4, 26))
-        self.nrel_15mw_power = pd.Series(np.array([720, 1239, 2271, 3817, 5876, 8450, 11536, 1500, 1500, 1500, 1500, 1500, 1500, 1500, 1500, 1500, 1500, 1500, 1500, 1500, 1500, 1500]))
+        self.nrel_15mw_power = pd.Series(np.array([720, 1239, 2271, 3817, 5876, 8450, 11536, 15000, 15000, 15000, 15000, 15000, 15000, 15000, 15000, 15000, 15000, 15000, 15000, 15000, 15000, 1500]))
 
     def test_IEC(self):
         # Create test data using logistic5param form
