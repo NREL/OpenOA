@@ -2,8 +2,7 @@ name: Comprehensive, scheduled, test suite.
 
 on:
   schedule:
-    cron: 0 0 * * MON
-    branches: [ main, develop ]
+    cron: "0 0 * * MON"
 
 jobs:
   build:
@@ -12,7 +11,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
-        python-version: 3.8
+        python-version: [3.8]
 
     steps:
     - uses: actions/checkout@v2
