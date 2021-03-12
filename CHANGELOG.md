@@ -1,6 +1,9 @@
 # Changelog
 All notable changes to this project will be documented in this file. If you make a notable change to the project, please add a line describing the change to the "unreleased" section. The maintainers will make an effort to keep the [Github Releases](https://github.com/NREL/OpenOA/releases) page up to date with this changelog. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [UNRELEASED]
+- Set power to 0 for windspeeds above and below cutoff in IEC power curve function.
+
 ## [2.1 - 2021-02-17]
 - Modify bootstrapping approach for period of record sampling. Data is now sampled with replacement, across 100% of the POR data.
 - Cleaned up dependencies for JOSS review. Adding peer-reviewed JOSS paper.
