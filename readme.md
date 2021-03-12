@@ -4,6 +4,12 @@
 
 [![Documentation Badge](https://readthedocs.org/projects/openoa/badge/?version=latest)](https://openoa.readthedocs.io) ![Tests Badge](https://github.com/NREL/OpenOA/workflows/Tests/badge.svg?branch=develop) [![Code Coverage Badge](https://codecov.io/gh/NREL/OpenOA/branch/develop/graph/badge.svg)](https://codecov.io/gh/NREL/OpenOA)
 
+[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
+
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
+[![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/)
+
 -----
 
 This library provides a framework for working with large timeseries data from wind plants, such as SCADA.
@@ -25,7 +31,7 @@ If you would like to try out the code before installation or simply explore the 
 ### Requirements
 
   * Python 3.6-3.8 with pip.
-  
+
 OpenOA should be compatible with newer versions of Python, but one of its dependencies, Shapely, does not yet have binary wheels in pip for Python 3.9 on Mac.
 
 We strongly recommend using the Anaconda Python distribution and creating a new conda environment for OpenOA. You can download Anaconda through [their website.](https://www.anaconda.com/products/individual)
@@ -55,18 +61,16 @@ python
 
 ### Development
 
-Development dependencies are provided in a requirements.txt file.
-
-We recommend utilizing a fresh virtual environment or Anaconda root before installing these requirements. To use requirements.txt:
+Development dependencies are provided through the develop extra flag in setup.py. Here, we install OpenOA, with development dependencies, in editable mode:
 
 ```
-pip install -r ./OpenOA/requirements.txt
+pip install -e ./OpenOA[develop]
 ```
 
-Next, we recommend installing OpenOA in editable mode:
+Optionally, activate git precommit to automatically run the linting pipeline for committed files:
 
 ```
-pip install -e ./OpenOA
+pre-commit install
 ```
 
 #### Example Notebooks and Data
@@ -90,16 +94,21 @@ jupyter notebook
 ```
 
 #### Testing
-Tests are written in the Python unittest framework and are runnable using pytest. To run all tests with code coverage reporting:
+Tests are written in the Python unittest framework and are runnable using pytest. There are two types of tests, unit tests (located in `test/unit`) run quickly and are automatically for every pull request to the OpenOA repository. Regression tests (located at `test/regression`) provide a comprehensive suite of scientific tests that may take a long time to run (up to 20 minutes on our machines). These tests should be run locally before submitting a pull request, and are run weekly on the develop and master branches.
 
+To run all unit and regresison tests:
 ```
-pytest --cov=operational_analysis
+pytest
 ```
 
 To run unit tests only:
-
 ```
-pytest --ignore=test/regression/ --cov=operational_analysis
+pytest test/unit
+```
+
+To run all tests and generate a code coverage report
+```
+pytest --cov=operational_analysis
 ```
 
 #### Documentation
