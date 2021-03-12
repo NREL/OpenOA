@@ -15,7 +15,7 @@ python function which can be used to evaluate the power curve at arbitrary locat
 
 def IEC(windspeed_column, power_column, bin_width=0.5, windspeed_start=0, windspeed_end=30.0):
     """
-    Use IEC 61400-12-1-2 method for creating wind-speed binned power curve.
+    Use IEC 61400-12-1-2 method for creating wind-speed binned power curve. Power is set to zero for windspeed values outside of the cutoff range specified by windspeed_start and windspeed_end, inclusive of the endpoints.
 
     Args:
         windspeed_column (:obj:`pandas.Series`): feature column
@@ -30,7 +30,8 @@ def IEC(windspeed_column, power_column, bin_width=0.5, windspeed_start=0, windsp
     """
 
     # Set up evenly spaced bins of fixed width, with any value over the maximum getting np.inf
-    bins = np.append(np.arange(windspeed_start, windspeed_end, bin_width), [np.inf])
+    n_bins = int(np.ceil((windspeed_end - windspeed_start) / bin_width)) + 1
+    bins = np.append(np.linspace(windspeed_start, windspeed_end, n_bins), [np.inf])
 
     # Initialize an array which will hold the mean values of each bin
     P_bin = np.ones(len(bins) - 1) * np.nan
@@ -49,6 +50,8 @@ def IEC(windspeed_column, power_column, bin_width=0.5, windspeed_start=0, windsp
         for i in range(0, len(bins) - 1):
             idx = np.where((x >= bins[i]) & (x < bins[i + 1]))
             P[idx] = P_bin[i]
+        cutoff_idx = (x < windspeed_start) | (x > windspeed_end)
+        P[cutoff_idx] = 0.0
         return P
 
     return pc_iec
