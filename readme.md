@@ -1,8 +1,14 @@
 <img src="https://github.com/NREL/OpenOA/blob/develop/Open%20OA%20Final%20Logos/Color/Open%20OA%20Color%20Transparent%20Background.png?raw=true" alt="OpenOA" width="300"/>
 
-![](https://github.com/NREL/OpenOA/workflows/Tests/badge.svg?branch=develop) [![](https://readthedocs.org/projects/openoa/badge/?version=latest)](https://openoa.readthedocs.io) [![codecov](https://codecov.io/gh/NREL/OpenOA/branch/develop/graph/badge.svg)](https://codecov.io/gh/NREL/OpenOA)
+[![Binder Badge](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/NREL/OpenOA/master?filepath=examples) [![Gitter Badge](https://badges.gitter.im/NREL_OpenOA/community.svg)](https://gitter.im/NREL_OpenOA/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge) [![Journal of Open Source Software Badge](https://joss.theoj.org/papers/d635ef3c3784d49f6e81e07a0b35ff6b/status.svg)](https://joss.theoj.org/papers/d635ef3c3784d49f6e81e07a0b35ff6b)
 
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/NREL/OpenOA/master?filepath=examples)
+[![Documentation Badge](https://readthedocs.org/projects/openoa/badge/?version=latest)](https://openoa.readthedocs.io) ![Tests Badge](https://github.com/NREL/OpenOA/workflows/Tests/badge.svg?branch=develop) [![Code Coverage Badge](https://codecov.io/gh/NREL/OpenOA/branch/develop/graph/badge.svg)](https://codecov.io/gh/NREL/OpenOA)
+
+[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
+
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
+[![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/)
 
 -----
 
@@ -20,12 +26,12 @@ The library is written around Pandas Data Frames, utilizing a flexible backend
 so that data loading, processing, and analysis could be performed using other libraries,
 such as Dask and Spark, in the future.
 
-If you would like to try out the code before installation or simply explore the possibilities, please see our examples on [Binder](https://mybinder.org/v2/gh/NREL/OpenOA/master?filepath=examples).
+If you would like to try out the code before installation or simply explore the possibilities, please see our examples on [Binder](https://mybinder.org/v2/gh/NREL/OpenOA/main?filepath=examples).
 
 ### Requirements
 
   * Python 3.6-3.8 with pip.
-  
+
 OpenOA should be compatible with newer versions of Python, but one of its dependencies, Shapely, does not yet have binary wheels in pip for Python 3.9 on Mac.
 
 We strongly recommend using the Anaconda Python distribution and creating a new conda environment for OpenOA. You can download Anaconda through [their website.](https://www.anaconda.com/products/individual)
@@ -55,23 +61,21 @@ python
 
 ### Development
 
-Development dependencies are provided in a requirements.txt file.
-
-We recommend utilizing a fresh virtual environment or Anaconda root before installing these requirements. To use requirements.txt:
+Development dependencies are provided through the develop extra flag in setup.py. Here, we install OpenOA, with development dependencies, in editable mode:
 
 ```
-pip install -r ./OpenOA/requirements.txt
+pip install -e ./OpenOA[develop]
 ```
 
-Next, we recommend installing OpenOA in editable mode:
+Optionally, activate git precommit to automatically run the linting pipeline for committed files:
 
 ```
-pip install -e ./OpenOA
+pre-commit install
 ```
 
-#### Extracting Example Data
+#### Example Notebooks and Data
 
-The example data will be automaticaly extracted as needed by the tests. The following command is provided for reference:
+The example data will be automaticaly extracted as needed by the tests. To manually extract the example data for use with the example notebooks, use the following command:
 
 ```
 unzip examples/data/la_haute_borne.zip -d examples/data/la_haute_borne/
@@ -83,17 +87,28 @@ In addition, you will need to install the packages required for running the exam
 pip install -r ./OpenOA/examples/requirements.txt
 ```
 
-#### Testing
-Tests are written in the Python unittest framework and are runnable using pytest. To run all tests with code coverage reporting:
+The example notebooks are located in the `examples` directory. We suggest installing the Jupyter notebook server to run the notebooks interactively. The notebooks can also be viewed statically on [Read The Docs](http://openoa.readthedocs.io/).
 
 ```
-pytest --cov=operational_analysis
+jupyter notebook
+```
+
+#### Testing
+Tests are written in the Python unittest framework and are runnable using pytest. There are two types of tests, unit tests (located in `test/unit`) run quickly and are automatically for every pull request to the OpenOA repository. Regression tests (located at `test/regression`) provide a comprehensive suite of scientific tests that may take a long time to run (up to 20 minutes on our machines). These tests should be run locally before submitting a pull request, and are run weekly on the develop and master branches.
+
+To run all unit and regresison tests:
+```
+pytest
 ```
 
 To run unit tests only:
-
 ```
-pytest --ignore=test/regression/ --cov=operational_analysis
+pytest test/unit
+```
+
+To run all tests and generate a code coverage report
+```
+pytest --cov=operational_analysis
 ```
 
 #### Documentation

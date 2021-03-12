@@ -30,3 +30,8 @@ examples/turbine_analysis/data/*.csv
 sphinx/examplesout.ipynb
 
 .devcontainer
+
+.vscode/
+.local
+
+.ipython
