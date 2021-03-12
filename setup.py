@@ -39,7 +39,15 @@ EXTRAS = {
         "nbsphinx",
     ],
     "wtk": ["h5pyd"],
-    "develop": ["pre-commit", "black", "isort", "flake8", "flake8-docstrings"],
+    "develop": [
+        "pre-commit",
+        "black",
+        "isort",
+        "flake8",
+        "flake8-docstrings",
+        "pytest",
+        "pytest-cov",
+    ],
 }
 
 

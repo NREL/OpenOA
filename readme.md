@@ -61,19 +61,18 @@ python
 
 ### Development
 
-Development dependencies are provided in a requirements.txt file.
-
-We recommend utilizing a fresh virtual environment or Anaconda root before installing these requirements. To use requirements.txt:
+Development dependencies are provided through the develop extra flag in setup.py. Here, we install OpenOA, with development dependencies, in editable mode:
 
 ```
-pip install -r ./OpenOA/requirements.txt
+pip install -e ./OpenOA[develop]
 ```
 
-Next, we recommend installing OpenOA in editable mode:
+Optionally, activate git precommit to automatically run the linting pipeline for committed files:
 
 ```
-pip install -e ./OpenOA
+pre-commit install
 ```
+
 
 #### Extracting Example Data
 
@@ -90,16 +89,21 @@ pip install -r ./OpenOA/examples/requirements.txt
 ```
 
 #### Testing
-Tests are written in the Python unittest framework and are runnable using pytest. To run all tests with code coverage reporting:
+Tests are written in the Python unittest framework and are runnable using pytest. There are two types of tests, unit tests (located in `test/unit`) run quickly and are automatically for every pull request to the OpenOA repository. Regression tests (located at `test/regression`) provide a comprehensive suite of scientific tests that may take a long time to run (up to 20 minutes on our machines). These tests should be run locally before submitting a pull request, and are run weekly on the develop and master branches.
 
+To run all unit and regresison tests:
 ```
-pytest --cov=operational_analysis
+pytest
 ```
 
 To run unit tests only:
-
 ```
-pytest --ignore=test/regression/ --cov=operational_analysis
+pytest test/unit
+```
+
+To run all tests and generate a code coverage report
+```
+pytest --cov=operational_analysis
 ```
 
 #### Documentation

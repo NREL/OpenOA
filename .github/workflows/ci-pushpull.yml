@@ -1,4 +1,4 @@
-name: Tests
+name: Unit Tests on activity for master and develop
 
 on:
   push:
@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
-        python-version: [3.6, 3.8]
+        python-version: 3.8
 
     steps:
     - uses: actions/checkout@v2
@@ -26,13 +26,11 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
       shell: bash
-    - name: Unzip example data
-      run: |
-        unzip examples/data/la_haute_borne.zip -d examples/data/la_haute_borne/
-      shell: bash
     - name: Test with pytest
       run: |
-        pytest --cov=operational_analysis --cov-report=xml
+        pytest test/unit --cov=operational_analysis --cov-report=xml
       shell: bash
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1
+      with:
+        flags: unittests
