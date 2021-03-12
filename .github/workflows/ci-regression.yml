@@ -3,7 +3,7 @@ name: Comprehensive, scheduled, test suite.
 on:
   schedule:
     cron: 0 0 * * MON
-    branches: [ master, develop ]
+    branches: [ main, develop ]
 
 jobs:
   build:

@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to this project will be documented in this file. If you make a notable change to the project, please add a line describing the change to the "unreleased" section. The maintainers will make an effort to keep the [Github Releases](https://github.com/NREL/OpenOA/releases) page up to date with this changelog. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.1 - 2021-02-17]
+- Modify bootstrapping approach for period of record sampling. Data is now sampled with replacement, across 100% of the POR data.
+- Cleaned up dependencies for JOSS review. Adding peer-reviewed JOSS paper.
+- Add Binder button to Readme which makes running the example notebooks easier.
+- Set maximum python version to 3.8, due to an install issue for dependency Shapely on Mac with Python 3.9.
+
 ## [2.0.1 - 2020-10-13]
 - Replaced `GeoPandas` functionality with `pyproj` and `Shapely` for coordinate
 reference system conversion and distance measurements.
