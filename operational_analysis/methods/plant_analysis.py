@@ -832,11 +832,6 @@ class MonteCarloAEP(object):
                 inputs = inputs.reshape(-1,1)
             gross_lt = fitted_model.predict(inputs)
 
-            # Annual values of lt gross energy, needed for IAV
-            reg_inputs_lt['gross_lt'] = gross_lt
-            gross_lt_annual = reg_inputs_lt['gross_lt'].resample('12MS').sum().values
-            #gross_lt_annual = gross_lt.reshape(-1, int(self._calendar_samples)).sum(1)
-
             # Get POR gross energy by applying regression result to POR regression inputs                                                                        
             reg_inputs_por = [self._reanalysis_por[self._run.reanalysis_product]]
             if self.reg_temperature:
@@ -852,6 +847,10 @@ class MonteCarloAEP(object):
             if self.time_resolution == 'M': # Undo normalization to 30-day months
                 gross_lt = gross_lt*np.tile(self.num_days_lt,self._run.num_years_windiness)/30 
                 gross_por = np.array(gross_por).flatten()*self.num_days_lt/30
+            
+            # Annual values of lt gross energy, needed for IAV
+            reg_inputs_lt['gross_lt'] = gross_lt
+            gross_lt_annual = reg_inputs_lt['gross_lt'].resample('12MS').sum().values
             
             # Get long-term availability and curtailment losses by month
             [avail_lt_losses, curt_lt_losses] = self.sample_long_term_losses()  
@@ -878,7 +877,8 @@ class MonteCarloAEP(object):
                                                                   'lt_por_ratio': lt_por_ratio,
                                                                   'r2': self._r2_score,
                                                                   'mse': self._mse_score,
-                                                                  'n_points': self._mc_num_points})       
+                                                                  'n_points': self._mc_num_points,
+                                                                  'iav': iav})       
         return sim_results
 
     @logged_method_call
