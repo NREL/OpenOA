@@ -2,9 +2,10 @@
 This module provides useful functions for processing timeseries data
 """
 
-import pandas as pd
-import numpy as np
 from datetime import datetime
+
+import numpy as np
+import pandas as pd
 from pytz import timezone
 
 
@@ -31,10 +32,12 @@ def convert_local_to_utc(d, tz_string):
     if d.tzinfo:
         raise Exception("d parameter must not have a timezone")
 
-    d_obj = datetime(d.year, d.month, d.day, d.hour, d.minute)  # Convert datetime object into simple integer form
+    d_obj = datetime(
+        d.year, d.month, d.day, d.hour, d.minute
+    )  # Convert datetime object into simple integer form
     tz = timezone(tz_string)  # define timezone
     d_local = tz.localize(d_obj, is_dst=True)  # localize the date object
-    utc = timezone('UTC')  # define UTC timezone
+    utc = timezone("UTC")  # define UTC timezone
     d_utc = d_local.astimezone(utc)  # calculate UTC time
 
     return d_utc
@@ -51,15 +54,16 @@ def find_time_gaps(t_series, freq):
     Returns:
         :obj:`pandas.Series`: Series of missing time stamps in datetime format
     """
-    
+
     # Convert 't_series' to Pandas series in case a time index is passed
     t_series = pd.Series(t_series)
 
     if t_series.size == 0:
         return t_series
 
-    range_dt = pd.Series(data=pd.date_range(t_series.min(),
-                                            end=t_series.max(), freq=freq))  # Full range of timestamps
+    range_dt = pd.Series(
+        data=pd.date_range(t_series.min(), end=t_series.max(), freq=freq)
+    )  # Full range of timestamps
 
     # Find missing time stamps by concatenating full timestamps and actual and removing duplicates
     # What remains is those timestamps not found in the data
@@ -79,10 +83,10 @@ def find_duplicate_times(t_series, freq):
     Returns:
         :obj:`pandas.Series`: Duplicates from input data
     """
-    
+
     # Convert 't_series' to Pandas series in case a time index is passed
     t_series = pd.Series(t_series)
-    
+
     repeated_steps = t_series[t_series.duplicated()]
 
     return repeated_steps
@@ -118,7 +122,7 @@ def percent_nan(s):
 
     Args:
         s(:obj:`pandas.Series`): The data to be checked for 'na' values
-    
+
     Returns:
         :obj:`float`: Percentage of NaN data in the data series
     """
@@ -135,11 +139,11 @@ def num_days(s):
 
     Args:
         s(:obj:`pandas.Series`): The data to be checked for number of days.
-    
+
     Returns:
         :obj:`int`: Number of days in the data
     """
-    n_days = len(s.resample('D'))
+    n_days = len(s.resample("D"))
 
     return n_days
 
@@ -153,6 +157,6 @@ def num_hours(s):
     Returns:
         :obj:`int`: Number of hours in the data
     """
-    n_hours = len(s.resample('H'))
+    n_hours = len(s.resample("H"))
 
     return n_hours

@@ -37,7 +37,7 @@ def compute_u_v_components(wind_speed, wind_dir):
     """
     # Send exception if any negative data found
     if (wind_speed[wind_speed < 0].size > 0) | (wind_dir[wind_dir < 0].size > 0):
-        raise Exception('Some of your wind speed or direction data is negative. Check your data')
+        raise Exception("Some of your wind speed or direction data is negative. Check your data")
 
     u = np.round(-wind_speed * np.sin(wind_dir * np.pi / 180), 10)  # round to 10 digits
     v = np.round(-wind_speed * np.cos(wind_dir * np.pi / 180), 10)
@@ -45,41 +45,45 @@ def compute_u_v_components(wind_speed, wind_dir):
     return u, v
 
 
-def compute_air_density(temp_col, pres_col, humi_col = None):
+def compute_air_density(temp_col, pres_col, humi_col=None):
     """
     Calculate air density from the ideal gas law based on the definition provided by IEC 61400-12
     given pressure, temperature and relative humidity.
-    
+
     This function assumes temperature and pressure are reported in standard units of measurement
     (i.e. Kelvin for temperature, Pascal for pressure, humidity has no dimension).
-    
-    Humidity values are optional. According to the IEC a humiditiy of 50% (0.5) is set as default value. 
+
+    Humidity values are optional. According to the IEC a humiditiy of 50% (0.5) is set as default value.
 
     Args:
         temp_col(:obj:`array-like`): array with temperature values; units of Kelvin
         pres_col(:obj:`array-like`): array with pressure values; units of Pascals
-        humi_col(:obj:`array-like`): optional array with relative humidity values; dimensionless (range 0 to 1) 
+        humi_col(:obj:`array-like`): optional array with relative humidity values; dimensionless (range 0 to 1)
 
     Returns:
         :obj:`pandas.Series`: Rho, calcualted air density; units of kg/m3
     """
     # Check if humidity column is provided and create default humidity array with values of 0.5 if necessary
-    if humi_col != None:
+    if humi_col is not None:
         rel_humidity = humi_col
     else:
-        rel_humidity = np.repeat(.5, temp_col.shape[0])
+        rel_humidity = np.repeat(0.5, temp_col.shape[0])
     # Send exception if any negative data found
     if np.any(temp_col < 0) | np.any(pres_col < 0) | np.any(rel_humidity < 0):
-        raise Exception('Some of your temperature, pressure or humidity data is negative. Check your data.')
+        raise Exception(
+            "Some of your temperature, pressure or humidity data is negative. Check your data."
+        )
 
-    #protect against python 2 integer division rules
+    # protect against python 2 integer division rules
     temp_col = temp_col.astype(float)
     pres_col = pres_col.astype(float)
 
     R_const = 287.05  # Gas constant for dry air, units of J/kg/K
-    Rw_const = 461.5   # Gas constant of water vapour, unit J/kg/K
-    rho = ((1/temp_col)*(pres_col/R_const-rel_humidity*(0.0000205*np.exp(0.0631846*temp_col))*
-            (1/R_const-1/Rw_const)))
+    Rw_const = 461.5  # Gas constant of water vapour, unit J/kg/K
+    rho = (1 / temp_col) * (
+        pres_col / R_const
+        - rel_humidity * (0.0000205 * np.exp(0.0631846 * temp_col)) * (1 / R_const - 1 / Rw_const)
+    )
 
     return rho
 
@@ -100,7 +104,7 @@ def pressure_vertical_extrapolation(p0, temp_avg, z0, z1):
     """
     # Send exception if any negative data found
     if (p0[p0 < 0].size > 0) | (temp_avg[temp_avg < 0].size > 0):
-        raise Exception('Some of your temperature of pressure data is negative. Check your data')
+        raise Exception("Some of your temperature of pressure data is negative. Check your data")
 
     R_const = 287.058  # Gas constant for dry air, units of J/kg/K
     p1 = p0 * np.exp(-const.g * (z1 - z0) / R_const / temp_avg)  # Pressure at z1
@@ -120,7 +124,9 @@ def air_density_adjusted_wind_speed(wind_col, density_col):
         :obj:`pandas.Series`: density-adjusted wind speeds; units of m/s
     """
     rho_mean = density_col.mean()  # Mean air density across sample
-    dens_adjusted_ws = wind_col * np.power(density_col / rho_mean, 1. / 3)  # Density adjusted wind speeds
+    dens_adjusted_ws = wind_col * np.power(
+        density_col / rho_mean, 1.0 / 3
+    )  # Density adjusted wind speeds
 
     return dens_adjusted_ws
 
@@ -139,7 +145,7 @@ def compute_turbulence_intensity(mean_col, std_col):
     return std_col / mean_col
 
 
-def compute_shear(df, windspeed_heights, ref_col='empty'):
+def compute_shear(df, windspeed_heights, ref_col="empty"):
     """
     Compute shear coefficient between wind speed measurements
 
@@ -152,15 +158,21 @@ def compute_shear(df, windspeed_heights, ref_col='empty'):
 
     Returns:
         :obj:`pandas.Series`: shear coefficient (unitless)
-   """
+    """
 
     # Convert wind speed heights to float
-    windspeed_heights = \
-        dict(list(zip(list(windspeed_heights.keys()), [float(value) for value in list(windspeed_heights.values())])))
+    windspeed_heights = dict(
+        list(
+            zip(
+                list(windspeed_heights.keys()),
+                [float(value) for value in list(windspeed_heights.values())],
+            )
+        )
+    )
 
     keys = list(windspeed_heights.keys())
     if len(keys) <= 1:
-        raise Exception('More than one wind speed measurement required to compute shear.')
+        raise Exception("More than one wind speed measurement required to compute shear.")
     elif len(keys) == 2:
         # If there are only two measurements, no optimization possible
         wind_a = keys[0]
@@ -182,23 +194,31 @@ def compute_shear(df, windspeed_heights, ref_col='empty'):
         # Rename columns to be windspeed measurement heights
         df_norm = df_norm.rename(columns=windspeed_heights)
 
-        alpha = pd.DataFrame(np.ones((len(df_norm), 1)) * np.nan, index=df_norm.index, columns=['alpha'])
+        alpha = pd.DataFrame(
+            np.ones((len(df_norm), 1)) * np.nan, index=df_norm.index, columns=["alpha"]
+        )
 
         # For each row
         for time in df_norm.index:
 
-            t = (df_norm.loc[time]  # Take the row as a series, the index will be the column names,
-                 .reset_index()  # Resetting the index yields the heights as a column
-                 .to_numpy())  # Numpy array: each row a sensor, column 0 the heights, column 1 the measurment
+            t = (
+                df_norm.loc[time]  # Take the row as a series, the index will be the column names,
+                .reset_index()  # Resetting the index yields the heights as a column
+                .to_numpy()
+            )  # Numpy array: each row a sensor, column 0 the heights, column 1 the measurment
             t = t[~np.isnan(t).any(axis=1)]  # Drop rows (sensors) for which the measurement was nan
             h = t[:, 0]  # The measurement heights
             u = t[:, 1]  # The measurements
-            if np.shape(u)[0] <= 1:  # If less than two measurements were available, leave value as nan
+            if (
+                np.shape(u)[0] <= 1
+            ):  # If less than two measurements were available, leave value as nan
                 continue
             else:
-                alpha.loc[time, 'alpha'] = curve_fit(power_law, h, u)[0][0]  # perform least square optimization
+                alpha.loc[time, "alpha"] = curve_fit(power_law, h, u)[0][
+                    0
+                ]  # perform least square optimization
 
-        return alpha['alpha']
+        return alpha["alpha"]
 
 
 def compute_veer(wind_a, height_a, wind_b, height_b):
@@ -211,13 +231,13 @@ def compute_veer(wind_a, height_a, wind_b, height_b):
 
     Returns:
         veer(:obj:`array`): veer (deg/m)
-   """
+    """
 
     # Calculate wind direction change
     delta_dir = wind_b - wind_a
 
     # Convert absolute values greater than 180 to normal range
-    delta_dir[delta_dir > 180] = delta_dir[delta_dir > 180] - 360.
-    delta_dir[delta_dir <= (-180)] = delta_dir[delta_dir <= (-180)] + 360.
+    delta_dir[delta_dir > 180] = delta_dir[delta_dir > 180] - 360.0
+    delta_dir[delta_dir <= (-180)] = delta_dir[delta_dir <= (-180)] + 360.0
 
     return delta_dir / (height_b - height_a)
