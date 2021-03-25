@@ -506,7 +506,7 @@ class MonteCarloAEP(object):
         """
             
         # Define empty data frame that spans past our period of interest
-        self._reanalysis_aggregate = pd.DataFrame(index=pd.date_range(start='1997-01-01', end='2020-01-01',
+        self._reanalysis_aggregate = pd.DataFrame(index=pd.date_range(start='1997-01-01', end='2019-12-31',
                                                                     freq=self._resample_freq), dtype=float)
 
         # Now loop through the different reanalysis products, density-correct wind speeds, and take monthly averages
@@ -850,7 +850,7 @@ class MonteCarloAEP(object):
             
             # Annual values of lt gross energy, needed for IAV
             reg_inputs_lt['gross_lt'] = gross_lt
-            gross_lt_annual = reg_inputs_lt['gross_lt'].resample('12MS').sum().values
+            gross_lt_annual = reg_inputs_lt['gross_lt'].resample('12MS').sum().values            
             
             # Get long-term availability and curtailment losses by month
             [avail_lt_losses, curt_lt_losses] = self.sample_long_term_losses()  
