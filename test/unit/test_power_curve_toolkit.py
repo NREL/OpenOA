@@ -16,12 +16,34 @@ class TestPowerCurveFunctions(unittest.TestCase):
         self.x = pd.Series(np.random.random(100) * 30)
         self.y = pd.Series(logistic5param(self.x, *params) + np.random.random(100) * noise)
 
+        # power curve source: https://github.com/NREL/turbine-models/blob/master/Offshore/2020ATB_NREL_Reference_15MW_240.csv
+        self.nrel_15mw_wind = pd.Series(np.arange(4, 26))
+        self.nrel_15mw_power = pd.Series(np.array([720, 1239, 2271, 3817, 5876, 8450, 11536, 15000, 15000, 15000, 15000, 15000, 15000, 15000, 15000, 15000, 15000, 15000, 15000, 15000, 15000, 1500]))
+
     def test_IEC(self):
         # Create test data using logistic5param form
         curve = power_curve.IEC(self.x, self.y)
         y_pred = curve(self.x)
         # Does the IEC power curve match the test data?
         nptest.assert_allclose(self.y, y_pred, rtol=1, atol=noise * 2, err_msg="Power curve did not properly fit.")
+
+    def test_IEC_with_bounds(self):
+        # Create the power curve with bounds at 4m/s adn 25m/s and bin width from power curve of 1m/s
+        cut_in = 4
+        cut_out = 25
+        curve = power_curve.IEC(self.nrel_15mw_wind, self.nrel_15mw_power, windspeed_start=cut_in, windspeed_end=cut_out, bin_width=1)
+        
+        # Create the test data
+        test_windspeeds = np.arange(0, 31)
+        test_power = curve(test_windspeeds)
+        
+        # Test all windspeeds outside of cut-in and cut-out windspeeds produce no power
+        should_be_zeros = test_power[(test_windspeeds < cut_in) | (test_windspeeds > cut_out)]
+        nptest.assert_array_equal(should_be_zeros, np.zeros(should_be_zeros.shape))
+
+        # Test all the valid windspeeds are equal
+        valid_power = test_power[(test_windspeeds >= cut_in) & (test_windspeeds <= cut_out)]
+        nptest.assert_array_equal(self.nrel_15mw_power, valid_power)
 
     def test_logistic_5_param(self):
         # Create test data using logistic5param form

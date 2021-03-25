@@ -1,0 +1,37 @@
+[tool.black]
+# https://github.com/psf/black
+line-length = 100
+target-version = ["py36","py37", "py38"]
+include = '\.pyi?$'
+exclude = '''
+# A regex preceded with ^/ will apply only to files and directories
+# in the root of the project.
+^/(
+  (
+      \.eggs         # exclude a few common directories in the
+    | \.git          # root of the project
+    | \.hg
+    | \.mypy_cache
+    | \.tox
+    | \.venv
+    | _build
+    | buck-out
+    | build
+    | dist
+  )/
+  | foo.py           # also separately exclude a file named foo.py in
+                     # the root of the project
+)
+'''
+
+[tool.isort]
+# https://github.com/PyCQA/isort
+profile = "black"
+src_paths = ["isort", "test"]
+line_length = "100"
+length_sort = "True"
+length_sort_straight = "True"
+lines_after_imports = "2"
+sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
+known_first_party = "operational_analysis"
+known_third_party = ["numpy","scipy","pandas","pygam","tqdm","statsmodels","scikit_learn","EIA-python","requests","pyproj","shapely"]

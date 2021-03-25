@@ -16,7 +16,7 @@ The OpenOA repository is hosted on Github, and located here: http://github.com/N
 
 This repository is organized using a modified git-flow system. Branches are organized as follows:
 
-- master: Stable release version. Must have good test coverage and may not have all the newest features.
+- main: Stable release version. Must have good test coverage and may not have all the newest features.
 - develop: Development branch which contains the newest features. Tests must pass, but code may be unstable.
 - feature/xxx: Branch from develop, should reference a github issue number.
 
@@ -28,8 +28,10 @@ When the feature branch is ready, make a pull request to NREL/OpenOA through the
 
 ## Pull Request
 
-Pull requests must be made for any changes to be merged into release branches.
-They must include updated documentation and pass all unit tests and integration tests.
+Pull requests must be made for all changes.
+Most pull requests should be made against the develop branch.
+Only core developers should make pull requests to the main branch.
+Pull requests must include updated documentation and pass all unit tests and integration tests.
 In addition, code coverage should not be negatively affected by the pull request.
 
 **Scope:** Encapsulate the changes of ideally one, or potentially a couple, issues.
@@ -37,7 +39,7 @@ It is greatly preferable to submit three small pull requests than it is to submi
 Write a complete description of these changes in the pull request body.
 
 **Tests:** Must pass all tests. Pull requests will be rejected if tests do not pass.
-Tests are automatically run through Github Actions for any pull request or push to the master or develop branches.
+Tests are automatically run through Github Actions for any pull request or push to the main or develop branches.
 
 **Documentation:** Include any relevant changes to inline documentation, as well as any changes to the RST files
 located in /sphinx.

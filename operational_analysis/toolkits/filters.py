@@ -4,11 +4,11 @@ intended for application in wind plant operational energy analysis, particularly
 """
 
 import numpy as np
-import pandas as pd
 import scipy as sp
+import pandas as pd
 
 
-def range_flag(data_col, below=-1. * np.inf, above=np.inf):
+def range_flag(data_col, below=-1.0 * np.inf, above=np.inf):
     """Flag data for which the specified data is outside a specified range
 
     Args:
@@ -20,7 +20,7 @@ def range_flag(data_col, below=-1. * np.inf, above=np.inf):
         :obj:`pandas.Series(bool)`: Array-like object with boolean entries.
     """
 
-    flag = ~((data_col <= above) & (data_col >= below)) # Apply the range flag
+    flag = ~((data_col <= above) & (data_col >= below))  # Apply the range flag
     return flag  # Return boolean series of data flags
 
 
@@ -43,7 +43,7 @@ def unresponsive_flag(data_col, threshold=3):
     roll_sum = value_diff.rolling(threshold - 1).sum()
 
     # Create boolean series that is True if rolling sum is zero
-    flag_ind = (roll_sum == 0)
+    flag_ind = roll_sum == 0
 
     # Need to flag preceding <threshold> -1 values as well
     for n in np.arange(threshold - 1):
@@ -52,7 +52,7 @@ def unresponsive_flag(data_col, threshold=3):
     return flag_ind  # Return boolean series of data flags
 
 
-def std_range_flag(data_col, threshold=2.):
+def std_range_flag(data_col, threshold=2.0):
     """Flag time stamps for which the measurement is outside of the threshold number of standard deviations from the
     mean across all passed columns; does not distinguish between asset ids
 
@@ -66,8 +66,9 @@ def std_range_flag(data_col, threshold=2.):
 
     data_mean = data_col.mean()  # Get mean of data
     data_std = data_col.std()  # Get std of data
-    flag = ((data_col <= data_mean - threshold * data_std) | (
-            data_col >= data_mean + threshold * data_std))  # Apply the range flag
+    flag = (data_col <= data_mean - threshold * data_std) | (
+        data_col >= data_mean + threshold * data_std
+    )  # Apply the range flag
 
     return flag
 
@@ -88,14 +89,26 @@ def window_range_flag(window_col, window_start, window_end, value_col, value_min
         :obj:`pandas.Series(bool)`: Array-like object with boolean entries.
     """
 
-    flag = ((window_col >= window_start) & (window_col <= window_end)
-            & ((value_col < value_min) | (value_col > value_max)))
+    flag = (
+        (window_col >= window_start)
+        & (window_col <= window_end)
+        & ((value_col < value_min) | (value_col > value_max))
+    )
 
     return flag
 
 
-def bin_filter(bin_col, value_col, bin_width, threshold=2, center_type='mean', bin_min=None, bin_max=None,
-               threshold_type='std', direction='all'):
+def bin_filter(
+    bin_col,
+    value_col,
+    bin_width,
+    threshold=2,
+    center_type="mean",
+    bin_min=None,
+    bin_max=None,
+    threshold_type="std",
+    direction="all",
+):
     """Flag time stamps for which data in <value_col> when binned by data in <bin_col> into bins of <width>
     is outside <threhsold> bin. The <center_type> of each bin can be either the median or mean, and flagging
     can be applied directionally (i.e. above or below the center, or both)
@@ -142,25 +155,25 @@ def bin_filter(bin_col, value_col, bin_width, threshold=2, center_type='mean', b
         y_bin = value_col.loc[(bin_col <= bin_edges[n + 1]) & (bin_col > bin_edges[n])]
 
         # Get center of binned data
-        if center_type == 'mean':
+        if center_type == "mean":
             cent = y_bin.mean()
-        elif center_type == 'median':
+        elif center_type == "median":
             cent = y_bin.median()
         else:
-            print('incorrect center type specified')
+            print("incorrect center type specified")
 
         # Define threshold of data flag
-        if threshold_type == 'std':
+        if threshold_type == "std":
             ran = y_bin.std() * threshold
-        elif threshold_type == 'scalar':
+        elif threshold_type == "scalar":
             ran = threshold
 
         # Perform flagging depending on specfied direction
-        if direction == 'all':
+        if direction == "all":
             flag_bin = (y_bin > (cent + ran)) | (y_bin < (cent - ran))
-        elif direction == 'above':
+        elif direction == "above":
             flag_bin = y_bin > (cent + ran)
-        elif direction == 'below':
+        elif direction == "below":
             flag_bin = y_bin < (cent - ran)
 
         # Record flags in final flag column
@@ -169,7 +182,7 @@ def bin_filter(bin_col, value_col, bin_width, threshold=2, center_type='mean', b
     return flag
 
 
-def cluster_mahalanobis_2d(data_col1, data_col2, n_clusters=13, dist_thresh=3.):
+def cluster_mahalanobis_2d(data_col1, data_col2, n_clusters=13, dist_thresh=3.0):
     """K-means clustering of  data into <n_cluster> clusters; Mahalanobis distance evaluated for each cluster and
     points with distances outside of <dist_thresh> are flagged; distinguishes between asset ids
 
@@ -184,10 +197,11 @@ def cluster_mahalanobis_2d(data_col1, data_col2, n_clusters=13, dist_thresh=3.):
     """
 
     # Create 2D data frame for input into cluster algorithm
-    df = pd.DataFrame({'d1': data_col1, 'd2': data_col2})
+    df = pd.DataFrame({"d1": data_col1, "d2": data_col2})
 
     # Run cluster algorithm
     from sklearn.cluster import KMeans
+
     kmeans = KMeans(n_clusters=n_clusters).fit(df)
 
     # Define empty flag of 'False' values with indices matching value_col
@@ -196,7 +210,7 @@ def cluster_mahalanobis_2d(data_col1, data_col2, n_clusters=13, dist_thresh=3.):
     # Loop through clusters and flag data that fall outside a threshold distance from cluster center
     for ic in range(n_clusters):
         # Extract data for cluster
-        clust_sub = ((kmeans.labels_ == ic))
+        clust_sub = kmeans.labels_ == ic
         cluster = df.loc[clust_sub]
 
         # Cluster centroid
@@ -207,11 +221,12 @@ def cluster_mahalanobis_2d(data_col1, data_col2, n_clusters=13, dist_thresh=3.):
         invcovmx = sp.linalg.inv(covmx)
 
         # Compute mahalnobis distance of each point in cluster
-        mahalanobis_dist = cluster.apply(lambda r: sp.spatial.distance.mahalanobis(r.values, centroid, invcovmx),
-                                         axis=1)
+        mahalanobis_dist = cluster.apply(
+            lambda r: sp.spatial.distance.mahalanobis(r.values, centroid, invcovmx), axis=1
+        )
 
         # Flag data outside the distance threshold
-        flag_bin = (mahalanobis_dist > dist_thresh)
+        flag_bin = mahalanobis_dist > dist_thresh
 
         # Record flags in final flag column
         flag.loc[flag_bin.index] = flag_bin
