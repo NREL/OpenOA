@@ -59,6 +59,8 @@ python
 >>> import operational_analysis
 ```
 
+Note in Windows you may need to install Shapely using conda instead of pip if you get an error regarding geos_c.dll, e.g. "conda install Shapely" in Anaconda Prompt.
+
 ### Development
 
 Development dependencies are provided through the develop extra flag in setup.py. Here, we install OpenOA, with development dependencies, in editable mode:
