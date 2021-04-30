@@ -83,6 +83,15 @@ class Project_Engie(PlantData):
         self._num_turbines = 4
         self._turbine_capacity = 2.05 # MW
 
+
+        ###################
+        # ASSET DATA #
+        ###################
+        logger.info("Loading ASSET data")
+        self._asset.load(self._path, "static-information", "csv")  # Load ASSET data
+        logger.info("ASSET data loaded")
+  
+
         ###################
         # SCADA DATA #
         ###################
