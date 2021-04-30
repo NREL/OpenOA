@@ -1,6 +1,6 @@
 <img src="https://github.com/NREL/OpenOA/blob/develop/Open%20OA%20Final%20Logos/Color/Open%20OA%20Color%20Transparent%20Background.png?raw=true" alt="OpenOA" width="300"/>
 
-[![Binder Badge](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/NREL/OpenOA/master?filepath=examples) [![Gitter Badge](https://badges.gitter.im/NREL_OpenOA/community.svg)](https://gitter.im/NREL_OpenOA/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge) [![Journal of Open Source Software Badge](https://joss.theoj.org/papers/d635ef3c3784d49f6e81e07a0b35ff6b/status.svg)](https://joss.theoj.org/papers/d635ef3c3784d49f6e81e07a0b35ff6b)
+[![Binder Badge](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/NREL/OpenOA/main?filepath=examples) [![Gitter Badge](https://badges.gitter.im/NREL_OpenOA/community.svg)](https://gitter.im/NREL_OpenOA/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge) [![Journal of Open Source Software Badge](https://joss.theoj.org/papers/d635ef3c3784d49f6e81e07a0b35ff6b/status.svg)](https://joss.theoj.org/papers/d635ef3c3784d49f6e81e07a0b35ff6b)
 
 [![Documentation Badge](https://readthedocs.org/projects/openoa/badge/?version=latest)](https://openoa.readthedocs.io) ![Tests Badge](https://github.com/NREL/OpenOA/workflows/Tests/badge.svg?branch=develop) [![Code Coverage Badge](https://codecov.io/gh/NREL/OpenOA/branch/develop/graph/badge.svg)](https://codecov.io/gh/NREL/OpenOA)
 
@@ -108,7 +108,7 @@ jupyter notebook
 ```
 
 #### Testing
-Tests are written in the Python unittest framework and are runnable using pytest. There are two types of tests, unit tests (located in `test/unit`) run quickly and are automatically for every pull request to the OpenOA repository. Regression tests (located at `test/regression`) provide a comprehensive suite of scientific tests that may take a long time to run (up to 20 minutes on our machines). These tests should be run locally before submitting a pull request, and are run weekly on the develop and master branches.
+Tests are written in the Python unittest framework and are runnable using pytest. There are two types of tests, unit tests (located in `test/unit`) run quickly and are automatically for every pull request to the OpenOA repository. Regression tests (located at `test/regression`) provide a comprehensive suite of scientific tests that may take a long time to run (up to 20 minutes on our machines). These tests should be run locally before submitting a pull request, and are run weekly on the develop and main branches.
 
 To run all unit and regresison tests:
 ```
