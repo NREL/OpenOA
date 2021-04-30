@@ -59,6 +59,20 @@ python
 >>> import operational_analysis
 ```
 
+#### Common Installation Issues:
+
+- In Windows you may get an error regarding geos_c.dll. To fix this install Shapely using:
+
+```
+conda install Shapely
+```
+
+- In Windows, an ImportError regarding win32api can also occur. This can be resolved by fixing the version of pywin32 as follows:
+
+```
+pip install --upgrade pywin32==255
+```
+
 ### Development
 
 Development dependencies are provided through the develop extra flag in setup.py. Here, we install OpenOA, with development dependencies, in editable mode:
