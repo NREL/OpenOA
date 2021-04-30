@@ -59,13 +59,15 @@ python
 >>> import operational_analysis
 ```
 
-Note in Windows you may get an error regarding geos_c.dll. To fix this install Shapely using:
+#### Common Installation Issues:
+
+- In Windows you may get an error regarding geos_c.dll. To fix this install Shapely using:
 
 ```
 conda install Shapely
 ```
 
-An ImportError regarding win32api can also occur. This can be resolved by fixing the version of pywin32 as follows:
+- In Windows, an ImportError regarding win32api can also occur. This can be resolved by fixing the version of pywin32 as follows:
 
 ```
 pip install --upgrade pywin32==255
