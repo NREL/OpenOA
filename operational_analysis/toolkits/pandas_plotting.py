@@ -8,6 +8,9 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 
+from bokeh.plotting import figure
+from bokeh.models import WMTSTileSource
+from bokeh.models import ColumnDataSource, HoverTool
 
 plt.close("all")
 font = {"family": "serif", "size": 14}
@@ -710,3 +713,93 @@ def turbine_polar_contour(
         ax_carthesian.set_title("Turbine %s" % (tid))
 
     return ax_carthesian, ax_polar, artists, labels
+
+
+def wgs84_to_web_mercator(df, lon="LON", lat="LAT"):
+
+    """Convert from longitude and latitude to web_mercator coordinates
+    Args:
+        df(:obj:`dataframe`): df with longitude and latitude columns
+        lon(:obj:`str`): name of longitude column
+        lat(:obj:`str`): name of latitude column
+    
+    Returns:
+        df(:obj:`dataframe`): input df with x and y mercator coordinates as additional columns
+    """
+    
+
+    # remove issue of division by zero by setting min longitude
+    df.loc[df[lon] < 10**-6,lon]=10**-6
+
+    k = 6378137
+    df["x"] = df[lon] * (k * np.pi/180.0)
+    df["y"] = np.log(np.tan((90 + df[lat]) * np.pi/360.0)) * k
+
+    return df
+
+
+def plot_turbines(project,tile_name='OpenMap',plot_width=800,plot_height=800):
+    
+    """Plot locations of turbines, with labels, on latitude/longitude grid with map tiles
+
+     Args:
+        project(:obj:`plant object`): project to be plotted
+        tile_name(:obj:`str`): tile set to be used for the underlay
+    
+    Returns:
+        Bokeh plot
+    """
+    
+    # See https://wiki.openstreetmap.org/wiki/Tile_servers for various tile services
+    tiles = {'OpenMap': WMTSTileSource(url='http://c.tile.openstreetmap.org/{Z}/{X}/{Y}.png'),
+             'ESRI': WMTSTileSource(url='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{Z}/{Y}/{X}.jpg'),
+             'OpenTopoMap': WMTSTileSource(url='https://tile.opentopomap.org/{Z}/{X}/{Y}.png')}
+
+    
+    asset_groups = project.asset.df.groupby("type")
+
+    if "turbine" in asset_groups.groups.keys():
+        turbines = asset_groups.get_group("turbine")
+
+        turbines = wgs84_to_web_mercator(turbines, lon="longitude", lat="latitude")
+        
+        X = turbines["x"]
+        Y = turbines["y"]
+        labels = turbines["id"].tolist()
+
+        source = ColumnDataSource(data=dict(
+            turbine_id=turbines["id"].tolist(),
+            turbine_name=turbines["Wind_turbine_name"].tolist(),
+            coordinates=tuple(zip(turbines["latitude"],turbines["longitude"])),
+            coordinate_x=X,
+            coordinate_y=Y,
+            ))
+        
+        plot_map = figure(tools="pan,wheel_zoom,reset,help",
+                        plot_width=plot_width, plot_height=plot_height,
+                        x_axis_type="mercator", y_axis_type="mercator"
+                        )
+        
+
+        plot_map.xaxis.axis_label = "Longitude"
+        plot_map.yaxis.axis_label = "Latitude"
+
+        plot_map.add_tile(tiles[tile_name])
+
+        circle = plot_map.circle(x='coordinate_x', y='coordinate_y',
+            size=10,source=source,color='red',legend_label='Wind turbines')
+
+        tooltips = [
+            ("turbine_id", "@turbine_id"),
+            ("turbine_name", "@turbine_name"),
+            ("(Lat,Lon)", "@coordinates")
+        ]
+        hover = HoverTool(tooltips=tooltips,renderers=[circle])
+        plot_map.add_tools(hover)
+
+        return plot_map
+
+    else:
+        print("Please check that the project has turbines defined")
+
+
