@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from bokeh.plotting import figure
 from bokeh.models import WMTSTileSource
 from bokeh.models import ColumnDataSource, HoverTool
+from bokeh.palettes import Colorblind
 
 plt.close("all")
 font = {"family": "serif", "size": 14}
@@ -726,8 +727,6 @@ def wgs84_to_web_mercator(df, lon="LON", lat="LAT"):
     Returns:
         df(:obj:`dataframe`): input df with x and y mercator coordinates as additional columns
     """
-    
-
     # remove issue of division by zero by setting min longitude
     df.loc[df[lon] < 10**-6,lon]=10**-6
 
@@ -738,68 +737,72 @@ def wgs84_to_web_mercator(df, lon="LON", lat="LAT"):
     return df
 
 
-def plot_turbines(project,tile_name='OpenMap',plot_width=800,plot_height=800):
+def plot_windfarm(project,tile_name="OpenMap",plot_width=800,plot_height=800):
     
-    """Plot locations of turbines, with labels, on latitude/longitude grid with map tiles
+    """Plot location of devices, with labels, on latitude/longitude grid with map tiles
 
      Args:
         project(:obj:`plant object`): project to be plotted
-        tile_name(:obj:`str`): tile set to be used for the underlay
+        tile_name(:obj:`str`): tile set to be used for the underlay, e.g. OpenMap, ESRI, OpenTopoMap
+        plot_width(:obj:`scalar`): width of plot
+        plot_height(:obj:`scalar`): height of plot
     
     Returns:
         Bokeh plot
     """
     
     # See https://wiki.openstreetmap.org/wiki/Tile_servers for various tile services
-    tiles = {'OpenMap': WMTSTileSource(url='http://c.tile.openstreetmap.org/{Z}/{X}/{Y}.png'),
-             'ESRI': WMTSTileSource(url='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{Z}/{Y}/{X}.jpg'),
-             'OpenTopoMap': WMTSTileSource(url='https://tile.opentopomap.org/{Z}/{X}/{Y}.png')}
+    tiles = {"OpenMap": WMTSTileSource(url="http://c.tile.openstreetmap.org/{Z}/{X}/{Y}.png"),
+             "ESRI": WMTSTileSource(url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{Z}/{Y}/{X}.jpg"),
+             "OpenTopoMap": WMTSTileSource(url="https://tile.opentopomap.org/{Z}/{X}/{Y}.png")}
 
     
-    asset_groups = project.asset.df.groupby("type")
+    # create figure with tiles
+    plot_map = figure(tools="save,pan,wheel_zoom,reset,help",
+                    plot_width=plot_width, plot_height=plot_height,
+                    x_axis_type="mercator", y_axis_type="mercator",
+                    match_aspect=True,
+                    )
+    
+    plot_map.xaxis.axis_label = "Longitude"
+    plot_map.yaxis.axis_label = "Latitude"
+    plot_map.add_tile(tiles[tile_name])
 
-    if "turbine" in asset_groups.groups.keys():
-        turbines = asset_groups.get_group("turbine")
+    # plot asset devices
+    assets = project.asset.df
+    assets = wgs84_to_web_mercator(assets, lon="longitude", lat="latitude")
+    color_mapping = dict(zip(set(assets["type"]),Colorblind[8][:len(set(assets["type"]))]))
 
-        turbines = wgs84_to_web_mercator(turbines, lon="longitude", lat="latitude")
-        
-        X = turbines["x"]
-        Y = turbines["y"]
-        labels = turbines["id"].tolist()
+    X = assets["x"]
+    Y = assets["y"]
+    asset_ids = assets["id"].tolist()
+    asset_type = assets["type"].tolist()
+    asset_colors = assets["type"].map(color_mapping)
+    asset_names = assets["Wind_turbine_name"].tolist()
 
-        source = ColumnDataSource(data=dict(
-            turbine_id=turbines["id"].tolist(),
-            turbine_name=turbines["Wind_turbine_name"].tolist(),
-            coordinates=tuple(zip(turbines["latitude"],turbines["longitude"])),
-            coordinate_x=X,
-            coordinate_y=Y,
-            ))
-        
-        plot_map = figure(tools="pan,wheel_zoom,reset,help",
-                        plot_width=plot_width, plot_height=plot_height,
-                        x_axis_type="mercator", y_axis_type="mercator"
-                        )
-        
+    source = ColumnDataSource(data=dict(
+        id=asset_ids,
+        type=asset_type,
+        color=asset_colors,
+        name=asset_names,
+        coordinates=tuple(zip(assets["latitude"],assets["longitude"])),
+        coordinate_x=X,
+        coordinate_y=Y,
+        ))
+    
+    circle = plot_map.circle(x="coordinate_x", y="coordinate_y",
+        size=10,source=source,color="color",legend_group="type")
 
-        plot_map.xaxis.axis_label = "Longitude"
-        plot_map.yaxis.axis_label = "Latitude"
-
-        plot_map.add_tile(tiles[tile_name])
-
-        circle = plot_map.circle(x='coordinate_x', y='coordinate_y',
-            size=10,source=source,color='red',legend_label='Wind turbines')
-
-        tooltips = [
-            ("turbine_id", "@turbine_id"),
-            ("turbine_name", "@turbine_name"),
-            ("(Lat,Lon)", "@coordinates")
+    tooltips = [
+        ("id", "@id"),
+        ("type", "@type"),
+        ("name", "@name"),
+        ("(Lat,Lon)", "@coordinates"),
         ]
-        hover = HoverTool(tooltips=tooltips,renderers=[circle])
-        plot_map.add_tools(hover)
 
-        return plot_map
+    hover = HoverTool(tooltips=tooltips,renderers=[circle])
+    plot_map.add_tools(hover)
 
-    else:
-        print("Please check that the project has turbines defined")
+    return plot_map
 
 
