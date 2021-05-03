@@ -76,36 +76,40 @@ def plot_array(project):
 
     asset_groups = project.asset.df.groupby("type")
 
-    turbines = asset_groups.get_group("turbine")
-    X = turbines["longitude"]
-    Y = turbines["latitude"]
-    labels = turbines["id"].tolist()
+    if "turbine" in asset_groups.groups.keys():
+        turbines = asset_groups.get_group("turbine")
+        X = turbines["longitude"]
+        Y = turbines["latitude"]
+        labels = turbines["id"].tolist()
 
-    ax.scatter(X, Y, marker="o", color="k")
-    for label, x, y in zip(labels, X, Y):
-        ax.annotate(label, xy=(x, y), xytext=(-8, 5), textcoords="offset points", fontsize=6)
+        ax.scatter(X, Y, marker="o", color="k")
+        for label, x, y in zip(labels, X, Y):
+            ax.annotate(label, xy=(x, y), xytext=(-8, 5), textcoords="offset points", fontsize=6)
 
-    towers = asset_groups.get_group("tower")
-    X = towers["longitude"]
-    Y = towers["latitude"]
-    labels = towers["id"].tolist()
+        del X, Y, labels, x, y, label
 
-    ax.scatter(X, Y, marker="s", color="r")
-    for label, x, y in zip(labels, X, Y):
-        ax.annotate(
-            label, xy=(x, y), xytext=(-8, -10), textcoords="offset points", fontsize=6, color="r"
-        )
+    if "tower" in asset_groups.groups.keys():
+        towers = asset_groups.get_group("tower")
+        X = towers["longitude"]
+        Y = towers["latitude"]
+        labels = towers["id"].tolist()
+
+        ax.scatter(X, Y, marker="s", color="r")
+        for label, x, y in zip(labels, X, Y):
+            ax.annotate(
+                label, xy=(x, y), xytext=(-8, -10), textcoords="offset points", fontsize=6, color="r"
+            )
+        
+        del X, Y, labels, x, y, label
 
     ax.set_xlabel("Longitude, [deg]")
     ax.set_ylabel("Latitude, [deg]")
-
-    del X, Y, labels, x, y, label
 
 
 def subplot_powerRose_array(
     project,
     turbine_ids,
-    shift=0,
+    shift=[0],
     direction=1,
     columns=None,
     left_margin=0.1,
@@ -157,7 +161,9 @@ def subplot_powerRose_array(
             sp_h_frac,
         ]
 
-        powerRose_array(fig, rect, tid, shift, direction)
+
+        model_eval = {"winddirection":1,tid:1}
+        powerRose_array(project,fig, rect, tid, model_eval, shift, direction)
 
 
 def powerRose_array(project, fig, rect, tid, model_eval, shift=[0], direction=1):
@@ -222,7 +228,8 @@ def powerRose_array(project, fig, rect, tid, model_eval, shift=[0], direction=1)
 
     # the polar plot
     cm = plt.get_cmap("jet")
-    ax_polar.set_color_cycle([cm(1.0 * i / len(shift)) for i in range(len(shift))])
+    
+    ax_polar.set_prop_cycle(color=[cm(1.0 * i / len(shift)) for i in range(len(shift))])
     for i in range(len(shift)):
         ax_polar.plot(
             (model_eval["winddirection"] * direction + shift[i]) * np.pi / 180,
