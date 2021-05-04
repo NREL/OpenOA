@@ -910,7 +910,8 @@ class MonteCarloAEP(object):
     def sample_long_term_losses(self, gross_lt):
         """
         This function calculates long-term availability and curtailment losses based on the Monte Carlo sampled
-        historical availability and curtailment data. To estimate long-term losses, average percentage monthly losses are weighted by monthly long-term gross energy.
+        historical availability and curtailment data. To estimate long-term losses, average percentage monthly losses 
+        are weighted by monthly long-term gross energy.
         
         Args:
             :obj:`pandas.Series`: Time series of long-term gross energy
