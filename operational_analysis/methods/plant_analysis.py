@@ -554,7 +554,7 @@ class MonteCarloAEP(object):
         Returns:
             (None)
         """
-        df = self._aggregate.df.rename_axis(None)
+        df = self._aggregate.df
 
         # isolate availabilty and curtailment values that are representative of average plant performance
         avail_valid = df.loc[df['availability_typical'],'availability_pct'].to_frame()
@@ -914,7 +914,7 @@ class MonteCarloAEP(object):
         are weighted by monthly long-term gross energy.
         
         Args:
-            :obj:`pandas.Series`: Time series of long-term gross energy
+            n(:obj:`pandas.Series`): Time series of long-term gross energy
         
         Returns:
             :obj:`float`: long-term availability loss expressed as fraction
@@ -924,7 +924,8 @@ class MonteCarloAEP(object):
         mc_curt = self.long_term_losses[1] * self._run.loss_fraction
 
         # Calculate annualized monthly average long-term gross energy
-        gross_lt_avg = self.groupby_time_res(gross_lt)
+        # Rename axis to time to be consistent with mc_avail and mc_curt when combining variables
+        gross_lt_avg = self.groupby_time_res(gross_lt.rename_axis('time'))
 
         # Estimate long-term losses by weighting monthly losses by long-term monthly gross energy
         mc_avail_lt = (gross_lt_avg * mc_avail).sum()/gross_lt_avg.sum()
