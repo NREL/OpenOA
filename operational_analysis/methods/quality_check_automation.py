@@ -1,3 +1,9 @@
+"""Creates the QualityControlDiagnosticSuite and specific data-based subclasses."""
+
+import pytz
+from abc import abstractmethod
+from typing import List
+
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -13,6 +19,242 @@ from operational_analysis import logging
 
 logger = logging.getLogger(__name__)
 
+
+def get_country_timezones(country: str) -> List[str]:
+    """Returns the list of local timzones for the ISO 3166 (two-letter, English) country codes.
+
+    Parameters
+    ----------
+    country : str
+        Two-letter ISO 3166 country code corresponding to an English country name.
+
+    Returns
+    -------
+    List[str]
+        A list of the valid timezones available for a country that can be used for QC methods.
+    """
+    return pytz.country_timezones[country]
+
+
+class QualityControlDiagnosticSuite:
+    """This class defines key analytical procedures in a quality check process for turbine data.
+    After analyzing the data for missing and duplicate timestamps, timezones, Daylight Savings Time corrections, and extrema values,
+    the user can make informed decisions about how to handle the data.
+    """
+    
+    @logged_method_call
+    def __init__(
+        self, df, ws_field='wmet_wdspd_avg',power_field='wtur_W_avg', time_field='datetime', id_field=None,
+        freq='10T', lat_lon=(0,0), tz="America/Denver", check_tz=False
+    ):
+        """
+        Initialize QCAuto object with data and parameters.
+
+        Args:
+         df(:obj:`DataFrame object`): DataFrame object that contains data
+         ws_field(:obj: 'String'): String name of the windspeed field to df
+         power_field(:obj: 'String'): String name of the power field to df
+         time_field(:obj: 'String'): String name of the time field to df
+         id_field(:obj: 'String'): String name of the id field to df
+         freq(:obj: 'String'): String representation of the resolution for the time field to df
+         lat_lon(:obj: 'tuple'): latitude and longitude of farm represented as a tuple
+         tz(:obj: 'String'): The `pytz`-compatible timezone for local time reference. Use `get_country_timezones()` to see
+            which timezones are available for your locality.
+         check_tz(:obj: 'boolean'): Boolean on whether to use WIND Toolkit data to assess timezone of data
+        """
+
+        logger.info("Initializing QC_Automation Object")
+
+        self._df = df
+        self._ws = ws_field
+        self._w = power_field
+        self._t = time_field
+        self._id = id_field
+        self._freq = freq
+        self._lat_lon = lat_lon
+        self._tz = tz
+        self._check_tz = check_tz
+
+        if self._id==None:
+            self._id = 'ID'
+            self._df['ID'] = 'Data'
+
+        if self._check_tz:
+            self._convert_datetime_column()
+
+    def _convert_datetime_column(self) -> None:
+        dt = self._df[self._t]
+        dt = dt.tz_localize(self._tz)
+
+    @abstractmethod
+    @logged_method_call
+    def run(self):
+        """
+        Run the QC analysis functions in order by calling this function.
+
+        Args:
+            (None)
+
+        Returns:
+            (None)
+        """
+        pass
+
+    def dup_time_identification(self):
+        """
+        This function identifies any time duplications in the dataset.
+
+        Args:
+        (None)
+
+        Returns:
+        (None)
+        """
+        self._time_duplications = self._df.loc[self._df.duplicated(subset= [self._id, self._t]), self._t]
+
+    def gap_time_identification(self):
+        """
+        This function identifies any time gaps in the dataset.
+
+        Args:
+        (None)
+
+        Returns:
+        (None)
+        """
+        self._time_gaps = timeseries.find_time_gaps(self._df[self._t], freq=self._freq)
+
+    def max_min(self):
+
+        """
+        This function creates a DataFrame that contains the max and min values for each column
+
+        Args:
+        (None)
+
+        Returns:
+        (None)
+        """
+
+        self._max_min = pd.DataFrame(index = self._df.columns, columns = {'max', 'min'})
+        self._max_min['max'] = self._df.max()
+        self._max_min['min'] = self._df.min()
+    
+
+    def daylight_savings_plot(self, hour_window=3):
+
+        """
+        Produce a timeseries plot showing daylight savings events for each year using the passed data.
+
+        Args:
+            hour_window(:obj: 'int'): number of hours outside of the Daylight Savings Time transitions to view in the plot (optional)
+
+        Returns:
+            (None)
+        """
+
+        self._df_dst =  self._df.loc[self._df[self._id]==self._df[self._id].unique()[0], :]
+
+        df_full = timeseries.gap_fill_data_frame(self._df_dst, self._t, self._freq) # Gap fill so spring ahead is visible
+        df_full.set_index(self._t, inplace=True)
+        self._df_full = df_full
+
+        years = df_full.index.year.unique() # Years in data record
+        num_years = len(years)
+
+        plt.figure(figsize = (12,20))
+
+        for y in np.arange(num_years):
+            dst_data = self._dst_dates.loc[self._dst_dates['year'] == years[y]]
+
+            # Set spring ahead window to plot
+            spring_start = pd.to_datetime(dst_data['start']) - pd.Timedelta(hours = hour_window)
+            spring_end = pd.to_datetime(dst_data['start']) + pd.Timedelta(hours = hour_window)
+
+            # Set fall back window to plot
+            fall_start = pd.to_datetime(dst_data['end']) - pd.Timedelta(hours = hour_window)
+            fall_end = pd.to_datetime(dst_data['end']) + pd.Timedelta(hours = hour_window)
+
+            # Get data corresponding to each
+            data_spring = df_full.loc[(df_full.index > spring_start.values[0]) & (df_full.index < spring_end.values[0])]
+            data_fall = df_full.loc[(df_full.index > fall_start.values[0]) & (df_full.index < fall_end.values[0])]
+
+            # Plot each as side-by-side subplots
+            plt.subplot(num_years, 2, 2*y + 1)
+            if np.sum(~np.isnan(data_spring[self._w])) > 0:
+                plt.plot(data_spring[self._w])
+            plt.title(str(years[y]) + ', Spring')
+            plt.ylabel('Power')
+            plt.xlabel('Date')
+
+            plt.subplot(num_years, 2, 2*y + 2)
+            if np.sum(~np.isnan(data_fall[self._w])) > 0:
+                plt.plot(data_fall[self._w])
+            plt.title(str(years[y]) + ', Fall')
+            plt.ylabel('Power')
+            plt.xlabel('Date')
+
+        plt.tight_layout()
+        plt.show()
+
+    def plot_by_id(self, x_axis = None, y_axis = None):
+
+        """
+        This is generalized function that allows the user to plot any two fields against each other with unique plots for each unique ID.
+        For scada data, this function produces turbine plots and for meter data, this will return a single plot.
+
+        Args:
+            x_axis(:obj:'String'): Independent variable to plot (default is windspeed field)
+            y_axis(:obj:'String'): Dependent variable to plot (default is power field)
+
+        Returns:
+            (None)
+        """
+        if x_axis is None:
+            x_axis = self._ws
+
+        if y_axis is None:
+            y_axis = self._w
+
+        turbs = self._df[self._id].unique()
+        num_turbs = len(turbs)
+        num_rows = np.ceil(num_turbs/4.)
+
+        plt.figure(figsize = (15,num_rows * 5))
+        n = 1
+        for t in turbs:
+            plt.subplot(num_rows, 4, n)
+            scada_sub = self._df.loc[self._df[self._id] == t, :]
+            plt.scatter(scada_sub[x_axis], scada_sub[y_axis], s = 5)
+            n = n + 1
+            plt.title(t)
+            plt.xlabel(x_axis)
+            plt.ylabel(y_axis)
+        plt.tight_layout()
+        plt.show()
+
+    def column_histograms(self):
+        """
+        Produces histogram plot for each numeric column.
+        
+        Args:
+            (None)
+
+        Returns:
+            (None)
+        """
+
+        for c in self._df.columns:
+            if (self._df[c].dtype==float) | (self._df[c].dtype==int):
+                #plt.subplot(2,2,n)
+                plt.figure(figsize=(8,6))
+                plt.hist(self._df[c].dropna(), 40)
+                #n = n + 1
+                plt.title(c)
+                plt.ylabel('Count')
+                plt.show()
+
+
 class WindToolKitQualityControlDiagnosticSuite(object):
 
     """This class defines key analytical procedures in a quality check process for turbine data.
@@ -21,9 +263,10 @@ class WindToolKitQualityControlDiagnosticSuite(object):
     """
 
     @logged_method_call
-    def __init__(self,df, ws_field='wmet_wdspd_avg', power_field= 'wtur_W_avg', time_field= 'datetime',
-                 id_field= None, freq = '10T', lat_lon= (0,0), dst_subset = 'American',
-                 check_tz = False):
+    def __init__(
+        self, df, ws_field='wmet_wdspd_avg', power_field= 'wtur_W_avg', time_field= 'datetime',
+        id_field= None, freq = '10T', lat_lon= (0,0), dst_subset = 'American', check_tz = False
+    ):
         """
         Initialize QCAuto object with data and parameters.
 
@@ -38,21 +281,10 @@ class WindToolKitQualityControlDiagnosticSuite(object):
          dst_subset(:obj: 'String'): Set of Daylight Savings Time transitions to use (currently American or France)
          check_tz(:obj: 'boolean'): Boolean on whether to use WIND Toolkit data to assess timezone of data
         """
-        logger.info("Initializing QC_Automation Object")
-
-        self._df = df
-        self._ws = ws_field
-        self._w = power_field
-        self._t = time_field
-        self._id = id_field
-        self._freq = freq
-        self._lat_lon = lat_lon
-        self._dst_subset = dst_subset
-        self._check_tz = check_tz
-
-        if self._id==None:
-            self._id = 'ID'
-            self._df['ID'] = 'Data'
+        super.__init__(
+            self, df, ws_field=ws_field, power_field=power_field, time_field=time_field,
+            id_field=id_field, freq=freq, lat_lon=lat_lon, dst_subset=dst_subset, check_tz=check_tz
+        )
 
     @logged_method_call
     def run(self):
@@ -81,31 +313,6 @@ class WindToolKitQualityControlDiagnosticSuite(object):
         logger.info("Isolating Extrema Values")
         self.max_min()
         logger.info("QC Diagnostic Complete")
-
-
-    def dup_time_identification(self):
-        """
-        This function identifies any time duplications in the dataset.
-
-        Args:
-        (None)
-
-        Returns:
-        (None)
-        """
-        self._time_duplications = self._df.loc[self._df.duplicated(subset= [self._id, self._t]), self._t]
-
-    def gap_time_identification(self):
-        """
-        This function identifies any time gaps in the dataset.
-
-        Args:
-        (None)
-
-        Returns:
-        (None)
-        """
-        self._time_gaps = timeseries.find_time_gaps(self._df[self._t], freq=self._freq)
 
     def indicesForCoord(self,f):
 
@@ -244,132 +451,3 @@ class WindToolKitQualityControlDiagnosticSuite(object):
             self._dst_dates['year'] = [2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019]
             self._dst_dates['start'] = ['3/30/08 2:00', '3/29/09 2:00', '3/28/10 2:00', '3/27/11 2:00', '3/25/12 2:00', '3/31/13 2:00', '3/30/14 2:00', '3/29/15 2:00', '3/27/16 2:00', '3/26/17 2:00', '3/25/18 2:00' , '3/31/19 2:00']
             self._dst_dates['end'] = ['10/26/08 3:00', '10/25/09 3:00', '10/31/10 3:00', '10/30/11 3:00', '10/28/12 3:00', '10/27/13 3:00', '10/26/14 3:00', '10/25/15 3:00', '10/30/16 3:00', '10/29/17 3:00', '10/28/18 3:00', '10/27/19 3:00']
-
-    def daylight_savings_plot(self, hour_window = 3):
-
-        """
-        Produce a timeseries plot showing daylight savings events for each year using the passed data.
-
-        Args:
-            hour_window(:obj: 'int'): number of hours outside of the Daylight Savings Time transitions to view in the plot (optional)
-
-        Returns:
-            (None)
-        """
-
-        self._df_dst =  self._df.loc[self._df[self._id]==self._df[self._id].unique()[0], :]
-
-        df_full = timeseries.gap_fill_data_frame(self._df_dst, self._t, self._freq) # Gap fill so spring ahead is visible
-        df_full.set_index(self._t, inplace=True)
-        self._df_full = df_full
-
-        years = df_full.index.year.unique() # Years in data record
-        num_years = len(years)
-
-        plt.figure(figsize = (12,20))
-
-        for y in np.arange(num_years):
-            dst_data = self._dst_dates.loc[self._dst_dates['year'] == years[y]]
-
-            # Set spring ahead window to plot
-            spring_start = pd.to_datetime(dst_data['start']) - pd.Timedelta(hours = hour_window)
-            spring_end = pd.to_datetime(dst_data['start']) + pd.Timedelta(hours = hour_window)
-
-            # Set fall back window to plot
-            fall_start = pd.to_datetime(dst_data['end']) - pd.Timedelta(hours = hour_window)
-            fall_end = pd.to_datetime(dst_data['end']) + pd.Timedelta(hours = hour_window)
-
-            # Get data corresponding to each
-            data_spring = df_full.loc[(df_full.index > spring_start.values[0]) & (df_full.index < spring_end.values[0])]
-            data_fall = df_full.loc[(df_full.index > fall_start.values[0]) & (df_full.index < fall_end.values[0])]
-
-            # Plot each as side-by-side subplots
-            plt.subplot(num_years, 2, 2*y + 1)
-            if np.sum(~np.isnan(data_spring[self._w])) > 0:
-                plt.plot(data_spring[self._w])
-            plt.title(str(years[y]) + ', Spring')
-            plt.ylabel('Power')
-            plt.xlabel('Date')
-
-            plt.subplot(num_years, 2, 2*y + 2)
-            if np.sum(~np.isnan(data_fall[self._w])) > 0:
-                plt.plot(data_fall[self._w])
-            plt.title(str(years[y]) + ', Fall')
-            plt.ylabel('Power')
-            plt.xlabel('Date')
-
-        plt.tight_layout()
-        plt.show()
-
-    def max_min(self):
-
-        """
-        This function creates a DataFrame that contains the max and min values for each column
-
-        Args:
-        (None)
-
-        Returns:
-        (None)
-        """
-
-        self._max_min = pd.DataFrame(index = self._df.columns, columns = {'max', 'min'})
-        self._max_min['max'] = self._df.max()
-        self._max_min['min'] = self._df.min()
-
-    def plot_by_id(self, x_axis = None, y_axis = None):
-
-        """
-        This is generalized function that allows the user to plot any two fields against each other with unique plots for each unique ID.
-        For scada data, this function produces turbine plots and for meter data, this will return a single plot.
-
-        Args:
-            x_axis(:obj:'String'): Independent variable to plot (default is windspeed field)
-            y_axis(:obj:'String'): Dependent variable to plot (default is power field)
-
-        Returns:
-            (None)
-        """
-        if x_axis is None:
-            x_axis = self._ws
-
-        if y_axis is None:
-            y_axis = self._w
-
-        turbs = self._df[self._id].unique()
-        num_turbs = len(turbs)
-        num_rows = np.ceil(num_turbs/4.)
-
-        plt.figure(figsize = (15,num_rows * 5))
-        n = 1
-        for t in turbs:
-            plt.subplot(num_rows, 4, n)
-            scada_sub = self._df.loc[self._df[self._id] == t, :]
-            plt.scatter(scada_sub[x_axis], scada_sub[y_axis], s = 5)
-            n = n + 1
-            plt.title(t)
-            plt.xlabel(x_axis)
-            plt.ylabel(y_axis)
-        plt.tight_layout()
-        plt.show()
-
-    def column_histograms(self):
-        """
-        Produces histogram plot for each numeric column.
-        
-        Args:
-            (None)
-
-        Returns:
-            (None)
-        """
-
-        for c in self._df.columns:
-            if (self._df[c].dtype==float) | (self._df[c].dtype==int):
-                #plt.subplot(2,2,n)
-                plt.figure(figsize=(8,6))
-                plt.hist(self._df[c].dropna(), 40)
-                #n = n + 1
-                plt.title(c)
-                plt.ylabel('Count')
-                plt.show()
