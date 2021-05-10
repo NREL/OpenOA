@@ -1,4 +1,4 @@
-name: Unit Tests on activity for master and develop
+name: Unit Tests on activity for main and develop
 
 on:
   push:
