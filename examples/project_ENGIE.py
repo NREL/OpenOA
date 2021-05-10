@@ -85,14 +85,6 @@ class Project_Engie(PlantData):
 
 
         ###################
-        # ASSET DATA #
-        ###################
-        logger.info("Loading ASSET data")
-        self._asset.load(self._path, "static-information", "csv")  # Load ASSET data
-        logger.info("ASSET data loaded")
-  
-
-        ###################
         # SCADA DATA #
         ###################
         logger.info("Loading SCADA data")

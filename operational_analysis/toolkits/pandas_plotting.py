@@ -785,13 +785,11 @@ def plot_windfarm(project,tile_name="OpenMap",plot_width=800,plot_height=800):
     asset_ids = assets["id"].tolist()
     asset_type = assets["type"].tolist()
     asset_colors = assets["type"].map(color_mapping)
-    asset_names = assets["Wind_turbine_name"].tolist()
 
     source = ColumnDataSource(data=dict(
         id=asset_ids,
         type=asset_type,
         color=asset_colors,
-        name=asset_names,
         coordinates=tuple(zip(assets["latitude"],assets["longitude"])),
         coordinate_x=X,
         coordinate_y=Y,
@@ -803,7 +801,6 @@ def plot_windfarm(project,tile_name="OpenMap",plot_width=800,plot_height=800):
     tooltips = [
         ("id", "@id"),
         ("type", "@type"),
-        ("name", "@name"),
         ("(Lat,Lon)", "@coordinates"),
         ]
 
