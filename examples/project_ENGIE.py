@@ -230,3 +230,22 @@ class Project_Engie(PlantData):
         # Drop the fields we don't need
         self._reanalysis._product['era5'].df.drop(['Unnamed: 0',
                                 'datetime'], axis=1,inplace=True)
+
+        ##############
+        # ASSET DATA #
+        ############## 
+        self._asset.load(self._path,"la-haute-borne_asset_table","csv")
+        self._asset.rename_columns({"id":"Wind_turbine_name",
+                                    "latitude":"Latitude",
+                                    "longitude":"Longitude",
+                                    "rated_power_kw":"Rated_power",
+                                    "hub_height_m":"Hub_height_m",
+                                    "rotor_diameter_m":"Rotor_diameter_m"})
+
+        # Assign type to turbine for all assets
+        self._asset._asset['type'] = 'turbine'
+
+        # Drop renamed fields
+        self._asset._asset.drop(["Wind_turbine_name","Latitude","Longitude",
+                                "Rated_power","Hub_height_m",
+                                "Rotor_diameter_m"], axis=1,inplace=True)

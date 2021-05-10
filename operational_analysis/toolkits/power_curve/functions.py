@@ -1,18 +1,21 @@
-from .parametric_forms import logistic5param
-from .parametric_optimize import fit_parametric_power_curve, least_squares
-from scipy.optimize import differential_evolution
-from pygam import LinearGAM
-import pandas as pd
 import numpy as np
+import pandas as pd
+from pygam import LinearGAM
+from scipy.optimize import differential_evolution
+
+from .parametric_forms import logistic5param
+from .parametric_optimize import least_squares, fit_parametric_power_curve
+
 
 """
 This module holds ready-to-use power curve functions. They take windspeed and power columns as arguments and return a
 python function which can be used to evaluate the power curve at arbitrary locations.
 """
 
+
 def IEC(windspeed_column, power_column, bin_width=0.5, windspeed_start=0, windspeed_end=30.0):
     """
-    Use IEC 61400-12-1-2 method for creating wind-speed binned power curve.
+    Use IEC 61400-12-1-2 method for creating wind-speed binned power curve. Power is set to zero for windspeed values outside of the cutoff range specified by windspeed_start and windspeed_end, inclusive of the endpoints.
 
     Args:
         windspeed_column (:obj:`pandas.Series`): feature column
@@ -27,18 +30,19 @@ def IEC(windspeed_column, power_column, bin_width=0.5, windspeed_start=0, windsp
     """
 
     # Set up evenly spaced bins of fixed width, with any value over the maximum getting np.inf
-    bins = np.append(np.arange(windspeed_start, windspeed_end, bin_width), [np.inf])
+    n_bins = int(np.ceil((windspeed_end - windspeed_start) / bin_width)) + 1
+    bins = np.append(np.linspace(windspeed_start, windspeed_end, n_bins), [np.inf])
 
     # Initialize an array which will hold the mean values of each bin
     P_bin = np.ones(len(bins) - 1) * np.nan
 
     # Compute the mean of each bin and set corresponding P_bin
     for ibin in range(0, len(bins) - 1):
-        indices = ((windspeed_column >= bins[ibin]) & (windspeed_column < bins[ibin + 1]))
+        indices = (windspeed_column >= bins[ibin]) & (windspeed_column < bins[ibin + 1])
         P_bin[ibin] = power_column.loc[indices].mean()
 
     # Linearly interpolate any missing bins
-    P_bin = pd.Series(data=P_bin).interpolate(method='linear').bfill().values
+    P_bin = pd.Series(data=P_bin).interpolate(method="linear").bfill().values
 
     # Create a closure over the computed bins which computes the power curve value for arbitrary array-like input
     def pc_iec(x):
@@ -46,6 +50,8 @@ def IEC(windspeed_column, power_column, bin_width=0.5, windspeed_start=0, windsp
         for i in range(0, len(bins) - 1):
             idx = np.where((x >= bins[i]) & (x < bins[i + 1]))
             P[idx] = P_bin[i]
+        cutoff_idx = (x < windspeed_start) | (x > windspeed_end)
+        P[cutoff_idx] = 0.0
         return P
 
     return pc_iec
@@ -87,11 +93,14 @@ def logistic_5_parametric(windspeed_column, power_column):
         :obj:`function`: Python function of type (Array[float] -> Array[float]) implementing the power curve.
 
     """
-    return fit_parametric_power_curve(windspeed_column, power_column,
-                                      curve=logistic5param,
-                                      optimization_algorithm=differential_evolution,
-                                      cost_function=least_squares,
-                                      bounds=((1200, 1800), (-10, -1e-3), (1e-3, 30), (1e-3, 1), (1e-3, 10)))
+    return fit_parametric_power_curve(
+        windspeed_column,
+        power_column,
+        curve=logistic5param,
+        optimization_algorithm=differential_evolution,
+        cost_function=least_squares,
+        bounds=((1200, 1800), (-10, -1e-3), (1e-3, 30), (1e-3, 1), (1e-3, 10)),
+    )
 
 
 def gam(windspeed_column, power_column, n_splines=20):
@@ -108,10 +117,7 @@ def gam(windspeed_column, power_column, n_splines=20):
 
     """
     # Fit the model
-    return LinearGAM(n_splines=n_splines).\
-        fit(windspeed_column.values, power_column.values).\
-        predict
-
+    return LinearGAM(n_splines=n_splines).fit(windspeed_column.values, power_column.values).predict
 
 
 def gam_3param(windspeed_column, winddir_column, airdens_column, power_column, n_splines=20):
@@ -130,9 +136,7 @@ def gam_3param(windspeed_column, winddir_column, airdens_column, power_column, n
 
     """
     # create dataframe input to LinearGAM
-    X = pd.DataFrame({'ws': windspeed_column,
-                      'wd': winddir_column,
-                      'dens': airdens_column})
+    X = pd.DataFrame({"ws": windspeed_column, "wd": winddir_column, "dens": airdens_column})
 
     # Set response
     y = power_column.values
@@ -142,8 +146,7 @@ def gam_3param(windspeed_column, winddir_column, airdens_column, power_column, n
 
     # Wrap the prediction function in a closure to pack input variables
     def predict(windspeed_column, winddir_column, airdens_column):
-        X = pd.DataFrame({'ws': windspeed_column,
-                          'wd': winddir_column,
-                          'dens': airdens_column})
+        X = pd.DataFrame({"ws": windspeed_column, "wd": winddir_column, "dens": airdens_column})
         return s.predict(X)
+
     return predict
