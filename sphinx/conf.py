@@ -55,7 +55,8 @@ extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.viewcode',
               'sphinx.ext.napoleon',
               'sphinx.ext.todo',
-              'm2r','nbsphinx',]
+              'm2r','nbsphinx',
+              'bokeh.sphinxext.bokeh_plot',]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

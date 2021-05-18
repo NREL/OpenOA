@@ -726,14 +726,16 @@ def turbine_polar_contour(
 def wgs84_to_web_mercator(df, lon="LON", lat="LAT"):
 
     """Convert from longitude and latitude to web_mercator coordinates
+
     Args:
         df(:obj:`dataframe`): df with longitude and latitude columns
         lon(:obj:`str`): name of longitude column
         lat(:obj:`str`): name of latitude column
-    
+ 
     Returns:
         df(:obj:`dataframe`): input df with x and y mercator coordinates as additional columns
     """
+
     # remove issue of division by zero by setting min longitude
     df.loc[df[lon] < 10**-6,lon]=10**-6
 
@@ -745,18 +747,44 @@ def wgs84_to_web_mercator(df, lon="LON", lat="LAT"):
 
 
 def plot_windfarm(project,tile_name="OpenMap",plot_width=800,plot_height=800):
-    
-    """Plot location of devices, with labels, on latitude/longitude grid with map tiles
 
-     Args:
+    """Plot the windfarm spatially on a map
+
+    Args:
         project(:obj:`plant object`): project to be plotted
         tile_name(:obj:`str`): tile set to be used for the underlay, e.g. OpenMap, ESRI, OpenTopoMap
         plot_width(:obj:`scalar`): width of plot
         plot_height(:obj:`scalar`): height of plot
-    
+ 
     Returns:
-        Bokeh plot
+        Bokeh_plot(:obj:`axes handle`): windfarm map
+
+    Example:
+        .. bokeh-plot::
+
+            import pandas as pd
+
+            from bokeh.plotting import figure, output_file, show
+
+            from operational_analysis.toolkits.pandas_plotting import plot_windfarm
+            from operational_analysis.types import PlantData
+
+            from examples.project_ENGIE import Project_Engie
+
+            # Load plant object
+            project = Project_Engie('../examples/data/la_haute_borne')
+
+            # Prepare data
+            project.prepare()
+
+            # Creating a pseudo met mast (tower) as an example
+            # project.asset.df = project.asset.df.append(pd.DataFrame({'id':['Mast01'],'type':['tower'],'longitude':[5.5],'latitude':[48.5]}))
+
+            # Create the bokeh wind farm plot
+            show(plot_windfarm(project,tile_name="ESRI",plot_width=600,plot_height=600))
     """
+
+
     
     # See https://wiki.openstreetmap.org/wiki/Tile_servers for various tile services
     tiles = {"OpenMap": WMTSTileSource(url="http://c.tile.openstreetmap.org/{Z}/{X}/{Y}.png"),
@@ -795,8 +823,9 @@ def plot_windfarm(project,tile_name="OpenMap",plot_width=800,plot_height=800):
         coordinate_y=Y,
         ))
     
-    circle = plot_map.circle(x="coordinate_x", y="coordinate_y",
-        size=10,source=source,color="color",legend_group="type")
+    markers = plot_map.circle_y(x="coordinate_x", y="coordinate_y",
+        size=14,source=source,fill_color="color",legend_group="type",
+        alpha=0.5,line_color='black')
 
     tooltips = [
         ("id", "@id"),
@@ -804,7 +833,7 @@ def plot_windfarm(project,tile_name="OpenMap",plot_width=800,plot_height=800):
         ("(Lat,Lon)", "@coordinates"),
         ]
 
-    hover = HoverTool(tooltips=tooltips,renderers=[circle])
+    hover = HoverTool(tooltips=tooltips,renderers=[markers])
     plot_map.add_tools(hover)
 
     return plot_map
