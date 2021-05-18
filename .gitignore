@@ -31,6 +31,7 @@ sphinx/examplesout.ipynb
 
 .devcontainer
 
+.vscode/
 .local
 
 .ipython

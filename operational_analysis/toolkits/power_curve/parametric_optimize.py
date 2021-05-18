@@ -1,5 +1,6 @@
 import numpy as np
 
+
 """
 Curve fitting routines
 
@@ -9,7 +10,9 @@ cost function
 """
 
 
-def fit_parametric_power_curve(x, y, curve, optimization_algorithm, cost_function, bounds, return_params=False):
+def fit_parametric_power_curve(
+    x, y, curve, optimization_algorithm, cost_function, bounds, return_params=False
+):
     """
     Fit curve to filtered power-windspeed data.
 
@@ -52,7 +55,7 @@ Cost Functions
 
 
 def least_squares(x, y):
-    """ Least Squares loss function
+    """Least Squares loss function
 
     Args:
         x(np.array): 1-D array of numbers representing x

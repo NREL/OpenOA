@@ -506,7 +506,7 @@ class MonteCarloAEP(object):
         """
             
         # Define empty data frame that spans past our period of interest
-        self._reanalysis_aggregate = pd.DataFrame(index=pd.date_range(start='1997-01-01', end='2020-01-01',
+        self._reanalysis_aggregate = pd.DataFrame(index=pd.date_range(start='1997-01-01', end='2019-12-31',
                                                                     freq=self._resample_freq), dtype=float)
 
         # Now loop through the different reanalysis products, density-correct wind speeds, and take monthly averages
@@ -545,20 +545,16 @@ class MonteCarloAEP(object):
     @logged_method_call
     def calculate_long_term_losses(self):
         """
-        This function calculates long-term availability and curtailment losses based on the reported data,
-        filtering for those data that are deemed representative of average plant performance
+        This function calculates long-term availability and curtailment losses based on the reported data grouped by the time resolution,
+        filtering for those data that are deemed representative of average plant performance.
         
         Args:
             (None)
         
         Returns:
-            (tuple):
-                :obj:`float`: long-term annual availability loss expressed as fraction
-                :obj:`float`: long-term annual curtailment loss expressed as fraction
+            (None)
         """
         df = self._aggregate.df
-        
-        days_year_lt = 365.25 # Number of days per long-term year (accounting for leap year every 4 years)
 
         # isolate availabilty and curtailment values that are representative of average plant performance
         avail_valid = df.loc[df['availability_typical'],'availability_pct'].to_frame()
@@ -574,15 +570,7 @@ class MonteCarloAEP(object):
         if (curt_long_term.shape[0] < int(self._calendar_samples)):
                 raise Exception('Not all calendar days/months represented in long-term curtailment calculation')
 
-        if self.time_resolution == 'M':
-            # Weight monthly totals by number of days in month
-            avail_long_term *= self.num_days_lt
-            curt_long_term *= self.num_days_lt
-
-        avail_annual = avail_long_term.sum()/days_year_lt
-        curt_annual = curt_long_term.sum()/days_year_lt
-
-        self.long_term_losses = (avail_annual, curt_annual)
+        self.long_term_losses = (avail_long_term, curt_long_term)
 
     def setup_monte_carlo_inputs(self):
         """
@@ -813,6 +801,7 @@ class MonteCarloAEP(object):
         avail_pct =  np.empty(num_sim)
         curt_pct =  np.empty(num_sim)
         lt_por_ratio =  np.empty(num_sim)
+        iav =  np.empty(num_sim)
 
         # Loop through number of simulations, run regression each time, store AEP results
         for n in tqdm(np.arange(num_sim)):
@@ -847,14 +836,27 @@ class MonteCarloAEP(object):
                 gross_lt = gross_lt*np.tile(self.num_days_lt,self._run.num_years_windiness)/30 
                 gross_por = np.array(gross_por).flatten()*self.num_days_lt/30
             
-            # Get long-term availability and curtailment losses by month
-            [avail_lt_losses, curt_lt_losses] = self.sample_long_term_losses()  
+            # Annual values of lt gross energy, needed for IAV
+            reg_inputs_lt['gross_lt'] = gross_lt
+            gross_lt_annual = reg_inputs_lt['gross_lt'].resample('12MS').sum().values            
 
-            # Assign AEP, long-term availability, and long-term curtailment to output data frame
+            # Get long-term availability and curtailment losses, using gross_lt to weight individual monthly losses
+            [avail_lt_losses, curt_lt_losses] = self.sample_long_term_losses(reg_inputs_lt['gross_lt'])  
+
+            # Assign AEP, IAV, long-term availability, and long-term curtailment to output data frame
             aep_GWh[n] = gross_lt.sum()/self._run.num_years_windiness * (1 - avail_lt_losses)
+            iav[n] = gross_lt_annual.std()/gross_lt_annual.mean()
             avail_pct[n] = avail_lt_losses
             curt_pct[n] = curt_lt_losses
             lt_por_ratio[n] = (gross_lt.sum()/self._run.num_years_windiness) / gross_por.sum()
+
+        # Calculate mean IAV for gross energy
+        iav_avg = iav.mean()
+        
+        # Apply IAV to AEP from single MC iterations
+        iav_nsim = np.random.normal(1, iav_avg, self.num_sim)
+        aep_GWh = aep_GWh * iav_nsim
+        lt_por_ratio = lt_por_ratio * iav_nsim
             
         # Return final output
         sim_results = pd.DataFrame(index=np.arange(num_sim), data={'aep_GWh': aep_GWh,                                                                                                        
@@ -863,7 +865,8 @@ class MonteCarloAEP(object):
                                                                   'lt_por_ratio': lt_por_ratio,
                                                                   'r2': self._r2_score,
                                                                   'mse': self._mse_score,
-                                                                  'n_points': self._mc_num_points})       
+                                                                  'n_points': self._mc_num_points,
+                                                                  'iav': iav})       
         return sim_results
 
     @logged_method_call
@@ -904,20 +907,29 @@ class MonteCarloAEP(object):
         return long_term_reg_inputs.copy()
 
     @logged_method_call
-    def sample_long_term_losses(self):
+    def sample_long_term_losses(self, gross_lt):
         """
         This function calculates long-term availability and curtailment losses based on the Monte Carlo sampled
-        historical availability and curtailment data
+        historical availability and curtailment data. To estimate long-term losses, average percentage monthly losses 
+        are weighted by monthly long-term gross energy.
         
         Args:
-            n(:obj:`integer`): The Monte Carlo iteration number
+            n(:obj:`pandas.Series`): Time series of long-term gross energy
         
         Returns:
-            :obj:`float`: annualized monthly/daily availability loss expressed as fraction
-            :obj:`float`: annualized monthly/daily curtailment loss expressed as fraction
+            :obj:`float`: long-term availability loss expressed as fraction
+            :obj:`float`: long-term curtailment loss expressed as fraction
         """
         mc_avail = self.long_term_losses[0] * self._run.loss_fraction
         mc_curt = self.long_term_losses[1] * self._run.loss_fraction
 
-        # Return availbilty and curtailment long-term monthly/daily data
-        return mc_avail, mc_curt
+        # Calculate annualized monthly average long-term gross energy
+        # Rename axis to time to be consistent with mc_avail and mc_curt when combining variables
+        gross_lt_avg = self.groupby_time_res(gross_lt.rename_axis('time'))
+
+        # Estimate long-term losses by weighting monthly losses by long-term monthly gross energy
+        mc_avail_lt = (gross_lt_avg * mc_avail).sum()/gross_lt_avg.sum()
+        mc_curt_lt = (gross_lt_avg * mc_curt).sum()/gross_lt_avg.sum()
+
+        # Return long-term availabilty and curtailment 
+        return mc_avail_lt, mc_curt_lt
