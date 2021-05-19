@@ -8,3 +8,4 @@ sphinxcontrib-napoleon==0.6.1
 sphinx_rtd_theme==0.2.4
 nbmerge
 nbsphinx
+bokeh>=2.3.1
