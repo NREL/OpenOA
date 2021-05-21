@@ -831,7 +831,7 @@ class MonteCarloAEP(object):
                 reg_inputs_por += [np.sin(np.deg2rad(self._reanalysis_por[self._run.reanalysis_product + '_wd']))]
                 reg_inputs_por += [np.cos(np.deg2rad(self._reanalysis_por[self._run.reanalysis_product + '_wd']))]
             gross_por = fitted_model.predict(np.array(pd.concat(reg_inputs_por, axis = 1)))
-                
+            
             # Create padans dataframe for gross_por and group by calendar date to have a single full year
             gross_por = self.groupby_time_res(pd.DataFrame(data=gross_por,index=self._reanalysis_por[self._run.reanalysis_product].index))
             
@@ -841,7 +841,10 @@ class MonteCarloAEP(object):
             
             # Annual values of lt gross energy, needed for IAV
             reg_inputs_lt['gross_lt'] = gross_lt
-            gross_lt_annual = reg_inputs_lt['gross_lt'].resample('12MS').sum().values            
+            gross_lt_annual = np.zeros(self._run.num_years_windiness)
+            # Annual resample starting on the first day in reg_inputs_lt
+            for j in np.arange(self._run.num_years_windiness):
+                gross_lt_annual[j] = reg_inputs_lt['gross_lt'].loc[(reg_inputs_lt.index >= reg_inputs_lt.index[0] + j*pd.tseries.offsets.DateOffset(months = 12)) & (reg_inputs_lt.index < reg_inputs_lt.index[0] + (j+1)*pd.tseries.offsets.DateOffset(months = 12))].sum()
             
             # Get long-term availability and curtailment losses, using gross_lt to weight individual monthly losses
             [avail_lt_losses, curt_lt_losses] = self.sample_long_term_losses(reg_inputs_lt['gross_lt'])
@@ -886,17 +889,17 @@ class MonteCarloAEP(object):
            :obj:`pandas.DataFrame`: the windiness-corrected or 'long-term' monthly/daily wind speeds
         """
         # Check if valid data has already been calculated and stored. If so, just return it
-        if (self._run.reanalysis_product,self. _run.num_years_windiness) in self.long_term_sampling:
-            long_term_reg_inputs = self.long_term_sampling[(self._run.reanalysis_product,self. _run.num_years_windiness)]
+        if (self._run.reanalysis_product,self._run.num_years_windiness) in self.long_term_sampling:
+            long_term_reg_inputs = self.long_term_sampling[(self._run.reanalysis_product,self._run.num_years_windiness)]
             return long_term_reg_inputs.copy()
         
         # Sample long-term wind speed values
         ws_df = self._reanalysis_aggregate[self._run.reanalysis_product].to_frame().dropna()  # Drop NA values from monthly/daily reanalysis data series
-        long_term_reg_inputs = ws_df.tail(int(self. _run.num_years_windiness * self._calendar_samples))  # Get last 'x' years of data from reanalysis product
+        long_term_reg_inputs = ws_df[ws_df.index[-1] + ws_df.index.freq - pd.offsets.DateOffset(years = self._run.num_years_windiness):] # Get last 'x' years of data from reanalysis product
 
         # Temperature and wind direction
         namescol = [self._run.reanalysis_product + '_' + var for var in self._rean_vars]
-        long_term_temp = self._reanalysis_aggregate[namescol].dropna().tail(int(self. _run.num_years_windiness * self._calendar_samples))
+        long_term_temp = self._reanalysis_aggregate[namescol].dropna()[ws_df.index[-1] + ws_df.index.freq - pd.offsets.DateOffset(years = self._run.num_years_windiness):]
         if self.reg_temperature:
             long_term_reg_inputs = pd.concat([long_term_reg_inputs, long_term_temp[self._run.reanalysis_product + '_temperature_K']], axis=1)
         if self.reg_winddirection:
@@ -904,7 +907,7 @@ class MonteCarloAEP(object):
             long_term_reg_inputs = pd.concat([long_term_reg_inputs, np.sin(np.deg2rad(wd_aggregate)), np.cos(np.deg2rad(wd_aggregate))], axis=1)
         
         # Store result in dictionary
-        self.long_term_sampling[(self._run.reanalysis_product, self. _run.num_years_windiness)] = long_term_reg_inputs
+        self.long_term_sampling[(self._run.reanalysis_product, self._run.num_years_windiness)] = long_term_reg_inputs
         
         # Return result            
         return long_term_reg_inputs.copy()
