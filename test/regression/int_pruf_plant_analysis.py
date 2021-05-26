@@ -227,7 +227,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
 
     def check_simulation_results_lin_monthly(self, s):
         # Make sure AEP results are consistent to one decimal place
-        expected_results = [12.41, 11.34, 1.30, 3.57, 0.09, 3.57]
+        expected_results = [12.33, 10.47, 1.16, 5.00, 0.06, 5.90]
 
         calculated_results = [s.aep_GWh.mean(),
                               s.aep_GWh.std() / s.aep_GWh.mean() * 100,
