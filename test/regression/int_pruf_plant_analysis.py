@@ -1,3 +1,4 @@
+import random
 import unittest
 
 import numpy as np
@@ -8,17 +9,21 @@ from examples.project_ENGIE import Project_Engie
 from operational_analysis.methods import plant_analysis
 
 
+def reset_prng():
+    np.random.seed(42)
+    random.seed(42)
+
+
 class TestPandasPrufPlantAnalysis(unittest.TestCase):
     def setUp(self):
-        np.random.seed(42)
-
+        reset_prng()
         # Set up data to use for testing (ENGIE example plant)
         self.project = Project_Engie("./examples/data/la_haute_borne")
         self.project.prepare()
 
     # Test inputs to the regression model, at monthly time resolution
-    def test_plant_analysis(self):
-
+    def test_monthly(self):
+        reset_prng()
         # ____________________________________________________________________
         # Test inputs to the regression model, at monthly time resolution
         self.analysis = plant_analysis.MonteCarloAEP(
@@ -35,6 +40,8 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         self.check_process_loss_estimates_monthly(df)
         self.check_process_reanalysis_data_monthly(df)
 
+    def test_monthly_lin(self):
+        reset_prng()
         # ____________________________________________________________________
         # Test linear regression model, at monthly time resolution
         self.analysis = plant_analysis.MonteCarloAEP(
@@ -50,6 +57,8 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         sim_results = self.analysis.results
         self.check_simulation_results_lin_monthly(sim_results)
 
+    def test_daily_gam(self):
+        reset_prng()
         # ____________________________________________________________________
         # Test GAM regression model (can be used at daily time resolution only)
         self.analysis = plant_analysis.MonteCarloAEP(
@@ -65,6 +74,8 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         sim_results = self.analysis.results
         self.check_simulation_results_gam_daily(sim_results)
 
+    def test_daily_gbm(self):
+        reset_prng()
         # ____________________________________________________________________
         # Test GBM regression model (can be used at daily time resolution only)
         self.analysis = plant_analysis.MonteCarloAEP(
@@ -80,6 +91,8 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         sim_results = self.analysis.results
         self.check_simulation_results_gbm_daily(sim_results)
 
+    def test_daily_etr(self):
+        reset_prng()
         # ____________________________________________________________________
         # Test ETR regression model (can be used at daily time resolution only)
         self.analysis = plant_analysis.MonteCarloAEP(
