@@ -22,7 +22,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         self.project.prepare()
 
     # Test inputs to the regression model, at monthly time resolution
-    def test_monthly(self):
+    def test_monthly_inputs(self):
         reset_prng()
         # ____________________________________________________________________
         # Test inputs to the regression model, at monthly time resolution
@@ -56,6 +56,25 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         self.analysis.run(num_sim=10)
         sim_results = self.analysis.results
         self.check_simulation_results_lin_monthly(sim_results)
+
+    # Test inputs to the regression model, at daily time resolution
+    def test_daily_inputs(self):
+        reset_prng()
+        # ____________________________________________________________________
+        # Test inputs to the regression model, at monthly time resolution
+        self.analysis = plant_analysis.MonteCarloAEP(
+            self.project,
+            reanal_products=["merra2", "era5"],
+            time_resolution="D",
+            reg_temperature=True,
+            reg_winddirection=True,
+        )
+        df = self.analysis._aggregate.df
+
+        # Check the pre-processing functions
+        self.check_process_revenue_meter_energy_daily(df)
+        self.check_process_loss_estimates_daily(df)
+        self.check_process_reanalysis_data_daily(df)
 
     def test_daily_gam(self):
         reset_prng()
@@ -190,40 +209,24 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         nptest.assert_array_almost_equal(expected_avail_pct, df.loc[date_ind, "availability_pct"])
         nptest.assert_array_almost_equal(expected_curt_pct, df.loc[date_ind, "curtailment_pct"])
 
-    # Commenting this out because it's never called.
-    # def check_process_reanalysis_data_daily(self, df):
-    #     # Check a few wind speed values
-    #     expected_merra2 = pd.Series([11.02, 7.04, 8.42])
-    #     expected_era5 = pd.Series([10.48, 7.71, 9.61])
+    def check_process_reanalysis_data_daily(self, df):
 
-    #     date_ind = pd.to_datetime(["2014-01-02", "2014-10-12", "2015-12-28"])
+        expected = {
+            "merra2": np.array([11.02459231, 7.04306896, 8.41880152]),
+            "era5": np.array([10.47942319, 7.71069617, 9.60864791]),
+            "merra2_wd": np.array([213.81683361, 129.08053181, 170.39815032]),
+            "era5_wd": np.array([212.23854097, 127.75317448, 170.33488958]),
+            "merra2_temperature_K": np.array([279.67922333, 285.69317833, 278.15574917]),
+            "era5_temperature_K": np.array([281.14880642, 285.81961816, 280.42017656]),
+        }
 
-    #     nptest.assert_array_almost_equal(expected_merra2, df.loc[date_ind, "merra2"])
-    #     nptest.assert_array_almost_equal(expected_era5, df.loc[date_ind, "era5"])
+        date_ind = pd.to_datetime(["2014-01-02", "2014-10-12", "2015-12-28"])
+        computed = {key: df.loc[date_ind, key].to_numpy() for key in expected.keys()}
 
-    #     # Check a few wind direction values
-    #     expected_merra2_wd = pd.Series([213.8, 129.1, 170.4])
-    #     expected_era5_wd = pd.Series([212.2, 127.8, 170.3])
+        print(computed)
 
-    #     date_ind = pd.to_datetime(["2014-01-02", "2014-10-12", "2015-12-28"])
-
-    #     nptest.assert_array_almost_equal(
-    #         expected_merra2_wd, df.loc[date_ind, "merra2_wd"]
-    #     )
-    #     nptest.assert_array_almost_equal(expected_era5_wd, df.loc[date_ind, "era5_wd"])
-
-    #     # Check a few temperature values
-    #     expected_merra2_temp = pd.Series([279.7, 285.7, 278.2])
-    #     expected_era5_temp = pd.Series([281.1, 285.8, 280.4])
-
-    #     date_ind = pd.to_datetime(["2014-01-02", "2014-10-12", "2015-12-28"])
-
-    #     nptest.assert_array_almost_equal(
-    #         expected_merra2_temp, df.loc[date_ind, "merra2_temperature_K"]
-    #     )
-    #     nptest.assert_array_almost_equal(
-    #         expected_era5_temp, df.loc[date_ind, "era5_temperature_K"]
-    #     )
+        for key in expected.keys():
+            nptest.assert_array_almost_equal(expected[key], computed[key])
 
     def check_simulation_results_lin_monthly(self, s):
         # Make sure AEP results are consistent to one decimal place
