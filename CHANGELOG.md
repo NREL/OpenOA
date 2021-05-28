@@ -1,16 +1,15 @@
 # Changelog
 All notable changes to this project will be documented in this file. If you make a notable change to the project, please add a line describing the change to the "unreleased" section. The maintainers will make an effort to keep the [Github Releases](https://github.com/NREL/OpenOA/releases) page up to date with this changelog. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [UNRELEASED]
-- Updated long-term loss calculations to weight by monthly/daily long-term gross energy
-- Added wind turbine asset data to example ENGIE project
-- Bugfixes, such as fixing an improper python version specifier in setup.py and replacing some straggling references to the master branch with main.
-
-## [2.2 - 2021-04-30]
+## [2.2 - 2021-05-25]
 - IAV incorporation in AEP calculation
 - Set power to 0 for windspeeds above and below cutoff in IEC power curve function.
 - Split unit tests from regression tests and updated CI pipeline to run the full regression tests weekly.
 - Flake8 with Black code style implemented with git hook to run on commit
+- Updated long-term loss calculations to weight by monthly/daily long-term gross energy
+- Added wind turbine asset data to example ENGIE project
+- Bugfixes, such as fixing an improper python version specifier in setup.py and replacing some straggling references to the master branch with main.
+- Reduce amount of time it takes to run regression tests by decreasing number of monte carlo iterations. Linear regression on daily data is also removed.
 
 ## [2.1 - 2021-02-17]
 - Modify bootstrapping approach for period of record sampling. Data is now sampled with replacement, across 100% of the POR data.
