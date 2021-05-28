@@ -1,4 +1,7 @@
 __version__ = "2.2"
+"""
+When bumping version, please be sure to also update parameters in sphinx/conf.py
+"""
 
 import os
 import json
