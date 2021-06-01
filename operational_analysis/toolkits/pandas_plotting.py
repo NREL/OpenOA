@@ -11,7 +11,9 @@ import matplotlib.pyplot as plt
 from bokeh.plotting import figure
 from bokeh.models import WMTSTileSource
 from bokeh.models import ColumnDataSource, HoverTool
-from bokeh.palettes import Colorblind
+from bokeh.palettes import Colorblind, cividis, viridis
+
+from pyproj import Transformer
 
 plt.close("all")
 font = {"family": "serif", "size": 14}
@@ -716,30 +718,7 @@ def turbine_polar_contour(
     return ax_carthesian, ax_polar, artists, labels
 
 
-def wgs84_to_web_mercator(df, lon="LON", lat="LAT"):
-
-    """Convert from longitude and latitude to web_mercator coordinates
-
-    Args:
-        df(:obj:`dataframe`): df with longitude and latitude columns
-        lon(:obj:`str`): name of longitude column
-        lat(:obj:`str`): name of latitude column
- 
-    Returns:
-        df(:obj:`dataframe`): input df with x and y mercator coordinates as additional columns
-    """
-
-    # remove issue of division by zero by setting min longitude
-    df.loc[df[lon] < 10**-6,lon]=10**-6
-
-    k = 6378137
-    df["x"] = df[lon] * (k * np.pi/180.0)
-    df["y"] = np.log(np.tan((90 + df[lat]) * np.pi/360.0)) * k
-
-    return df
-
-
-def plot_windfarm(project,tile_name="OpenMap",plot_width=800,plot_height=800):
+def plot_windfarm(project,tile_name="OpenMap",plot_width=800,plot_height=800,marker="circle_y",marker_size=14,kwargs_for_figure={},kwargs_for_marker=[]):
 
     """Plot the windfarm spatially on a map
 
@@ -748,6 +727,9 @@ def plot_windfarm(project,tile_name="OpenMap",plot_width=800,plot_height=800):
         tile_name(:obj:`str`): tile set to be used for the underlay, e.g. OpenMap, ESRI, OpenTopoMap
         plot_width(:obj:`scalar`): width of plot
         plot_height(:obj:`scalar`): height of plot
+        marker_size(:obj:`scalar`): size of markers
+        kwargs_for_figure(:obj:`dict`): additional figure options for advanced users, see Bokeh docs
+        kwargs_for_marker(:obj:`dict`): additional marker options for advanced users, see Bokeh docs
  
     Returns:
         Bokeh_plot(:obj:`axes handle`): windfarm map
@@ -770,64 +752,67 @@ def plot_windfarm(project,tile_name="OpenMap",plot_width=800,plot_height=800):
             # Prepare data
             project.prepare()
 
-            # Creating a pseudo met mast (tower) as an example
-            # project.asset.df = project.asset.df.append(pd.DataFrame({'id':['Mast01'],'type':['tower'],'longitude':[5.5],'latitude':[48.5]}))
-
             # Create the bokeh wind farm plot
             show(plot_windfarm(project,tile_name="ESRI",plot_width=600,plot_height=600))
     """
 
 
-    
     # See https://wiki.openstreetmap.org/wiki/Tile_servers for various tile services
-    tiles = {"OpenMap": WMTSTileSource(url="http://c.tile.openstreetmap.org/{Z}/{X}/{Y}.png"),
+    MAP_TILES = {"OpenMap": WMTSTileSource(url="http://c.tile.openstreetmap.org/{Z}/{X}/{Y}.png"),
              "ESRI": WMTSTileSource(url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{Z}/{Y}/{X}.jpg"),
              "OpenTopoMap": WMTSTileSource(url="https://tile.opentopomap.org/{Z}/{X}/{Y}.png")}
 
+
+    # Use pyproj to transform longitude and latitude into web-mercator and add to a copy of the asset dataframe
+    TRANSFORM_4326_TO_3857 = Transformer.from_crs("EPSG:4326", "EPSG:3857")
     
-    # create figure with tiles
-    plot_map = figure(tools="save,pan,wheel_zoom,reset,help",
-                    plot_width=plot_width, plot_height=plot_height,
+    assets = project.asset._df.copy()
+    assets["x"],assets["y"] = TRANSFORM_4326_TO_3857.transform(assets['latitude'],assets['longitude'])   
+    assets["coordinates"]=tuple(zip(assets["latitude"],assets["longitude"]))
+
+
+    # Update figure and marker options based on kwargs
+    figure_options = {"tools":"save,hover,pan,wheel_zoom,reset,help","match_aspect":True,"tooltips":[("id", "@id"),("type", "@type"),("(Lat,Lon)", "@coordinates")]}
+    figure_options.update(kwargs_for_figure)
+
+
+    marker_options = {"line_width":1,"alpha":0.8,"fill_color":"color_fill","line_color":"color_line","legend_group":"type",}
+    marker_options.update(kwargs_for_marker)        
+    
+    
+    # Create an appropriate color map
+    color_grouping = marker_options["legend_group"]
+
+    color_mapping_fill = dict(zip(set(assets[color_grouping]),cividis(len(set(assets[color_grouping])))))
+    color_mapping_line = dict(zip(set(assets[color_grouping]),reversed(viridis(1+len(set(assets[color_grouping]))))))
+
+    assets["color_fill"] = assets[color_grouping].map(color_mapping_fill)
+    assets["color_line"] = assets[color_grouping].map(color_mapping_line)
+
+    marker_options.update(kwargs_for_marker)
+
+    
+    # Create the bokeh data source
+    source = ColumnDataSource(assets)    
+
+    
+    # Create a bokeh figure with tiles
+    plot_map = figure(plot_width=plot_width, plot_height=plot_height,
                     x_axis_type="mercator", y_axis_type="mercator",
-                    match_aspect=True,
-                    )
+                    **figure_options)
     
     plot_map.xaxis.axis_label = "Longitude"
     plot_map.yaxis.axis_label = "Latitude"
-    plot_map.add_tile(tiles[tile_name])
+    plot_map.add_tile(MAP_TILES[tile_name])
 
-    # plot asset devices
-    assets = project.asset.df
-    assets = wgs84_to_web_mercator(assets, lon="longitude", lat="latitude")
-    color_mapping = dict(zip(set(assets["type"]),Colorblind[8][:len(set(assets["type"]))]))
 
-    X = assets["x"]
-    Y = assets["y"]
-    asset_ids = assets["id"].tolist()
-    asset_type = assets["type"].tolist()
-    asset_colors = assets["type"].map(color_mapping)
+    # Plot the asset devices   
+    markers = plot_map.scatter(x="x", y="y",
+        source=source,
+        marker=marker,
+        size=marker_size,
+        **marker_options)
 
-    source = ColumnDataSource(data=dict(
-        id=asset_ids,
-        type=asset_type,
-        color=asset_colors,
-        coordinates=tuple(zip(assets["latitude"],assets["longitude"])),
-        coordinate_x=X,
-        coordinate_y=Y,
-        ))
-    
-    markers = plot_map.circle_y(x="coordinate_x", y="coordinate_y",
-        size=14,source=source,fill_color="color",legend_group="type",
-        alpha=0.5,line_color='black')
-
-    tooltips = [
-        ("id", "@id"),
-        ("type", "@type"),
-        ("(Lat,Lon)", "@coordinates"),
-        ]
-
-    hover = HoverTool(tooltips=tooltips,renderers=[markers])
-    plot_map.add_tools(hover)
 
     return plot_map
 
