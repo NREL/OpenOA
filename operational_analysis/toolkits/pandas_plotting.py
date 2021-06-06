@@ -720,11 +720,11 @@ def turbine_polar_contour(
 
 
 def luminance(rgb):
-
-    """Calculates the brightness of an rgb color. See https://en.wikipedia.org/wiki/Relative_luminance
+    
+    """Calculates the brightness of an rgb 255 color. See https://en.wikipedia.org/wiki/Relative_luminance
 
     Args:
-        rgb(:obj:`tuple`): normalised (red, green, blue) tuple
+        rgb(:obj:`tuple`): 255 (red, green, blue) tuple
 
     Returns:
         luminance(:obj:`scalar`): relative luminance
@@ -733,16 +733,16 @@ def luminance(rgb):
 
         .. code-block:: python
 
-            >>> rgb = (1.0,0.5,0.0)
+            >>> rgb = (255,127,0)
             >>> luminance(rgb)
-            0.5702
+            0.5687976470588235
 
-            >>> luminance((0.0,0.75,1.0))
-            0.6086
+            >>> luminance((0,50,255))
+            0.21243529411764706
 
     """
 
-    luminance = 0.2126*rgb[0] + 0.7152*rgb[1] + 0.0722*rgb[2]
+    luminance = (0.2126*rgb[0] + 0.7152*rgb[1] + 0.0722*rgb[2])/255
 
     return luminance
 
@@ -869,14 +869,17 @@ def plot_windfarm(project,tile_name="OpenMap",plot_width=800,plot_height=800,mar
         assets["auto_fill_color"] = assets[color_grouping].map(color_mapping)
         assets["auto_fill_color"] = assets["auto_fill_color"].apply(color_to_rgb)
         assets["auto_line_color"] = ["black" if luminance(color)>0.5 else "white" for color in assets["auto_fill_color"]]
+        print(assets["auto_fill_color"])
 
     else:
         if marker_options["fill_color"] in assets.columns:
             assets[marker_options["fill_color"]] = assets[marker_options["fill_color"]].apply(color_to_rgb)
             assets["auto_line_color"] = ["black" if luminance(color)>0.5 else "white" for color in assets[marker_options["fill_color"]]]
+            #print(marker_options["fill_color"])
 
         else:
             assets["auto_line_color"] = "black"
+            #print(marker_options["fill_color"])
 
 
     # Create the bokeh data source
