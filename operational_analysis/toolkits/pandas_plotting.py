@@ -10,8 +10,8 @@ import matplotlib.pyplot as plt
 
 from bokeh.plotting import figure
 from bokeh.models import WMTSTileSource
-from bokeh.models import ColumnDataSource, HoverTool
-from bokeh.palettes import Colorblind, cividis, viridis
+from bokeh.models import ColumnDataSource
+from bokeh.palettes import viridis, Category10
 
 from pyproj import Transformer
 
@@ -718,7 +718,70 @@ def turbine_polar_contour(
     return ax_carthesian, ax_polar, artists, labels
 
 
-def plot_windfarm(project,tile_name="OpenMap",plot_width=800,plot_height=800,marker="circle_y",marker_size=14,kwargs_for_figure={},kwargs_for_marker=[]):
+def luminance(rgb):
+
+    """Calculates the brightness of an rgb color. See https://en.wikipedia.org/wiki/Relative_luminance
+
+    Args:
+        rgb(:obj:`tuple`): normalised (red, green, blue) tuple
+
+    Returns:
+        luminance(:obj:`scalar`): relative luminance
+
+    Example:
+
+        .. code-block:: python
+
+            >>> rgb = (1.0,0.5,0.0)
+            >>> luminance(rgb)
+            0.5702
+
+            >>> luminance((0.0,0.75,1.0))
+            0.6086
+
+    """
+
+    luminance = 0.2126*rgb[0] + 0.7152*rgb[1] + 0.0722*rgb[2]
+
+    return luminance
+
+
+def color_to_rgb(color):
+
+    """Converts named colors, hex and normalised RGB to 255 RGB values
+
+    Args:
+        color(:obj:`color`): RGB, HEX or named color
+
+    Returns:
+        rgb(:obj:`tuple`): 255 RGB values
+
+    Example:
+
+        .. code-block:: python
+
+            >>> color_to_rgb("Red")
+            (255, 0, 0)
+
+            >>> color_to_rgb((1,1,0))
+            (255,255,0)
+
+            >>> color_to_rgb("#ff00ff")
+            (255,0,255)
+    """
+
+    if isinstance(color, tuple):
+        if max(color) > 1:
+            color = tuple([i/255 for i in color])
+
+    rgb = matplotlib.colors.to_rgb(color)
+
+    rgb = tuple([int(i*255) for i in rgb])
+
+    return rgb
+
+
+def plot_windfarm(project,tile_name="OpenMap",plot_width=800,plot_height=800,marker_size=14,kwargs_for_figure={},kwargs_for_marker={}):
 
     """Plot the windfarm spatially on a map
 
@@ -766,34 +829,57 @@ def plot_windfarm(project,tile_name="OpenMap",plot_width=800,plot_height=800,mar
     # Use pyproj to transform longitude and latitude into web-mercator and add to a copy of the asset dataframe
     TRANSFORM_4326_TO_3857 = Transformer.from_crs("EPSG:4326", "EPSG:3857")
     
-    assets = project.asset._df.copy()
+    assets = project.asset.df.copy()
     assets["x"],assets["y"] = TRANSFORM_4326_TO_3857.transform(assets['latitude'],assets['longitude'])   
     assets["coordinates"]=tuple(zip(assets["latitude"],assets["longitude"]))
 
 
-    # Update figure and marker options based on kwargs
-    figure_options = {"tools":"save,hover,pan,wheel_zoom,reset,help","match_aspect":True,"tooltips":[("id", "@id"),("type", "@type"),("(Lat,Lon)", "@coordinates")]}
+    # Define default and then update figure and marker options based on kwargs
+    figure_options = {"tools":"save,hover,pan,wheel_zoom,reset,help",
+        "x_axis_label":"Longitude",
+        "y_axis_label":"Latitude",
+        "match_aspect":True,
+        "tooltips":[("id", "@id"),("type", "@type"),("(Lat,Lon)", "@coordinates")]
+        }
     figure_options.update(kwargs_for_figure)
 
-
-    marker_options = {"line_width":1,"alpha":0.8,"fill_color":"color_fill","line_color":"color_line","legend_group":"type",}
+    marker_options = {"marker":"circle_y",
+        "line_width":1,
+        "alpha":0.8,
+        "fill_color":"auto_fill_color",
+        "line_color":"auto_line_color",
+        "legend_group":"type",
+        }
     marker_options.update(kwargs_for_marker)        
     
     
-    # Create an appropriate color map
-    color_grouping = marker_options["legend_group"]
+    # Create an appropriate fill color map and contrasting line color
+    if marker_options["fill_color"] == "auto_fill_color":
+        color_grouping = marker_options["legend_group"]
 
-    color_mapping_fill = dict(zip(set(assets[color_grouping]),cividis(len(set(assets[color_grouping])))))
-    color_mapping_line = dict(zip(set(assets[color_grouping]),reversed(viridis(1+len(set(assets[color_grouping]))))))
+        assets = assets.sort_values(color_grouping)
 
-    assets["color_fill"] = assets[color_grouping].map(color_mapping_fill)
-    assets["color_line"] = assets[color_grouping].map(color_mapping_line)
+        if len(set(assets[color_grouping]))<=10:
+            color_palette = list(Category10[10])
+        else:
+            color_palette = viridis(len(set(assets[color_grouping])))
 
-    marker_options.update(kwargs_for_marker)
+        color_mapping = dict(zip(set(assets[color_grouping]),color_palette))
+        assets["auto_fill_color"] = assets[color_grouping].map(color_mapping)
+        assets["auto_fill_color"] = assets["auto_fill_color"].apply(color_to_rgb)
+        assets["auto_line_color"] = ["black" if luminance(color)>0.5 else "white" for color in assets["auto_fill_color"]]
 
-    
+    else:
+        if marker_options["fill_color"] in assets.columns:
+            assets[marker_options["fill_color"]] = assets[marker_options["fill_color"]].apply(color_to_rgb)
+            assets["auto_line_color"] = ["black" if luminance(color)>0.5 else "white" for color in assets[marker_options["fill_color"]]]
+
+        else:
+            assets["auto_line_color"] = "black"
+
+
     # Create the bokeh data source
-    source = ColumnDataSource(assets)    
+    source = ColumnDataSource(assets)
 
     
     # Create a bokeh figure with tiles
@@ -801,15 +887,12 @@ def plot_windfarm(project,tile_name="OpenMap",plot_width=800,plot_height=800,mar
                     x_axis_type="mercator", y_axis_type="mercator",
                     **figure_options)
     
-    plot_map.xaxis.axis_label = "Longitude"
-    plot_map.yaxis.axis_label = "Latitude"
     plot_map.add_tile(MAP_TILES[tile_name])
 
 
     # Plot the asset devices   
     markers = plot_map.scatter(x="x", y="y",
         source=source,
-        marker=marker,
         size=marker_size,
         **marker_options)
 
