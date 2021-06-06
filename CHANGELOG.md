@@ -3,15 +3,17 @@ All notable changes to this project will be documented in this file. If you make
 
 ## [UNRELEASED]
 - Updated long-term loss calculations to weight by monthly/daily long-term gross energy
-- Added wind turbine asset data to example ENGIE project
-- Bugfixes, such as fixing an improper python version specifier in setup.py and replacing some straggling references to the master branch with main.
 - Added wind farm plotting tool
 
-## [2.2 - 2021-04-30]
+## [2.2 - 2021-05-28]
 - IAV incorporation in AEP calculation
 - Set power to 0 for windspeeds above and below cutoff in IEC power curve function.
 - Split unit tests from regression tests and updated CI pipeline to run the full regression tests weekly.
 - Flake8 with Black code style implemented with git hook to run on commit
+- Updated long-term loss calculations to weight by monthly/daily long-term gross energy
+- Added wind turbine asset data to example ENGIE project
+- Reduce amount of time it takes to run regression tests by decreasing number of monte carlo iterations. Reduce tolerance of float comparisons in plant analysis regression test. Linear regression on daily data is removed from test.
+- Bugfixes, such as fixing an improper python version specifier in setup.py and replacing some straggling references to the master branch with main.
 
 ## [2.1 - 2021-02-17]
 - Modify bootstrapping approach for period of record sampling. Data is now sampled with replacement, across 100% of the POR data.

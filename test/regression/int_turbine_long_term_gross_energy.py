@@ -41,7 +41,7 @@ class TestLongTermGrossEnergyUQ(unittest.TestCase):
         self.project = Project_Engie('./examples/data/la_haute_borne')
         self.project.prepare()
 
-        self.analysis_uq = TurbineLongTermGrossEnergy(self.project, UQ = True, num_sim = 100)
+        self.analysis_uq = TurbineLongTermGrossEnergy(self.project, UQ = True, num_sim = 5)
         self.analysis_uq.run(enable_plotting = False, reanal_subset = ['era5', 'merra2'])
 
     def test_longterm_gross_energy_results(self):
