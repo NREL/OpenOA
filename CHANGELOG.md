@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file. If you make
 - Updated long-term loss calculations to weight by monthly/daily long-term gross energy
 - Added wind turbine asset data to example ENGIE project
 - Bugfixes, such as fixing an improper python version specifier in setup.py and replacing some straggling references to the master branch with main.
+- Added wind farm plotting tool
 
 ## [2.2 - 2021-04-30]
 - IAV incorporation in AEP calculation

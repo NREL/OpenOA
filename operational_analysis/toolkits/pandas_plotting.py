@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 
+
 from bokeh.plotting import figure
 from bokeh.models import WMTSTileSource
 from bokeh.models import ColumnDataSource
@@ -810,7 +811,7 @@ def plot_windfarm(project,tile_name="OpenMap",plot_width=800,plot_height=800,mar
             from examples.project_ENGIE import Project_Engie
 
             # Load plant object
-            project = Project_Engie('../examples/data/la_haute_borne')
+            project = Project_Engie("../examples/data/la_haute_borne")
 
             # Prepare data
             project.prepare()

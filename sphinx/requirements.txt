@@ -8,4 +8,16 @@ sphinxcontrib-napoleon==0.6.1
 sphinx_rtd_theme==0.2.4
 nbmerge
 nbsphinx
-bokeh>=2.3.1
+
+# Added as part of solo Sphinx environment - although probably best to install all requirements from main
+pandas>=0.23.4
+bokeh==2.3.1
+eia-python>=1.22
+scipy>=1.1.0
+matplotlib>=2.1.0
+pygam>=0.8.0
+tqdm>=4.28.1
+pyproj>=2.6.1
+shapely>=1.7.1
+statsmodels>=0.11
+scikit_learn>=0.20.1
