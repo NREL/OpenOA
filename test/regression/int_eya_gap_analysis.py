@@ -15,8 +15,8 @@ class EYAGAPAnalysis(unittest.TestCase):
 
         # Set up EYA estimates
         eya_data = [467.0, 597.14, 0.062, 0.024, 0.037, 0.011, 0.087] 
-        # AEP (GWh/yr), gross energy (GWh/yr), availability loss (fraction), electrical loss (fraction), turbine performance loss (fraction)
-        # blade degradation loss (fraction), wake loss (fraction)
+        # AEP (GWh/yr), gross energy (GWh/yr), availability loss (fraction), electrical loss (fraction), 
+        # turbine performance loss (fraction), blade degradation loss (fraction), wake loss (fraction)
 
         # Creat gap analysis method object and run
         self.analysis = EYAGapAnalysis(plant = 'NA', eya_estimates = eya_data, oa_results = oa_data, make_fig = False)
