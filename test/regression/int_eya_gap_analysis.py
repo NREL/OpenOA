@@ -11,7 +11,7 @@ class EYAGAPAnalysis(unittest.TestCase):
         np.random.seed(42)
         # Set up operational results data                
         oa_data = [448., 0.0493, 0.012, 477.8] 
-        # AEP (GWh/yr), availability loss (fraction), electrical loss (fraction), turbine ideal energy (GWh/yr)
+        # AEP (GWh/yr), gross energy (GWh/yr), availability loss (fraction), electrical loss (fraction), turbine ideal energy (GWh/yr)
 
         # Set up EYA estimates
         eya_data = [467.0, 597.14, 0.062, 0.024, 0.037, 0.011, 0.087] 
