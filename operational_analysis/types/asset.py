@@ -192,3 +192,7 @@ class AssetData(object):
     @property
     def df(self):
         return self._asset
+
+    @df.setter
+    def df(self, value):
+        self._asset = value
