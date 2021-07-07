@@ -24,7 +24,7 @@ To work on a feature, please fork OpenOA first and then create a feature branch 
 Work out of this feature branch before submitting a pull request.
 Be sure to periodically synchronize the upstream develop branch into your feature branch to avoid conflicts in the pull request.
 
-When the feature branch is ready, make a pull request to NREL/OpenOA through the Github.com UI.  You will need to accept the Contributor License Agreement(CLA) for pull requests greater than 20 lines in length. [CLA Language](https://gist.github.com/Dynorat/118aaa0c8277be986c59c32029898faa)
+When the feature branch is ready, make a pull request to NREL/OpenOA through the Github.com UI. When submitting a pull request, you will need to accept the Contributor License Agreement(CLA). [CLA Language](https://gist.github.com/Dynorat/118aaa0c8277be986c59c32029898faa)
 
 [![CLA assistant](https://cla-assistant.io/readme/badge/NREL/OpenOA)](https://cla-assistant.io/NREL/OpenOA)
 
