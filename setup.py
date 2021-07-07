@@ -24,6 +24,7 @@ REQUIRED = [
     "statsmodels>=0.11",
     "tqdm>=4.28.1",
     "matplotlib>=2.1.0",
+    "bokeh==2.3.*",
 ]
 
 TESTS = ["pytest>=5.4.2", "pytest-cov>=2.8.1"]
