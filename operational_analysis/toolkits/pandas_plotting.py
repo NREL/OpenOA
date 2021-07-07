@@ -784,7 +784,7 @@ def color_to_rgb(color):
 
 def plot_windfarm(project,tile_name="OpenMap",plot_width=800,plot_height=800,marker_size=14,kwargs_for_figure={},kwargs_for_marker={}):
 
-    """Plot the windfarm spatially on a map
+    """Plot the windfarm spatially on a map using the Bokeh plotting libaray.
 
     Args:
         project(:obj:`plant object`): project to be plotted
@@ -793,7 +793,7 @@ def plot_windfarm(project,tile_name="OpenMap",plot_width=800,plot_height=800,mar
         plot_height(:obj:`scalar`): height of plot
         marker_size(:obj:`scalar`): size of markers
         kwargs_for_figure(:obj:`dict`): additional figure options for advanced users, see Bokeh docs
-        kwargs_for_marker(:obj:`dict`): additional marker options for advanced users, see Bokeh docs
+        kwargs_for_marker(:obj:`dict`): additional marker options for advanced users, see Bokeh docs. We have some custom behavior around the "fill_color" attribute. If "fill_color" is not defined, OpenOA will use an internally defined color pallete. If "fill_color" is the name of a column in the asset table, OpenOA will use the value of that column as the marker color. Otherwise, "fill_color" is passed through to Bokeh.
  
     Returns:
         Bokeh_plot(:obj:`axes handle`): windfarm map
