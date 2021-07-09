@@ -880,7 +880,6 @@ def plot_windfarm(
         assets["auto_line_color"] = [
             "black" if luminance(color) > 0.5 else "white" for color in assets["auto_fill_color"]
         ]
-        print(assets["auto_fill_color"])
 
     else:
         if marker_options["fill_color"] in assets.columns:
@@ -891,11 +890,9 @@ def plot_windfarm(
                 "black" if luminance(color) > 0.5 else "white"
                 for color in assets[marker_options["fill_color"]]
             ]
-            # print(marker_options["fill_color"])
 
         else:
             assets["auto_line_color"] = "black"
-            # print(marker_options["fill_color"])
 
     # Create the bokeh data source
     source = ColumnDataSource(assets)
