@@ -1,7 +1,8 @@
 """Creates the QualityControlDiagnosticSuite and specific data-based subclasses."""
 
 from abc import abstractmethod
-from typing import List
+from typing import List, Tuple, Union
+from datetime import datetime
 
 import pytz
 import h5pyd
@@ -10,11 +11,15 @@ import pandas as pd
 import dateutil
 import matplotlib.pyplot as plt
 from pyproj import Proj
+from dateutil import tz
+from pandas.core.frame import DataFrame
+from pandas.core.algorithms import isin
 
 from operational_analysis import logging, logged_method_call
 from operational_analysis.toolkits import filters, timeseries, power_curve
 
 
+Number = Union[int, float]
 logger = logging.getLogger(__name__)
 
 
@@ -35,6 +40,20 @@ def get_country_timezones(country: str) -> List[str]:
     return pytz.country_timezones[country]
 
 
+def read_data(data: Union[pd.DataFrame, str]) -> pd.DataFrame:
+    """Takes the `DataFrame` or file path and returns a `DataFrame`
+
+    Args:
+     data(:obj: `Union[pd.DataFrame, str]`): The actual data or a path to the csv data.
+
+    Returns
+     (:obj: `pd.DataFrame`): The data fram object.
+    """
+    if isinstance(data, pd.DataFrame):
+        return data
+    return pd.read_csv(data)
+
+
 class QualityControlDiagnosticSuite:
     """This class defines key analytical procedures in a quality check process for turbine data.
     After analyzing the data for missing and duplicate timestamps, timezones, Daylight Savings Time corrections, and extrema values,
@@ -44,35 +63,33 @@ class QualityControlDiagnosticSuite:
     @logged_method_call
     def __init__(
         self,
-        df,
-        ws_field="wmet_wdspd_avg",
-        power_field="wtur_W_avg",
-        time_field="datetime",
-        id_field=None,
-        freq="10T",
-        lat_lon=(0, 0),
-        tz="America/Denver",
-        check_tz=False,
+        data: Union[pd.DataFrame, str],
+        ws_field: str = "wmet_wdspd_avg",
+        power_field: str = "wtur_W_avg",
+        time_field: str = "datetime",
+        id_field: str = None,
+        freq: str = "10T",
+        lat_lon: Tuple[Number, Number] = (0, 0),
+        tz: str = "UTC",
     ):
         """
         Initialize QCAuto object with data and parameters.
 
         Args:
-         df(:obj:`DataFrame object`): DataFrame object that contains data
+         data(:obj: `Union[pd.DataFrame, str]`): The actual data or a path to the csv data.
          ws_field(:obj: 'String'): String name of the windspeed field to df
          power_field(:obj: 'String'): String name of the power field to df
          time_field(:obj: 'String'): String name of the time field to df
          id_field(:obj: 'String'): String name of the id field to df
          freq(:obj: 'String'): String representation of the resolution for the time field to df
-         lat_lon(:obj: 'tuple'): latitude and longitude of farm represented as a tuple
+         lat_lon(:obj: 'tuple'): latitude and longitude of farm represented as a tuple; this is purely informational.
          tz(:obj: 'String'): The `pytz`-compatible timezone for local time reference. Use `get_country_timezones()` to see
-            which timezones are available for your locality.
-         check_tz(:obj: 'boolean'): Boolean on whether to use WIND Toolkit data to assess timezone of data
+            which timezones are available for your locality, by default UTC.
         """
 
         logger.info("Initializing QC_Automation Object")
 
-        self._df = df
+        self._df = read_data(data)
         self._ws = ws_field
         self._w = power_field
         self._t = time_field
@@ -80,18 +97,48 @@ class QualityControlDiagnosticSuite:
         self._freq = freq
         self._lat_lon = lat_lon
         self._tz = tz
-        self._check_tz = check_tz
+        self._ptz = pytz.timezone(tz)
+        self._offset = "utc_offset"
+        self._dst = "is_dst"
+        self._non_dst_offset = self._ptz.localize(datetime(2021, 1, 1)).utcoffset()
 
         if self._id is None:
             self._id = "ID"
             self._df["ID"] = "Data"
 
-        if self._check_tz:
-            self._convert_datetime_column()
+        self._convert_datetime_column()
+
+    def _determine_offset_dst(self, df: pd.DataFrame) -> None:
+        """Creates a column of "utc_offset" and "is_dst".
+
+        Args:
+         df(:obj:`pd.DataFrame`): The dataframe object to manipulate.
+
+        Returns:
+         (:obj:`pd.DataFrame`): The updated dataframe with "utc_offset" and "is_dst" columns created.
+        """
+        dt = df.copy().tz_convert(self._tz)
+        dt_col = dt.index.to_pydatetime()
+
+        # Determine the Daylight Savings Time status and UTC offset
+        # dt[self._dst] = [el != self._non_dst_offset for el in dt_col]
+        dt[self._offset] = [el.utcoffset() for el in dt_col]
+        dt[self._dst] = (dt[self._offset] != self._non_dst_offset).astype(bool)
+
+        # Convert back to UTC
+        dt = dt.tz_convert("UTC")
+        return dt
 
     def _convert_datetime_column(self) -> None:
-        dt = self._df[self._t]
-        dt = dt.tz_localize(self._tz)
+        """Converts the column of timestamps to a UTC-encoded `pd.DateTimeIndex`."""
+        # Convert the timestamps to datetime.datetime objects
+        dt_col = self._df[self._t].values
+
+        self._df[self._t] = pd.to_datetime(
+            [dateutil.parser.parse(el).astimezone(tz.tzutc()) for el in dt_col]
+        ).tz_convert("UTC")
+        self._df = self._df.set_index(self._t, drop=False)
+        self._df = self._determine_offset_dst(self._df)
 
     @abstractmethod
     @logged_method_call
@@ -160,51 +207,59 @@ class QualityControlDiagnosticSuite:
         Returns:
             (None)
         """
+        # Get data for one of the turbines
+        self._df_dst = self._df.loc[self._df[self._id] == self._df[self._id].unique()[0]]
+        df_full = self._df_dst.copy()
 
-        self._df_dst = self._df.loc[self._df[self._id] == self._df[self._id].unique()[0], :]
+        # Locate the missing timestamps, convert to UTC, and recreate DST and UTC-offset columns
+        missing = timeseries.find_time_gaps(self._df_dst[self._t], self._freq)
+        missing_df = pd.DataFrame(
+            np.full((len(missing), df_full.shape[1]), np.nan, dtype=float),
+            columns=df_full.columns,
+            index=missing,
+        )
+        missing_df[self._t] = pd.to_datetime(missing.values).tz_localize("UTC")
+        missing_df = self._determine_offset_dst(missing_df)
 
-        df_full = timeseries.gap_fill_data_frame(
-            self._df_dst, self._t, self._freq
-        )  # Gap fill so spring ahead is visible
-        df_full.set_index(self._t, inplace=True)
+        # Append and resort the missing timestamps, then convert to local time
+        df_full = df_full.append(missing_df).sort_values(self._t)
+        df_full = df_full.tz_convert(self._tz)
         self._df_full = df_full
 
         years = df_full.index.year.unique()  # Years in data record
         num_years = len(years)
+        hour_window = pd.Timedelta(hours=hour_window)
 
         plt.figure(figsize=(12, 20))
 
-        for y in np.arange(num_years):
-            dst_data = self._dst_dates.loc[self._dst_dates["year"] == years[y]]
+        for i, year in enumerate(years):
+            year_data = df_full.loc[df_full.index.year == year]
+            dst_dates = np.where(year_data[self._dst].values)[0]
 
-            # Set spring ahead window to plot
-            spring_start = pd.to_datetime(dst_data["start"]) - pd.Timedelta(hours=hour_window)
-            spring_end = pd.to_datetime(dst_data["start"]) + pd.Timedelta(hours=hour_window)
+            # Break the plotting loop if there is a partial year without DST in the data
+            if dst_dates.size == 0:
+                break
 
-            # Set fall back window to plot
-            fall_start = pd.to_datetime(dst_data["end"]) - pd.Timedelta(hours=hour_window)
-            fall_end = pd.to_datetime(dst_data["end"]) + pd.Timedelta(hours=hour_window)
+            # Get the start and end DatetimeIndex values
+            start_ix = year_data.iloc[dst_dates[0]].name
+            end_ix = year_data.iloc[dst_dates[-1] + 1].name
 
-            # Get data corresponding to each
-            data_spring = df_full.loc[
-                (df_full.index > spring_start.values[0]) & (df_full.index < spring_end.values[0])
-            ]
-            data_fall = df_full.loc[
-                (df_full.index > fall_start.values[0]) & (df_full.index < fall_end.values[0])
-            ]
+            # Create the data subsets for plotting the appropriate window
+            data_spring = year_data.loc[start_ix - hour_window : start_ix + hour_window]
+            data_fall = year_data.loc[end_ix - hour_window : end_ix + hour_window]
 
             # Plot each as side-by-side subplots
-            plt.subplot(num_years, 2, 2 * y + 1)
+            plt.subplot(num_years, 2, 2 * i + 1)
             if np.sum(~np.isnan(data_spring[self._w])) > 0:
                 plt.plot(data_spring[self._w])
-            plt.title(str(years[y]) + ", Spring")
+            plt.title(f"{year}, Spring")
             plt.ylabel("Power")
             plt.xlabel("Date")
 
-            plt.subplot(num_years, 2, 2 * y + 2)
+            plt.subplot(num_years, 2, 2 * i + 2)
             if np.sum(~np.isnan(data_fall[self._w])) > 0:
                 plt.plot(data_fall[self._w])
-            plt.title(str(years[y]) + ", Fall")
+            plt.title(f"{year}, Fall")
             plt.ylabel("Power")
             plt.xlabel("Date")
 
@@ -269,51 +324,48 @@ class QualityControlDiagnosticSuite:
                 plt.show()
 
 
-class WindToolKitQualityControlDiagnosticSuite(object):
-
-    """This class defines key analytical procedures in a quality check process for turbine data.
-    After analyzing the data for missing and duplicate timestamps, timezones, Daylight Savings Time corrections, and extrema values,
-    the user can make informed decisions about how to handle the data.
+class WindToolKitQualityControlDiagnosticSuite(QualityControlDiagnosticSuite):
+    """This class defines key analytical procedures in a quality check process for
+    turbine data. After analyzing the data for missing and duplicate timestamps,
+    timezones, Daylight Savings Time corrections, and extrema values, the user can make
+    informed decisions about how to handle the data.
     """
 
     @logged_method_call
     def __init__(
         self,
-        df,
-        ws_field="wmet_wdspd_avg",
-        power_field="wtur_W_avg",
-        time_field="datetime",
-        id_field=None,
-        freq="10T",
-        lat_lon=(0, 0),
-        dst_subset="American",
-        check_tz=False,
+        data: Union[pd.DataFrame, str],
+        ws_field: str = "wmet_wdspd_avg",
+        power_field: str = "wtur_W_avg",
+        time_field: str = "datetime",
+        id_field: str = None,
+        freq: str = "10T",
+        lat_lon: Tuple[Number, Number] = (0, 0),
+        tz: str = "UTC",
     ):
         """
         Initialize QCAuto object with data and parameters.
 
         Args:
-         df(:obj:`DataFrame object`): DataFrame object that contains data
+         data(:obj: `Union[pd.DataFrame, str]`): The actual data or a path to the csv data.
          ws_field(:obj: 'String'): String name of the windspeed field to df
          power_field(:obj: 'String'): String name of the power field to df
          time_field(:obj: 'String'): String name of the time field to df
          id_field(:obj: 'String'): String name of the id field to df
          freq(:obj: 'String'): String representation of the resolution for the time field to df
-         lat_lon(:obj: 'tuple'): latitude and longitude of farm represented as a tuple
-         dst_subset(:obj: 'String'): Set of Daylight Savings Time transitions to use (currently American or France)
-         check_tz(:obj: 'boolean'): Boolean on whether to use WIND Toolkit data to assess timezone of data
+         lat_lon(:obj: 'tuple'): latitude and longitude of farm represented as a tuple; this is purely informational.
+         tz(:obj: 'String'): The `pytz`-compatible timezone for local time reference. Use `get_country_timezones()` to see
+            which timezones are available for your locality, by default UTC.
         """
-        super.__init__(
-            self,
-            df,
+        super().__init__(
+            data=data,
             ws_field=ws_field,
             power_field=power_field,
             time_field=time_field,
             id_field=id_field,
             freq=freq,
             lat_lon=lat_lon,
-            dst_subset=dst_subset,
-            check_tz=check_tz,
+            tz=tz,
         )
 
     @logged_method_call
@@ -332,13 +384,10 @@ class WindToolKitQualityControlDiagnosticSuite(object):
         self.dup_time_identification()
         logger.info("Identifying Time Gaps")
         self.gap_time_identification()
-        logger.info("Grabbing DST Transition Times")
-        self.create_dst_df()
 
-        if self._check_tz:
-            logger.info("Evaluating timezone deviation from UTC")
-            self.ws_diurnal_prep()
-            self.corr_df_calc()
+        logger.info("Evaluating timezone deviation from UTC")
+        self.ws_diurnal_prep()
+        self.corr_df_calc()
 
         logger.info("Isolating Extrema Values")
         self.max_min()
@@ -470,95 +519,3 @@ class WindToolKitQualityControlDiagnosticSuite(object):
             ]
 
         self._hour_shift = pd.DataFrame(index=np.arange(24), data={"corr_by_hour": return_corr})
-
-    def create_dst_df(self):
-        if self._dst_subset == "American":
-            # American DST Transition Dates (Local Time)
-            self._dst_dates = pd.DataFrame()
-            self._dst_dates["year"] = [
-                2008,
-                2009,
-                2010,
-                2011,
-                2012,
-                2013,
-                2014,
-                2015,
-                2016,
-                2017,
-                2018,
-                2019,
-            ]
-            self._dst_dates["start"] = [
-                "3/9/08 2:00",
-                "3/8/09 2:00",
-                "3/14/10 2:00",
-                "3/13/11 2:00",
-                "3/11/12 2:00",
-                "3/10/13 2:00",
-                "3/9/14 2:00",
-                "3/8/15 2:00",
-                "3/13/16 2:00",
-                "3/12/17 2:00",
-                "3/11/18 2:00",
-                "3/10/19 2:00",
-            ]
-            self._dst_dates["end"] = [
-                "11/2/08 2:00",
-                "11/1/09 2:00",
-                "11/7/10 2:00",
-                "11/6/11 2:00",
-                "11/4/12 2:00",
-                "11/3/13 2:00",
-                "11/2/14 2:00",
-                "11/1/15 2:00",
-                "11/6/16 2:00",
-                "11/5/17 2:00",
-                "11/4/18 2:00",
-                "11/3/19 2:00",
-            ]
-        else:
-            # European DST Transition Dates (Local Time)
-            self._dst_dates = pd.DataFrame()
-            self._dst_dates["year"] = [
-                2008,
-                2009,
-                2010,
-                2011,
-                2012,
-                2013,
-                2014,
-                2015,
-                2016,
-                2017,
-                2018,
-                2019,
-            ]
-            self._dst_dates["start"] = [
-                "3/30/08 2:00",
-                "3/29/09 2:00",
-                "3/28/10 2:00",
-                "3/27/11 2:00",
-                "3/25/12 2:00",
-                "3/31/13 2:00",
-                "3/30/14 2:00",
-                "3/29/15 2:00",
-                "3/27/16 2:00",
-                "3/26/17 2:00",
-                "3/25/18 2:00",
-                "3/31/19 2:00",
-            ]
-            self._dst_dates["end"] = [
-                "10/26/08 3:00",
-                "10/25/09 3:00",
-                "10/31/10 3:00",
-                "10/30/11 3:00",
-                "10/28/12 3:00",
-                "10/27/13 3:00",
-                "10/26/14 3:00",
-                "10/25/15 3:00",
-                "10/30/16 3:00",
-                "10/29/17 3:00",
-                "10/28/18 3:00",
-                "10/27/19 3:00",
-            ]
