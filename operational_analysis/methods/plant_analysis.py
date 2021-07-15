@@ -28,6 +28,36 @@ from operational_analysis import logging
 
 logger = logging.getLogger(__name__)
 
+
+def get_annual_values(data):
+    """
+    This function returns annual summations of values in a pandas Series (or each column of a pandas DataFrame) with a
+    DatetimeIndex index starting from the first row. The purpose of the function is to correctly resample to annual
+    values when the first index does not fall on the beginning of the month.
+
+    Args:
+        data(:obj:`pandas.Series or pandas.DataFrame`): Input data with a DatetimeIndex index.
+
+    Returns:
+        :obj:`numpy.ndarray`: Array containing annual summations for each column of the input data.
+    """
+    
+    # shift time index to beginning of first month so resampling by 'MS' groups the data into full years 
+    # starting from the beginning
+    data.index = (
+        data.index - pd.Timedelta(
+            data.index[0]
+            - (
+                data.index[0].floor('d')
+                + pd.offsets.MonthEnd(0)
+                - pd.offsets.MonthBegin(1)
+            )
+        )
+    )
+    
+    return data.resample('12MS').sum().values
+
+
 class MonteCarloAEP(object):
     """
     A serial (Pandas-driven) implementation of the benchmark PRUF operational
@@ -841,10 +871,9 @@ class MonteCarloAEP(object):
             
             # Annual values of lt gross energy, needed for IAV
             reg_inputs_lt['gross_lt'] = gross_lt
-            gross_lt_annual = np.zeros(self._run.num_years_windiness)
+
             # Annual resample starting on the first day in reg_inputs_lt
-            for j in np.arange(self._run.num_years_windiness):
-                gross_lt_annual[j] = reg_inputs_lt['gross_lt'].loc[(reg_inputs_lt.index >= reg_inputs_lt.index[0] + j*pd.tseries.offsets.DateOffset(months = 12)) & (reg_inputs_lt.index < reg_inputs_lt.index[0] + (j+1)*pd.tseries.offsets.DateOffset(months = 12))].sum()
+            gross_lt_annual = get_annual_values(reg_inputs_lt['gross_lt'])
             
             # Get long-term availability and curtailment losses, using gross_lt to weight individual monthly losses
             [avail_lt_losses, curt_lt_losses] = self.sample_long_term_losses(reg_inputs_lt['gross_lt'])
