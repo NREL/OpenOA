@@ -61,6 +61,7 @@ extensions = [
     "sphinx.ext.todo",
     "m2r",
     "nbsphinx",
+    "bokeh.sphinxext.bokeh_plot",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
