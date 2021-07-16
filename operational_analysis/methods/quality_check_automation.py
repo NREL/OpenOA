@@ -23,23 +23,6 @@ Number = Union[int, float]
 logger = logging.getLogger(__name__)
 
 
-def get_country_timezones(country: str) -> List[str]:
-    """Returns the list of local timzones for the ISO 3166 (two-letter, English) country codes.
-    For all possible inputs see: https://www.iso.org/obp/ui/#search.
-
-    Parameters
-    ----------
-    country : str
-        Two-letter ISO 3166 country code corresponding to an English country name.
-
-    Returns
-    -------
-    List[str]
-        A list of the valid timezones available for a country that can be used for QC methods.
-    """
-    return pytz.country_timezones[country]
-
-
 def read_data(data: Union[pd.DataFrame, str]) -> pd.DataFrame:
     """Takes the `DataFrame` or file path and returns a `DataFrame`
 
@@ -70,7 +53,7 @@ class QualityControlDiagnosticSuite:
         id_field: str = None,
         freq: str = "10T",
         lat_lon: Tuple[Number, Number] = (0, 0),
-        tz: str = "UTC",
+        local_tz: str = "UTC",
     ):
         """
         Initialize QCAuto object with data and parameters.
@@ -83,8 +66,9 @@ class QualityControlDiagnosticSuite:
          id_field(:obj: 'String'): String name of the id field to df
          freq(:obj: 'String'): String representation of the resolution for the time field to df
          lat_lon(:obj: 'tuple'): latitude and longitude of farm represented as a tuple; this is purely informational.
-         tz(:obj: 'String'): The `pytz`-compatible timezone for local time reference. Use `get_country_timezones()` to see
-            which timezones are available for your locality, by default UTC.
+         local_tz(:obj: 'String'): The `pytz`-compatible timezone for local time reference. Use `get_country_timezones()` to see
+            which timezones are available for your locality, by default UTC. This should be in the format of "Country/City"
+            or "Region/City" such as "America/Denver" or "Europe/Paris".
         """
 
         logger.info("Initializing QC_Automation Object")
@@ -96,11 +80,11 @@ class QualityControlDiagnosticSuite:
         self._id = id_field
         self._freq = freq
         self._lat_lon = lat_lon
-        self._tz = tz
-        self._ptz = pytz.timezone(tz)
+        self._local_tz = local_tz
+        self._local_ptz = pytz.timezone(local_tz)
         self._offset = "utc_offset"
         self._dst = "is_dst"
-        self._non_dst_offset = self._ptz.localize(datetime(2021, 1, 1)).utcoffset()
+        self._non_dst_offset = self._local_ptz.localize(datetime(2021, 1, 1)).utcoffset()
 
         if self._id is None:
             self._id = "ID"
@@ -117,7 +101,7 @@ class QualityControlDiagnosticSuite:
         Returns:
          (:obj:`pd.DataFrame`): The updated dataframe with "utc_offset" and "is_dst" columns created.
         """
-        dt = df.copy().tz_convert(self._tz)
+        dt = df.copy().tz_convert(self._local_tz)
         dt_col = dt.index.to_pydatetime()
 
         # Determine the Daylight Savings Time status and UTC offset
@@ -223,7 +207,7 @@ class QualityControlDiagnosticSuite:
 
         # Append and resort the missing timestamps, then convert to local time
         df_full = df_full.append(missing_df).sort_values(self._t)
-        df_full = df_full.tz_convert(self._tz)
+        df_full = df_full.tz_convert(self._local_tz)
         self._df_full = df_full
 
         years = df_full.index.year.unique()  # Years in data record
@@ -341,7 +325,8 @@ class WindToolKitQualityControlDiagnosticSuite(QualityControlDiagnosticSuite):
         id_field: str = None,
         freq: str = "10T",
         lat_lon: Tuple[Number, Number] = (0, 0),
-        tz: str = "UTC",
+        local_tz: str = "UTC",
+        check_tz: bool = False,
     ):
         """
         Initialize QCAuto object with data and parameters.
@@ -354,8 +339,11 @@ class WindToolKitQualityControlDiagnosticSuite(QualityControlDiagnosticSuite):
          id_field(:obj: 'String'): String name of the id field to df
          freq(:obj: 'String'): String representation of the resolution for the time field to df
          lat_lon(:obj: 'tuple'): latitude and longitude of farm represented as a tuple; this is purely informational.
-         tz(:obj: 'String'): The `pytz`-compatible timezone for local time reference. Use `get_country_timezones()` to see
-            which timezones are available for your locality, by default UTC.
+         local_tz(:obj: 'String'): The `pytz`-compatible timezone for local time reference. Use `get_country_timezones()` to see
+            which timezones are available for your locality, by default UTC. This should be in the format of "Country/City"
+            or "Region/City" such as "America/Denver" or "Europe/Paris".
+         check_tz(:obj: 'bool'): Boolean on whether to use WIND Toolkit data to assess timezone of data, by default False. This
+            should only be set to `True` when the `lat_lon` fall within the WIND Toolkit parameters.
         """
         super().__init__(
             data=data,
@@ -365,8 +353,9 @@ class WindToolKitQualityControlDiagnosticSuite(QualityControlDiagnosticSuite):
             id_field=id_field,
             freq=freq,
             lat_lon=lat_lon,
-            tz=tz,
+            local_tz=local_tz,
         )
+        self._check_tz = check_tz
 
     @logged_method_call
     def run(self):
@@ -385,9 +374,13 @@ class WindToolKitQualityControlDiagnosticSuite(QualityControlDiagnosticSuite):
         logger.info("Identifying Time Gaps")
         self.gap_time_identification()
 
-        logger.info("Evaluating timezone deviation from UTC")
-        self.ws_diurnal_prep()
-        self.corr_df_calc()
+        if self._check_tz:
+            logger.info("Evaluating timezone deviation from UTC")
+            try:
+                self.ws_diurnal_prep()
+                self.corr_df_calc()
+            except IndexError as e:
+                logger.info(str(e))
 
         logger.info("Isolating Extrema Values")
         self.max_min()
@@ -448,11 +441,15 @@ class WindToolKitQualityControlDiagnosticSuite(QualityControlDiagnosticSuite):
 
         project_idx = self.indicesForCoord(f)
 
+        try:
+            coordinates = f["coordinates"][project_idx[0]][project_idx[1]]
+        except ValueError:
+            message = "Project coordinates are outside of the WIND Toolkit domain; aborting diurnal methods!"
+            raise IndexError(message)
+
         print("y,x indices for project: \t\t {}".format(project_idx))
         print("Coordinates of project: \t {}".format(self._lat_lon))
-        print(
-            "Coordinates of project: \t {}".format(f["coordinates"][project_idx[0]][project_idx[1]])
-        )
+        print("Coordinates of project: \t {}".format(coordinates))
 
         # Get wind speed at 80m from the specified lat/lon
         ws = f["windspeed_80m"]
