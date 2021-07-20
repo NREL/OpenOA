@@ -28,6 +28,29 @@ from operational_analysis import logging
 
 logger = logging.getLogger(__name__)
 
+
+def get_annual_values(data):
+    """
+    This function returns annual summations of values in a pandas Series (or each column of a pandas DataFrame) with a
+    DatetimeIndex index starting from the first row. The purpose of the function is to correctly resample to annual
+    values when the first index does not fall on the beginning of the month.
+
+    Args:
+        data(:obj:`pandas.Series` or :obj:`pandas.DataFrame`): Input data with a DatetimeIndex index.
+
+    Returns:
+        :obj:`numpy.ndarray`: Array containing annual summations for each column of the input data.
+    """
+    
+    # shift time index to beginning of first month so resampling by 'MS' groups the data into full years 
+    # starting from the beginning of the time series
+    ix_start = data.index[0]
+    month_start = ix_start.floor("d") + pd.offsets.MonthEnd(0) - pd.offsets.MonthBegin(1)
+    data.index = data.index - pd.Timedelta(ix_start - month_start)
+    
+    return data.resample('12MS').sum().values
+
+
 class MonteCarloAEP(object):
     """
     A serial (Pandas-driven) implementation of the benchmark PRUF operational
@@ -49,7 +72,7 @@ class MonteCarloAEP(object):
     """
 
     @logged_method_call
-    def __init__(self, plant, reanal_products=["merra2", "ncep2", "erai","era5"], uncertainty_meter=0.005, uncertainty_losses=0.05,
+    def __init__(self, plant, reanal_products=["merra2", "ncep2", "erai", "era5"], uncertainty_meter=0.005, uncertainty_losses=0.05,
                  uncertainty_windiness=(10, 20), uncertainty_loss_max=(10, 20),
                  uncertainty_nan_energy=0.01, time_resolution = 'M', reg_model = 'lin', ml_setup_kwargs={},
                  reg_temperature = False, reg_winddirection = False):
@@ -64,7 +87,7 @@ class MonteCarloAEP(object):
          uncertainty_windiness(:obj:`tuple`): number of years to use for the windiness correction
          uncertainty_loss_max(:obj:`tuple`): threshold for the combined availabilty and curtailment monthly loss threshold
          uncertainty_nan_energy(:obj:`float`): threshold to flag days/months based on NaNs
-         time_resolution(:obj:`string`): whether to perform the AEP calculation at monthly ('M') or daily ('D') time resolution
+         time_resolution(:obj:`string`): whether to perform the AEP calculation at monthly ('M'), daily ('D') or hourly ('H') time resolution
          reg_model(:obj:`string`): which model to use for the regression ('lin' for linear, 'gam', 'gbm', 'etr'). At monthly time resolution only linear regression is allowed because of the reduced number of data points.
          ml_setup_kwargs(:obj:`kwargs`): keyword arguments to MachineLearningSetup class
          reg_temperature(:obj:`bool`): whether to include temperature (True) or not (False) as regression input
@@ -89,12 +112,12 @@ class MonteCarloAEP(object):
         self.uncertainty_nan_energy = np.float64(uncertainty_nan_energy)
         
         # Check that selected time resolution is allowed
-        if time_resolution not in ['M','D']:
-            raise ValueError("time_res has to either be M (monthly, default) or D (daily)")
+        if time_resolution not in ['M','D','H']:
+            raise ValueError("time_res has to either be M (monthly, default) or D (daily) or H (hourly)")
         self.time_resolution = time_resolution
-        self._resample_freq = {"M": 'MS', "D": 'D'}[self.time_resolution]
-        self._hours_in_res = {"M": 30*24, "D": 1*24}[self.time_resolution]
-        self._calendar_samples = {"M": 12, "D": 365.25}[self.time_resolution]
+        self._resample_freq = {"M": 'MS', "D": 'D', 'H': 'H'}[self.time_resolution]
+        self._hours_in_res = {"M": 30*24, "D": 1*24, "H": 1}[self.time_resolution]
+        self._calendar_samples = {"M": 12, "D": 365, "H": 365*24}[self.time_resolution]
         self.num_days_lt = (31, 28.25, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
 
         # Check that choices for regression inputs are allowed
@@ -237,7 +260,7 @@ class MonteCarloAEP(object):
             if self.time_resolution == 'M':
                 y = valid_aggregate['gross_energy_gwh'] * 30 / valid_aggregate[
                     'num_days_expected']  # Normalize energy data to 30-days
-            elif self.time_resolution == 'D':
+            else:
                 y = valid_aggregate['gross_energy_gwh']
                 
             rlm = sm.RLM(y, x, M=sm.robust.norms.HuberT(
@@ -257,6 +280,8 @@ class MonteCarloAEP(object):
                 plt.ylabel('30-day normalized gross energy (GWh)')
             elif self.time_resolution == 'D':
                 plt.ylabel('Daily gross energy (GWh)')
+            elif self.time_resolution == 'H':
+                plt.ylabel('Hourly gross energy (GWh)')
         plt.tight_layout()
         return plt
 
@@ -366,7 +391,9 @@ class MonteCarloAEP(object):
             df_grouped = df.groupby(df.index.month).mean()
         elif self.time_resolution == 'D':
             df_grouped = df.groupby([(df.index.month),(df.index.day)]).mean()
-         
+        elif self.time_resolution == 'H':
+            df_grouped = df.groupby([(df.index.month),(df.index.day),(df.index.hour)]).mean()     
+            
         return df_grouped
 
     @logged_method_call
@@ -515,8 +542,7 @@ class MonteCarloAEP(object):
             rean_df['ws_dens_corr'] = mt.air_density_adjusted_wind_speed(rean_df['windspeed_ms'],
                                                                          rean_df['rho_kgm-3'])  # Density correct wind speeds
             self._reanalysis_aggregate[key] = rean_df.resample(self._resample_freq)['ws_dens_corr'].mean()  # .to_frame() # Get average wind speed by year-month
-            
-            
+                      
             if self.reg_winddirection | self.reg_temperature:
                 namescol = [key + '_' + var for var in self._rean_vars]
                 self._reanalysis_aggregate[namescol] = rean_df[self._rean_vars].resample(self._resample_freq).mean()
@@ -555,7 +581,7 @@ class MonteCarloAEP(object):
             (None)
         """
         df = self._aggregate.df
-
+        
         # isolate availabilty and curtailment values that are representative of average plant performance
         avail_valid = df.loc[df['availability_typical'],'availability_pct'].to_frame()
         curt_valid = df.loc[df['curtailment_typical'],'curtailment_pct'].to_frame()
@@ -565,9 +591,9 @@ class MonteCarloAEP(object):
         curt_long_term = self.groupby_time_res(curt_valid)['curtailment_pct']
     
         # Ensure there are 12 or 365 data points in long-term average. If not, throw an exception:
-        if (avail_long_term.shape[0] < int(self._calendar_samples)):
+        if (avail_long_term.shape[0] < self._calendar_samples):
                 raise Exception('Not all calendar days/months represented in long-term availability calculation')
-        if (curt_long_term.shape[0] < int(self._calendar_samples)):
+        if (curt_long_term.shape[0] < self._calendar_samples):
                 raise Exception('Not all calendar days/months represented in long-term curtailment calculation')
 
         self.long_term_losses = (avail_long_term, curt_long_term)
@@ -703,7 +729,7 @@ class MonteCarloAEP(object):
         if self.time_resolution == 'M':
             num_days_expected = reg_data['num_days_expected']
             mc_gross_norm = mc_gross_energy * 30 / num_days_expected  # Normalize gross energy to 30-day months
-        elif self.time_resolution == 'D':   
+        else:   
             mc_gross_norm = mc_gross_energy
             
         # Set reanalysis product
@@ -828,7 +854,7 @@ class MonteCarloAEP(object):
                 reg_inputs_por += [np.sin(np.deg2rad(self._reanalysis_por[self._run.reanalysis_product + '_wd']))]
                 reg_inputs_por += [np.cos(np.deg2rad(self._reanalysis_por[self._run.reanalysis_product + '_wd']))]
             gross_por = fitted_model.predict(np.array(pd.concat(reg_inputs_por, axis = 1)))
-                
+            
             # Create padans dataframe for gross_por and group by calendar date to have a single full year
             gross_por = self.groupby_time_res(pd.DataFrame(data=gross_por,index=self._reanalysis_por[self._run.reanalysis_product].index))
             
@@ -838,10 +864,12 @@ class MonteCarloAEP(object):
             
             # Annual values of lt gross energy, needed for IAV
             reg_inputs_lt['gross_lt'] = gross_lt
-            gross_lt_annual = reg_inputs_lt['gross_lt'].resample('12MS').sum().values            
 
+            # Annual resample starting on the first day in reg_inputs_lt
+            gross_lt_annual = get_annual_values(reg_inputs_lt['gross_lt'])
+            
             # Get long-term availability and curtailment losses, using gross_lt to weight individual monthly losses
-            [avail_lt_losses, curt_lt_losses] = self.sample_long_term_losses(reg_inputs_lt['gross_lt'])  
+            [avail_lt_losses, curt_lt_losses] = self.sample_long_term_losses(reg_inputs_lt['gross_lt'])
 
             # Assign AEP, IAV, long-term availability, and long-term curtailment to output data frame
             aep_GWh[n] = gross_lt.sum()/self._run.num_years_windiness * (1 - avail_lt_losses)
@@ -883,17 +911,17 @@ class MonteCarloAEP(object):
            :obj:`pandas.DataFrame`: the windiness-corrected or 'long-term' monthly/daily wind speeds
         """
         # Check if valid data has already been calculated and stored. If so, just return it
-        if (self._run.reanalysis_product,self. _run.num_years_windiness) in self.long_term_sampling:
-            long_term_reg_inputs = self.long_term_sampling[(self._run.reanalysis_product,self. _run.num_years_windiness)]
+        if (self._run.reanalysis_product,self._run.num_years_windiness) in self.long_term_sampling:
+            long_term_reg_inputs = self.long_term_sampling[(self._run.reanalysis_product,self._run.num_years_windiness)]
             return long_term_reg_inputs.copy()
         
         # Sample long-term wind speed values
         ws_df = self._reanalysis_aggregate[self._run.reanalysis_product].to_frame().dropna()  # Drop NA values from monthly/daily reanalysis data series
-        long_term_reg_inputs = ws_df.tail(int(self. _run.num_years_windiness * self._calendar_samples))  # Get last 'x' years of data from reanalysis product
+        long_term_reg_inputs = ws_df[ws_df.index[-1] + ws_df.index.freq - pd.offsets.DateOffset(years = self._run.num_years_windiness):] # Get last 'x' years of data from reanalysis product
 
         # Temperature and wind direction
         namescol = [self._run.reanalysis_product + '_' + var for var in self._rean_vars]
-        long_term_temp = self._reanalysis_aggregate[namescol].dropna().tail(int(self. _run.num_years_windiness * self._calendar_samples))
+        long_term_temp = self._reanalysis_aggregate[namescol].dropna()[ws_df.index[-1] + ws_df.index.freq - pd.offsets.DateOffset(years = self._run.num_years_windiness):]
         if self.reg_temperature:
             long_term_reg_inputs = pd.concat([long_term_reg_inputs, long_term_temp[self._run.reanalysis_product + '_temperature_K']], axis=1)
         if self.reg_winddirection:
@@ -901,7 +929,7 @@ class MonteCarloAEP(object):
             long_term_reg_inputs = pd.concat([long_term_reg_inputs, np.sin(np.deg2rad(wd_aggregate)), np.cos(np.deg2rad(wd_aggregate))], axis=1)
         
         # Store result in dictionary
-        self.long_term_sampling[(self._run.reanalysis_product, self. _run.num_years_windiness)] = long_term_reg_inputs
+        self.long_term_sampling[(self._run.reanalysis_product, self._run.num_years_windiness)] = long_term_reg_inputs
         
         # Return result            
         return long_term_reg_inputs.copy()
@@ -914,7 +942,7 @@ class MonteCarloAEP(object):
         are weighted by monthly long-term gross energy.
         
         Args:
-            n(:obj:`pandas.Series`): Time series of long-term gross energy
+            gross_lt(:obj:`pandas.Series`): Time series of long-term gross energy
         
         Returns:
             :obj:`float`: long-term availability loss expressed as fraction
@@ -932,4 +960,6 @@ class MonteCarloAEP(object):
         mc_curt_lt = (gross_lt_avg * mc_curt).sum()/gross_lt_avg.sum()
 
         # Return long-term availabilty and curtailment 
-        return mc_avail_lt, mc_curt_lt
+        return mc_avail_lt, mc_curt_lt 
+    
+    
