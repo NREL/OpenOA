@@ -36,24 +36,17 @@ def get_annual_values(data):
     values when the first index does not fall on the beginning of the month.
 
     Args:
-        data(:obj:`pandas.Series or pandas.DataFrame`): Input data with a DatetimeIndex index.
+        data(:obj:`pandas.Series` or :obj:`pandas.DataFrame`): Input data with a DatetimeIndex index.
 
     Returns:
         :obj:`numpy.ndarray`: Array containing annual summations for each column of the input data.
     """
     
     # shift time index to beginning of first month so resampling by 'MS' groups the data into full years 
-    # starting from the beginning
-    data.index = (
-        data.index - pd.Timedelta(
-            data.index[0]
-            - (
-                data.index[0].floor('d')
-                + pd.offsets.MonthEnd(0)
-                - pd.offsets.MonthBegin(1)
-            )
-        )
-    )
+    # starting from the beginning of the time series
+    ix_start = data.index[0]
+    month_start = ix_start.floor("d") + pd.offsets.MonthEnd(0) - pd.offsets.MonthBegin(1)
+    data.index = data.index - pd.Timedelta(ix_start - month_start)
     
     return data.resample('12MS').sum().values
 
