@@ -140,16 +140,15 @@ class Project_Engie(PlantData):
         # Note: there is no vane direction variable defined in -25, so
         # making one up
         scada_map = {
-                    "time"                 : "time",
-                    "Wind_turbine_name"    : "id",
-                    "Power_W"              : "wtur_W_avg",
-
-                    "wmet_HorWdSpd_avg"               : "wmet_wdspd_avg",
-                    "wmet_HorWdDir_avg"               : "wmet_HorWdDir_avg",
-                    "wmet_HorWdDirRel_avg"               : "wmet_VaneDir_avg",
-                    "wnac_Dir_avg"               : "wyaw_YwAng_avg",
-                    "wtow_GndCtlTmp_avg"               : "wmet_EnvTmp_avg",
-                    "wrot_BlPthAngVal_avg"               : "wrot_BlPthAngVal1_avg",
+                    "time"                              : "time",
+                    "Wind_turbine_name"                 : "id",
+                    "Power_W"                           : "wtur_W_avg",
+                    "wmet_HorWdSpd_avg"                 : "wmet_wdspd_avg",
+                    "wmet_HorWdDir_avg"                 : "wmet_HorWdDir_avg",
+                    "wmet_HorWdDirRel_avg"              : "wmet_VaneDir_avg",
+                    "wnac_Dir_avg"                      : "wyaw_YwAng_avg",
+                    "wtow_GndCtlTmp_avg"                : "wmet_EnvTmp_avg",
+                    "wrot_BlPthAngVal_avg"              : "wrot_BlPthAngVal1_avg",
                     }
 
         self._scada.df.rename(scada_map, axis="columns", inplace=True)
