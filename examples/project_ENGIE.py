@@ -144,12 +144,12 @@ class Project_Engie(PlantData):
                     "Wind_turbine_name"    : "id",
                     "Power_W"              : "wtur_W_avg",
 
-                    "Ws_avg"               : "wmet_wdspd_avg",
-                    "Wa_avg"               : "wmet_HorWdDir_avg",
-                    "Va_avg"               : "wmet_VaneDir_avg",
-                    "Ya_avg"               : "wyaw_YwAng_avg",
-                    "Ot_avg"               : "wmet_EnvTmp_avg",
-                    "Ba_avg"               : "wrot_BlPthAngVal1_avg",
+                    "wmet_HorWdSpd_avg"               : "wmet_wdspd_avg",
+                    "wmet_HorWdDir_avg"               : "wmet_HorWdDir_avg",
+                    "wmet_HorWdDirRel_avg"               : "wmet_VaneDir_avg",
+                    "wnac_Dir_avg"               : "wyaw_YwAng_avg",
+                    "wtow_GndCtlTmp_avg"               : "wmet_EnvTmp_avg",
+                    "wrot_BlPthAngVal_avg"               : "wrot_BlPthAngVal1_avg",
                     }
 
         self._scada.df.rename(scada_map, axis="columns", inplace=True)
