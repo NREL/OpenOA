@@ -89,7 +89,7 @@ class Project_Engie(PlantData):
         logger.info("Loading SCADA data")
         if scada_df is not None:
             self._scada.df = scada_df # use the provided scada dataframe
-        else
+        else:
             self._scada.load(self._path, "la-haute-borne-data-2014-2015", "csv")  # Load Scada data
         logger.info("SCADA data loaded")
 
