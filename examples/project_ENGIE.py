@@ -111,17 +111,18 @@ class Project_Engie(PlantData):
         self._scada.df = self._scada.df[(self._scada.df["Ot_avg"]>=-15.0) & (self._scada.df["Ot_avg"]<=45.0)]
 
         logger.info("Flagging unresponsive sensors")
+
         # Due to data discretization, there appear to be a lot of repeating
         # values. But these filters seem to catch the obvious unresponsive
         # sensors.
-        for id in self._scada.df.Wind_turbine_name.unique():
-            temp_flag = filters.unresponsive_flag(self._scada.df.loc[self._scada.df.Wind_turbine_name == id,'Va_avg'], 3)
-            self._scada.df.loc[(self._scada.df.Wind_turbine_name == id) \
-                & (temp_flag),['Ba_avg','P_avg','Ws_avg','Va_avg','Ot_avg', \
-                'Ya_avg','Wa_avg']] = np.nan
-            temp_flag = filters.unresponsive_flag(self._scada.df.loc[self._scada.df.Wind_turbine_name == id,'Ot_avg'], 20)
-            self._scada.df.loc[(self._scada.df.Wind_turbine_name == id) \
-                & (temp_flag),'Ot_avg'] = np.nan
+        # for id in self._scada.df.Wind_turbine_name.unique():
+        #     temp_flag = filters.unresponsive_flag(self._scada.df.loc[self._scada.df.Wind_turbine_name == id,'Va_avg'], 3)
+        #     self._scada.df.loc[(self._scada.df.Wind_turbine_name == id) \
+        #         & (temp_flag),['Ba_avg','P_avg','Ws_avg','Va_avg','Ot_avg', \
+        #         'Ya_avg','Wa_avg']] = np.nan
+        #     temp_flag = filters.unresponsive_flag(self._scada.df.loc[self._scada.df.Wind_turbine_name == id,'Ot_avg'], 20)
+        #     self._scada.df.loc[(self._scada.df.Wind_turbine_name == id) \
+        #         & (temp_flag),'Ot_avg'] = np.nan
 
         # Put power in watts
         self._scada.df["Power_W"] = self._scada.df["P_avg"] * 1000
