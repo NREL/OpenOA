@@ -1,9 +1,8 @@
 """Creates the QualityControlDiagnosticSuite and specific data-based subclasses."""
 
-
 from abc import abstractmethod
 from typing import List, Tuple, Union
-from datetime import time, datetime
+from datetime import datetime
 
 import pytz
 import h5pyd
