@@ -3,7 +3,7 @@
 
 from abc import abstractmethod
 from typing import List, Tuple, Union
-from datetime import datetime
+from datetime import time, datetime
 
 import pytz
 import h5pyd
@@ -22,7 +22,7 @@ Number = Union[int, float]
 logger = logging.getLogger(__name__)
 
 
-def read_data(data: Union[pd.DataFrame, str]) -> pd.DataFrame:
+def _read_data(data: Union[pd.DataFrame, str]) -> pd.DataFrame:
     """Takes the `DataFrame` or file path and returns a `DataFrame`
 
     Args:
@@ -34,6 +34,29 @@ def read_data(data: Union[pd.DataFrame, str]) -> pd.DataFrame:
     if isinstance(data, pd.DataFrame):
         return data
     return pd.read_csv(data)
+
+
+def _remove_tz(df, t_local_column):
+    """Identify the non-timestamp elements in the DataFrame timestamp column and return
+    the valid integer-indices and their corresponding timestamps.
+
+    Args:
+        df (:obj:`pandas.DataFrame`): The DataFrame of interest.
+        t_local_column (:obj:`str`): The name of the timestamp column.
+
+    Returns:
+        :obj:`numpy.ndarray`: The filtered integer-indices that can be used in a df.iloc[] call.
+        :obj:`numpy.ndarray`: The filtered timestamps.
+    """
+    arr = np.array(
+        [
+            [ix, el.tz_localize(None)] if not isinstance(el, float) else [-1, el]
+            for ix, el in enumerate(df[t_local_column].values)
+        ]
+    )
+    ix_filter = arr[:, 0][arr[:, 0] >= 0]
+    time_stamps = arr[:, 1][arr[:, 0] >= 0]
+    return ix_filter, time_stamps
 
 
 class QualityControlDiagnosticSuite:
@@ -72,10 +95,12 @@ class QualityControlDiagnosticSuite:
 
         logger.info("Initializing QC_Automation Object")
 
-        self._df = read_data(data)
+        self._df = _read_data(data)
         self._ws = ws_field
         self._w = power_field
         self._t = time_field
+        self._t_utc = f"{time_field}_utc"
+        self._t_local = f"{time_field}_localized"
         self._id = id_field
         self._freq = freq
         self._lat_lon = lat_lon
@@ -104,7 +129,6 @@ class QualityControlDiagnosticSuite:
         dt_col = dt.index.to_pydatetime()
 
         # Determine the Daylight Savings Time status and UTC offset
-        # dt[self._dst] = [el != self._non_dst_offset for el in dt_col]
         dt[self._offset] = [el.utcoffset() for el in dt_col]
         dt[self._dst] = (dt[self._offset] != self._non_dst_offset).astype(bool)
 
@@ -117,10 +141,30 @@ class QualityControlDiagnosticSuite:
         # Convert the timestamps to datetime.datetime objects
         dt_col = self._df[self._t].values
 
-        self._df[self._t] = pd.to_datetime(
-            [dateutil.parser.parse(el).astimezone(tz.tzutc()) for el in dt_col]
-        ).tz_convert("UTC")
-        self._df = self._df.set_index(self._t, drop=False)
+        # Check for raw timestamp inputs or pre-formatted
+        if isinstance(dt_col[0], str):
+            dt_col = [dateutil.parser.parse(el) for el in dt_col]
+            self._df[self._t] = pd.to_datetime(dt_col)
+
+        # Create the localized time-stamp
+        try:
+            self._df[self._t_local] = self._df[self._t].tz_localize(self._local_tz)
+        except TypeError:  # catches error for localization
+            self._df[self._t_local] = pd.to_datetime(dt_col).tz_localize(
+                self._local_tz, ambiguous=True
+            )
+
+        self._df = self._df.set_index(pd.DatetimeIndex(self._df[self._t_local]))
+
+        # Create the UTC-converted time-stamp
+        try:
+            self._df[self._t_utc] = pd.to_datetime(
+                [el.astimezone(tz.tzutc()) for el in dt_col]
+            ).tz_convert("UTC")
+        except AttributeError:  # catches numpy datetime error for astimezone() not existing
+            self._df = self._df.tz_convert("UTC")
+            self._df[self._t_utc] = self._df.index
+
         self._df = self._determine_offset_dst(self._df)
 
     @abstractmethod
@@ -179,6 +223,28 @@ class QualityControlDiagnosticSuite:
         self._max_min["max"] = self._df.max()
         self._max_min["min"] = self._df.min()
 
+    def _get_time_window(self, df, ix, hour_window):
+        """Retrieves the time window in a DataFrame with likely confusing
+        implementation of timezones.
+
+        Args:
+            df (:obj:`pandas.DataFrame`): The DataFrame of interest.
+            ix (:obj:`pandas._libs.tslibs.timestamps.Timestamp`]): The starting
+                Timestamp on which to base the time window.
+            hour_window (:obj:`pandas._libs.tslibs.timedeltas.Timedelta`): The number
+                length of the window, in hours.
+
+        Returns:
+            (:obj:`pandas.DataFrame`): The filtered DataFrame object
+        """
+        if ix.tz is None:
+            start = np.where(df[self._t] == ix - hour_window)[0][0]
+            end = np.where(df[self._t] == ix + hour_window)[0][0]
+        if str(ix.tz) == "UTC":
+            start = np.where(df[self._t_utc] == ix - hour_window)[0][0]
+            end = np.where(df[self._t_utc] == ix + hour_window)[0][0]
+        return df.iloc[start:end]
+
     def daylight_savings_plot(self, hour_window=3):
 
         """
@@ -201,22 +267,35 @@ class QualityControlDiagnosticSuite:
             columns=df_full.columns,
             index=missing,
         )
-        missing_df[self._t] = pd.to_datetime(missing.values).tz_localize("UTC")
-        missing_df = self._determine_offset_dst(missing_df)
+        missing = pd.to_datetime(missing.values)
+        missing_df[self._t] = missing
+        try:
+            missing_df[self._t_local] = missing_df[self._t].tz_localize(self._local_tz)
+            missing_df[self._t_utc] = pd.to_datetime(missing_df[self._t_local].values).tz_convert(
+                "UTC"
+            )
+            missing_df = self._determine_offset_dst(missing_df)
+        except pytz.NonExistentTimeError:
+            pass
+
+        missing_df.tz_localize("UTC")
 
         # Append and resort the missing timestamps, then convert to local time
         df_full = df_full.append(missing_df).sort_values(self._t)
-        df_full = df_full.tz_convert(self._local_tz)
+        try:
+            df_full = df_full.tz_convert(self._local_tz)
+        except TypeError:
+            pass
         self._df_full = df_full
 
-        years = df_full.index.year.unique()  # Years in data record
+        years = df_full[self._t].dt.year.unique()  # Years in data record
         num_years = len(years)
         hour_window = pd.Timedelta(hours=hour_window)
 
         plt.figure(figsize=(12, 20))
 
         for i, year in enumerate(years):
-            year_data = df_full.loc[df_full.index.year == year]
+            year_data = df_full.loc[df_full[self._t].dt.year == year]
             dst_dates = np.where(year_data[self._dst].values)[0]
 
             # Break the plotting loop if there is a partial year without DST in the data
@@ -228,23 +307,49 @@ class QualityControlDiagnosticSuite:
             end_ix = year_data.iloc[dst_dates[-1] + 1].name
 
             # Create the data subsets for plotting the appropriate window
-            data_spring = year_data.loc[start_ix - hour_window : start_ix + hour_window]
-            data_fall = year_data.loc[end_ix - hour_window : end_ix + hour_window]
+            data_spring = self._get_time_window(year_data, start_ix, hour_window)
+            data_fall = self._get_time_window(year_data, end_ix, hour_window)
 
             # Plot each as side-by-side subplots
             plt.subplot(num_years, 2, 2 * i + 1)
             if np.sum(~np.isnan(data_spring[self._w])) > 0:
-                plt.plot(data_spring[self._w])
+                plt.plot(
+                    data_spring[self._t],
+                    data_spring[self._w],
+                    label="Original Timestamp",
+                    c="tab:blue",
+                )
+                ix_filter, time_stamps = _remove_tz(data_spring, self._t_utc)
+                plt.plot(
+                    time_stamps,
+                    data_spring.iloc[ix_filter][self._w],
+                    label="Timezone-Adjusted Timestamp",
+                    c="tab:orange",
+                )
             plt.title(f"{year}, Spring")
             plt.ylabel("Power")
             plt.xlabel("Date")
+            plt.legend(loc="lower left")
 
             plt.subplot(num_years, 2, 2 * i + 2)
             if np.sum(~np.isnan(data_fall[self._w])) > 0:
-                plt.plot(data_fall[self._w])
+                plt.plot(
+                    data_fall[self._t], data_fall[self._w], label="Original Timestamp", c="tab:blue"
+                )
+                ix_filter, time_stamps = _remove_tz(data_fall, self._t_utc)
+                ix_filter = np.intersect(
+                    ix_filter, np.where(~data_fall[self._w].isna().values)
+                )  # NOTE: NOT GOING TO WORK
+                plt.plot(
+                    time_stamps,
+                    data_fall.iloc[ix_filter][self._w],
+                    label="Timezone-Adjusted Timestamp",
+                    c="tab:orange",
+                )
             plt.title(f"{year}, Fall")
             plt.ylabel("Power")
             plt.xlabel("Date")
+            plt.legend(loc="lower left")
 
         plt.tight_layout()
         plt.show()
