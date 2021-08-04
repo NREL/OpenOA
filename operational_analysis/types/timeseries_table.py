@@ -16,17 +16,19 @@ be defined at all time points).
 
 import datetime
 import importlib
+
 import pandas as pd
 
-from operational_analysis import logged_method_call
-from operational_analysis import logging
+from operational_analysis import logging, logged_method_call
+
+
 logger = logging.getLogger(__name__)
 
 
 # The abstract class sets the interface for the timeseries table
 class AbstractTimeseriesTable:
     df = None
-    _time_field = 'time'
+    _time_field = "time"
     _metric_fields = []
 
     def __init__(self):
@@ -110,7 +112,7 @@ class PandasTimeseriesTable(AbstractTimeseriesTable):
     """
 
     def __init__(self, *args, **kwargs):
-        self._pd = __import__('pandas', globals(), locals(), [], 0)
+        self._pd = __import__("pandas", globals(), locals(), [], 0)
 
     @logged_method_call
     def save(self, path, name, format="csv"):
@@ -160,8 +162,8 @@ class PandasTimeseriesTable(AbstractTimeseriesTable):
         for col in list(std.keys()):
             logging.debug("checking  {} is astype {} ".format(col, std[col]))
             if col not in self.df.columns:
-                if std[col] == 'float64':
-                    self.df[col] = float('nan')
+                if std[col] == "float64":
+                    self.df[col] = float("nan")
                 else:
                     self.df[col] = None
             self.df[col] = self.df[col].astype(std[col])
@@ -178,21 +180,27 @@ class PandasTimeseriesTable(AbstractTimeseriesTable):
 
     def validate(self, schema):
         """ Validate this timeseriestable object against its schema.
-        
+
         Returns:
             (bool): True if valid, Rasies an exception if not valid."""
         if schema["type"] != "timeseries":
-            raise Exception("Incompatible schema type {} applied to TimeseriesTable".format(schema["type"]))
+            raise Exception(
+                "Incompatible schema type {} applied to TimeseriesTable".format(schema["type"])
+            )
 
         df_schema = self.schema
         for field in schema["fields"]:
             if field["name"] in df_schema.keys():
-                assert df_schema[field["name"]] == field["type"], \
-                    "Incompatible type for field {}. Expected {} but got {}".format( \
-                        field["name"], field["type"], df_schema[field["name"]])
+                assert (
+                    df_schema[field["name"]] == field["type"]
+                ), "Incompatible type for field {}. Expected {} but got {}".format(
+                    field["name"], field["type"], df_schema[field["name"]]
+                )
                 del df_schema[field["name"]]
 
-        assert len(df_schema) == 0, "Extra columns are present in TimeseriesTable: \n {}".format(df_schema)
+        assert len(df_schema) == 0, "Extra columns are present in TimeseriesTable: \n {}".format(
+            df_schema
+        )
 
         return True
 
@@ -236,7 +244,7 @@ class PandasTimeseriesTable(AbstractTimeseriesTable):
         if col is None:
             col = self._time_field
         logger.debug("Running to_datetime on {}  ".format(col))
-        self.df[col] = self.df[col].apply(lambda x: pd.to_datetime(x, unit='s'), 1)
+        self.df[col] = self.df[col].apply(lambda x: pd.to_datetime(x, unit="s"), 1)
 
     def head(self):
         """ Head data """
@@ -247,11 +255,11 @@ class PandasTimeseriesTable(AbstractTimeseriesTable):
         """
         logger.debug("Mapping col:{}".format(col))
         if col not in self.df.columns:
-            self.df[col] = 'unknown'
+            self.df[col] = "unknown"
 
         self.df[col] = self.df[col].apply(func, 1)
 
-    def pandas_merge(self, right, right_cols, how='left', on='id'):
+    def pandas_merge(self, right, right_cols, how="left", on="id"):
         """ Run merge with data """
         logger.debug("merging right:{} right_cols:{} ".format(right, right_cols))
         self.df = self.df.merge(right.loc[:, right_cols], how=how, on=on)
@@ -278,7 +286,9 @@ class PandasTimeseriesTable(AbstractTimeseriesTable):
             stop (datetime):  stop of time-sereies trim
         """
         logger.debug("trim_timeseries start:{} stop:{} ".format(start, stop))
-        self.df = self.df.loc[(self.df[self._time_field] >= start) & (self.df[self._time_field] <= stop), :]
+        self.df = self.df.loc[
+            (self.df[self._time_field] >= start) & (self.df[self._time_field] <= stop), :
+        ]
 
     def max(self):
         """ Find maximum timestamp value """
@@ -291,28 +301,33 @@ class PandasTimeseriesTable(AbstractTimeseriesTable):
 
 class SparkTimeseriesTable(AbstractTimeseriesTable):
     def __init__(self, *args, **kwargs):
-        self._f = importlib.import_module('pyspark.sql.functions')
-        self._t = importlib.import_module('pyspark.sql.types')
-        self._sql = importlib.import_module('pyspark.sql')
-        self._pyspark = importlib.import_module('pyspark')
+        self._f = importlib.import_module("pyspark.sql.functions")
+        self._t = importlib.import_module("pyspark.sql.types")
+        self._sql = importlib.import_module("pyspark.sql")
+        self._pyspark = importlib.import_module("pyspark")
         self._sc = self._pyspark.SparkContext.getOrCreate()
         self._sqlContext = self._sql.SQLContext.getOrCreate(self._sc)
-        self.type_map = {"datetime64[ns]": self._t.TimestampType(),
-                         "string": self._t.StringType(),
-                         "object": self._t.StringType(),
-                         "float64": self._t.DoubleType()}
+        self.type_map = {
+            "datetime64[ns]": self._t.TimestampType(),
+            "string": self._t.StringType(),
+            "object": self._t.StringType(),
+            "float64": self._t.DoubleType(),
+        }
 
     def save(self, path, name, format="parquet"):
         if format != "parquet":
             raise NotImplementedError("Cannot save to format %s yet" % (format,))
-        self.df.write.mode('overwrite').parquet("%s/%s.parquet" % (path, name))
+        self.df.write.mode("overwrite").parquet("%s/%s.parquet" % (path, name))
 
     def load(self, path, name, format="parquet", nrows=None):
         if format == "parquet":
-            self.df = self._sqlContext.read.parquet('%s/%s.parquet' % (path, name))
+            self.df = self._sqlContext.read.parquet("%s/%s.parquet" % (path, name))
         elif format == "csv":
-            self.df = self._sqlContext.read.format("com.databricks.spark.csv") \
-                .options(header='true', inferschema='true').load("%s/%s.csv" % (path, name))
+            self.df = (
+                self._sqlContext.read.format("com.databricks.spark.csv")
+                .options(header="true", inferschema="true")
+                .load("%s/%s.csv" % (path, name))
+            )
         if nrows is not None:
             self.df = self.df.limit(nrows)
 
@@ -365,7 +380,9 @@ class SparkTimeseriesTable(AbstractTimeseriesTable):
 
     def pandas_merge(self, right, right_cols, how, on):
         right = right.loc[:, right_cols]
-        schema = [self._t.StructField(x, self.type_map[right[x].dtype.name], True) for x in right_cols]
+        schema = [
+            self._t.StructField(x, self.type_map[right[x].dtype.name], True) for x in right_cols
+        ]
         schema = self._t.StructType(schema)
         right = self._sqlContext.createDataFrame(right, schema)
         self.df = self.df.join(right, on, how)
@@ -393,7 +410,7 @@ class TimeseriesTable:
     _classes = {
         "spark": SparkTimeseriesTable,
         "pandas": PandasTimeseriesTable,
-        "dask": DaskTimeseriesTable
+        "dask": DaskTimeseriesTable,
     }
 
     @staticmethod

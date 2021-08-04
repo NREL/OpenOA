@@ -36,7 +36,7 @@ energy industry.
 - Reliability
     - Fault Prediction
     - Anomaly detection
-    
+
 ### Software Development
 
 - Data Standardization

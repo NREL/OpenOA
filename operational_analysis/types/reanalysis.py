@@ -1,3 +1,5 @@
+import importlib
+
 from operational_analysis.types import timeseries_table
 
 
@@ -16,8 +18,8 @@ class ReanalysisData(object):
             self._product[product] = timeseries_table.TimeseriesTable.factory(engine)
 
         if engine == "spark":
-            self._sql = importlib.import_module('pyspark.sql')
-            self._pyspark = importlib.import_module('pyspark')
+            self._sql = importlib.import_module("pyspark.sql")
+            self._pyspark = importlib.import_module("pyspark")
             self._sc = self._pyspark.SparkContext.getOrCreate()
             self._sqlContext = self._sql.SQLContext.getOrCreate(self._sc)
 

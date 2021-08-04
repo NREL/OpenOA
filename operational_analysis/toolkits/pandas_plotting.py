@@ -909,6 +909,6 @@ def plot_windfarm(
     plot_map.add_tile(MAP_TILES[tile_name])
 
     # Plot the asset devices
-    markers = plot_map.scatter(x="x", y="y", source=source, size=marker_size, **marker_options)
+    plot_map.scatter(x="x", y="y", source=source, size=marker_size, **marker_options)
 
     return plot_map
