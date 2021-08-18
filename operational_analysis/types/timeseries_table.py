@@ -337,7 +337,7 @@ class SparkTimeseriesTable(AbstractTimeseriesTable):
                 self.df = self.df.withColumnRenamed(mapping[k], k)
 
     def copy_column(self, to, fro):
-        self.df = self.df.withColumn(df[fro])
+        self.df = self.df.withColumn(to, self.df[fro])
 
     def ensure_columns(self, std):
         for col in list(std.keys()):
