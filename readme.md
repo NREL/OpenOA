@@ -39,7 +39,7 @@ conda create --name openoa-env python=3.8
 conda activate openoa-env
 ```
 
-### Installation:
+### Installation
 
 Clone the repository and install the library and its dependencies using pip:
 
