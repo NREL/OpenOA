@@ -54,11 +54,15 @@ work is fully covered.
 
 ## Coding Style
 
-This code follows the PEP 8 style guide and uses the ``pycodestyle`` linter to check for compliance.
-The only exception is the line length limit of 120 characters.
+This code uses a ``pre-commit`` workflow where code styling and linting is taken care of when a user
+commits their code. Specifically, this code utilizes ``black`` for automatic formatting (line length, quotation usage, hanging
+lines, etc.), ``isort`` for automatic import sorting, and ``flake8`` for linting.
+
+To activate the ``pre-commit`` workflow, the user must install the develop version as outlined in the
+[Readme](https://github.com/NREL/OpenOA/tree/develop#Development), and run the following line:
 
 ```
-pylint --max-line-length=120 operational_analysis
+pre-commit install
 ```
 
 ## Documentation Style
