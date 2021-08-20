@@ -1,11 +1,13 @@
 import io
-import json
 import os
+import json
+import itertools
 
 from dateutil.parser import parse
 
-from .asset import AssetData
 from operational_analysis.types import timeseries_table
+
+from .asset import AssetData
 from .reanalysis import ReanalysisData
 
 
@@ -49,7 +51,7 @@ class PlantData(object):
         """
         if not schema:
             dir = os.path.dirname(os.path.abspath(__file__))
-            schema = dir+"/plant_schema.json"
+            schema = dir + "/plant_schema.json"
         with open(schema) as schema_file:
             self._schema = json.load(schema_file)
 
@@ -68,7 +70,15 @@ class PlantData(object):
 
         self._status_labels = ["full", "unavailable"]
 
-        self._tables = ["_scada", "_meter", "_status", "_tower", "_asset", "_curtail", "_reanalysis"]
+        self._tables = [
+            "_scada",
+            "_meter",
+            "_status",
+            "_tower",
+            "_asset",
+            "_curtail",
+            "_reanalysis",
+        ]
 
     def amend_std(self, dfname, new_fields):
         """
@@ -85,7 +95,9 @@ class PlantData(object):
         """
 
         k = "_%s_std" % (dfname,)
-        setattr(self, k, dict(itertools.chain(iter(getattr(self, k).items()), iter(new_fields.items()))))
+        setattr(
+            self, k, dict(itertools.chain(iter(getattr(self, k).items()), iter(new_fields.items())))
+        )
 
     def get_time_range(self):
         """Get time range as tuple
@@ -134,7 +146,7 @@ class PlantData(object):
             else:
                 meta_dict[ca] = ci
 
-        with io.open(os.path.join(path, "metadata.json"), 'w', encoding="utf-8") as outfile:
+        with io.open(os.path.join(path, "metadata.json"), "w", encoding="utf-8") as outfile:
             outfile.write(str(json.dumps(meta_dict, ensure_ascii=False)))
 
     def load(self, path=None):
@@ -153,8 +165,8 @@ class PlantData(object):
             getattr(self, df).load(path, df)
 
         meta_path = os.path.join(path, "metadata.json")
-        if (os.path.exists(meta_path)):
-            with io.open(os.path.join(path, "metadata.json"), 'r') as infile:
+        if os.path.exists(meta_path):
+            with io.open(os.path.join(path, "metadata.json"), "r") as infile:
                 meta_dict = json.load(infile)
                 for ca, ci in meta_dict.items():
                     if ca in ["_start_time", "_stop_time"]:
@@ -164,7 +176,6 @@ class PlantData(object):
     def ensure_columns(self):
         """@deprecated Ensure all dataframes contain necessary columns and format as needed"""
         raise NotImplementedError("ensure_columns has been deprecated. Use plant.validate instead.")
-
 
     def validate(self, schema=None):
 
@@ -181,21 +192,42 @@ class PlantData(object):
 
         return True
 
-
     def merge_asset_metadata(self):
         """Merge metadata from the asset table into the scada and tower tables"""
-        if (not (self._scada.is_empty()) and (len(self._asset.turbine_ids()) > 0)):
-            self._scada.pandas_merge(self._asset.df, ["latitude", "longitude", "rated_power_kw", "id",
-                                                      "nearest_turbine_id", "nearest_tower_id"], "left", on="id")
-        if (not (self._tower.is_empty()) and (len(self._asset.tower_ids()) > 0)):
-            self._tower.pandas_merge(self._asset.df, ["latitude", "longitude", "rated_power_kw", "id",
-                                                      "nearest_turbine_id", "nearest_tower_id"], "left", on="id")
+        if not (self._scada.is_empty()) and (len(self._asset.turbine_ids()) > 0):
+            self._scada.pandas_merge(
+                self._asset.df,
+                [
+                    "latitude",
+                    "longitude",
+                    "rated_power_kw",
+                    "id",
+                    "nearest_turbine_id",
+                    "nearest_tower_id",
+                ],
+                "left",
+                on="id",
+            )
+        if not (self._tower.is_empty()) and (len(self._asset.tower_ids()) > 0):
+            self._tower.pandas_merge(
+                self._asset.df,
+                [
+                    "latitude",
+                    "longitude",
+                    "rated_power_kw",
+                    "id",
+                    "nearest_turbine_id",
+                    "nearest_tower_id",
+                ],
+                "left",
+                on="id",
+            )
 
     def prepare(self):
         """Prepare this object for use by loading data and doing essential preprocessing."""
         self.ensure_columns()
         if not ((self._scada.is_empty()) or (self._tower.is_empty())):
-            self._asset.prepare(self._scada.unique("id"), self._tower.unique('id'))
+            self._asset.prepare(self._scada.unique("id"), self._tower.unique("id"))
         self.merge_asset_metadata()
 
     @property

@@ -1,5 +1,6 @@
 import random
 import unittest
+from test import example_data_path_str
 
 import numpy as np
 import pandas as pd
@@ -18,7 +19,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
     def setUp(self):
         reset_prng()
         # Set up data to use for testing (ENGIE example plant)
-        self.project = Project_Engie("./examples/data/la_haute_borne")
+        self.project = Project_Engie(example_data_path_str)
         self.project.prepare()
 
     # Test inputs to the regression model, at monthly time resolution

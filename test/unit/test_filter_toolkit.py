@@ -18,7 +18,25 @@ class SimpleFilters(unittest.TestCase):
 
     def test_unresponsive_flag(self):
         x = pd.Series(np.array([-1, -1, -1, 2, 2, 2, 3, 4, 5, 1, 1, 1, 1, 3, 3]))
-        y = pd.Series([True, True, True, True, True, True, False, False, False, True, True, True, True, False, False])
+        y = pd.Series(
+            [
+                True,
+                True,
+                True,
+                True,
+                True,
+                True,
+                False,
+                False,
+                False,
+                True,
+                True,
+                True,
+                True,
+                False,
+                False,
+            ]
+        )
         y_test = filters.unresponsive_flag(x, threshold=3)
         self.assertTrue(y.equals(y_test))
 
@@ -54,5 +72,5 @@ class SimpleFilters(unittest.TestCase):
         pass
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

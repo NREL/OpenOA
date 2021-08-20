@@ -44,4 +44,3 @@ To interact with how each of these components of OpenOA are used, please visit o
     types.rst
     contributing.rst
     credit.rst
-

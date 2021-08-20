@@ -15,8 +15,8 @@ machine learning algorithms. Specifically, this toolkit constrains the following
 
     1. The learning algorithms available
 
-    These include extremely randomized trees, gradient boosting, and a 
-    generalized additive model (from pyGAM library, not SciKit-Learn). 
+    These include extremely randomized trees, gradient boosting, and a
+    generalized additive model (from pyGAM library, not SciKit-Learn).
     These algorithms have been used extensively at NREL and have been
     found to provide robust results for a range of turbine and wind plant power
     analyses.
