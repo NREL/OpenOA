@@ -71,15 +71,11 @@ pip install --upgrade pywin32==255
 
 ### Development
 
-Development dependencies are provided through the develop extra flag in setup.py. Here, we install OpenOA, with development dependencies, in editable mode:
+Development dependencies are provided through the develop extra flag in setup.py. Here, we install OpenOA, with development dependencies, in editable mode, and activate the pre-commit workflow (note: this second step must be done before committing any
+changes):
 
 ```
 pip install -e "./OpenOA[develop]"
-```
-
-Optionally, activate git precommit to automatically run the linting pipeline for committed files:
-
-```
 pre-commit install
 ```
 
