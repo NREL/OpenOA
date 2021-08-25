@@ -2,7 +2,7 @@
 
 from abc import abstractmethod
 from typing import List, Tuple, Union
-from datetime import datetime
+from datetime import time, datetime
 
 import pytz
 import h5pyd
@@ -75,6 +75,7 @@ class QualityControlDiagnosticSuite:
         freq: str = "10T",
         lat_lon: Tuple[Number, Number] = (0, 0),
         local_tz: str = "UTC",
+        timezone_aware: bool = False,
     ):
         """
         Initialize QCAuto object with data and parameters.
@@ -90,6 +91,8 @@ class QualityControlDiagnosticSuite:
          local_tz(:obj: 'String'): The `pytz`-compatible timezone for local time reference. Use `get_country_timezones()` to see
             which timezones are available for your locality, by default UTC. This should be in the format of "Country/City"
             or "Region/City" such as "America/Denver" or "Europe/Paris".
+         timezone_aware(:obj: `bool`): If True, this indicates the `time_field` column has timezone information embedded, and if
+            False, then there is no timezone information, by default False.
         """
 
         logger.info("Initializing QC_Automation Object")
@@ -105,6 +108,7 @@ class QualityControlDiagnosticSuite:
         self._lat_lon = lat_lon
         self._local_tz = local_tz
         self._local_ptz = pytz.timezone(local_tz)
+        self._tz_aware = timezone_aware
         self._offset = "utc_offset"
         self._dst = "is_dst"
         self._non_dst_offset = self._local_ptz.localize(datetime(2021, 1, 1)).utcoffset()
@@ -143,16 +147,15 @@ class QualityControlDiagnosticSuite:
         # Check for raw timestamp inputs or pre-formatted
         if isinstance(dt_col[0], str):
             dt_col = [dateutil.parser.parse(el) for el in dt_col]
-            self._df[self._t] = pd.to_datetime(dt_col)
 
-        # Create the localized time-stamp
-        try:
-            self._df[self._t_local] = self._df[self._t].tz_localize(self._local_tz)
-        except TypeError:  # catches error for localization
-            self._df[self._t_local] = pd.to_datetime(dt_col).tz_localize(
-                self._local_tz, ambiguous=True
-            )
+        if self._tz_aware:
+            pd_dt_col = pd.to_datetime(dt_col, utc=True).tz_convert(self._local_tz)
+            self._df[self._t_local] = pd_dt_col
+        else:
+            pd_dt_col = pd.to_datetime(dt_col)
+            self._df[self._t_local] = pd_dt_col.tz_localize(self._local_tz, ambiguous=True)
 
+        self._df[self._t] = pd_dt_col
         self._df = self._df.set_index(pd.DatetimeIndex(self._df[self._t_local]))
 
         # Create the UTC-converted time-stamp
@@ -237,11 +240,13 @@ class QualityControlDiagnosticSuite:
             (:obj:`pandas.DataFrame`): The filtered DataFrame object
         """
         if ix.tz is None:
-            start = np.where(df[self._t] == ix - hour_window)[0][0]
-            end = np.where(df[self._t] == ix + hour_window)[0][0]
-        if str(ix.tz) == "UTC":
-            start = np.where(df[self._t_utc] == ix - hour_window)[0][0]
-            end = np.where(df[self._t_utc] == ix + hour_window)[0][0]
+            col = self._t
+        elif str(ix.tz) == "UTC":
+            col = self._t_utc
+        else:
+            col = self._t_local
+        start = np.where(df[col] == ix - hour_window)[0][0]
+        end = np.where(df[col] == ix + hour_window)[0][0]
         return df.iloc[start:end]
 
     def daylight_savings_plot(self, hour_window=3):
@@ -267,17 +272,23 @@ class QualityControlDiagnosticSuite:
             index=missing,
         )
         missing = pd.to_datetime(missing.values)
-        missing_df[self._t] = missing
+        if self._tz_aware:
+            missing_df[self._t] = missing.tz_localize(self._local_tz)
+        else:
+            missing_df[self._t] = missing
         try:
-            missing_df[self._t_local] = missing_df[self._t].tz_localize(self._local_tz)
-            missing_df[self._t_utc] = pd.to_datetime(missing_df[self._t_local].values).tz_convert(
-                "UTC"
-            )
+            missing_local = missing.tz_localize(self._local_tz)
+            missing_df[self._t_local] = missing_local
+            try:
+                missing_df[self._t_utc] = missing_local.tz_convert("UTC")
+            except TypeError:
+                missing_df[self._t_utc] = missing_local.tz_localize("UTC")
             missing_df = self._determine_offset_dst(missing_df)
         except pytz.NonExistentTimeError:
             pass
 
-        missing_df.tz_localize("UTC")
+        if self._tz_aware:
+            missing_df = missing_df.set_index(missing_df[self._t_utc], drop=False)
 
         # Append and resort the missing timestamps, then convert to local time
         df_full = df_full.append(missing_df).sort_values(self._t)
@@ -336,7 +347,7 @@ class QualityControlDiagnosticSuite:
                     data_fall[self._t], data_fall[self._w], label="Original Timestamp", c="tab:blue"
                 )
                 ix_filter, time_stamps = _remove_tz(data_fall, self._t_utc)
-                ix_filter = np.intersect(
+                ix_filter = np.intersect1d(
                     ix_filter, np.where(~data_fall[self._w].isna().values)
                 )  # NOTE: NOT GOING TO WORK
                 plt.plot(
@@ -429,6 +440,7 @@ class WindToolKitQualityControlDiagnosticSuite(QualityControlDiagnosticSuite):
         freq: str = "10T",
         lat_lon: Tuple[Number, Number] = (0, 0),
         local_tz: str = "UTC",
+        timezone_aware: bool = False,
         check_tz: bool = False,
     ):
         """
@@ -445,6 +457,8 @@ class WindToolKitQualityControlDiagnosticSuite(QualityControlDiagnosticSuite):
          local_tz(:obj: 'String'): The `pytz`-compatible timezone for local time reference. Use `get_country_timezones()` to see
             which timezones are available for your locality, by default UTC. This should be in the format of "Country/City"
             or "Region/City" such as "America/Denver" or "Europe/Paris".
+         timezone_aware(:obj: `bool`): If True, this indicates the `time_field` column has timezone information embedded, and if
+            False, then there is no timezone information, by default False.
          check_tz(:obj: 'bool'): Boolean on whether to use WIND Toolkit data to assess timezone of data, by default False. This
             should only be set to `True` when the `lat_lon` fall within the WIND Toolkit parameters.
         """
@@ -457,6 +471,7 @@ class WindToolKitQualityControlDiagnosticSuite(QualityControlDiagnosticSuite):
             freq=freq,
             lat_lon=lat_lon,
             local_tz=local_tz,
+            timezone_aware=timezone_aware,
         )
         self._check_tz = check_tz
 
