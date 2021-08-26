@@ -35,7 +35,7 @@ def _read_data(data: Union[pd.DataFrame, str]) -> pd.DataFrame:
     return pd.read_csv(data)
 
 
-def _remove_tz(df, t_local_column):
+def _remove_tz(df: pd.DataFrame, t_local_column: str) -> Tuple[np.ndarray, np.ndarray]:
     """Identify the non-timestamp elements in the DataFrame timestamp column and return
     a truth array for filtering the values and the timezone-naive timestamps.
 
@@ -142,7 +142,10 @@ class QualityControlDiagnosticSuite:
         return dt
 
     def _convert_datetime_column(self) -> None:
-        """Converts the column of timestamps to a UTC-encoded `pd.DateTimeIndex`."""
+        """Converts the passed timestamp data to a pandas-encoded Datetime, and creates a
+        corresponding localized and UTC timestamp using the `time_field` column name with either
+        "localized" or "utc", respectively.
+        """
         # Convert the timestamps to datetime.datetime objects
         dt_col = self._df[self._t].values
 
@@ -304,7 +307,7 @@ class QualityControlDiagnosticSuite:
         num_years = len(years)
         hour_window = pd.Timedelta(hours=hour_window)
 
-        plt.figure(figsize=(12, 20))
+        plt.figure(figsize=(14, 20))
 
         for i, year in enumerate(years):
             year_data = df_full.loc[df_full[self._t].dt.year == year]
@@ -322,22 +325,35 @@ class QualityControlDiagnosticSuite:
             data_spring = self._get_time_window(year_data, start_ix, hour_window)
             data_fall = self._get_time_window(year_data, end_ix, hour_window)
 
+            data_spring = data_spring.sort_values(
+                [self._t, self._w], na_position="first"
+            ).drop_duplicates(subset=self._t, keep="last")
+            data_fall = data_fall.sort_values(
+                [self._t, self._w], na_position="first"
+            ).drop_duplicates(subset=self._t, keep="last")
+
             # Plot each as side-by-side subplots
             plt.subplot(num_years, 2, 2 * i + 1)
             if np.sum(~np.isnan(data_spring[self._w])) > 0:
-                na_filter = np.all(data_spring[[self._t, self._w]].notna().values, axis=1)
-                plt.plot(
-                    data_spring[self._t][na_filter],
-                    data_spring[self._w][na_filter],
-                    label="Original Timestamp",
-                    c="tab:blue",
-                )
-                ix_filter, time_stamps = _remove_tz(data_spring, self._t_utc)
-                ix_filter &= np.all(data_spring[[self._t_utc, self._w]].notna().values, axis=1)
+                ix_filter, time_stamps = _remove_tz(data_spring, self._t)
+                # ix_filter &= np.all(data_spring[[self._t, self._w]].notna().values, axis=1)
                 plt.plot(
                     time_stamps[ix_filter],
                     data_spring.loc[ix_filter, self._w],
-                    label="Timezone-Adjusted Timestamp",
+                    label="Original Timestamp",
+                    c="tab:blue",
+                )
+
+                # Find bad timestamps, then fill in any potential UTC time gaps due the focus on the input time field
+                ix_filter, time_stamps = _remove_tz(data_spring, self._t_utc)
+                data_spring = timeseries.gap_fill_data_frame(
+                    data_spring[ix_filter], self._t_utc, self._freq
+                )
+                ix_filter, time_stamps = _remove_tz(data_spring, self._t_utc)
+                plt.plot(
+                    time_stamps[ix_filter],
+                    data_spring[self._w][ix_filter],
+                    label="Timezone-Adjusted UTC Timestamp",
                     c="tab:orange",
                     linestyle="--",
                 )
@@ -348,15 +364,24 @@ class QualityControlDiagnosticSuite:
 
             plt.subplot(num_years, 2, 2 * i + 2)
             if np.sum(~np.isnan(data_fall[self._w])) > 0:
-                na_filter = np.all(data_fall[[self._t, self._w]].notna().values, axis=1)
-                plt.plot(data_fall[self._t][na_filter], data_fall[self._w][na_filter])
-
-                ix_filter, time_stamps = _remove_tz(data_fall, self._t_utc)
-                ix_filter &= np.all(data_fall[[self._t_utc, self._w]].notna().values, axis=1)
+                ix_filter, time_stamps = _remove_tz(data_fall, self._t)
                 plt.plot(
                     time_stamps[ix_filter],
-                    data_fall.loc[ix_filter, self._w],
-                    label="Timezone-Adjusted Timestamp",
+                    data_fall[self._w][ix_filter],
+                    label="Original Timestamp",
+                    c="tab:blue",
+                )
+
+                # Find bad timestamps, then fill in any potential UTC time gaps due the focus on the input time field
+                ix_filter, time_stamps = _remove_tz(data_fall, self._t_utc)
+                data_fall = timeseries.gap_fill_data_frame(
+                    data_fall[ix_filter], self._t_utc, self._freq
+                )
+                ix_filter, time_stamps = _remove_tz(data_fall, self._t_utc)
+                plt.plot(
+                    time_stamps[ix_filter],
+                    data_fall[self._w][ix_filter],
+                    label="Timezone-Adjusted UTC Timestamp",
                     c="tab:orange",
                     linestyle="--",
                 )
@@ -364,8 +389,6 @@ class QualityControlDiagnosticSuite:
             plt.ylabel("Power")
             plt.xlabel("Date")
             plt.legend(loc="lower left")
-
-            return data_spring, data_fall
 
         plt.tight_layout()
         plt.show()
