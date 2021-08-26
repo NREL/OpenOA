@@ -37,24 +37,26 @@ def _read_data(data: Union[pd.DataFrame, str]) -> pd.DataFrame:
 
 def _remove_tz(df, t_local_column):
     """Identify the non-timestamp elements in the DataFrame timestamp column and return
-    the valid integer-indices and their corresponding timestamps.
+    a truth array for filtering the values and the timezone-naive timestamps.
 
     Args:
         df (:obj:`pandas.DataFrame`): The DataFrame of interest.
         t_local_column (:obj:`str`): The name of the timestamp column.
 
     Returns:
-        :obj:`numpy.ndarray`: The filtered integer-indices that can be used in a df.iloc[] call.
-        :obj:`numpy.ndarray`: The filtered timestamps.
+        :obj:`numpy.ndarray`: Truth array that can be used to filter the timestamps and subsequent values.
+        :obj:`numpy.ndarray`: Array of timezone-naive timestamps.
     """
     arr = np.array(
         [
-            [ix, el.tz_localize(None)] if not isinstance(el, float) else [-1, el]
+            [True, pd.to_datetime(el).tz_localize(None)]
+            if not isinstance(el, float)
+            else [False, np.nan]
             for ix, el in enumerate(df[t_local_column].values)
         ]
     )
-    ix_filter = arr[:, 0][arr[:, 0] >= 0]
-    time_stamps = arr[:, 1][arr[:, 0] >= 0]
+    ix_filter = arr[:, 0].astype(bool)
+    time_stamps = arr[:, 1]
     return ix_filter, time_stamps
 
 
@@ -323,18 +325,21 @@ class QualityControlDiagnosticSuite:
             # Plot each as side-by-side subplots
             plt.subplot(num_years, 2, 2 * i + 1)
             if np.sum(~np.isnan(data_spring[self._w])) > 0:
+                na_filter = np.all(data_spring[[self._t, self._w]].notna().values, axis=1)
                 plt.plot(
-                    data_spring[self._t],
-                    data_spring[self._w],
+                    data_spring[self._t][na_filter],
+                    data_spring[self._w][na_filter],
                     label="Original Timestamp",
                     c="tab:blue",
                 )
                 ix_filter, time_stamps = _remove_tz(data_spring, self._t_utc)
+                ix_filter &= np.all(data_spring[[self._t_utc, self._w]].notna().values, axis=1)
                 plt.plot(
-                    time_stamps,
-                    data_spring.iloc[ix_filter][self._w],
+                    time_stamps[ix_filter],
+                    data_spring.loc[ix_filter, self._w],
                     label="Timezone-Adjusted Timestamp",
                     c="tab:orange",
+                    linestyle="--",
                 )
             plt.title(f"{year}, Spring")
             plt.ylabel("Power")
@@ -343,23 +348,24 @@ class QualityControlDiagnosticSuite:
 
             plt.subplot(num_years, 2, 2 * i + 2)
             if np.sum(~np.isnan(data_fall[self._w])) > 0:
-                plt.plot(
-                    data_fall[self._t], data_fall[self._w], label="Original Timestamp", c="tab:blue"
-                )
+                na_filter = np.all(data_fall[[self._t, self._w]].notna().values, axis=1)
+                plt.plot(data_fall[self._t][na_filter], data_fall[self._w][na_filter])
+
                 ix_filter, time_stamps = _remove_tz(data_fall, self._t_utc)
-                ix_filter = np.intersect1d(
-                    ix_filter, np.where(~data_fall[self._w].isna().values)
-                )  # NOTE: NOT GOING TO WORK
+                ix_filter &= np.all(data_fall[[self._t_utc, self._w]].notna().values, axis=1)
                 plt.plot(
-                    time_stamps,
-                    data_fall.iloc[ix_filter][self._w],
+                    time_stamps[ix_filter],
+                    data_fall.loc[ix_filter, self._w],
                     label="Timezone-Adjusted Timestamp",
                     c="tab:orange",
+                    linestyle="--",
                 )
             plt.title(f"{year}, Fall")
             plt.ylabel("Power")
             plt.xlabel("Date")
             plt.legend(loc="lower left")
+
+            return data_spring, data_fall
 
         plt.tight_layout()
         plt.show()
