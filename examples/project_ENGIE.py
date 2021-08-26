@@ -211,12 +211,12 @@ class Project_Engie(PlantData):
         # the data can be downloaded through the PlanetOS API using the
         # toolkits.reanalysis_downloading module with the "planetos" option:
         #
-        # project._reanalysis.load(project._path,
-        #                          project._name,
-        #                          "planetos",
-        #                          lat=project._lat_lon[0],
-        #                          lon=project._lat_lon[1]
-        #                          )
+        # self._reanalysis.load(project._path,
+        #                       project._name,
+        #                       "planetos",
+        #                       lat=self._lat_lon[0],
+        #                       lon=self._lat_lon[1]
+        #                       )
         #
         # However, wind direction and air density will still need to be calculated from the wind
         # speed, temperature, and surface pessure variables.
