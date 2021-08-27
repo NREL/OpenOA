@@ -1,6 +1,10 @@
 # Changelog
 All notable changes to this project will be documented in this file. If you make a notable change to the project, please add a line describing the change to the "unreleased" section. The maintainers will make an effort to keep the [Github Releases](https://github.com/NREL/OpenOA/releases) page up to date with this changelog. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [UNRELEASED]
+- Added hourly resolution to AEP calculation
+- Added wind farm plotting function to pandas_plotting toolkit using the Bokeh library
+
 ## [2.2 - 2021-05-28]
 - IAV incorporation in AEP calculation
 - Set power to 0 for windspeeds above and below cutoff in IEC power curve function.

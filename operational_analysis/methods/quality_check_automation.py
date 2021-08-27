@@ -62,8 +62,8 @@ def _remove_tz(df: pd.DataFrame, t_local_column: str) -> Tuple[np.ndarray, np.nd
 
 class QualityControlDiagnosticSuite:
     """This class defines key analytical procedures in a quality check process for turbine data.
-    After analyzing the data for missing and duplicate timestamps, timezones, Daylight Savings Time corrections, and extrema values,
-    the user can make informed decisions about how to handle the data.
+    After analyzing the data for missing and duplicate timestamps, timezones, Daylight Savings Time
+    corrections, and extrema values, the user can make informed decisions about how to handle the data.
     """
 
     @logged_method_call
@@ -89,12 +89,13 @@ class QualityControlDiagnosticSuite:
          time_field(:obj: 'String'): String name of the time field to df
          id_field(:obj: 'String'): String name of the id field to df
          freq(:obj: 'String'): String representation of the resolution for the time field to df
-         lat_lon(:obj: 'tuple'): latitude and longitude of farm represented as a tuple; this is purely informational.
-         local_tz(:obj: 'String'): The `pytz`-compatible timezone for local time reference. Use `get_country_timezones()` to see
-            which timezones are available for your locality, by default UTC. This should be in the format of "Country/City"
-            or "Region/City" such as "America/Denver" or "Europe/Paris".
-         timezone_aware(:obj: `bool`): If True, this indicates the `time_field` column has timezone information embedded, and if
-            False, then there is no timezone information, by default False.
+         lat_lon(:obj: 'tuple'): latitude and longitude of farm represented as a tuple; this is
+            purely informational.
+         local_tz(:obj: 'String'): The `pytz`-compatible timezone for local time reference, by
+            default UTC. This should be in the format of "Country/City" or "Region/City" such as
+            "America/Denver" or "Europe/Paris".
+         timezone_aware(:obj: `bool`): If True, this indicates the `time_field` column has timezone
+            information embedded, and if False, then there is no timezone information, by default False.
         """
 
         logger.info("Initializing QC_Automation Object")
@@ -260,7 +261,8 @@ class QualityControlDiagnosticSuite:
         Produce a timeseries plot showing daylight savings events for each year using the passed data.
 
         Args:
-            hour_window(:obj: 'int'): number of hours outside of the Daylight Savings Time transitions to view in the plot (optional)
+            hour_window(:obj: 'int'): number of hours outside of the Daylight Savings Time
+            transitions to view in the plot (optional)
 
         Returns:
             (None)
@@ -336,7 +338,6 @@ class QualityControlDiagnosticSuite:
             plt.subplot(num_years, 2, 2 * i + 1)
             if np.sum(~np.isnan(data_spring[self._w])) > 0:
                 ix_filter, time_stamps = _remove_tz(data_spring, self._t)
-                # ix_filter &= np.all(data_spring[[self._t, self._w]].notna().values, axis=1)
                 plt.plot(
                     time_stamps[ix_filter],
                     data_spring.loc[ix_filter, self._w],
@@ -396,8 +397,9 @@ class QualityControlDiagnosticSuite:
     def plot_by_id(self, x_axis=None, y_axis=None):
 
         """
-        This is generalized function that allows the user to plot any two fields against each other with unique plots for each unique ID.
-        For scada data, this function produces turbine plots and for meter data, this will return a single plot.
+        This is generalized function that allows the user to plot any two fields against each other
+        with unique plots for each unique ID. For scada data, this function produces turbine plots
+        and for meter data, this will return a single plot.
 
         Args:
             x_axis(:obj:'String'): Independent variable to plot (default is windspeed field)
@@ -482,14 +484,16 @@ class WindToolKitQualityControlDiagnosticSuite(QualityControlDiagnosticSuite):
          time_field(:obj: 'String'): String name of the time field to df
          id_field(:obj: 'String'): String name of the id field to df
          freq(:obj: 'String'): String representation of the resolution for the time field to df
-         lat_lon(:obj: 'tuple'): latitude and longitude of farm represented as a tuple; this is purely informational.
-         local_tz(:obj: 'String'): The `pytz`-compatible timezone for local time reference. Use `get_country_timezones()` to see
-            which timezones are available for your locality, by default UTC. This should be in the format of "Country/City"
-            or "Region/City" such as "America/Denver" or "Europe/Paris".
-         timezone_aware(:obj: `bool`): If True, this indicates the `time_field` column has timezone information embedded, and if
-            False, then there is no timezone information, by default False.
-         check_tz(:obj: 'bool'): Boolean on whether to use WIND Toolkit data to assess timezone of data, by default False. This
-            should only be set to `True` when the `lat_lon` fall within the WIND Toolkit parameters.
+         lat_lon(:obj: 'tuple'): latitude and longitude of farm represented as a tuple; this is
+            purely informational.
+         local_tz(:obj: 'String'): The `pytz`-compatible timezone for local time reference, by
+            default UTC. This should be in the format of "Country/City" or "Region/City" such as
+            "America/Denver" or "Europe/Paris".
+         timezone_aware(:obj: `bool`): If True, this indicates the `time_field` column has timezone
+            information embedded, and if False, then there is no timezone information, by default False.
+         check_tz(:obj: 'bool'): Boolean on whether to use WIND Toolkit data to assess timezone of
+            data, by default False. This should only be set to `True` when the `lat_lon` fall within
+            the WIND Toolkit parameters.
         """
         super().__init__(
             data=data,
@@ -567,8 +571,9 @@ class WindToolKitQualityControlDiagnosticSuite(QualityControlDiagnosticSuite):
     def ws_diurnal_prep(self, start_date="2007-01-01", end_date="2013-12-31"):
 
         """
-        This method links into Wind Toolkit data on AWS as a data source, grabs wind speed data, and calculates diurnal hourly averages.
-        These diurnal hourly averages are returned as a Pandas series.
+        This method links into Wind Toolkit data on AWS as a data source, grabs wind speed data,
+        and calculates diurnal hourly averages. These diurnal hourly averages are returned as a
+        Pandas series.
 
         Args:
             start_date(:obj:'String'): start date to diurnal analysis (optional)
@@ -576,7 +581,8 @@ class WindToolKitQualityControlDiagnosticSuite(QualityControlDiagnosticSuite):
 
 
         Returns:
-            ws_diurnal (Pandas Series): Series where each index corresponds to a different hour of the day and each value corresponds to the average windspeed
+            ws_diurnal (Pandas Series): Series where each index corresponds to a different hour of
+            the day and each value corresponds to the average windspeed
         """
 
         f = h5pyd.File("/nrel/wtk-us.h5", "r")
@@ -645,7 +651,8 @@ class WindToolKitQualityControlDiagnosticSuite(QualityControlDiagnosticSuite):
 
     def corr_df_calc(self):
         """
-        This method creates a correlation series that compares the current power data (with different shift thresholds) to wind speed data from the WTK with hourly resolution.
+        This method creates a correlation series that compares the current power data (with
+        different shift thresholds) to wind speed data from the WTK with hourly resolution.
 
         Args:
             (None)
