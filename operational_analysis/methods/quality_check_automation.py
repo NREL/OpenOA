@@ -45,11 +45,11 @@ def _remove_tz(df: pd.DataFrame, t_local_column: str) -> Tuple[np.ndarray, np.nd
 
     Returns:
         :obj:`numpy.ndarray`: Truth array that can be used to filter the timestamps and subsequent values.
-        :obj:`numpy.ndarray`: Array of timezone-naive timestamps.
+        :obj:`numpy.ndarray`: Array of timezone-naive python `datetime` objects.
     """
     arr = np.array(
         [
-            [True, pd.to_datetime(el).tz_localize(None)]
+            [True, pd.to_datetime(el).tz_localize(None).to_pydatetime()]
             if not isinstance(el, float)
             else [False, np.nan]
             for ix, el in enumerate(df[t_local_column].values)
