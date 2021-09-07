@@ -325,8 +325,8 @@ class TurbineLongTermGrossEnergy(object):
                 bin_width=0.06 * turb_capac,
                 threshold=threshold_wind_bin,  # wind bin thresh
                 center_type="median",
-                bin_min=0.01 * turb_capac,
-                bin_max=max_bin,
+                bin_min=np.round(0.01 * turb_capac),
+                bin_max=np.round(max_bin),
                 threshold_type="scalar",
                 direction="all",
             )
