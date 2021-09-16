@@ -53,7 +53,9 @@ def fetch_eia(api_key, plant_id, file_path):
     def meta_dic_fn(metafile, sheet, var_list):
         all_plant = pd.read_excel(file_path + metafile, sheet_name=sheet, skiprows=1)
 
-        eia_plant = all_plant.loc[all_plant["Plant Code"] == np.int(plant_id)]  # specific wind farm
+        eia_plant = all_plant.loc[
+            all_plant["Plant Code"] == np.int64(plant_id)
+        ]  # specific wind farm
 
         if eia_plant.shape[0] == 0:  # Couldn't locate EIA ID in database
             raise Exception("Plant ID not found in EIA database")
