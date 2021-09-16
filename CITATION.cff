@@ -118,18 +118,3 @@ preferred-citation:
   issue: "58"
   volume: "6"
   date-released: "2021-02-26"
-
-
-
-#   @article{Perr-Sauer2021,
-#   doi = {10.21105/joss.02171},
-#   url = {https://doi.org/10.21105/joss.02171},
-#   year = {2021},
-#   publisher = {The Open Journal},
-#   volume = {6},
-#   number = {58},
-#   pages = {2171},
-#   author = {Jordan Perr-Sauer and Mike Optis and Jason M. Fields and Nicola Bodini and Joseph C.y. Lee and Austin Todd and Eric Simley and Robert Hammond and Caleb Phillips and Monte Lunacek and Travis Kemper and Lindy Williams and Anna Craig and Nathan Agarwal and Shawn Sheng and John Meissner},
-#   title = {OpenOA: An Open-Source Codebase For Operational Analysis of Wind Farms},
-#   journal = {Journal of Open Source Software}
-# }
