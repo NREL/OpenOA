@@ -1,6 +1,5 @@
 cff-version: 1.1.0
 message: "If you use this software, please cite it as below."
-# type: "article"
 doi: "10.21105/joss.02171"
 url: "https://doi.org/10.21105/joss.02171"
 title: "OpenOA: An Open-Source Codebase For Operational Analysis of Wind Farms"
@@ -113,14 +112,12 @@ preferred-citation:
   doi: "10.21105/joss.02171"
   url: "https://doi.org/10.21105/joss.02171"
   journal: "Journal of Open Source Software"
+  publisher: The Open Journal
   start: "2171"
-  end: "2173"
   title: "OpenOA: An Open-Source Codebase For Operational Analysis of Wind Farms"
   issue: "58"
   volume: "6"
   year: "2021"
-  month: "2"
-  day: "26"
 
 
 
