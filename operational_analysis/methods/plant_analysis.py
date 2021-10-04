@@ -35,8 +35,10 @@ def get_annual_values(data):
     This function returns annual summations of values in a pandas Series (or each column of a pandas DataFrame) with a
     DatetimeIndex index starting from the first row. The purpose of the function is to correctly resample to annual
     values when the first index does not fall on the beginning of the month.
+
     Args:
         data(:obj:`pandas.Series` or :obj:`pandas.DataFrame`): Input data with a DatetimeIndex index.
+
     Returns:
         :obj:`numpy.ndarray`: Array containing annual summations for each column of the input data.
     """
@@ -55,13 +57,17 @@ class MonteCarloAEP(object):
     A serial (Pandas-driven) implementation of the benchmark PRUF operational
     analysis implementation. This module collects standard processing and
     analysis methods for estimating plant level operational AEP and uncertainty.
+
     The preprocessing should run in this order:
         1. Process revenue meter energy - creates monthly/daily data frame, gets revenue meter on monthly/daily basis, and adds
            data flag
         2. Process loss estimates - add monthly/daily curtailment and availabilty losses to monthly/daily data frame
+
         3. Process reanalysis data - add monthly/daily density-corrected wind speeds, temperature (if used) and wind direction (if used)
            from several reanalysis products to the monthly data frame
+
         4. Set up Monte Carlo - create the necessary Monte Carlo inputs to the OA process
+
         5. Run AEP Monte Carlo - run the OA process iteratively to get distribution of AEP results
     The end result is a distribution of AEP results which we use to assess expected AEP and associated uncertainty
     """
@@ -75,6 +81,8 @@ class MonteCarloAEP(object):
         uncertainty_losses=0.05,
         uncertainty_windiness=(10, 20),
         uncertainty_loss_max=(10, 20),
+        outlier_detection=False,
+        uncertainty_outlier=(2, 3.1),
         uncertainty_nan_energy=0.01,
         time_resolution="M",
         reg_model="lin",
@@ -84,6 +92,7 @@ class MonteCarloAEP(object):
     ):
         """
         Initialize APE_MC analysis with data and parameters.
+
         Args:
          plant(:obj:`PlantData object`): PlantData object from which PlantAnalysis should draw data.
          reanal_products(obj:`list`) : List of reanalysis products to use for Monte Carlo sampling. Defaults to ["merra2", "ncep2", "erai"].
@@ -91,6 +100,8 @@ class MonteCarloAEP(object):
          uncertainty_losses(:obj:`float`): uncertainty on long-term losses
          uncertainty_windiness(:obj:`tuple`): number of years to use for the windiness correction
          uncertainty_loss_max(:obj:`tuple`): threshold for the combined availabilty and curtailment monthly loss threshold
+         outlier_detection(:obj:`bool`): whether to perform (True) or not (False) outlier detection filtering
+         uncertainty_outlier(:obj:`tuple`): threshold for the outlier detection filter based on robust linear regression (applied at monthly resolution only) or bin filter (applied at daily and hourly resolution)
          uncertainty_nan_energy(:obj:`float`): threshold to flag days/months based on NaNs
          time_resolution(:obj:`string`): whether to perform the AEP calculation at monthly ('M'), daily ('D') or hourly ('H') time resolution
          reg_model(:obj:`string`): which model to use for the regression ('lin' for linear, 'gam', 'gbm', 'etr'). At monthly time resolution only linear regression is allowed because of the reduced number of data points.
@@ -113,9 +124,11 @@ class MonteCarloAEP(object):
         self.uncertainty_meter = np.float64(uncertainty_meter)
         self.uncertainty_losses = np.float64(uncertainty_losses)
         self.uncertainty_windiness = np.array(uncertainty_windiness, dtype=np.float64)
+        self.uncertainty_outlier = np.array(uncertainty_outlier, dtype=np.float64)
         self.uncertainty_loss_max = np.array(uncertainty_loss_max, dtype=np.float64)
         self.uncertainty_nan_energy = np.float64(uncertainty_nan_energy)
-
+        self.outlier_detection = outlier_detection
+        
         # Check that selected time resolution is allowed
         if time_resolution not in ["M", "D", "H"]:
             raise ValueError(
@@ -175,9 +188,11 @@ class MonteCarloAEP(object):
     def run(self, num_sim, reanal_subset=None):
         """
         Perform pre-processing of data into an internal representation for which the analysis can run more quickly.
+
         Args:
             reanal_subset(:obj:`list`): list of str data indicating which reanalysis products to use in OA
             num_sim(:obj:`int`): number of simulations to perform
+
         Returns:
             None
         """
@@ -215,6 +230,7 @@ class MonteCarloAEP(object):
         """
         Make a plot of annual average wind speeds from reanalysis data to show general trends for each
         Highlight the period of record for plant data
+
         Returns:
             matplotlib.pyplot object
         """
@@ -269,9 +285,12 @@ class MonteCarloAEP(object):
 
     def plot_reanalysis_gross_energy_data(self, outlier_thres):
         """
-        Make a plot of normalized 30-day gross energy vs wind speed for each reanalysis product, include R2 measure
+        Make a plot of gross energy vs wind speed for each reanalysis product,
+        with outliers highlighted
+
         Args:
             outlier_thres (float): outlier threshold (typical range of 1 to 4) which adjusts outlier sensitivity detection
+
         Returns:
             matplotlib.pyplot object
         """
@@ -283,56 +302,90 @@ class MonteCarloAEP(object):
         # Loop through each reanalysis product and make a scatterplot of monthly wind speed vs plant energy
         for p in np.arange(0, len(list(self._reanal_products))):
             col_name = self._reanal_products[p]  # Reanalysis column in monthly data frame
-
-            x = sm.add_constant(
-                valid_aggregate[col_name]
-            )  # Define 'x'-values (constant needed for regression function)
-            if self.time_resolution == "M":
+            # Plot 
+            plt.subplot(2, 2, p + 1)
+            
+            if self.time_resolution == "M": # Montly case: apply robust linear regression for outliers detection
+                x = sm.add_constant(
+                    valid_aggregate[col_name]
+                )  # Define 'x'-values (constant needed for regression function)
                 y = (
                     valid_aggregate["gross_energy_gwh"] * 30 / valid_aggregate["num_days_expected"]
-                )  # Normalize energy data to 30-days
-            else:
-                y = valid_aggregate["gross_energy_gwh"]
-
-            rlm = sm.RLM(
-                y, x, M=sm.robust.norms.HuberT(t=outlier_thres)
-            )  # Robust linear regression with HuberT algorithm (threshold equal to 2)
-            rlm_results = rlm.fit()
-
-            r2 = np.corrcoef(
-                x.loc[rlm_results.weights == 1, col_name], y[rlm_results.weights == 1]
-            )[
-                0, 1
-            ]  # Get R2 from valid data
-
-            # Plot results
-            plt.subplot(2, 2, p + 1)
-            plt.plot(
-                x.loc[rlm_results.weights != 1, col_name],
-                y[rlm_results.weights != 1],
-                "rx",
-                label="Outlier",
-            )
-            plt.plot(
-                x.loc[rlm_results.weights == 1, col_name],
-                y[rlm_results.weights == 1],
-                ".",
-                label="Valid data",
-            )
-            plt.title(col_name + ", R2=" + str(np.round(r2, 3)))
-            plt.xlabel("Wind speed (m/s)")
-            if self.time_resolution == "M":
+                    )  # Normalize energy data to 30-days
+    
+                rlm = sm.RLM(
+                    y, x, M=sm.robust.norms.HuberT(t=outlier_thres)
+                )  # Robust linear regression with HuberT algorithm (threshold equal to 2)
+                rlm_results = rlm.fit()
+    
+                r2 = np.corrcoef(
+                    x.loc[rlm_results.weights == 1, col_name], y[rlm_results.weights == 1]
+                )[
+                    0, 1
+                ]  # Get R2 from valid data
+            
+                # Continue plotting
+                plt.plot(
+                    x.loc[rlm_results.weights != 1, col_name],
+                    y[rlm_results.weights != 1],
+                    "rx",
+                    label="Outlier",
+                )
+                plt.plot(
+                    x.loc[rlm_results.weights == 1, col_name],
+                    y[rlm_results.weights == 1],
+                    ".",
+                    label="Valid data",
+                )
+                plt.title(col_name + ", R2=" + str(np.round(r2, 3)))
                 plt.ylabel("30-day normalized gross energy (GWh)")
-            elif self.time_resolution == "D":
-                plt.ylabel("Daily gross energy (GWh)")
-            elif self.time_resolution == "H":
-                plt.ylabel("Hourly gross energy (GWh)")
+                
+            else: # Daily/hourly case: apply bin filter for outliers detection
+                x = valid_aggregate[col_name]
+                y = valid_aggregate["gross_energy_gwh"]
+                plant_capac = self._plant._plant_capacity / 1000.0 * self._hours_in_res
+                
+                # Apply bin filter
+                flag = filters.bin_filter(
+                    bin_col=y,
+                    value_col=x,
+                    bin_width=0.06 * plant_capac,
+                    threshold=outlier_thres,  # wind bin threshold (stdev outside the median)
+                    center_type="median",
+                    bin_min=0.01 * plant_capac,
+                    bin_max=0.85 * plant_capac,
+                    threshold_type="scalar",
+                    direction="all", # both left and right (from the median)
+                )
+                            
+                # Continue plotting
+                plt.plot(
+                    x.loc[flag],
+                    y[flag],
+                    "rx",
+                    label="Outlier",
+                )
+                plt.plot(
+                    x.loc[~flag],
+                    y[~flag],
+                    ".",
+                    label="Valid data",
+                )
+                
+                if self.time_resolution == "D":
+                    plt.ylabel("Daily gross energy (GWh)")
+                elif self.time_resolution == "H":
+                    plt.ylabel("Hourly gross energy (GWh)")
+            
+            plt.xlabel("Wind speed (m/s)")
+                
         plt.tight_layout()
         return plt
 
     def plot_result_aep_distributions(self):
         """
         Plot a distribution of AEP values from the Monte-Carlo OA method
+
         Returns:
             matplotlib.pyplot object
         """
@@ -385,9 +438,11 @@ class MonteCarloAEP(object):
     def plot_aep_boxplot(self, param, lab):
         """
         Plot box plots of AEP results sliced by a specified Monte Carlo parameter
+
         Args:
            param(:obj:`list`): The Monte Carlo parameter on which to split the AEP results
            lab(:obj:`str`): The name to use for the parameter when producing the figure
+
         Returns:
             (none)
         """
@@ -408,6 +463,7 @@ class MonteCarloAEP(object):
     def plot_aggregate_plant_data_timeseries(self):
         """
         Plot timeseries of monthly/daily gross energy, availability and curtailment
+
         Returns:
             matplotlib.pyplot object
         """
@@ -440,8 +496,10 @@ class MonteCarloAEP(object):
     def groupby_time_res(self, df):
         """
         Group pandas dataframe based on the time resolution chosen in the calculation.
+
         Args:
             df(:obj:`dataframe`): dataframe that needs to be grouped based on time resolution used
+
         Returns:
             None
         """
@@ -459,8 +517,10 @@ class MonteCarloAEP(object):
     def calculate_aggregate_dataframe(self):
         """
         Perform pre-processing of the plant data to produce a monthly/daily data frame to be used in AEP analysis.
+
         Args:
             (None)
+
         Returns:
             (None)
         """
@@ -491,6 +551,7 @@ class MonteCarloAEP(object):
             1. Populate monthly/daily data frame with energy data summed from 10-min QC'd data
             2. For each monthly/daily value, find percentage of NaN data used in creating it and flag if percentage is
                greater than 0
+
         Args:
             (None)
         Returns:
@@ -533,8 +594,10 @@ class MonteCarloAEP(object):
     def process_loss_estimates(self):
         """
         Append availability and curtailment losses to monthly data frame
+
         Args:
             (None)
+
         Returns:
             (None)
         """
@@ -603,8 +666,10 @@ class MonteCarloAEP(object):
             - calculate monthly/daily average wind direction
             - calculate monthly/daily average temperature
             - append monthly/daily averages to monthly/daily energy data frame
+
         Args:
             (None)
+
         Returns:
             (None)
         """
@@ -650,8 +715,10 @@ class MonteCarloAEP(object):
     def trim_monthly_df(self):
         """
         Remove first and/or last month of data if the raw data had an incomplete number of days
+
         Args:
             (None)
+
         Returns:
             (None)
         """
@@ -667,8 +734,10 @@ class MonteCarloAEP(object):
         """
         This function calculates long-term availability and curtailment losses based on the reported data grouped by the time resolution,
         filtering for those data that are deemed representative of average plant performance.
+
         Args:
             (None)
+
         Returns:
             (None)
         """
@@ -698,8 +767,10 @@ class MonteCarloAEP(object):
         """
         Create and populate the data frame defining the simulation parameters.
         This data frame is stored as self._inputs
+
         Args:
             (None)
+
         Returns:
             (None)
         """
@@ -718,6 +789,8 @@ class MonteCarloAEP(object):
                 self.uncertainty_loss_max[0], self.uncertainty_loss_max[1] + 1, self.num_sim
             )
             / 100.0,
+            "outlier_threshold": np.random.randint(self.uncertainty_outlier[0] * 10,
+                                                       (self.uncertainty_outlier[1]) * 10, self.num_sim) / 10.
         }
 
         self._inputs = pd.DataFrame(inputs)
@@ -730,8 +803,10 @@ class MonteCarloAEP(object):
         We use a memoized funciton to store the regression data in a dictionary for each combination as it
         comes up in the Monte Carlo simulation. This saves significant computational time in not having to run
         robust linear regression for each Monte Carlo iteration
+
         Args:
             n(:obj:`float`): Monte Carlo iteration
+
         Returns:
             :obj:`pandas.DataFrame`: Filtered monthly/daily data ready for linear regression
         """
@@ -758,8 +833,9 @@ class MonteCarloAEP(object):
 
         # Apply range filter to wind speed
         df_sub = df_sub.assign(flag_range=filters.range_flag(df_sub[reanal], below=0, above=40))
-        # Apply frozen/unresponsive sensor filter
-        df_sub.loc[:, "flag_frozen"] = filters.unresponsive_flag(df_sub[reanal], threshold=3)
+        if self.reg_temperature:
+            # Apply range filter to temperatre
+            df_sub = df_sub.assign(flag_range_T=filters.range_flag(df_sub[reanal + "_temperature_K"], below=200, above=320))
         # Apply window range filter
         df_sub.loc[:, "flag_window"] = filters.window_range_flag(
             window_col=df_sub[reanal],
@@ -769,13 +845,51 @@ class MonteCarloAEP(object):
             value_min=0.02 * plant_capac,
             value_max=1.2 * plant_capac,
         )
-
+        
+        if self.outlier_detection:
+            if self.time_resolution == 'M':
+                # Monthly linear regression (i.e., few data points): 
+                # filter outliers based on robust linear regression
+                # using Huber algorithm to flag outliers
+                X = sm.add_constant(df_sub[reanal])  # Reanalysis data with constant column
+                y = df_sub['gross_energy_gwh']*30/df_sub['num_days_expected']  # Energy data
+        
+                # Perform robust linear regression
+                rlm = sm.RLM(y, X, M=sm.robust.norms.HuberT(self._run.outlier_threshold))
+                rlm_results = rlm.fit()
+        
+                # Define valid data as points in which the Huber algorithm returned a value of 1
+                df_sub.loc[:, "flag_outliers"] = rlm_results.weights != 1
+            
+            else:
+                # Daily regressions (i.e., higher number of data points):
+                # Apply bin filter to catch outliers
+                df_sub.loc[:, "flag_outliers"] = filters.bin_filter(
+                        bin_col=df_sub["energy_gwh"],
+                        value_col=df_sub[reanal],
+                        bin_width=0.06 * plant_capac,
+                        threshold=int(round(self._run.outlier_threshold)),  # wind bin threshold (stdev outside the median)
+                        center_type="median",
+                        bin_min=0.01 * plant_capac,
+                        bin_max=0.85 * plant_capac,
+                        threshold_type="scalar",
+                        direction="all", # both left and right (from the median)
+                    )
+        else:
+            df_sub.loc[:, "flag_outliers"] = False
+            
         # Create a 'final' flag which is true if any of the previous flags are true
         df_sub.loc[:, "flag_final"] = (
             (df_sub.loc[:, "flag_range"])
             | (df_sub.loc[:, "flag_frozen"])
             | (df_sub.loc[:, "flag_window"])
-        )
+            | (df_sub.loc[:, "flag_outliers"])
+            )
+        if self.reg_temperature:
+            df_sub.loc[:, "flag_final"] = (
+                (df_sub.loc[:, "flag_final"])
+                | (df_sub.loc[:, "flag_range_T"])
+                ) 
 
         # Define valid data
         valid_data = df_sub.loc[
@@ -808,6 +922,7 @@ class MonteCarloAEP(object):
     def set_regression_data(self, n):
         """
         This will be called for each iteration of the Monte Carlo simulation and will do the following:
+
             1. Randomly sample monthly/daily revenue meter, availabilty, and curtailment data based on specified uncertainties
                and correlations
             2. Randomly choose one reanalysis product
@@ -816,8 +931,10 @@ class MonteCarloAEP(object):
             5. Filter results to remove months/days with NaN data and with combined losses that exceed the Monte Carlo
                sampled max threhold
             6. Return the wind speed and normalized gross energy to be used in the regression relationship
+
         Args:
             n(:obj:`int`): The Monte Carlo iteration number
+
         Returns:
             :obj:`pandas.Series`: Monte-Carlo sampled wind speeds and other variables (temperature, wind direction) if used in the regression
             :obj:`pandas.Series`: Monte-Carlo sampled normalized gross energy
@@ -873,8 +990,10 @@ class MonteCarloAEP(object):
         """
         Run robust linear regression between Monte-Carlo generated monthly/daily gross energy,
         wind speed, temperature and wind direction (if used)
+
         Args:
             n(:obj:`int`): The Monte Carlo iteration number
+
         Returns:
             :obj:`?`: trained regression model
         """
@@ -929,6 +1048,7 @@ class MonteCarloAEP(object):
     def run_AEP_monte_carlo(self):
         """
         Loop through OA process a number of times and return array of AEP results each time
+
         Returns:
             :obj:`numpy.ndarray` Array of AEP, long-term avail, long-term curtailment calculations
         """
@@ -1045,8 +1165,10 @@ class MonteCarloAEP(object):
     def sample_long_term_reanalysis(self):
         """
         This function returns the long-term monthly/daily wind speeds based on the Monte-Carlo generated sample of:
+
             1. The reanalysis product
             2. The number of years to use in the long-term correction
+
         Args:
            (None)
         Returns:
@@ -1115,8 +1237,10 @@ class MonteCarloAEP(object):
         This function calculates long-term availability and curtailment losses based on the Monte Carlo sampled
         historical availability and curtailment data. To estimate long-term losses, average percentage monthly losses
         are weighted by monthly long-term gross energy.
+
         Args:
             gross_lt(:obj:`pandas.Series`): Time series of long-term gross energy
+
         Returns:
             :obj:`float`: long-term availability loss expressed as fraction
             :obj:`float`: long-term curtailment loss expressed as fraction
