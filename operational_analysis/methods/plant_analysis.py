@@ -833,9 +833,10 @@ class MonteCarloAEP(object):
 
         # Apply range filter to wind speed
         df_sub = df_sub.assign(flag_range=filters.range_flag(df_sub[reanal], below=0, above=40))
-        if self.reg_temperature:
-            # Apply range filter to temperatre
-            df_sub = df_sub.assign(flag_range_T=filters.range_flag(df_sub[reanal + "_temperature_K"], below=200, above=320))
+        df_sub.loc[:, "flag_frozen"] = filters.unresponsive_flag(df_sub[reanal], threshold=3)
+        #if self.reg_temperature:
+        #    # Apply range filter to temperatre
+        #    df_sub = df_sub.assign(flag_range_T=filters.range_flag(df_sub[reanal + "_temperature_K"], below=200, above=320))
         # Apply window range filter
         df_sub.loc[:, "flag_window"] = filters.window_range_flag(
             window_col=df_sub[reanal],
@@ -881,14 +882,15 @@ class MonteCarloAEP(object):
         # Create a 'final' flag which is true if any of the previous flags are true
         df_sub.loc[:, "flag_final"] = (
             (df_sub.loc[:, "flag_range"])
+            | (df_sub.loc[:, "flag_frozen"])
             | (df_sub.loc[:, "flag_window"])
-            | (df_sub.loc[:, "flag_outliers"])
+            #| (df_sub.loc[:, "flag_outliers"])
             )
-        if self.reg_temperature:
-            df_sub.loc[:, "flag_final"] = (
-                (df_sub.loc[:, "flag_final"])
-                | (df_sub.loc[:, "flag_range_T"])
-                ) 
+        #if self.reg_temperature:
+        #    df_sub.loc[:, "flag_final"] = (
+        #        (df_sub.loc[:, "flag_final"])
+        #        | (df_sub.loc[:, "flag_range_T"])
+        #        ) 
 
         # Define valid data
         valid_data = df_sub.loc[
