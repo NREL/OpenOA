@@ -789,8 +789,8 @@ class MonteCarloAEP(object):
                 self.uncertainty_loss_max[0], self.uncertainty_loss_max[1] + 1, self.num_sim
             )
             / 100.0,
-            #"outlier_threshold": np.random.randint(self.uncertainty_outlier[0] * 10,
-            #                                           (self.uncertainty_outlier[1]) * 10, self.num_sim) / 10.
+            "outlier_threshold": np.random.randint(self.uncertainty_outlier[0] * 10,
+                                                       (self.uncertainty_outlier[1]) * 10, self.num_sim) / 10.
         }
 
         self._inputs = pd.DataFrame(inputs)
