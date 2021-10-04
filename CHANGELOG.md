@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file. If you make
 ## [UNRELEASED]
 - Added hourly resolution to AEP calculation
 - Added wind farm plotting function to pandas_plotting toolkit using the Bokeh library
+- Updated filter algorithms in AEP calculation, now with a proper outlier filter
 
 ## [2.2 - 2021-05-28]
 - IAV incorporation in AEP calculation
