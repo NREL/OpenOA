@@ -847,37 +847,37 @@ class MonteCarloAEP(object):
             value_max=1.2 * plant_capac,
         )
         
-        if self.outlier_detection:
-            if self.time_resolution == 'M':
-                # Monthly linear regression (i.e., few data points): 
-                # filter outliers based on robust linear regression
-                # using Huber algorithm to flag outliers
-                X = sm.add_constant(df_sub[reanal])  # Reanalysis data with constant column
-                y = df_sub['gross_energy_gwh']*30/df_sub['num_days_expected']  # Energy data
+        # if self.outlier_detection:
+        #     if self.time_resolution == 'M':
+        #         # Monthly linear regression (i.e., few data points): 
+        #         # filter outliers based on robust linear regression
+        #         # using Huber algorithm to flag outliers
+        #         X = sm.add_constant(df_sub[reanal])  # Reanalysis data with constant column
+        #         y = df_sub['gross_energy_gwh']*30/df_sub['num_days_expected']  # Energy data
         
-                # Perform robust linear regression
-                rlm = sm.RLM(y, X, M=sm.robust.norms.HuberT(self._run.outlier_threshold))
-                rlm_results = rlm.fit()
+        #         # Perform robust linear regression
+        #         rlm = sm.RLM(y, X, M=sm.robust.norms.HuberT(self._run.outlier_threshold))
+        #         rlm_results = rlm.fit()
         
-                # Define valid data as points in which the Huber algorithm returned a value of 1
-                df_sub.loc[:, "flag_outliers"] = rlm_results.weights != 1
+        #         # Define valid data as points in which the Huber algorithm returned a value of 1
+        #         df_sub.loc[:, "flag_outliers"] = rlm_results.weights != 1
             
-            else:
-                # Daily regressions (i.e., higher number of data points):
-                # Apply bin filter to catch outliers
-                df_sub.loc[:, "flag_outliers"] = filters.bin_filter(
-                        bin_col=df_sub["energy_gwh"],
-                        value_col=df_sub[reanal],
-                        bin_width=0.06 * plant_capac,
-                        threshold=int(round(self._run.outlier_threshold)),  # wind bin threshold (stdev outside the median)
-                        center_type="median",
-                        bin_min=0.01 * plant_capac,
-                        bin_max=0.85 * plant_capac,
-                        threshold_type="scalar",
-                        direction="all", # both left and right (from the median)
-                    )
-        else:
-            df_sub.loc[:, "flag_outliers"] = False
+        #     else:
+        #         # Daily regressions (i.e., higher number of data points):
+        #         # Apply bin filter to catch outliers
+        #         df_sub.loc[:, "flag_outliers"] = filters.bin_filter(
+        #                 bin_col=df_sub["energy_gwh"],
+        #                 value_col=df_sub[reanal],
+        #                 bin_width=0.06 * plant_capac,
+        #                 threshold=int(round(self._run.outlier_threshold)),  # wind bin threshold (stdev outside the median)
+        #                 center_type="median",
+        #                 bin_min=0.01 * plant_capac,
+        #                 bin_max=0.85 * plant_capac,
+        #                 threshold_type="scalar",
+        #                 direction="all", # both left and right (from the median)
+        #             )
+        # else:
+        #     df_sub.loc[:, "flag_outliers"] = False
             
         # Create a 'final' flag which is true if any of the previous flags are true
         df_sub.loc[:, "flag_final"] = (
