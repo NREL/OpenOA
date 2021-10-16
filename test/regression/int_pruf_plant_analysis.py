@@ -261,7 +261,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
 
     def check_simulation_results_gbm_daily(self, s):
         # Make sure AEP results are consistent to one decimal place
-        expected_results = [12.794527, 10.609839, 1.298789, 4.849577, 0.050383, 8.620032]
+        expected_results = [12.794528, 10.609942, 1.298789, 4.849577, 0.050383, 8.620032]
 
         calculated_results = [
             s.aep_GWh.mean(),
