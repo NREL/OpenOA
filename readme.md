@@ -35,7 +35,7 @@ If you use this software in your work, please cite our JOSS article with the fol
   volume = {6},
   number = {58},
   pages = {2171},
-  author = {Jordan Perr-Sauer and Mike Optis and Jason M. Fields and Nicola Bodini and Joseph Y. Lee and Austin Todd and Eric Simley and Robert Hammond and Caleb Phillips and Monte Lunacek and Travis Kemper and Lindy Williams and Anna Craig and Nathan Agarwal and Shawn Sheng and John Meissner},
+  author = {Jordan Perr-Sauer and Mike Optis and Jason M. Fields and Nicola Bodini and Joseph C.Y. Lee and Austin Todd and Eric Simley and Robert Hammond and Caleb Phillips and Monte Lunacek and Travis Kemper and Lindy Williams and Anna Craig and Nathan Agarwal and Shawn Sheng and John Meissner},
   title = {OpenOA: An Open-Source Codebase For Operational Analysis of Wind Farms},
   journal = {Journal of Open Source Software}
 }
