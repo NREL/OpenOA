@@ -372,7 +372,7 @@ class QualityControlDiagnosticSuite:
                 ix_filter, time_stamps = _remove_tz(data_spring, self._t_utc)
                 plt.plot(
                     time_stamps[ix_filter],
-                    data_spring[self._w][ix_filter],
+                    data_spring.loc[ix_filter, self._w],
                     label="Timezone-Adjusted UTC Timestamp",
                     c="tab:orange",
                     linestyle="--",
@@ -387,7 +387,7 @@ class QualityControlDiagnosticSuite:
                 ix_filter, time_stamps = _remove_tz(data_fall, self._t)
                 plt.plot(
                     time_stamps[ix_filter],
-                    data_fall[self._w][ix_filter],
+                    data_fall.loc[ix_filter, self._w],
                     label="Original Timestamp",
                     c="tab:blue",
                 )
@@ -400,7 +400,7 @@ class QualityControlDiagnosticSuite:
                 ix_filter, time_stamps = _remove_tz(data_fall, self._t_utc)
                 plt.plot(
                     time_stamps[ix_filter],
-                    data_fall[self._w][ix_filter],
+                    data_fall.loc[ix_filter, self._w],
                     label="Timezone-Adjusted UTC Timestamp",
                     c="tab:orange",
                     linestyle="--",
