@@ -64,6 +64,34 @@ def _remove_tz(df: pd.DataFrame, t_local_column: str) -> Tuple[np.ndarray, np.nd
     return ix_filter, time_stamps
 
 
+def _get_time_window(df, ix, hour_window, time_col, local_time_col, utc_time_col):
+    """Retrieves the time window in a DataFrame with likely confusing
+        implementation of timezones.
+
+        Args:
+            df (:obj:`pandas.DataFrame`): The DataFrame of interest.
+            ix (:obj:`pandas._libs.tslibs.timestamps.Timestamp`]): The starting
+                Timestamp on which to base the time window.
+            hour_window (:obj:`pandas._libs.tslibs.timedeltas.Timedelta`): The number
+                length of the window, in hours.
+            time_col (:obj:`str`): The original input datetime column.
+            local_time_col (:obj:`str`): The local timezone resolved datetime column.
+            utc_time_col (:obj:`str`): The UTC resolved datetime column.
+
+        Returns:
+            (:obj:`pandas.DataFrame`): The filtered DataFrame object
+        """
+    if ix.tz is None:
+        col = time_col
+    elif str(ix.tz) == "UTC":
+        col = utc_time_col
+    else:
+        col = local_time_col
+    start = np.where(df[col] == ix - hour_window)[0][0]
+    end = np.where(df[col] == ix + hour_window)[0][0]
+    return df.iloc[start:end]
+
+
 class QualityControlDiagnosticSuite:
     """This class defines key analytical procedures in a quality check process for turbine data.
     After analyzing the data for missing and duplicate timestamps, timezones, Daylight Savings Time
@@ -240,30 +268,6 @@ class QualityControlDiagnosticSuite:
         self._max_min["max"] = self._df.max()
         self._max_min["min"] = self._df.min()
 
-    def _get_time_window(self, df, ix, hour_window):
-        """Retrieves the time window in a DataFrame with likely confusing
-        implementation of timezones.
-
-        Args:
-            df (:obj:`pandas.DataFrame`): The DataFrame of interest.
-            ix (:obj:`pandas._libs.tslibs.timestamps.Timestamp`]): The starting
-                Timestamp on which to base the time window.
-            hour_window (:obj:`pandas._libs.tslibs.timedeltas.Timedelta`): The number
-                length of the window, in hours.
-
-        Returns:
-            (:obj:`pandas.DataFrame`): The filtered DataFrame object
-        """
-        if ix.tz is None:
-            col = self._t
-        elif str(ix.tz) == "UTC":
-            col = self._t_utc
-        else:
-            col = self._t_local
-        start = np.where(df[col] == ix - hour_window)[0][0]
-        end = np.where(df[col] == ix + hour_window)[0][0]
-        return df.iloc[start:end]
-
     def daylight_savings_plot(self, hour_window=3):
 
         """
@@ -333,8 +337,12 @@ class QualityControlDiagnosticSuite:
             end_ix = year_data.iloc[dst_dates[-1] + 1].name
 
             # Create the data subsets for plotting the appropriate window
-            data_spring = self._get_time_window(year_data, start_ix, hour_window)
-            data_fall = self._get_time_window(year_data, end_ix, hour_window)
+            data_spring = _get_time_window(
+                year_data, start_ix, hour_window, self._t, self._t_local, self._t_utc
+            )
+            data_fall = _get_time_window(
+                year_data, end_ix, hour_window, self._t, self._t_local, self._t_utc
+            )
 
             data_spring = data_spring.sort_values(
                 [self._t, self._w], na_position="first"
