@@ -95,7 +95,7 @@ class QualityControlDiagnosticSuite:
          freq(:obj: 'String'): String representation of the resolution for the time field to df
          lat_lon(:obj: 'tuple'): latitude and longitude of farm represented as a tuple; this is
             purely informational.
-         local_tz(:obj: 'String'): The `pytz`-compatible timezone for local time reference, by
+         local_tz(:obj: 'String'): The `pytz`-compatible timezone for the input `time_field`, by
             default UTC. This should be in the format of "Country/City" or "Region/City" such as
             "America/Denver" or "Europe/Paris".
          timezone_aware(:obj: `bool`): If True, this indicates the `time_field` column has timezone
@@ -158,6 +158,8 @@ class QualityControlDiagnosticSuite:
         if isinstance(dt_col[0], str):
             dt_col = [dateutil.parser.parse(el) for el in dt_col]
 
+        # Read the timestamps as UTC, then convert to the local timezone if the data are
+        # timezone-aware, otherwise localize the timestamp to the local timezone
         if self._tz_aware:
             pd_dt_col = pd.to_datetime(dt_col, utc=True).tz_convert(self._local_tz)
             self._df[self._t_local] = pd_dt_col
