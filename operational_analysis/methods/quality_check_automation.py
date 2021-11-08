@@ -39,6 +39,10 @@ def _remove_tz(df: pd.DataFrame, t_local_column: str) -> Tuple[np.ndarray, np.nd
     """Identify the non-timestamp elements in the DataFrame timestamp column and return
     a truth array for filtering the values and the timezone-naive timestamps.
 
+    This function should be used after all data has been converted to timestamps, and will
+    therefore only be checking for `float` data as invalid because this is the standard
+    fault data-type in the conversion to datetime data.
+
     Args:
         df (:obj:`pandas.DataFrame`): The DataFrame of interest.
         t_local_column (:obj:`str`): The name of the timestamp column.
