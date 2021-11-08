@@ -216,15 +216,17 @@ class QualityControlDiagnosticSuite:
     @logged_method_call
     def run(self):
         """
-        Run the QC analysis functions in order by calling this function.
-
-        Args:
-            (None)
-
-        Returns:
-            (None)
+        Run the QC analysis functions in order by calling this function. In the base
+        class, this operates as a basic demonstration of features, so it is encouraged
+        that users devise a method to enhance their data checking.
         """
-        pass
+        logger.info("Identifying Time Duplications")
+        self.dup_time_identification()
+        logger.info("Identifying Time Gaps")
+        self.gap_time_identification()
+        logger.info("Isolating Extrema Values")
+        self.max_min()
+        logger.info("QC Diagnostic Complete")
 
     def dup_time_identification(self):
         """
