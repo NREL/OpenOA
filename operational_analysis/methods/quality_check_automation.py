@@ -473,10 +473,9 @@ class QualityControlDiagnosticSuite:
 
 
 class WindToolKitQualityControlDiagnosticSuite(QualityControlDiagnosticSuite):
-    """This class defines key analytical procedures in a quality check process for
-    turbine data. After analyzing the data for missing and duplicate timestamps,
-    timezones, Daylight Savings Time corrections, and extrema values, the user can make
-    informed decisions about how to handle the data.
+    """This is a child class of the `QualityControlDiagnosticSuite` that adds in
+    WindToolKit (WTK) specific functionality for checking datetime data, and the
+    diurnality of the input power data.
     """
 
     @logged_method_call
