@@ -149,7 +149,8 @@ class QualityControlDiagnosticSuite:
     def _convert_datetime_column(self) -> None:
         """Converts the passed timestamp data to a pandas-encoded Datetime, and creates a
         corresponding localized and UTC timestamp using the `time_field` column name with either
-        "localized" or "utc", respectively.
+        "localized" or "utc", respectively. The `_df` object then uses the local timezone
+        timestamp for its index.
         """
         # Convert the timestamps to datetime.datetime objects
         dt_col = self._df[self._t].values
@@ -176,8 +177,10 @@ class QualityControlDiagnosticSuite:
                 [el.astimezone(tz.tzutc()) for el in dt_col]
             ).tz_convert("UTC")
         except AttributeError:  # catches numpy datetime error for astimezone() not existing
+            _index = self._df.index.values
             self._df = self._df.tz_convert("UTC")
-            self._df[self._t_utc] = self._df.index
+            self._df[self._t_utc] = self._df.index.values
+            self._df = self._df.set_index(_index)
 
         self._df = self._determine_offset_dst(self._df)
 
