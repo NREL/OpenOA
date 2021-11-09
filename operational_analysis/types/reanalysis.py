@@ -1,5 +1,6 @@
 import os
 import importlib
+from pathlib import Path
 
 from operational_analysis.types import timeseries_table
 from operational_analysis.toolkits import reanalysis_downloading
@@ -55,15 +56,15 @@ class ReanalysisData(object):
                 for product in self._products:
                     self._product[product].load(path, "{}_{}".format(name, product))
             elif format == "planetos":
-                for product in [p for p in self._products if p in ["merra2", "era5"]]:
+                for product in list(set(self._products) & set(("merra2", "era5"))):
                     # Download from PlanetOS if csv file doesn't already exist
-                    if not os.path.exists(os.path.join(path, "{}_{}.csv".format(name, product))):
+                    if not (Path(path) / f"{name}_{product}.csv").exists():
                         reanalysis_downloading.download_reanalysis_data_planetos(
                             product,
                             lat=lat,
                             lon=lon,
                             save_pathname=path,
-                            save_filename="{}_{}".format(name, product),
+                            save_filename=f"{name}_{product}",
                             **kwargs,
                         )
 
