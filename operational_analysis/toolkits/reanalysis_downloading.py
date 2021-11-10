@@ -46,6 +46,7 @@ pressure (temperature and surface pressure can be used to calculate air density)
 
 import os
 import datetime
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -56,7 +57,7 @@ import requests
 dataset_names = {"merra2": "nasa_merra2_global", "era5": "ecmwf_era5_v2"}
 
 
-def get_default_var_dicts_planetos(dataset):
+def _get_default_var_dicts_planetos(dataset):
     """
     Returns dictionary mapping PlanetOS variable names to OpenOA variable names for a particular dataset
 
@@ -82,29 +83,7 @@ def get_default_var_dicts_planetos(dataset):
     return var_dict
 
 
-def get_dataset_start_end_dates_planetos(dataset, apikey):
-    """
-    Returns the first and last datetimes for a PlanetOS dataset
-
-    Args:
-        dataset (:obj:`string`): Dataset name ("merra2" or "era5")
-        apikey (:obj:`string`): PlanetOS API key
-
-    Returns:
-        (:obj:`pandas.Timestamp`, :obj:`pandas.Timestamp`): Timestamps of first and last datetimes in PlanetOS dataset
-    """
-
-    url = "http://api.planetos.com/v1/datasets/" + dataset_names[dataset] + "/subdatasets?"
-
-    r = requests.get(url, params={"apikey": apikey})
-
-    start_date = pd.to_datetime(r.json()["subdatasets"][0]["temporalCoverage"]["start"] * 1e6)
-    end_date = pd.to_datetime(r.json()["subdatasets"][0]["temporalCoverage"]["end"] * 1e6)
-
-    return start_date, end_date
-
-
-def get_start_end_dates_planetos(start_date, end_date, num_years, start_date_ds, end_date_ds):
+def _get_start_end_dates_planetos(start_date, end_date, num_years, start_date_ds, end_date_ds):
     """
     This function determines the start and end datetimes to use for retrieving data from a dataset based on the
     combination of inputs provided by the user. The rules are as follows:
@@ -197,30 +176,60 @@ def get_start_end_dates_planetos(start_date, end_date, num_years, start_date_ds,
     return start_date_new, end_date_new
 
 
-def convert_resp_to_df(r, var_dict):
+def _convert_resp_to_df(r, var_names, var_dict=None):
     """
-    This function converts an API request Response object to a pandas dataframe containing the desired variables
-    renamed to standard OpenOA variable names.
+    This function converts an API request Response object to a pandas dataframe containing the desired variables,
+    optionally renamed to custom variable names.
 
     Args:
         r (:obj:`requests.Response`): An API request response object
-        var_dict (:obj:`dict`): Dictionary mapping reanalysis variable names from PlanetOS to standard OpenOA variable
-            names
+        var_names (:obj:`list`): List of reanalysis variable names downloaded from PlanetOS data set
+        var_dict (:obj:`dict`, optional): Optional dictionary mapping reanalysis variable names from PlanetOS to
+        custom variable names
 
     Returns:
-        :obj:`pandas.DataFrame`: A dataframe containing the variables specified in var_dict
+        :obj:`pandas.DataFrame`: A dataframe containing the variables specified in var_names or var_dict
     """
 
     df = pd.json_normalize(r.json()["entries"])
     df["datetime"] = pd.to_datetime(df["axes.time"])
 
-    # Convert to standard variable names
-    df.rename(columns={"data." + str(key): val for key, val in var_dict.items()}, inplace=True)
+    # remove prefix from data column names
+    df.columns = df.columns.str.replace("data.", "")
 
-    # Limit to relevant columns
-    df = df[["datetime"] + list(var_dict.values())]
+    # If var_dict is provided, convert to custom variable names
+    if var_dict is not None:
+        df.rename(columns=var_dict, inplace=True)
+
+        # Limit to relevant columns
+        df = df[["datetime"] + list(set(df.columns) & (set(var_dict.values()) | set(var_names)))]
+    else:
+        # Limit to relevant columns
+        df = df[["datetime"] + var_names]
 
     return df
+
+
+def get_dataset_start_end_dates_planetos(dataset, apikey):
+    """
+    Returns the first and last datetimes for a PlanetOS dataset
+
+    Args:
+        dataset (:obj:`string`): Dataset name ("merra2" or "era5")
+        apikey (:obj:`string`): PlanetOS API key
+
+    Returns:
+        (:obj:`pandas.Timestamp`, :obj:`pandas.Timestamp`): Timestamps of first and last datetimes in PlanetOS dataset
+    """
+
+    url = "http://api.planetos.com/v1/datasets/" + dataset_names[dataset] + "/subdatasets?"
+
+    r = requests.get(url, params={"apikey": apikey})
+
+    start_date = pd.to_datetime(r.json()["subdatasets"][0]["temporalCoverage"]["start"] * 1e6)
+    end_date = pd.to_datetime(r.json()["subdatasets"][0]["temporalCoverage"]["end"] * 1e6)
+
+    return start_date, end_date
 
 
 def download_reanalysis_data_planetos(
@@ -230,6 +239,7 @@ def download_reanalysis_data_planetos(
     start_date=None,
     end_date=None,
     num_years=20,
+    var_names=None,
     var_dict=None,
     save_pathname=None,
     save_filename=None,
@@ -251,17 +261,21 @@ def download_reanalysis_data_planetos(
 
     Args:
         dataset (:obj:`string`): Dataset name ("merra2" or "era5")
-        lat (:obj:`float`): Latitude (degrees)
-        lon (:obj:`float`): Longitude (degrees)
+        lat (:obj:`float`): Latitude in WGS 84 spatial reference system (degrees)
+        lon (:obj:`float`): Longitude in WGS 84 spatial reference system (degrees)
         start_date (:obj:`pandas.Timestamp` or :obj:`string`, optional): Desired start datetime of reanalysis data time
             series. Defaults to None.
         end_date (:obj:`pandas.Timestamp` or :obj:`string`, optional): Desired end datetime of reanalysis data time
             series. Defaults to None.
         num_years (int, optional): [description]. Desired number of years of reanalysis data. Only used if either
             start_date or end_date are undefined. Defaults to 20.
-        var_dict (:obj:`dict`, optional): Dictionary mapping the desired reanalysis variable names from PlanetOS to
-            standard OpenOA variable names. If undefined, default variables will be downloaded (U and V wind speeds,
-            temperature, and surface air pressure). Defaults to None.
+        var_names (:obj:`list`, optional): List of desired reanalysis variable names from PlanetOS data
+            set. If undefined, default variables will be downloaded (U and V wind speeds, temperature, and surface air
+            pressure) and variable names will be converted to standard OpenOA variable names. Defaults to None.
+        var_dict (:obj:`dict`, optional): Optional dictionary mapping the desired reanalysis variable names from
+            PlanetOS to custom variable names which will be used in the datarame that is returned. Note that if the
+            argument var_names is undefined, the downloaded default variables will be converted to standard OpenOA
+            variable names. Defaults to None.
         save_pathname (:obj:`string`, optional): The path where the downloaded reanalysis data will be saved (if
             defined). Defaults to None.
         save_filename (:obj:`string`, optional): The file name used to save the downloaded reanalysis data (if
@@ -276,15 +290,15 @@ def download_reanalysis_data_planetos(
 
     # Import PlanetOS apikey
     if apikey_file is None:
-        apikey_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "APIKEY")
-    apikey = open(apikey_file).readlines()[0].strip()
+        apikey_file = Path(__file__).parent.resolve() / "APIKEY"
+    apikey = open(apikey_file).read().strip()
 
     # Get start and end dates of dataset
     start_date_ds, end_date_ds = get_dataset_start_end_dates_planetos(dataset, apikey)
 
     # Depending on the start date, end date, and number of years specified, calculate the appropriate start and end
     # dates
-    start_date, end_date = get_start_end_dates_planetos(
+    start_date, end_date = _get_start_end_dates_planetos(
         start_date, end_date, num_years, start_date_ds, end_date_ds
     )
 
@@ -292,9 +306,10 @@ def download_reanalysis_data_planetos(
     date_diff = end_date - start_date
     count = int(24 * date_diff.days + date_diff.seconds / 3600)
 
-    # Get default variable dictionaries if not defined
-    if var_dict is None:
-        var_dict = get_default_var_dicts_planetos(dataset)
+    # Get default variable names and dictionary if not defined
+    if var_names is None:
+        var_dict = _get_default_var_dicts_planetos(dataset)
+        var_names = list(var_dict.keys())
 
     # Download data from PlanetOS
     url = "http://api.planetos.com/v1/datasets/" + dataset_names[dataset] + "/point?"
@@ -304,7 +319,7 @@ def download_reanalysis_data_planetos(
         "count": count,
         "lon": lon,
         "lat": lat,
-        "vars": ", ".join(list(var_dict.keys())),
+        "vars": ", ".join(var_names),
         "time_start": start_date.strftime("%Y-%m-%dT%H:%M:%S"),
         "time_end": end_date.strftime("%Y-%m-%dT%H:%M:%S"),
     }
@@ -312,7 +327,7 @@ def download_reanalysis_data_planetos(
     r = requests.get(url, params=kwgs)
 
     # convert to standard dataframe
-    df = convert_resp_to_df(r, var_dict)
+    df = _convert_resp_to_df(r, var_names, var_dict)
 
     if save_filename is not None:
         df.to_csv(os.path.join(save_pathname, save_filename + ".csv"), index=False)
