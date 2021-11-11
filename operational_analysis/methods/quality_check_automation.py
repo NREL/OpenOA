@@ -229,30 +229,40 @@ class QualityControlDiagnosticSuite:
         self.max_min()
         logger.info("QC Diagnostic Complete")
 
-    def dup_time_identification(self):
+    def dup_time_identification(self, which="original"):
         """
         This function identifies any time duplications in the dataset.
 
         Args:
-        (None)
+            which (:obj:`str`): One of "original" (default), "local", or "utc" to serve
+                as the timestamp basis for the duplication check. Original is used by
+                default and in case of invalid input.
 
         Returns:
         (None)
         """
+        which = which.lower().strip()
+        col_map = dict(original=self._t, local=self._t_local, utc=self._t_utc)
+        which = "original" if which not in col_map else which
         self._time_duplications = self._df.loc[
-            self._df.duplicated(subset=[self._id, self._t]), self._t
+            self._df.duplicated(subset=[self._id, col_map[which]]), col_map[which]
         ]
 
-    def gap_time_identification(self):
+    def gap_time_identification(self, which="original"):
         """
         This function identifies any time gaps in the dataset.
 
         Args:
-        (None)
+            which (:obj:`str`): One of "original" (default), "local", or "utc" to serve
+                as the timestamp basis for the gap check. Original is used by
+                default and in case of invalid input.
 
         Returns:
         (None)
         """
+        which = which.lower().strip()
+        col_map = dict(original=self._t, local=self._t_local, utc=self._t_utc)
+        which = "original" if which not in col_map else which
         self._time_gaps = timeseries.find_time_gaps(self._df[self._t], freq=self._freq)
 
     def max_min(self):
@@ -375,7 +385,7 @@ class QualityControlDiagnosticSuite:
                 plt.plot(
                     time_stamps[ix_filter],
                     data_spring.loc[ix_filter, self._w],
-                    label="Timezone-Adjusted UTC Timestamp",
+                    label="UTC Timestamp",
                     c="tab:orange",
                     linestyle="--",
                 )
@@ -404,7 +414,7 @@ class QualityControlDiagnosticSuite:
                 plt.plot(
                     time_stamps[ix_filter],
                     data_fall.loc[ix_filter, self._w],
-                    label="Timezone-Adjusted UTC Timestamp",
+                    label="UTC Timestamp",
                     c="tab:orange",
                     linestyle="--",
                 )
