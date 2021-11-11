@@ -52,6 +52,8 @@ import numpy as np
 import pandas as pd
 import requests
 
+import operational_analysis.toolkits.met_data_processing as met
+
 
 # Maps OpenOA-standard reanalysis product names to PlanetOS datasets
 dataset_names = {"merra2": "nasa_merra2_global", "era5": "ecmwf_era5_v2"}
@@ -69,13 +71,13 @@ def _get_default_var_dicts_planetos(dataset):
     """
 
     if dataset == "merra2":
-        var_dict = {"U50M": "u_50", "V50M": "v_50", "T2M": "t_2m", "PS": "surf_pres"}
+        var_dict = {"U50M": "u_ms", "V50M": "v_ms", "T2M": "temperature_K", "PS": "surf_pres_Pa"}
     elif dataset == "era5":
         var_dict = {
-            "eastward_wind_at_100_metres": "u_100",
-            "northward_wind_at_100_metres": "v_100",
-            "air_temperature_at_2_metres": "t_2m",
-            "surface_air_pressure": "surf_pres",
+            "eastward_wind_at_100_metres": "u_ms",
+            "northward_wind_at_100_metres": "v_ms",
+            "air_temperature_at_2_metres": "temperature_K",
+            "surface_air_pressure": "surf_pres_Pa",
         }
     else:
         var_dict = None
@@ -141,7 +143,7 @@ def _get_start_end_dates_planetos(start_date, end_date, num_years, start_date_ds
             print("End date is out of range. Changing to " + str(end_date_ds))
             end_date_new = end_date_ds + datetime.timedelta(hours=1)
 
-        # Handle rare leap year case where start date is on the last day of February
+        # Handle rare leap year case where end date is on the last day of February
         try:
             start_date_new = end_date_new.replace(year=end_date_new.year - num_years)
         except ValueError:
@@ -172,6 +174,18 @@ def _get_start_end_dates_planetos(start_date, end_date, num_years, start_date_ds
     if (end_date_new - datetime.timedelta(hours=1)) > end_date_ds:
         print("End date is out of range. Changing to " + str(end_date_ds))
         end_date_new = end_date_ds + datetime.timedelta(hours=1)
+
+    # Now check to see if both the start and end dates happen to be out of bounds
+    if end_date_new < start_date_ds:
+        print(
+            "End date is earlier than the start date of the data set. Setting end date equal to start date"
+        )
+        end_date_new = start_date_new
+    elif start_date_new > end_date_ds:
+        print(
+            "Start date is later than the end date of the data set. Setting start date equal to end date"
+        )
+        start_date_new = end_date_new
 
     return start_date_new, end_date_new
 
@@ -241,6 +255,7 @@ def download_reanalysis_data_planetos(
     num_years=20,
     var_names=None,
     var_dict=None,
+    calc_derived_vars=False,
     save_pathname=None,
     save_filename=None,
     apikey_file=None,
@@ -276,6 +291,8 @@ def download_reanalysis_data_planetos(
             PlanetOS to custom variable names which will be used in the datarame that is returned. Note that if the
             argument var_names is undefined, the downloaded default variables will be converted to standard OpenOA
             variable names. Defaults to None.
+        calc_derived_vars (:obj:`bool`, optional): Boolean that specifies whether wind speed, wind direction, and air
+            density are computed from the downloaded reanalysis variables. Defaults to False.
         save_pathname (:obj:`string`, optional): The path where the downloaded reanalysis data will be saved (if
             defined). Defaults to None.
         save_filename (:obj:`string`, optional): The file name used to save the downloaded reanalysis data (if
@@ -328,6 +345,12 @@ def download_reanalysis_data_planetos(
 
     # convert to standard dataframe
     df = _convert_resp_to_df(r, var_names, var_dict)
+
+    # compute derived variables if requested
+    if calc_derived_vars:
+        df["windspeed_ms"] = np.sqrt(df["u_ms"] ** 2 + df["v_ms"] ** 2)
+        df["winddirection_deg"] = met.compute_wind_direction(df["u_ms"], df["v_ms"])
+        df["rho_kgm-3"] = met.compute_air_density(df["temperature_K"], df["surf_pres_Pa"])
 
     if save_filename is not None:
         df.to_csv(os.path.join(save_pathname, save_filename + ".csv"), index=False)

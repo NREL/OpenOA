@@ -217,9 +217,6 @@ class Project_Engie(PlantData):
         #                       lat=self._lat_lon[0],
         #                       lon=self._lat_lon[1]
         #                       )
-        #
-        # However, wind direction and air density will still need to be calculated from the wind
-        # speed, temperature, and surface pessure variables.
 
         # merra2
         self._reanalysis._product["merra2"].load(self._path, "merra2_la_haute_borne", "csv")
