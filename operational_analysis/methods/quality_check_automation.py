@@ -56,7 +56,7 @@ def _remove_tz(df: pd.DataFrame, t_local_column: str) -> Tuple[np.ndarray, np.nd
             [True, pd.to_datetime(el).tz_localize(None).to_pydatetime()]
             if not isinstance(el, float)
             else [False, np.nan]
-            for ix, el in enumerate(df[t_local_column].values)
+            for ix, el in enumerate(df.loc[:, t_local_column])
         ]
     )
     ix_filter = arr[:, 0].astype(bool)
