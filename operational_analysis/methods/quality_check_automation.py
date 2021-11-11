@@ -205,10 +205,11 @@ class QualityControlDiagnosticSuite:
                 [el.astimezone(tz.tzutc()) for el in dt_col]
             ).tz_convert("UTC")
         except AttributeError:  # catches numpy datetime error for astimezone() not existing
-            _index = self._df.index.values
             self._df = self._df.tz_convert("UTC")
-            self._df[self._t_utc] = self._df.index.values
-            self._df = self._df.set_index(_index)
+            self._df[self._t_utc] = self._df.index
+
+        # Adjust the index name to reflect the change to a UTC-based timestamp
+        self._df.index.name = self._t_utc
 
         self._df = self._determine_offset_dst(self._df)
 
@@ -276,8 +277,8 @@ class QualityControlDiagnosticSuite:
         Produce a timeseries plot showing daylight savings events for each year using the passed data.
 
         Args:
-            hour_window(:obj: 'int'): number of hours outside of the Daylight Savings Time
-            transitions to view in the plot (optional)
+            hour_window(:obj: 'int'): number of hours, before and after the Daylight Savings Time
+            transitions to view in the plot, by default 3.
 
         Returns:
             (None)
@@ -362,6 +363,7 @@ class QualityControlDiagnosticSuite:
                     data_spring.loc[ix_filter, self._w],
                     label="Original Timestamp",
                     c="tab:blue",
+                    lw=1.5,
                 )
 
                 # Find bad timestamps, then fill in any potential UTC time gaps due the focus on the input time field
@@ -390,6 +392,7 @@ class QualityControlDiagnosticSuite:
                     data_fall.loc[ix_filter, self._w],
                     label="Original Timestamp",
                     c="tab:blue",
+                    lw=1.5,
                 )
 
                 # Find bad timestamps, then fill in any potential UTC time gaps due the focus on the input time field
