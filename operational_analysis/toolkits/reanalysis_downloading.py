@@ -175,17 +175,17 @@ def _get_start_end_dates_planetos(start_date, end_date, num_years, start_date_ds
         print("End date is out of range. Changing to " + str(end_date_ds))
         end_date_new = end_date_ds + datetime.timedelta(hours=1)
 
-    # Now check to see if both the start and end dates happen to be out of bounds
-    if end_date_new < start_date_ds:
-        print(
-            "End date is earlier than the start date of the data set. Setting end date equal to start date"
-        )
-        end_date_new = start_date_new
-    elif start_date_new > end_date_ds:
-        print(
-            "Start date is later than the end date of the data set. Setting start date equal to end date"
-        )
-        start_date_new = end_date_new
+    # # Now check to see if both the start and end dates happen to be out of bounds
+    # if end_date_new < start_date_ds:
+    #     print(
+    #         "End date is earlier than the start date of the data set. Setting end date equal to start date"
+    #     )
+    #     end_date_new = start_date_new
+    # elif start_date_new > end_date_ds:
+    #     print(
+    #         "Start date is later than the end date of the data set. Setting start date equal to end date"
+    #     )
+    #     start_date_new = end_date_new
 
     return start_date_new, end_date_new
 
@@ -292,7 +292,9 @@ def download_reanalysis_data_planetos(
             argument var_names is undefined, the downloaded default variables will be converted to standard OpenOA
             variable names. Defaults to None.
         calc_derived_vars (:obj:`bool`, optional): Boolean that specifies whether wind speed, wind direction, and air
-            density are computed from the downloaded reanalysis variables. Defaults to False.
+            density are computed from the downloaded reanalysis variables. Note that this requires the downloaded
+            eastward wind speed, northward wind speed, temperature, and surface pressure to be renamed to the standard
+            variable names "u_ms", "v_ms", "temperature_K", and "surf_pres_Pa". Defaults to False.
         save_pathname (:obj:`string`, optional): The path where the downloaded reanalysis data will be saved (if
             defined). Defaults to None.
         save_filename (:obj:`string`, optional): The file name used to save the downloaded reanalysis data (if
@@ -344,7 +346,12 @@ def download_reanalysis_data_planetos(
     r = requests.get(url, params=kwgs)
 
     # convert to standard dataframe
-    df = _convert_resp_to_df(r, var_names, var_dict)
+    try:
+        df = _convert_resp_to_df(r, var_names, var_dict)
+    except KeyError as e:
+        raise KeyError(
+            "Error downloading the requested data from PlanetOS. Please check the request parameters (e.g., date range or variable names)."
+        ) from e
 
     # compute derived variables if requested
     if calc_derived_vars:
