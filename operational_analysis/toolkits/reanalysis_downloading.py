@@ -4,7 +4,8 @@ MERRA-2 and ERA5 reanalysis products and returning the data as pandas DataFrames
 data in csv files. Currently, the module supports downloading hourly reanalysis data for a time
 period of interest using the PlanetOS API. PlanetOS (https://planetos.com) is a service by
 Intertrust Technologies that provides access to a variety of weather, climate, and environmental
-datasets, including MERRA-2 and ERA5.
+datasets, including MERRA-2 and ERA5. The authors acknowledge Intertrust Technologies Corporation
+for providing valuable input on portions of this code.
 
 To use this module to download data through the PlanetOS API, users must first create a PlanetOS
 account (https://data.planetos.com/plans). Once an account is created, an API key will be provided,
@@ -132,7 +133,7 @@ def _get_start_end_dates_planetos(start_date, end_date, num_years, start_date_ds
             end_date_new = start_date_new.replace(year=start_date_new.year + num_years)
         except ValueError:
             end_date_new = start_date_new.replace(
-                month=2, day=28, year=start_date_new.years + num_years
+                month=2, day=28, year=start_date_new.year + num_years
             )
 
     elif (start_date is None) & (end_date is not None):
@@ -148,7 +149,7 @@ def _get_start_end_dates_planetos(start_date, end_date, num_years, start_date_ds
             start_date_new = end_date_new.replace(year=end_date_new.year - num_years)
         except ValueError:
             start_date_new = end_date_new.replace(
-                month=2, day=28, year=end_date_new.years - num_years
+                month=2, day=28, year=end_date_new.year - num_years
             )
 
     elif (start_date is None) & (end_date is None):
@@ -175,17 +176,17 @@ def _get_start_end_dates_planetos(start_date, end_date, num_years, start_date_ds
         print("End date is out of range. Changing to " + str(end_date_ds))
         end_date_new = end_date_ds + datetime.timedelta(hours=1)
 
-    # # Now check to see if both the start and end dates happen to be out of bounds
-    # if end_date_new < start_date_ds:
-    #     print(
-    #         "End date is earlier than the start date of the data set. Setting end date equal to start date"
-    #     )
-    #     end_date_new = start_date_new
-    # elif start_date_new > end_date_ds:
-    #     print(
-    #         "Start date is later than the end date of the data set. Setting start date equal to end date"
-    #     )
-    #     start_date_new = end_date_new
+    # Now check to see if both the start and end dates happen to be out of bounds
+    if end_date_new < start_date_ds:
+        print(
+            "End date is earlier than the start date of the data set. Setting end date equal to start date"
+        )
+        end_date_new = start_date_new
+    elif start_date_new > end_date_ds:
+        print(
+            "Start date is later than the end date of the data set. Setting start date equal to end date"
+        )
+        start_date_new = end_date_new
 
     return start_date_new, end_date_new
 
@@ -198,28 +199,36 @@ def _convert_resp_to_df(r, var_names, var_dict=None):
     Args:
         r (:obj:`requests.Response`): An API request response object
         var_names (:obj:`list`): List of reanalysis variable names downloaded from PlanetOS data set
-        var_dict (:obj:`dict`, optional): Optional dictionary mapping reanalysis variable names from PlanetOS to
-        custom variable names
+        var_dict (:obj:`dict`, optional): Optional dictionary mapping any number of reanalysis variable names from
+        PlanetOS to custom variable names
 
     Returns:
         :obj:`pandas.DataFrame`: A dataframe containing the variables specified in var_names or var_dict
     """
 
-    df = pd.json_normalize(r.json()["entries"])
-    df["datetime"] = pd.to_datetime(df["axes.time"])
+    try:
+        df = pd.json_normalize(r.json()["entries"])
+        df["datetime"] = pd.to_datetime(df["axes.time"])
+    except KeyError as e:
+        raise KeyError(
+            "A valid API Response could not be obtained from PlanetOS. Please check the request parameters (e.g., dataset name, date range, variable names)."
+        ) from e
 
     # remove prefix from data column names
-    df.columns = df.columns.str.replace("data.", "")
+    df.columns = df.columns.str.replace("data.", "", regex=False)
 
-    # If var_dict is provided, convert to custom variable names
-    if var_dict is not None:
-        df.rename(columns=var_dict, inplace=True)
-
-        # Limit to relevant columns
-        df = df[["datetime"] + list(set(df.columns) & (set(var_dict.values()) | set(var_names)))]
-    else:
+    try:
         # Limit to relevant columns
         df = df[["datetime"] + var_names]
+
+        # If var_dict is provided, convert to custom variable names
+        if var_dict is not None:
+            df.rename(columns=var_dict, inplace=True)
+
+    except KeyError as e:
+        raise KeyError(
+            "One or more of the desired variable names could not be obtained from PlanetOS. Please check the requested variable names."
+        ) from e
 
     return df
 
@@ -346,12 +355,7 @@ def download_reanalysis_data_planetos(
     r = requests.get(url, params=kwgs)
 
     # convert to standard dataframe
-    try:
-        df = _convert_resp_to_df(r, var_names, var_dict)
-    except KeyError as e:
-        raise KeyError(
-            "Error downloading the requested data from PlanetOS. Please check the request parameters (e.g., date range or variable names)."
-        ) from e
+    df = _convert_resp_to_df(r, var_names, var_dict)
 
     # compute derived variables if requested
     if calc_derived_vars:
