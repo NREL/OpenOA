@@ -229,23 +229,20 @@ class QualityControlDiagnosticSuite:
         self.max_min()
         logger.info("QC Diagnostic Complete")
 
-    def dup_time_identification(self, which="original"):
+    def dup_time_identification(self):
         """
         This function identifies any time duplications in the dataset.
-
-        Args:
-            which (:obj:`str`): One of "original" (default), "local", or "utc" to serve
-                as the timestamp basis for the duplication check. Original is used by
-                default and in case of invalid input.
-
-        Returns:
-        (None)
         """
-        which = which.lower().strip()
-        col_map = dict(original=self._t, local=self._t_local, utc=self._t_utc)
-        which = "original" if which not in col_map else which
         self._time_duplications = self._df.loc[
-            self._df.duplicated(subset=[self._id, col_map[which]]), col_map[which]
+            self._df.duplicated(subset=[self._id, self._t]), self._t
+        ]
+
+        self._time_duplications_local = self._df.loc[
+            self._df.duplicated(subset=[self._id, self._t_local]), self._t_local
+        ]
+
+        self._time_duplications_utc = self._df.loc[
+            self._df.duplicated(subset=[self._id, self._t_utc]), self._t_utc
         ]
 
     def gap_time_identification(self, which="original"):
@@ -298,30 +295,15 @@ class QualityControlDiagnosticSuite:
         df_full = self._df_dst.copy()
 
         # Locate the missing timestamps, convert to UTC, and recreate DST and UTC-offset columns
-        missing = timeseries.find_time_gaps(self._df_dst[self._t], self._freq)
-        missing_df = pd.DataFrame(
-            np.full((len(missing), df_full.shape[1]), np.nan, dtype=float),
-            columns=df_full.columns,
-            index=missing,
-        )
-        missing = pd.to_datetime(missing.values)
-        if self._tz_aware:
-            missing_df[self._t] = missing.tz_localize(self._local_tz)
-        else:
-            missing_df[self._t] = missing
-        try:
-            missing_local = missing.tz_localize(self._local_tz)
-            missing_df[self._t_local] = missing_local
-            try:
-                missing_df[self._t_utc] = missing_local.tz_convert("UTC")
-            except TypeError:
-                missing_df[self._t_utc] = missing_local.tz_localize("UTC")
-            missing_df = self._determine_offset_dst(missing_df)
-        except pytz.NonExistentTimeError:
-            pass
+        missing_original = timeseries.find_time_gaps(self._df_dst[self._t], self._freq)
+        missing_local = timeseries.find_time_gaps(self._df_dst[self._t_local], self._freq)
+        missing_utc = timeseries.find_time_gaps(self._df_dst[self._t_utc], self._freq)
 
-        if self._tz_aware:
-            missing_df = missing_df.set_index(missing_df[self._t_utc], drop=False)
+        missing_df = pd.DataFrame([], columns=self._df.columns)
+        missing_df.loc[:, self._t_utc] = missing_utc
+        missing_df.loc[:, self._t_local] = missing_local
+        missing_df.loc[:, self._t] = missing_original
+        missing_df = missing_df.set_index(self._t_utc, drop=False)
 
         # Append and resort the missing timestamps, then convert to local time
         df_full = df_full.append(missing_df).sort_values(self._t)
@@ -331,10 +313,9 @@ class QualityControlDiagnosticSuite:
             pass
         self._df_full = df_full
 
-        years = df_full[self._t].dt.year.unique()  # Years in data record
+        years = df_full[self._t].dt.year.unique().astype(int)  # Years in data record
         num_years = len(years)
         hour_window = pd.Timedelta(hours=hour_window)
-
         plt.figure(figsize=(14, 20))
 
         for i, year in enumerate(years):
@@ -367,14 +348,35 @@ class QualityControlDiagnosticSuite:
             # Plot each as side-by-side subplots
             plt.subplot(num_years, 2, 2 * i + 1)
             if np.sum(~np.isnan(data_spring[self._w])) > 0:
+                # For localized time, we want to ensure we're capturing the DST switch as missing data
                 ix_filter, time_stamps = _remove_tz(data_spring, self._t)
+                time_stamps = time_stamps[ix_filter]
+                power_data = data_spring.loc[ix_filter, self._w].tolist()
+
+                # Find the missing data points on the timezone stripped data and append
+                # it to the time stamps, then identify where to insert NaN in the power data
+                missing = timeseries.find_time_gaps(time_stamps, self._freq)
+                missing = pd.to_datetime(missing.values).to_pydatetime()
+                time_stamps = np.append(time_stamps, missing)
+                time_stamps.sort()
+                nan_ix = sorted([np.where(el == time_stamps)[0][0] for el in missing])
+                for ix in nan_ix:
+                    power_data.insert(ix, float("nan"))
+
                 plt.plot(
-                    time_stamps[ix_filter],
-                    data_spring.loc[ix_filter, self._w],
-                    label="Original Timestamp",
-                    c="tab:blue",
-                    lw=1.5,
+                    time_stamps, power_data, label="Original Timestamp", c="tab:blue", lw=1.5,
                 )
+
+                # Plot the duplicated time stamps as scatter points
+                duplications = data_spring.loc[data_spring[self._t].isin(self._time_duplications)]
+                if duplications.shape[0] > 0:
+                    ix_filter, time_stamps = _remove_tz(duplications, self._t)
+                    plt.scatter(
+                        time_stamps[ix_filter],
+                        duplications.loc[ix_filter, self._w],
+                        c="tab:blue",
+                        label="Original Timestamp Duplicates",
+                    )
 
                 # Find bad timestamps, then fill in any potential UTC time gaps due the focus on the input time field
                 ix_filter, time_stamps = _remove_tz(data_spring, self._t_utc)
@@ -389,6 +391,20 @@ class QualityControlDiagnosticSuite:
                     c="tab:orange",
                     linestyle="--",
                 )
+
+                # Plot the duplicated time stamps as scatter points
+                duplications = data_spring.loc[
+                    data_spring[self._t_utc].isin(self._time_duplications_utc)
+                ]
+                if duplications.shape[0] > 0:
+                    ix_filter, time_stamps = _remove_tz(duplications, self._t_utc)
+                    plt.scatter(
+                        time_stamps[ix_filter],
+                        duplications.loc[ix_filter, self._w],
+                        c="tab:orange",
+                        label="UTC Timestamp Duplicates",
+                    )
+
             plt.title(f"{year}, Spring")
             plt.ylabel("Power")
             plt.xlabel("Date")
@@ -405,6 +421,17 @@ class QualityControlDiagnosticSuite:
                     lw=1.5,
                 )
 
+                # Plot the duplicated time stamps as scatter points
+                duplications = data_fall.loc[data_fall[self._t].isin(self._time_duplications)]
+                if duplications.shape[0] > 0:
+                    ix_filter, time_stamps = _remove_tz(duplications, self._t)
+                    plt.scatter(
+                        time_stamps[ix_filter],
+                        duplications.loc[ix_filter, self._w],
+                        c="tab:blue",
+                        label="Original Timestamp Duplicates",
+                    )
+
                 # Find bad timestamps, then fill in any potential UTC time gaps due the focus on the input time field
                 ix_filter, time_stamps = _remove_tz(data_fall, self._t_utc)
                 data_fall = timeseries.gap_fill_data_frame(
@@ -418,6 +445,20 @@ class QualityControlDiagnosticSuite:
                     c="tab:orange",
                     linestyle="--",
                 )
+
+                # Plot the duplicated time stamps as scatter points
+                duplications = data_fall.loc[
+                    data_fall[self._t_utc].isin(self._time_duplications_utc)
+                ]
+                if duplications.shape[0] > 0:
+                    ix_filter, time_stamps = _remove_tz(duplications, self._t_utc)
+                    plt.scatter(
+                        time_stamps[ix_filter],
+                        duplications.loc[ix_filter, self._w],
+                        c="tab:orange",
+                        label="UTC Timestamp Duplicates",
+                    )
+
             plt.title(f"{year}, Fall")
             plt.ylabel("Power")
             plt.xlabel("Date")
