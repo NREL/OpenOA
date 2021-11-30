@@ -1,6 +1,22 @@
 import pandas as pd
+import pytest
 
 from operational_analysis.toolkits import reanalysis_downloading as rd
+
+
+def test_get_dataset_names():
+    dataset_names = {"merra2": "nasa_merra2_global", "era5": "ecmwf_era5_v2"}
+
+    assert rd._get_dataset_names("merra2") == dataset_names["merra2"]
+    assert rd._get_dataset_names("era5") == dataset_names["era5"]
+
+    # Check that minor typos are handled
+    assert rd._get_dataset_names("MERRA2") == dataset_names["merra2"]
+    assert rd._get_dataset_names(" era5 ") == dataset_names["era5"]
+
+    # Check that invalid dataset names are caught
+    with pytest.raises(KeyError):
+        rd._get_dataset_names("ERAI")
 
 
 def test_default_var_dicts_planetos():
@@ -15,6 +31,14 @@ def test_default_var_dicts_planetos():
 
     assert rd._get_default_var_dicts_planetos("merra2") == var_dict_merra2
     assert rd._get_default_var_dicts_planetos("era5") == var_dict_era5
+
+    # Check that minor typos are handled
+    assert rd._get_default_var_dicts_planetos("MERRA2") == var_dict_merra2
+    assert rd._get_default_var_dicts_planetos(" era5 ") == var_dict_era5
+
+    # Check that invalid dataset names are caught
+    with pytest.raises(ValueError):
+        rd._get_default_var_dicts_planetos("ERAI")
 
 
 def test_get_start_end_dates_planetos():

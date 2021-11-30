@@ -45,7 +45,6 @@ analysis methods require the eastward and northward wind components, temperature
 pressure (temperature and surface pressure can be used to calculate air density) over a 20-year period.
 """
 
-import os
 import datetime
 from pathlib import Path
 
@@ -56,8 +55,25 @@ import requests
 import operational_analysis.toolkits.met_data_processing as met
 
 
-# Maps OpenOA-standard reanalysis product names to PlanetOS datasets
-dataset_names = {"merra2": "nasa_merra2_global", "era5": "ecmwf_era5_v2"}
+def _get_dataset_names(dataset):
+    """
+    Maps OpenOA-standard reanalysis product names to PlanetOS datasets
+
+    Args:
+        dataset (:obj:`string`): Dataset name ("merra2" or "era5")
+
+    Returns:
+        :obj:`string`: Corresponding PlanetOS dataset name
+    """
+
+    dataset = dataset.lower().strip()
+
+    dataset_names = {"merra2": "nasa_merra2_global", "era5": "ecmwf_era5_v2"}
+
+    try:
+        return dataset_names[dataset]
+    except KeyError as e:
+        raise KeyError('Invalid dataset name. Currently, "merra2" and "era5" are supported.') from e
 
 
 def _get_default_var_dicts_planetos(dataset):
@@ -71,6 +87,8 @@ def _get_default_var_dicts_planetos(dataset):
         :obj:`dict`: Dictionary mapping reanalysis variable names from PlanetOS to standard OpenOA variable names
     """
 
+    dataset = dataset.lower().strip()
+
     if dataset == "merra2":
         var_dict = {"U50M": "u_ms", "V50M": "v_ms", "T2M": "temperature_K", "PS": "surf_pres_Pa"}
     elif dataset == "era5":
@@ -81,7 +99,7 @@ def _get_default_var_dicts_planetos(dataset):
             "surface_air_pressure": "surf_pres_Pa",
         }
     else:
-        var_dict = None
+        raise ValueError('Invalid dataset name. Currently, "merra2" and "era5" are supported.')
 
     return var_dict
 
@@ -245,7 +263,7 @@ def get_dataset_start_end_dates_planetos(dataset, apikey):
         (:obj:`pandas.Timestamp`, :obj:`pandas.Timestamp`): Timestamps of first and last datetimes in PlanetOS dataset
     """
 
-    url = "http://api.planetos.com/v1/datasets/" + dataset_names[dataset] + "/subdatasets?"
+    url = "http://api.planetos.com/v1/datasets/" + _get_dataset_names(dataset) + "/subdatasets?"
 
     r = requests.get(url, params={"apikey": apikey})
 
@@ -268,6 +286,7 @@ def download_reanalysis_data_planetos(
     save_pathname=None,
     save_filename=None,
     apikey_file=None,
+    **api_kwargs,
 ):
     """
     This function downloads ERA5 or MERRA2 reanalysis data for a specific lat/lon using the PlanetOS API, returning a
@@ -311,6 +330,7 @@ def download_reanalysis_data_planetos(
         apikey_file (:obj:`string`, optional): The combined path and file name where the PlanetOS API key is saved. If
             undefined, will assume there is a file called "APIKEY" saved in the operational_analysis.toolkits
             directory. Defaults to None.
+        **api_kwargs: Optional additional keyword arguments used in the PlanetOS API request.
 
     Returns:
         :obj:`pandas.DataFrame`: A dataframe containing time series of the requested reanalysis variables
@@ -340,9 +360,9 @@ def download_reanalysis_data_planetos(
         var_names = list(var_dict.keys())
 
     # Download data from PlanetOS
-    url = "http://api.planetos.com/v1/datasets/" + dataset_names[dataset] + "/point?"
+    url = "http://api.planetos.com/v1/datasets/" + _get_dataset_names(dataset) + "/point?"
 
-    kwgs = {
+    base_kwargs = {
         "apikey": apikey,
         "count": count,
         "lon": lon,
@@ -352,7 +372,7 @@ def download_reanalysis_data_planetos(
         "time_end": end_date.strftime("%Y-%m-%dT%H:%M:%S"),
     }
 
-    r = requests.get(url, params=kwgs)
+    r = requests.get(url, params={**base_kwargs, **api_kwargs})
 
     # convert to standard dataframe
     df = _convert_resp_to_df(r, var_names, var_dict)
@@ -364,6 +384,6 @@ def download_reanalysis_data_planetos(
         df["rho_kgm-3"] = met.compute_air_density(df["temperature_K"], df["surf_pres_Pa"])
 
     if save_filename is not None:
-        df.to_csv(os.path.join(save_pathname, save_filename + ".csv"), index=False)
+        df.to_csv(Path(save_pathname).resolve() / f"{save_filename}.csv", index=False)
 
     return df
