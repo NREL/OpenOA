@@ -59,7 +59,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.napoleon",
     "sphinx.ext.todo",
-    "m2r",
+    "m2r2",
     "nbsphinx",
     "bokeh.sphinxext.bokeh_plot",
 ]
