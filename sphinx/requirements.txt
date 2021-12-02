@@ -11,3 +11,5 @@ nbmerge
 nbsphinx
 bokeh
 matplotlib
+pyproj
+shapely
