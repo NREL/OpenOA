@@ -39,7 +39,7 @@ def logistic5param(x, a, b, c, d, g):
 
     """
 
-    res = np.ones_like(x, dtype=np.float)
+    res = np.ones_like(x, dtype=np.float64)
     # In the case where b<0, x==0, there is a divide by zero error. The answer should be "d" when x==0 and b<0.
     if b < 0:
         res *= d  # Initialize result, default value is d

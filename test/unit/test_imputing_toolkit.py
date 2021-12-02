@@ -238,7 +238,7 @@ class SimpleFilters(unittest.TestCase):
             "data",
             "time",
         )
-        nptest.assert_almost_equal(np.float(y.values[1]), np.float(2.989779), decimal=4)
+        nptest.assert_almost_equal(np.float64(y.values[1]), np.float64(2.989779), decimal=4)
 
         # Test 2, make sure only the first NaN entry is imputed
         y2 = imputing.impute_data(
@@ -248,7 +248,7 @@ class SimpleFilters(unittest.TestCase):
             "data",
             "time",
         )
-        nptest.assert_almost_equal(np.float(y2.loc["c"]), np.float(3.874429), decimal=4)
+        nptest.assert_almost_equal(np.float64(y2.loc["c"]), np.float64(3.874429), decimal=4)
         nptest.assert_equal(y2.loc["b"], np.nan)
 
         # Test 3, make sure no data is imputed when no NaN are present
