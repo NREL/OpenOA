@@ -14,6 +14,6 @@ bokeh==2.3.*
 # Not included in docs requirements
 pytest>=5.4.2
 pytest-cov>=2.8.1
-scikit_learn>=0.20.1
+scikit_learn>=0.20.1,<1.0
 matplotlib>=2.1.0
 requests>=2.21.0

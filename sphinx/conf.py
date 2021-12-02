@@ -60,7 +60,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.napoleon",
     "sphinx.ext.todo",
-    "m2r",
+    "m2r2",
     "nbsphinx",
     "bokeh.sphinxext.bokeh_plot",
 ]
@@ -227,3 +227,21 @@ napoleon_google_docstring = True
 napoleon_use_param = False
 napoleon_use_ivar = False
 autoclass_content = "both"
+
+# -- Options for Autodoc
+
+autodoc_mock_imports = [
+    "statsmodels",
+    "sklearn",
+    "requests",
+    "eia",
+    "numpy",
+    "pandas",
+    "pygam",
+    "scipy",
+    "tqdm",
+    #    "matplotlib", ## These are actually required to generate the Bokeh plot in the pandas_plotting docs
+    #    "pyproj",
+    #    "shapely",
+    #    "bokeh",
+]

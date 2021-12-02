@@ -24,6 +24,23 @@ such as Dask and Spark, in the future.
 
 If you would like to try out the code before installation or simply explore the possibilities, please see our examples on [Binder](https://mybinder.org/v2/gh/NREL/OpenOA/main?filepath=examples).
 
+If you use this software in your work, please cite our JOSS article with the following BibTex:
+
+```
+@article{Perr-Sauer2021,
+  doi = {10.21105/joss.02171},
+  url = {https://doi.org/10.21105/joss.02171},
+  year = {2021},
+  publisher = {The Open Journal},
+  volume = {6},
+  number = {58},
+  pages = {2171},
+  author = {Jordan Perr-Sauer and Mike Optis and Jason M. Fields and Nicola Bodini and Joseph C.Y. Lee and Austin Todd and Eric Simley and Robert Hammond and Caleb Phillips and Monte Lunacek and Travis Kemper and Lindy Williams and Anna Craig and Nathan Agarwal and Shawn Sheng and John Meissner},
+  title = {OpenOA: An Open-Source Codebase For Operational Analysis of Wind Farms},
+  journal = {Journal of Open Source Software}
+}
+```
+
 ### Requirements
 
   * Python 3.6-3.8 with pip.
