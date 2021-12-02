@@ -12,7 +12,7 @@ from setuptools.command.test import test as TestCommand
 
 REQUIRED = [
     "statsmodels",
-    "scikit_learn>=0.20.1",
+    "scikit_learn>=0.20.1,<1.0",
     "requests>=2.21.0",
     "eia-python>=1.22",
     "pyproj>=2.6.1",
@@ -92,5 +92,5 @@ setup(
     install_requires=REQUIRED,
     extras_require=EXTRAS,
     tests_require=TESTS,
-    python_requires=">=3.6, <=3.9",
+    python_requires=">=3.6, <=3.10",
 )
