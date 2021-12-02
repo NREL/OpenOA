@@ -32,10 +32,10 @@ TESTS = ["pytest>=5.4.2", "pytest-cov>=2.8.1"]
 EXTRAS = {
     "docs": [
         "ipython",
-        "m2r==0.2.1",
-        "sphinx==2.0.0",
-        "sphinxcontrib-napoleon==0.6.1",
-        "sphinx_rtd_theme==0.2.4",
+        "m2r2",
+        "sphinx",
+        "sphinxcontrib-napoleon",
+        "sphinx_rtd_theme",
         "nbmerge",
         "nbsphinx",
     ],

@@ -1,16 +1,15 @@
 # Requirement for docs
 # In addition to main requirements
 
-ipython
-#docutils==0.17.1
-m2r2
-sphinx
-sphinxcontrib-napoleon
-sphinx_rtd_theme
-nbmerge
-nbsphinx
-bokeh
-matplotlib
-pyproj
-shapely
-pandas
+ipython==7.30.*
+m2r2==0.3.*
+Sphinx==4.3.*
+sphinxcontrib-napoleon==0.7
+sphinx-rtd-theme==1.0.*
+nbmerge==0.0.4
+nbsphinx==0.8.*
+bokeh==2.3.*
+matplotlib==3.5.*
+pyproj==3.3.*
+Shapely==1.8.*
+pandas==1.2.*
