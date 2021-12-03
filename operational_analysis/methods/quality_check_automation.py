@@ -66,21 +66,21 @@ def _remove_tz(df: pd.DataFrame, t_local_column: str) -> Tuple[np.ndarray, np.nd
 
 def _get_time_window(df, ix, hour_window, time_col, local_time_col, utc_time_col):
     """Retrieves the time window in a DataFrame with likely confusing
-        implementation of timezones.
+    implementation of timezones.
 
-        Args:
-            df (:obj:`pandas.DataFrame`): The DataFrame of interest.
-            ix (:obj:`pandas._libs.tslibs.timestamps.Timestamp`]): The starting
-                Timestamp on which to base the time window.
-            hour_window (:obj:`pandas._libs.tslibs.timedeltas.Timedelta`): The number
-                length of the window, in hours.
-            time_col (:obj:`str`): The original input datetime column.
-            local_time_col (:obj:`str`): The local timezone resolved datetime column.
-            utc_time_col (:obj:`str`): The UTC resolved datetime column.
+    Args:
+        df (:obj:`pandas.DataFrame`): The DataFrame of interest.
+        ix (:obj:`pandas._libs.tslibs.timestamps.Timestamp`]): The starting
+            Timestamp on which to base the time window.
+        hour_window (:obj:`pandas._libs.tslibs.timedeltas.Timedelta`): The number
+            length of the window, in hours.
+        time_col (:obj:`str`): The original input datetime column.
+        local_time_col (:obj:`str`): The local timezone resolved datetime column.
+        utc_time_col (:obj:`str`): The UTC resolved datetime column.
 
-        Returns:
-            (:obj:`pandas.DataFrame`): The filtered DataFrame object
-        """
+    Returns:
+        (:obj:`pandas.DataFrame`): The filtered DataFrame object
+    """
     if ix.tz is None:
         col = time_col
     elif str(ix.tz) == "UTC":
@@ -231,7 +231,7 @@ class QualityControlDiagnosticSuite:
 
     def dup_time_identification(self):
         """
-        This function identifies any time duplications in the dataset.
+        This function identifies any time duplications in the dataset for original, localized, and UTC timestamps.
         """
         self._time_duplications = self._df.loc[
             self._df.duplicated(subset=[self._id, self._t]), self._t
@@ -245,22 +245,13 @@ class QualityControlDiagnosticSuite:
             self._df.duplicated(subset=[self._id, self._t_utc]), self._t_utc
         ]
 
-    def gap_time_identification(self, which="original"):
+    def gap_time_identification(self):
         """
-        This function identifies any time gaps in the dataset.
-
-        Args:
-            which (:obj:`str`): One of "original" (default), "local", or "utc" to serve
-                as the timestamp basis for the gap check. Original is used by
-                default and in case of invalid input.
-
-        Returns:
-        (None)
+        This function identifies any time gaps in the dataset for original, localized, and UTC timestamps.
         """
-        which = which.lower().strip()
-        col_map = dict(original=self._t, local=self._t_local, utc=self._t_utc)
-        which = "original" if which not in col_map else which
         self._time_gaps = timeseries.find_time_gaps(self._df[self._t], freq=self._freq)
+        self._time_gaps_local = timeseries.find_time_gaps(self._df[self._t_local], freq=self._freq)
+        self._time_gaps_utc = timeseries.find_time_gaps(self._df[self._t_utc], freq=self._freq)
 
     def max_min(self):
 
@@ -364,7 +355,11 @@ class QualityControlDiagnosticSuite:
                     power_data.insert(ix, float("nan"))
 
                 plt.plot(
-                    time_stamps, power_data, label="Original Timestamp", c="tab:blue", lw=1.5,
+                    time_stamps,
+                    power_data,
+                    label="Original Timestamp",
+                    c="tab:blue",
+                    lw=1.5,
                 )
 
                 # Plot the duplicated time stamps as scatter points
