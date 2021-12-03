@@ -931,7 +931,7 @@ class MonteCarloAEP(object):
             predicted_y = reg.predict(np.array(reg_data[:, 0:-1]))
 
             self._mc_slope[n, :] = reg.coef_
-            self._mc_intercept[n] = np.float(reg.intercept_)
+            self._mc_intercept[n] = np.float64(reg.intercept_)
 
             self._r2_score[n] = r2_score(reg_data[:, -1], predicted_y)
             self._mse_score[n] = mean_squared_error(reg_data[:, -1], predicted_y)
