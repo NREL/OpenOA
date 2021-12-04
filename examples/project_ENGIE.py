@@ -206,6 +206,18 @@ class Project_Engie(PlantData):
         ###################
         # REANALYSIS DATA #
         ###################
+
+        # Note that as an alternatvie to loading the existing csv files containing reanalysis data,
+        # the data can be downloaded through the PlanetOS API using the
+        # toolkits.reanalysis_downloading module with the "planetos" option:
+        #
+        # self._reanalysis.load(project._path,
+        #                       project._name,
+        #                       "planetos",
+        #                       lat=self._lat_lon[0],
+        #                       lon=self._lat_lon[1]
+        #                       )
+
         # merra2
         self._reanalysis._product["merra2"].load(self._path, "merra2_la_haute_borne", "csv")
 
