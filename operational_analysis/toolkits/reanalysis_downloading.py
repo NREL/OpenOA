@@ -22,18 +22,18 @@ and Information Services Center (GES DISC) and ERA5 data directly from the Coper
 Store (CDS) service. However, this module does not currently contain functions for automating the
 downloading process.
 
--Hourly MERRA-2 data can be downloaded directly from NASA GES DISC by selecting the
-"Subset / Get Data" link on the following webpage:
-https://disc.gsfc.nasa.gov/datasets/M2T1NXSLV_5.12.4/summary. Specific dates, variables, and
-coordinates can be selected using the OPeNDAP or GES DISC Subsetter download methods.
+* Hourly MERRA-2 data can be downloaded directly from NASA GES DISC by selecting the
+  "Subset / Get Data" link on the following webpage:
+  https://disc.gsfc.nasa.gov/datasets/M2T1NXSLV_5.12.4/summary. Specific dates, variables, and
+  coordinates can be selected using the OPeNDAP or GES DISC Subsetter download methods.
 
--Hourly ERA5 data can be downloaded using either the CDS web interface or the CDS API, as explained
-here: https://confluence.ecmwf.int/display/CKB/How+to+download+ERA5. Data for specific dates,
-variables, and coordinates can be downloaded using the CDS web interface via the "Download data"
-tab here: https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-single-levels?tab=overview.
-Instructions for using the CDS Toolbox API to download ERA5 data programatically can be found here:
-https://cds.climate.copernicus.eu/toolbox/doc/how-to/1_how_to_retrieve_data/1_how_to_retrieve_data.html
-(note that the "reanalysis-era5-single-levels" dataset should be used).
+* Hourly ERA5 data can be downloaded using either the CDS web interface or the CDS API, as explained
+  here: https://confluence.ecmwf.int/display/CKB/How+to+download+ERA5. Data for specific dates,
+  variables, and coordinates can be downloaded using the CDS web interface via the "Download data"
+  tab here: https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-single-levels?tab=overview.
+  Instructions for using the CDS Toolbox API to download ERA5 data programatically can be found here:
+  https://cds.climate.copernicus.eu/toolbox/doc/how-to/1_how_to_retrieve_data/1_how_to_retrieve_data.html
+  (note that the "reanalysis-era5-single-levels" dataset should be used).
 
 For reanalysis data downloaded directly from NASA or Copernicus, to import the data into an OpenOA
 PlantData object, used by the OpenOA analysis methods, the data should be re-saved as a single csv
@@ -293,14 +293,15 @@ def download_reanalysis_data_planetos(
     dataframe and, optionally, saving the data as a csv file. Only the indicated variables are downloaded and the start
     and end datetimes of the data are determined based on the provided combination of start_date, end_date, and
     num_years arguments as follows:
-        1. If start_date and end_date are both defined, they will be used as the final start and end dates but will be
-           adjusted if they are outside of the start and end dates of the PlanetOS dataset
-        2. If start_date and end_date are both undefined, the final end date will be the end of the last full month in
-           the PlanetOS dataset and the start date will be num_years before the end date
-        3. If only start_date is defined, the final end date will be the lesser of num_years after the start date or the
-           last datetime of the PlanetOS dataset
-        4. If only end_date is defined, the final start date will be the greater of num_years before the end date or the
-           first dateitme of the PlanetOS dataset
+
+    1. If start_date and end_date are both defined, they will be used as the final start and end dates but will be
+       adjusted if they are outside of the start and end dates of the PlanetOS dataset
+    2. If start_date and end_date are both undefined, the final end date will be the end of the last full month in
+       the PlanetOS dataset and the start date will be num_years before the end date
+    3. If only start_date is defined, the final end date will be the lesser of num_years after the start date or the
+       last datetime of the PlanetOS dataset
+    4. If only end_date is defined, the final start date will be the greater of num_years before the end date or the
+       first dateitme of the PlanetOS dataset
 
     Args:
         dataset (:obj:`string`): Dataset name ("merra2" or "era5")
@@ -310,7 +311,7 @@ def download_reanalysis_data_planetos(
             series. Defaults to None.
         end_date (:obj:`pandas.Timestamp` or :obj:`string`, optional): Desired end datetime of reanalysis data time
             series. Defaults to None.
-        num_years (int, optional): [description]. Desired number of years of reanalysis data. Only used if either
+        num_years (:obj:`int`, optional): Desired number of years of reanalysis data. Only used if either
             start_date or end_date are undefined. Defaults to 20.
         var_names (:obj:`list`, optional): List of desired reanalysis variable names from PlanetOS data
             set. If undefined, default variables will be downloaded (U and V wind speeds, temperature, and surface air
