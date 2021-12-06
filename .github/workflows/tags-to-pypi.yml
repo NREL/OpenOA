@@ -8,13 +8,13 @@ on:
 jobs:
     build-n-publish:
         name: Build and publish Python package to PyPi
-        runs-on: ubuntu-18.04
+        runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@main
-            - name: Set up Python 3.8
+            - name: Set up Python 3.9
               uses: actions/setup-python@v1
               with:
-                python-version: 3.8
+                python-version: 3.9
             - name: Build tarballs
               run: |
                 pip install wheel
