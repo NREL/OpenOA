@@ -30,7 +30,8 @@ new_nb = nbmerge.merge_notebooks(
     (
         "./examples.ipynb",
         "../examples/00_toolkit_examples.ipynb",
-        "../examples/01_qc_data.ipynb",
+        "../examples/01a_qc_tz_unaware_data.ipynb",
+        "../examples/01b_qc_tz_aware_data.ipynb",
         "../examples/02_plant_aep_analysis.ipynb",
         "../examples/02b_augmented_plant_aep_analysis.ipynb",
         "../examples/03_turbine_ideal_energy.ipynb",
