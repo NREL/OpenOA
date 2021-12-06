@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file. If you make
 - Toolkit added for downloading reanalysis data using the PlanetOS API
 - Added hourly resolution to AEP calculation
 - Added wind farm plotting function to pandas_plotting toolkit using the Bokeh library
+- Split the QC methods into a more generic `WindToolKitQualityControlDiagnosticSuite` class and WTK-specific subclass: `WindToolKitQualityControlDiagnosticSuite`.
 
 ## [2.2 - 2021-05-28]
 - IAV incorporation in AEP calculation
