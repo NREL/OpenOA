@@ -136,7 +136,10 @@ class MonteCarloAEP(object):
         self._calendar_samples = {"M": 12, "D": 365, "H": 365 * 24}[self.time_resolution]
         self.num_days_lt = (31, 28.25, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
 
-        self.end_date_lt = pd.to_datetime(end_date_lt).replace(minute=0)  # drop minute field
+        if end_date_lt is not None:
+            self.end_date_lt = pd.to_datetime(end_date_lt).replace(minute=0)  # drop minute field
+        else:
+            self.end_date_lt = end_date_lt
 
         # Check that choices for regression inputs are allowed
         if reg_temperature not in [True, False]:
