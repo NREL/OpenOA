@@ -56,7 +56,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         self.check_process_reanalysis_data_monthly(df, df_rean)
 
     # Test reanalysis start and end dates depending on time resolution and end date argument
-    def test_reanalysis_aggregate(self):
+    def test_reanalysis_aggregate_monthly(self):
         reset_prng()
         # ____________________________________________________________________
         # Test default aggregate reanalysis values and date range, at monthly time resolution
@@ -82,6 +82,54 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
             nptest.assert_array_almost_equal(expected[key], computed[key])
 
         # ____________________________________________________________________
+        # Check for invalid user-defined end dates
+        # Date range doesn't include full 20 years
+        with pytest.raises(ValueError):
+            self.analysis = plant_analysis.MonteCarloAEP(
+                self.project_rean,
+                reanal_products=["merra2", "era5"],
+                time_resolution="M",
+                end_date_lt="2018-12-15 12:00",
+            )
+
+        # End date out of bounds, monthly
+        with pytest.raises(ValueError):
+            self.analysis = plant_analysis.MonteCarloAEP(
+                self.project_rean,
+                reanal_products=["merra2", "era5"],
+                time_resolution="M",
+                end_date_lt="2019-04-15 13:00",
+            )
+
+        # ____________________________________________________________________
+        # Test aggregate reanalysis values and date range with user-defined end date, at monthly time resolution
+        self.analysis = plant_analysis.MonteCarloAEP(
+            self.project_rean,
+            reanal_products=["merra2", "era5"],
+            time_resolution="M",
+            end_date_lt="2019-02-10 12:00",
+        )
+        df_rean = self.analysis._reanalysis_aggregate
+
+        # check that date range is truncated correctly
+        assert (df_rean.index[0], df_rean.index[-1]) == (
+            pd.to_datetime("1999-02-01"),
+            pd.to_datetime("2019-02-01"),
+        )
+
+        # Check wind speed values at start and end dates
+        expected = {"merra2": [7.584891, 6.529796], "era5": [7.241081, 6.644804]}
+        computed = {
+            key: df_rean.loc[[df_rean.index[0], df_rean.index[-1]], key].to_numpy()
+            for key in expected.keys()
+        }
+
+        for key in expected.keys():
+            nptest.assert_array_almost_equal(expected[key], computed[key])
+
+    def test_reanalysis_aggregate_daily(self):
+        reset_prng()
+        # ____________________________________________________________________
         # Test default aggregate reanalysis values and date range, at daily time resolution
         self.analysis = plant_analysis.MonteCarloAEP(
             self.project_rean, reanal_products=["merra2", "era5"], time_resolution="D"
@@ -104,6 +152,54 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         for key in expected.keys():
             nptest.assert_array_almost_equal(expected[key], computed[key])
 
+        # ____________________________________________________________________
+        # Check for invalid user-defined end dates
+        # Date range doesn't include full 20 years
+        with pytest.raises(ValueError):
+            self.analysis = plant_analysis.MonteCarloAEP(
+                self.project_rean,
+                reanal_products=["merra2", "era5"],
+                time_resolution="D",
+                end_date_lt="2019-01-14 23:00",
+            )
+
+        # End date out of bounds, daily
+        with pytest.raises(ValueError):
+            self.analysis = plant_analysis.MonteCarloAEP(
+                self.project_rean,
+                reanal_products=["merra2", "era5"],
+                time_resolution="D",
+                end_date_lt="2019-04-15 13:00",
+            )
+
+        # ____________________________________________________________________
+        # Test aggregate reanalysis values and date range with user-defined end date, at daily time resolution
+        self.analysis = plant_analysis.MonteCarloAEP(
+            self.project_rean,
+            reanal_products=["merra2", "era5"],
+            time_resolution="D",
+            end_date_lt="2019-02-10 12:00",
+        )
+        df_rean = self.analysis._reanalysis_aggregate
+
+        # check that date range is truncated correctly
+        assert (df_rean.index[0], df_rean.index[-1]) == (
+            pd.to_datetime("1999-01-16"),
+            pd.to_datetime("2019-02-10"),
+        )
+
+        # Check wind speed values at start and end dates
+        expected = {"merra2": [12.868168, 14.571084], "era5": [12.461761, 14.045798]}
+        computed = {
+            key: df_rean.loc[[df_rean.index[0], df_rean.index[-1]], key].to_numpy()
+            for key in expected.keys()
+        }
+
+        for key in expected.keys():
+            nptest.assert_array_almost_equal(expected[key], computed[key])
+
+    def test_reanalysis_aggregate_hourly(self):
+        reset_prng()
         # ____________________________________________________________________
         # Test default aggregate reanalysis values and date range, at hourly time resolution
         self.analysis = plant_analysis.MonteCarloAEP(
@@ -134,26 +230,8 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
             self.analysis = plant_analysis.MonteCarloAEP(
                 self.project_rean,
                 reanal_products=["merra2", "era5"],
-                time_resolution="M",
-                end_date_lt="2018-12-15 12:00",
-            )
-
-        # End date out of bounds, monthly
-        with pytest.raises(ValueError):
-            self.analysis = plant_analysis.MonteCarloAEP(
-                self.project_rean,
-                reanal_products=["merra2", "era5"],
-                time_resolution="M",
-                end_date_lt="2019-04-15 13:00",
-            )
-
-        # End date out of bounds, daily
-        with pytest.raises(ValueError):
-            self.analysis = plant_analysis.MonteCarloAEP(
-                self.project_rean,
-                reanal_products=["merra2", "era5"],
-                time_resolution="D",
-                end_date_lt="2019-04-15 13:00",
+                time_resolution="H",
+                end_date_lt="2019-01-15 10:00",
             )
 
         # End date out of bounds, hourly
@@ -164,58 +242,6 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
                 time_resolution="H",
                 end_date_lt="2019-04-15 13:00",
             )
-
-        # ____________________________________________________________________
-        # Test aggregate reanalysis values and date range with user-defined end date, at monthly time resolution
-        self.analysis = plant_analysis.MonteCarloAEP(
-            self.project_rean,
-            reanal_products=["merra2", "era5"],
-            time_resolution="M",
-            end_date_lt="2019-02-10 12:00",
-        )
-        df_rean = self.analysis._reanalysis_aggregate
-
-        # check that date range is truncated correctly
-        assert (df_rean.index[0], df_rean.index[-1]) == (
-            pd.to_datetime("1999-02-01"),
-            pd.to_datetime("2019-02-01"),
-        )
-
-        # Check wind speed values at start and end dates
-        expected = {"merra2": [7.584891, 6.529796], "era5": [7.241081, 6.644804]}
-        computed = {
-            key: df_rean.loc[[df_rean.index[0], df_rean.index[-1]], key].to_numpy()
-            for key in expected.keys()
-        }
-
-        for key in expected.keys():
-            nptest.assert_array_almost_equal(expected[key], computed[key])
-
-        # ____________________________________________________________________
-        # Test aggregate reanalysis values and date range with user-defined end date, at daily time resolution
-        self.analysis = plant_analysis.MonteCarloAEP(
-            self.project_rean,
-            reanal_products=["merra2", "era5"],
-            time_resolution="D",
-            end_date_lt="2019-02-10 12:00",
-        )
-        df_rean = self.analysis._reanalysis_aggregate
-
-        # check that date range is truncated correctly
-        assert (df_rean.index[0], df_rean.index[-1]) == (
-            pd.to_datetime("1999-01-16"),
-            pd.to_datetime("2019-02-10"),
-        )
-
-        # Check wind speed values at start and end dates
-        expected = {"merra2": [12.868168, 14.571084], "era5": [12.461761, 14.045798]}
-        computed = {
-            key: df_rean.loc[[df_rean.index[0], df_rean.index[-1]], key].to_numpy()
-            for key in expected.keys()
-        }
-
-        for key in expected.keys():
-            nptest.assert_array_almost_equal(expected[key], computed[key])
 
         # ____________________________________________________________________
         # Test aggregate reanalysis values and date range with user-defined end date, at hourly time resolution

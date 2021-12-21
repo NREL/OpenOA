@@ -678,12 +678,6 @@ class MonteCarloAEP(object):
                 raise ValueError(
                     "Invalid end date for long-term correction. The end date cannot exceed the last full time period (defined by the time resolution) in the provided reanalysis data."
                 )
-            elif (self.end_date_lt - start_date) < np.timedelta64(
-                int(self.uncertainty_windiness[1]), "Y"
-            ):
-                raise ValueError(
-                    "Invalid end date for long-term correction. This end date does not provide enough reanalysis data for the long-term correction."
-                )
             else:
                 # replace end date
                 end_date = self.end_date_lt
@@ -697,6 +691,22 @@ class MonteCarloAEP(object):
             index=pd.date_range(start=start_date, end=end_date, freq=self._resample_freq),
             dtype=float,
         )
+
+        # Check if the date range covers the maximum number of years needed for the windiness correction
+        start_date_required = (
+            self._reanalysis_aggregate.index[-1]
+            + self._reanalysis_aggregate.index.freq
+            - pd.offsets.DateOffset(years=self.uncertainty_windiness[1])
+        )
+        if self._reanalysis_aggregate.index[0] > start_date_required:
+            if self.end_date_lt is not None:
+                raise ValueError(
+                    "Invalid end date argument for long-term correction. This end date does not provide enough reanalysis data for the long-term correction."
+                )
+            else:
+                raise ValueError(
+                    "The date range of the provided reanalysis data is not long enough to perform the long-term correction."
+                )
 
         # Now loop through the different reanalysis products, density-correct wind speeds, and take monthly averages
         for key in self._reanal_products:
