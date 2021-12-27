@@ -123,7 +123,8 @@ class TurbineLongTermGrossEnergy(object):
          max_power_filter(:obj:`tuple`): Maximum power threshold (fraction) to which the bin filter
                                          should be applied (default 0.85). This should be a tuple in the UQ = True case,
                                          a single value when UQ = False.
-         wind_bin_thresh(:obj:`tuple`): The filter threshold for each bin (default is 2 m/s).
+         wind_bin_thresh(:obj:`tuple`): The filter threshold for each vertical bin, expressed as number of standard deviations 
+                                         from the median in each bin (default is 2 stdev).
                                          This should be a tuple in the UQ = True case, a single value when UQ = False.
          correction_threshold(:obj:`tuple`): The threshold (fraction) above which daily scada energy data
                                              hould be corrected (default is 0.90).
@@ -327,7 +328,7 @@ class TurbineLongTermGrossEnergy(object):
                 center_type="median",
                 bin_min=np.round(0.01 * turb_capac),
                 bin_max=np.round(max_bin),
-                threshold_type="scalar",
+                threshold_type="std",
                 direction="all",
             )
 

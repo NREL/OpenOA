@@ -82,7 +82,7 @@ class MonteCarloAEP(object):
         uncertainty_windiness=(10, 20),
         uncertainty_loss_max=(10, 20),
         outlier_detection=False,
-        uncertainty_outlier=(2, 3.1),
+        uncertainty_outlier=(1, 3),
         uncertainty_nan_energy=0.01,
         time_resolution="M",
         reg_model="lin",
@@ -100,8 +100,8 @@ class MonteCarloAEP(object):
          uncertainty_losses(:obj:`float`): uncertainty on long-term losses
          uncertainty_windiness(:obj:`tuple`): number of years to use for the windiness correction
          uncertainty_loss_max(:obj:`tuple`): threshold for the combined availabilty and curtailment monthly loss threshold
-         outlier_detection(:obj:`bool`): whether to perform (True) or not (False) outlier detection filtering
-         uncertainty_outlier(:obj:`tuple`): threshold for the outlier detection filter based on robust linear regression (applied at monthly resolution only) or bin filter (applied at daily and hourly resolution)
+         outlier_detection(:obj:`bool`): whether to perform (True) or not (False - default) outlier detection filtering
+         uncertainty_outlier(:obj:`tuple`): threshold for the outlier detection filter. At monthly resolution, this is the tuning constant for Huber’s t function for a robust linear regression. At daily/hourly resolution, this is the number of stdev of wind speed used as threshold for the bin filter.
          uncertainty_nan_energy(:obj:`float`): threshold to flag days/months based on NaNs
          time_resolution(:obj:`string`): whether to perform the AEP calculation at monthly ('M'), daily ('D') or hourly ('H') time resolution
          reg_model(:obj:`string`): which model to use for the regression ('lin' for linear, 'gam', 'gbm', 'etr'). At monthly time resolution only linear regression is allowed because of the reduced number of data points.
@@ -305,7 +305,7 @@ class MonteCarloAEP(object):
             # Plot 
             plt.subplot(2, 2, p + 1)
             
-            if self.time_resolution == "M": # Montly case: apply robust linear regression for outliers detection
+            if self.time_resolution == "M": # Monthly case: apply robust linear regression for outliers detection
                 x = sm.add_constant(
                     valid_aggregate[col_name]
                 )  # Define 'x'-values (constant needed for regression function)
@@ -315,7 +315,7 @@ class MonteCarloAEP(object):
     
                 rlm = sm.RLM(
                     y, x, M=sm.robust.norms.HuberT(t=outlier_thres)
-                )  # Robust linear regression with HuberT algorithm (threshold equal to 2)
+                )  # Robust linear regression with HuberT algorithm (threshold equal to outlier_thres)
                 rlm_results = rlm.fit()
     
                 r2 = np.corrcoef(
@@ -354,7 +354,7 @@ class MonteCarloAEP(object):
                     center_type="median",
                     bin_min=0.01 * plant_capac,
                     bin_max=0.85 * plant_capac,
-                    threshold_type="scalar",
+                    threshold_type="std",
                     direction="all", # both left and right (from the median)
                 )
                             
@@ -376,7 +376,8 @@ class MonteCarloAEP(object):
                     plt.ylabel("Daily gross energy (GWh)")
                 elif self.time_resolution == "H":
                     plt.ylabel("Hourly gross energy (GWh)")
-            
+                plt.title(col_name)
+                    
             plt.xlabel("Wind speed (m/s)")
                 
         plt.tight_layout()
@@ -792,7 +793,7 @@ class MonteCarloAEP(object):
         }
         if self.outlier_detection:
             inputs['outlier_threshold'] = np.random.randint(self.uncertainty_outlier[0] * 10,
-                                                       (self.uncertainty_outlier[1]) * 10, self.num_sim) / 10.
+                                                       (self.uncertainty_outlier[1] + 0.1) * 10, self.num_sim) / 10.
 
         self._inputs = pd.DataFrame(inputs)
 
@@ -869,11 +870,11 @@ class MonteCarloAEP(object):
                         bin_col=df_sub["energy_gwh"],
                         value_col=df_sub[reanal],
                         bin_width=0.06 * plant_capac,
-                        threshold=int(round(self._run.outlier_threshold)),  # wind bin threshold (stdev outside the median)
+                        threshold=self._run.outlier_threshold,  # wind bin threshold (multiplicative factor of std of <value_col> in bin)
                         center_type="median",
                         bin_min=0.01 * plant_capac,
                         bin_max=0.85 * plant_capac,
-                        threshold_type="scalar",
+                        threshold_type="std",
                         direction="all", # both left and right (from the median)
                     )
         else:
