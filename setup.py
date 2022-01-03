@@ -12,7 +12,7 @@ from setuptools.command.test import test as TestCommand
 
 REQUIRED = [
     "statsmodels",
-    "scikit_learn>=0.20.1",
+    "scikit_learn>=0.20.1,<1.0",
     "requests>=2.21.0",
     "eia-python>=1.22",
     "pyproj>=2.6.1",
@@ -25,6 +25,7 @@ REQUIRED = [
     "tqdm>=4.28.1",
     "matplotlib>=2.1.0",
     "bokeh==2.3.*",
+    "pytz",
 ]
 
 TESTS = ["pytest>=5.4.2", "pytest-cov>=2.8.1"]
@@ -32,10 +33,10 @@ TESTS = ["pytest>=5.4.2", "pytest-cov>=2.8.1"]
 EXTRAS = {
     "docs": [
         "ipython",
-        "m2r==0.2.1",
-        "sphinx==2.0.0",
-        "sphinxcontrib-napoleon==0.6.1",
-        "sphinx_rtd_theme==0.2.4",
+        "m2r2",
+        "sphinx",
+        "sphinxcontrib-napoleon",
+        "sphinx_rtd_theme",
         "nbmerge",
         "nbsphinx",
     ],
@@ -92,5 +93,5 @@ setup(
     install_requires=REQUIRED,
     extras_require=EXTRAS,
     tests_require=TESTS,
-    python_requires=">=3.6, <=3.9",
+    python_requires=">=3.6, <=3.10",
 )

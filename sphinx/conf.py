@@ -30,7 +30,8 @@ new_nb = nbmerge.merge_notebooks(
     (
         "./examples.ipynb",
         "../examples/00_toolkit_examples.ipynb",
-        "../examples/01_qc_data.ipynb",
+        "../examples/01a_qc_tz_unaware_data.ipynb",
+        "../examples/01b_qc_tz_aware_data.ipynb",
         "../examples/02_plant_aep_analysis.ipynb",
         "../examples/02b_augmented_plant_aep_analysis.ipynb",
         "../examples/03_turbine_ideal_energy.ipynb",
@@ -59,7 +60,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.napoleon",
     "sphinx.ext.todo",
-    "m2r",
+    "m2r2",
     "nbsphinx",
     "bokeh.sphinxext.bokeh_plot",
 ]
@@ -226,3 +227,21 @@ napoleon_google_docstring = True
 napoleon_use_param = False
 napoleon_use_ivar = False
 autoclass_content = "both"
+
+# -- Options for Autodoc
+
+autodoc_mock_imports = [
+    "statsmodels",
+    "sklearn",
+    "requests",
+    "eia",
+    "numpy",
+    "pandas",
+    "pygam",
+    "scipy",
+    "tqdm",
+    #    "matplotlib", ## These are actually required to generate the Bokeh plot in the pandas_plotting docs
+    #    "pyproj",
+    #    "shapely",
+    #    "bokeh",
+]

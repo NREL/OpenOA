@@ -63,7 +63,7 @@ class SimpleTimeseriesTests(unittest.TestCase):
         )
 
         # An empty series has zero gaps
-        empty_series = pd.Series()
+        empty_series = pd.Series(dtype=np.float64)
         no_gaps = timeseries.find_time_gaps(empty_series, "10min")
         self.assertEqual(no_gaps.size, 0, "T4: Empty series should have zero gaps")
 
@@ -75,7 +75,7 @@ class SimpleTimeseriesTests(unittest.TestCase):
         self.assertEqual(dupes.size, 1, "T1: Detect one duplicated row")
 
         # Input series of length zero
-        day_of_data = pd.Series()
+        day_of_data = pd.Series(dtype=np.float64)
         dupes = timeseries.find_duplicate_times(day_of_data, "10min")
         self.assertEqual(dupes.size, 0, "T2: Empty series should have zero duplicates")
 
@@ -100,7 +100,7 @@ class SimpleTimeseriesTests(unittest.TestCase):
         )
 
         # empty input df
-        empty = pd.Series()
+        empty = pd.Series(dtype=np.float64)
         empty_df = pd.DataFrame({"time": empty, "col1": empty})
         filled = timeseries.gap_fill_data_frame(empty_df, "time", "10min")
         self.assertEqual(filled["time"].size, 0, "T3: Empty dataframe should still be empty")

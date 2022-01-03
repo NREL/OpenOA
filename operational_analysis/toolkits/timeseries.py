@@ -127,7 +127,7 @@ def percent_nan(s):
         :obj:`float`: Percentage of NaN data in the data series
     """
     if len(s) > 0:
-        perc = np.float((s.isnull().sum())) / np.float(len(s))
+        perc = np.float64((s.isnull().sum())) / np.float64(len(s))
     else:
         perc = 1
     return perc
