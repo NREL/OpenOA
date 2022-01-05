@@ -34,7 +34,7 @@ class TestLongTermGrossEnergy(unittest.TestCase):
         reset_prng()
         # Test not-UQ case, mean value
         res = self.analysis._plant_gross.mean()
-        check = 13.0
+        check = 12.842668
         npt.assert_almost_equal(res / 1e6, check)
 
     def tearDown(self):
@@ -55,13 +55,13 @@ class TestLongTermGrossEnergyUQ(unittest.TestCase):
         reset_prng()
         # Test UQ case, mean value
         res_uq = self.analysis_uq._plant_gross.mean()
-        check_uq = 13.0
+        check_uq = 13.550324
         npt.assert_almost_equal(res_uq / 1e6, check_uq)
 
         # Test UQ case, stdev
         res_std_uq = self.analysis_uq._plant_gross.std()
         check_std_uq = 0.10
-        npt.assert_almost_equal(res_std_uq / 1e6, check_std_uq, decimal=1)
+        npt.assert_almost_equal(res_std_uq / 1e6, check_std_uq)
 
     def tearDown(self):
         pass

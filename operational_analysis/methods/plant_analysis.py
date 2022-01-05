@@ -867,7 +867,7 @@ class MonteCarloAEP(object):
                 # Daily regressions (i.e., higher number of data points):
                 # Apply bin filter to catch outliers
                 df_sub.loc[:, "flag_outliers"] = filters.bin_filter(
-                        bin_col=df_sub["energy_gwh"],
+                        bin_col=df_sub["gross_energy_gwh"],
                         value_col=df_sub[reanal],
                         bin_width=0.06 * plant_capac,
                         threshold=self._run.outlier_threshold,  # wind bin threshold (multiplicative factor of std of <value_col> in bin)
