@@ -1,3 +1,4 @@
+import random
 import unittest
 from test import example_data_path_str
 
@@ -8,9 +9,13 @@ from examples.project_ENGIE import Project_Engie
 from operational_analysis.methods.turbine_long_term_gross_energy import TurbineLongTermGrossEnergy
 
 
+def reset_prng():
+    np.random.seed(42)
+    random.seed(42)
+
 class TestLongTermGrossEnergy(unittest.TestCase):
     def setUp(self):
-        np.random.seed(42)
+        reset_prng()
         # Set up data to use for testing (ENGIE data)
         self.project = Project_Engie(example_data_path_str)
         self.project.prepare()
@@ -26,11 +31,11 @@ class TestLongTermGrossEnergy(unittest.TestCase):
         )
 
     def test_longterm_gross_energy_results(self):
-
-        # Test not-UQ case
-        res = self.analysis._plant_gross
-        check = np.ones_like(res) * 13.7
-        npt.assert_almost_equal(res / 1e6, check, decimal=1)
+        reset_prng()
+        # Test not-UQ case, mean value
+        res = self.analysis._plant_gross.mean()
+        check = 13.0
+        npt.assert_almost_equal(res / 1e6, check)
 
     def tearDown(self):
         pass
@@ -38,7 +43,7 @@ class TestLongTermGrossEnergy(unittest.TestCase):
 
 class TestLongTermGrossEnergyUQ(unittest.TestCase):
     def setUp(self):
-        np.random.seed(42)
+        reset_prng()
         # Set up data to use for testing (TurbineExampleProject)
         self.project = Project_Engie(example_data_path_str)
         self.project.prepare()
@@ -47,11 +52,11 @@ class TestLongTermGrossEnergyUQ(unittest.TestCase):
         self.analysis_uq.run(enable_plotting=False, reanal_subset=["era5", "merra2"])
 
     def test_longterm_gross_energy_results(self):
-
+        reset_prng()
         # Test UQ case, mean value
         res_uq = self.analysis_uq._plant_gross.mean()
-        check_uq = 13.7
-        npt.assert_almost_equal(res_uq / 1e6, check_uq, decimal=1)
+        check_uq = 13.0
+        npt.assert_almost_equal(res_uq / 1e6, check_uq)
 
         # Test UQ case, stdev
         res_std_uq = self.analysis_uq._plant_gross.std()

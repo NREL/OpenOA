@@ -55,14 +55,14 @@ class TurbineLongTermGrossEnergy(object):
     """
 
     @logged_method_call
-    def __init__(self, plant, UQ=False, num_sim=2000):
+    def __init__(self, plant, UQ=True, num_sim=2000):
 
         """
         Initialize turbine long-term gross energy analysis with data and parameters.
 
         Args:
          plant(:obj:`PlantData object`): PlantData object from which TurbineLongTermGrossEnergy should draw data.
-         UQ:(:obj:`bool`): choice whether to perform ('Y') or not ('N') uncertainty quantification
+         UQ:(:obj:`bool`): choice whether to perform (True) or not (False) uncertainty quantification
          num_sim:(:obj:`int`): number of Monte Carlo simulations. Please note that this script is somewhat computationally heavy so the default num_sim value has been adjusted accordingly.
         """
         logger.info("Initializing TurbineLongTermGrossEnergy Object")
@@ -121,14 +121,15 @@ class TurbineLongTermGrossEnergy(object):
          reanal_subset(:obj:`list`): Which reanalysis products to use for long-term correction
          uncertainty_scada(:obj:`float`): uncertainty imposed to scada data (used in UQ = True case only)
          max_power_filter(:obj:`tuple`): Maximum power threshold (fraction) to which the bin filter
-                                         should be applied (default 0.85). This should be a tuple in the UQ = True case,
+                                         should be applied (default is the interval between 0.8 and 0.9). 
+                                         This should be a tuple in the UQ = True case (the values are Monte-Carlo sampled),
                                          a single value when UQ = False.
          wind_bin_thresh(:obj:`tuple`): The filter threshold for each vertical bin, expressed as number of standard deviations 
-                                         from the median in each bin (default is 2 stdev).
-                                         This should be a tuple in the UQ = True case, a single value when UQ = False.
+                                         from the median in each bin (default is the interval between 1 and 3 stdev).
+                                         This should be a tuple in the UQ = True case (the values are Monte-Carlo sampled), a single value when UQ = False.
          correction_threshold(:obj:`tuple`): The threshold (fraction) above which daily scada energy data
-                                             hould be corrected (default is 0.90).
-                                             This should be a tuple in the UQ = True case, a single value when UQ = False.
+                                             hould be corrected (default is the interval between 0.85 and 0.95).
+                                             This should be a tuple in the UQ = True case (the values are Monte-Carlo sampled), a single value when UQ = False.
          enable_plotting(:obj:`boolean`): Indicate whether to output plots
          plot_dir(:obj:`string`): Location to save figures
 

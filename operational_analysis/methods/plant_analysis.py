@@ -101,7 +101,7 @@ class MonteCarloAEP(object):
          uncertainty_windiness(:obj:`tuple`): number of years to use for the windiness correction
          uncertainty_loss_max(:obj:`tuple`): threshold for the combined availabilty and curtailment monthly loss threshold
          outlier_detection(:obj:`bool`): whether to perform (True) or not (False - default) outlier detection filtering
-         uncertainty_outlier(:obj:`tuple`): threshold for the outlier detection filter. At monthly resolution, this is the tuning constant for Huber’s t function for a robust linear regression. At daily/hourly resolution, this is the number of stdev of wind speed used as threshold for the bin filter.
+         uncertainty_outlier(:obj:`tuple`): min and max thresholds (Monte-Carlo sampled) for the outlier detection filter. At monthly resolution, this is the tuning constant for Huber’s t function for a robust linear regression. At daily/hourly resolution, this is the number of stdev of wind speed used as threshold for the bin filter.
          uncertainty_nan_energy(:obj:`float`): threshold to flag days/months based on NaNs
          time_resolution(:obj:`string`): whether to perform the AEP calculation at monthly ('M'), daily ('D') or hourly ('H') time resolution
          reg_model(:obj:`string`): which model to use for the regression ('lin' for linear, 'gam', 'gbm', 'etr'). At monthly time resolution only linear regression is allowed because of the reduced number of data points.
