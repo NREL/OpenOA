@@ -60,7 +60,7 @@ class TestLongTermGrossEnergyUQ(unittest.TestCase):
 
         # Test UQ case, stdev
         res_std_uq = self.analysis_uq._plant_gross.std()
-        check_std_uq = 0.136368
+        check_std_uq = 0.13636826
         npt.assert_almost_equal(res_std_uq / 1e6, check_std_uq)
 
     def tearDown(self):
