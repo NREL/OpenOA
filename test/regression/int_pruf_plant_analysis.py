@@ -309,7 +309,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
 
     def check_simulation_results_gam_daily_outliers(self, s):
         # Make sure AEP results are consistent to six decimal places
-        expected_results = [13.40877, 14.824492, 1.321696, 5.885386, 0.0472, 7.655553]
+        expected_results = [13.456155, 7.631475, 1.321492, 6.121169, 0.048311, 7.936318]
 
         calculated_results = [
             s.aep_GWh.mean(),
