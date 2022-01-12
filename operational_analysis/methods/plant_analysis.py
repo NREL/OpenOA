@@ -854,7 +854,7 @@ class MonteCarloAEP(object):
                 # filter outliers based on robust linear regression
                 # using Huber algorithm to flag outliers
                 X = sm.add_constant(df_sub[reanal])  # Reanalysis data with constant column
-                y = df_sub['gross_energy_gwh']*30/df_sub['num_days_expected']  # Energy data
+                y = df_sub['gross_energy_gwh']*30/df_sub['num_days_expected']  # Energy data (normalized to 30-days)
         
                 # Perform robust linear regression
                 rlm = sm.RLM(y, X, M=sm.robust.norms.HuberT(self._run.outlier_threshold))
