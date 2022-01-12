@@ -55,14 +55,14 @@ class TurbineLongTermGrossEnergy(object):
     """
 
     @logged_method_call
-    def __init__(self, plant, UQ=False, num_sim=2000):
+    def __init__(self, plant, UQ=True, num_sim=2000):
 
         """
         Initialize turbine long-term gross energy analysis with data and parameters.
 
         Args:
          plant(:obj:`PlantData object`): PlantData object from which TurbineLongTermGrossEnergy should draw data.
-         UQ:(:obj:`bool`): choice whether to perform ('Y') or not ('N') uncertainty quantification
+         UQ:(:obj:`bool`): choice whether to perform (True) or not (False) uncertainty quantification
          num_sim:(:obj:`int`): number of Monte Carlo simulations. Please note that this script is somewhat computationally heavy so the default num_sim value has been adjusted accordingly.
         """
         logger.info("Initializing TurbineLongTermGrossEnergy Object")
@@ -121,13 +121,15 @@ class TurbineLongTermGrossEnergy(object):
          reanal_subset(:obj:`list`): Which reanalysis products to use for long-term correction
          uncertainty_scada(:obj:`float`): uncertainty imposed to scada data (used in UQ = True case only)
          max_power_filter(:obj:`tuple`): Maximum power threshold (fraction) to which the bin filter
-                                         should be applied (default 0.85). This should be a tuple in the UQ = True case,
-                                         a single value when UQ = False.
-         wind_bin_thresh(:obj:`tuple`): The filter threshold for each bin (default is 2 m/s).
-                                         This should be a tuple in the UQ = True case, a single value when UQ = False.
+           should be applied (default is the interval between 0.8 and 0.9). This should be a tuple in
+           the UQ = True case (the values are Monte-Carlo sampled), a single value when UQ = False.
+         wind_bin_thresh(:obj:`tuple`): The filter threshold for each vertical bin, expressed as
+           number of standard deviations from the median in each bin (default is the interval
+           between 1 and 3 stdev). This should be a tuple in the UQ = True case (the values are
+           Monte-Carlo sampled), a single value when UQ = False.
          correction_threshold(:obj:`tuple`): The threshold (fraction) above which daily scada energy data
-                                             hould be corrected (default is 0.90).
-                                             This should be a tuple in the UQ = True case, a single value when UQ = False.
+           should be corrected (default is the interval between 0.85 and 0.95). This should be a
+           tuple in the UQ = True case (the values are Monte-Carlo sampled), a single value when UQ = False.
          enable_plotting(:obj:`boolean`): Indicate whether to output plots
          plot_dir(:obj:`string`): Location to save figures
 
@@ -325,9 +327,9 @@ class TurbineLongTermGrossEnergy(object):
                 bin_width=0.06 * turb_capac,
                 threshold=threshold_wind_bin,  # wind bin thresh
                 center_type="median",
-                bin_min=0.01 * turb_capac,
-                bin_max=max_bin,
-                threshold_type="scalar",
+                bin_min=np.round(0.01 * turb_capac),
+                bin_max=np.round(max_bin),
+                threshold_type="std",
                 direction="all",
             )
 
@@ -571,7 +573,14 @@ class TurbineLongTermGrossEnergy(object):
             plt.ylabel("Power (W)")
             plt.title("Filtered power curve for Turbine %s" % t)
             plt.legend(loc="lower right")
-            plt.savefig("%s/filtered_power_curve_%s.png" % (save_folder, t,), dpi=200)  # Save file
+            plt.savefig(
+                "%s/filtered_power_curve_%s.png"
+                % (
+                    save_folder,
+                    t,
+                ),
+                dpi=200,
+            )  # Save file
 
             # Output figure to terminal if desired
             if output_to_terminal:
@@ -610,7 +619,14 @@ class TurbineLongTermGrossEnergy(object):
             plt.ylabel("Daily Energy (kWh)")
             plt.title("Daily SCADA Energy Fitting, Turbine %s" % t)
             plt.legend(loc="lower right")
-            plt.savefig("%s/daily_power_curve_%s.png" % (save_folder, t,), dpi=200)  # Save file
+            plt.savefig(
+                "%s/daily_power_curve_%s.png"
+                % (
+                    save_folder,
+                    t,
+                ),
+                dpi=200,
+            )  # Save file
 
             # Output figure to terminal if desired
             if output_to_terminal:

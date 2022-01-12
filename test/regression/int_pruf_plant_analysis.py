@@ -128,6 +128,24 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         sim_results = self.analysis.results
         self.check_simulation_results_etr_daily(sim_results)
 
+    def test_daily_gam_outliers(self):
+        reset_prng()
+        # ____________________________________________________________________
+        # Test GAM regression model (can be used at daily time resolution only)
+        self.analysis = plant_analysis.MonteCarloAEP(
+            self.project,
+            reanal_products=["merra2", "era5"],
+            time_resolution="D",
+            outlier_detection = True,
+            reg_model="gam",
+            reg_temperature=True,
+            reg_winddirection=True,
+        )
+        # Run Monte Carlo AEP analysis, confirm the results are consistent
+        self.analysis.run(num_sim=5)
+        sim_results = self.analysis.results
+        self.check_simulation_results_gam_daily_outliers(sim_results)
+
     def check_process_revenue_meter_energy_monthly(self, df):
         # Energy Nan flags are all zero
         nptest.assert_array_equal(df["energy_nan_perc"].values, np.repeat(0.0, df.shape[0]))
@@ -230,7 +248,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
             nptest.assert_array_almost_equal(expected[key], computed[key])
 
     def check_simulation_results_lin_monthly(self, s):
-        # Make sure AEP results are consistent to one decimal place
+        # Make sure AEP results are consistent to six decimal places
         expected_results = [11.401602, 9.789065, 1.131574, 4.766565, 0.059858, 4.847703]
 
         calculated_results = [
@@ -245,7 +263,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         nptest.assert_array_almost_equal(expected_results, calculated_results)
 
     def check_simulation_results_gam_daily(self, s):
-        # Make sure AEP results are consistent to one decimal place
+        # Make sure AEP results are consistent to six decimal places
         expected_results = [12.807144, 3.959101, 1.320519, 6.294529, 0.049507, 8.152235]
 
         calculated_results = [
@@ -260,7 +278,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         nptest.assert_array_almost_equal(expected_results, calculated_results)
 
     def check_simulation_results_gbm_daily(self, s):
-        # Make sure AEP results are consistent to one decimal place
+        # Make sure AEP results are consistent to six decimal places
         expected_results = [12.794527, 10.609839, 1.298789, 4.849577, 0.050383, 8.620032]
 
         calculated_results = [
@@ -275,8 +293,23 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         nptest.assert_array_almost_equal(expected_results, calculated_results)
 
     def check_simulation_results_etr_daily(self, s):
-        # Make sure AEP results are consistent to one decimal place
+        # Make sure AEP results are consistent to six decimal places
         expected_results = [12.938536, 8.561798, 1.334704, 5.336189, 0.057874, 11.339976]
+
+        calculated_results = [
+            s.aep_GWh.mean(),
+            s.aep_GWh.std() / s.aep_GWh.mean() * 100,
+            s.avail_pct.mean() * 100,
+            s.avail_pct.std() / s.avail_pct.mean() * 100,
+            s.curt_pct.mean() * 100,
+            s.curt_pct.std() / s.curt_pct.mean() * 100,
+        ]
+
+        nptest.assert_array_almost_equal(expected_results, calculated_results)
+
+    def check_simulation_results_gam_daily_outliers(self, s):
+        # Make sure AEP results are consistent to six decimal places
+        expected_results = [13.456155, 7.631475, 1.321492, 6.121169, 0.048311, 7.936318]
 
         calculated_results = [
             s.aep_GWh.mean(),

@@ -136,7 +136,7 @@ def bin_filter(
         bin_max = bin_col.max()
 
     # Define bin edges
-    bin_edges = np.arange(np.round(bin_min), np.round(bin_max), bin_width)
+    bin_edges = np.arange(bin_min, bin_max, bin_width)
 
     # Ensure the last bin edge value is bin_max
     if bin_edges[-1] < bin_max:
