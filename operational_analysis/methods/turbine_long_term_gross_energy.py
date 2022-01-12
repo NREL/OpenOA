@@ -121,15 +121,15 @@ class TurbineLongTermGrossEnergy(object):
          reanal_subset(:obj:`list`): Which reanalysis products to use for long-term correction
          uncertainty_scada(:obj:`float`): uncertainty imposed to scada data (used in UQ = True case only)
          max_power_filter(:obj:`tuple`): Maximum power threshold (fraction) to which the bin filter
-           should be applied (default is the interval between 0.8 and 0.9). 
-           This should be a tuple in the UQ = True case (the values are Monte-Carlo sampled),
-           a single value when UQ = False.
-         wind_bin_thresh(:obj:`tuple`): The filter threshold for each vertical bin, expressed as number of standard deviations 
-           from the median in each bin (default is the interval between 1 and 3 stdev).
-           This should be a tuple in the UQ = True case (the values are Monte-Carlo sampled), a single value when UQ = False.
+           should be applied (default is the interval between 0.8 and 0.9). This should be a tuple in
+           the UQ = True case (the values are Monte-Carlo sampled), a single value when UQ = False.
+         wind_bin_thresh(:obj:`tuple`): The filter threshold for each vertical bin, expressed as
+           number of standard deviations from the median in each bin (default is the interval
+           between 1 and 3 stdev). This should be a tuple in the UQ = True case (the values are
+           Monte-Carlo sampled), a single value when UQ = False.
          correction_threshold(:obj:`tuple`): The threshold (fraction) above which daily scada energy data
-           hould be corrected (default is the interval between 0.85 and 0.95).
-           This should be a tuple in the UQ = True case (the values are Monte-Carlo sampled), a single value when UQ = False.
+           should be corrected (default is the interval between 0.85 and 0.95). This should be a
+           tuple in the UQ = True case (the values are Monte-Carlo sampled), a single value when UQ = False.
          enable_plotting(:obj:`boolean`): Indicate whether to output plots
          plot_dir(:obj:`string`): Location to save figures
 
@@ -573,7 +573,14 @@ class TurbineLongTermGrossEnergy(object):
             plt.ylabel("Power (W)")
             plt.title("Filtered power curve for Turbine %s" % t)
             plt.legend(loc="lower right")
-            plt.savefig("%s/filtered_power_curve_%s.png" % (save_folder, t,), dpi=200)  # Save file
+            plt.savefig(
+                "%s/filtered_power_curve_%s.png"
+                % (
+                    save_folder,
+                    t,
+                ),
+                dpi=200,
+            )  # Save file
 
             # Output figure to terminal if desired
             if output_to_terminal:
@@ -612,7 +619,14 @@ class TurbineLongTermGrossEnergy(object):
             plt.ylabel("Daily Energy (kWh)")
             plt.title("Daily SCADA Energy Fitting, Turbine %s" % t)
             plt.legend(loc="lower right")
-            plt.savefig("%s/daily_power_curve_%s.png" % (save_folder, t,), dpi=200)  # Save file
+            plt.savefig(
+                "%s/daily_power_curve_%s.png"
+                % (
+                    save_folder,
+                    t,
+                ),
+                dpi=200,
+            )  # Save file
 
             # Output figure to terminal if desired
             if output_to_terminal:

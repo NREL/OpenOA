@@ -128,7 +128,7 @@ class MonteCarloAEP(object):
         self.uncertainty_loss_max = np.array(uncertainty_loss_max, dtype=np.float64)
         self.uncertainty_nan_energy = np.float64(uncertainty_nan_energy)
         self.outlier_detection = outlier_detection
-        
+
         # Check that selected time resolution is allowed
         if time_resolution not in ["M", "D", "H"]:
             raise ValueError(
@@ -302,28 +302,30 @@ class MonteCarloAEP(object):
         # Loop through each reanalysis product and make a scatterplot of monthly wind speed vs plant energy
         for p in np.arange(0, len(list(self._reanal_products))):
             col_name = self._reanal_products[p]  # Reanalysis column in monthly data frame
-            # Plot 
+            # Plot
             plt.subplot(2, 2, p + 1)
-            
-            if self.time_resolution == "M": # Monthly case: apply robust linear regression for outliers detection
+
+            if (
+                self.time_resolution == "M"
+            ):  # Monthly case: apply robust linear regression for outliers detection
                 x = sm.add_constant(
                     valid_aggregate[col_name]
                 )  # Define 'x'-values (constant needed for regression function)
                 y = (
                     valid_aggregate["gross_energy_gwh"] * 30 / valid_aggregate["num_days_expected"]
-                    )  # Normalize energy data to 30-days
-    
+                )  # Normalize energy data to 30-days
+
                 rlm = sm.RLM(
                     y, x, M=sm.robust.norms.HuberT(t=outlier_thres)
                 )  # Robust linear regression with HuberT algorithm (threshold equal to outlier_thres)
                 rlm_results = rlm.fit()
-    
+
                 r2 = np.corrcoef(
                     x.loc[rlm_results.weights == 1, col_name], y[rlm_results.weights == 1]
                 )[
                     0, 1
                 ]  # Get R2 from valid data
-            
+
                 # Continue plotting
                 plt.plot(
                     x.loc[rlm_results.weights != 1, col_name],
@@ -339,12 +341,12 @@ class MonteCarloAEP(object):
                 )
                 plt.title(col_name + ", R2=" + str(np.round(r2, 3)))
                 plt.ylabel("30-day normalized gross energy (GWh)")
-                
-            else: # Daily/hourly case: apply bin filter for outliers detection
+
+            else:  # Daily/hourly case: apply bin filter for outliers detection
                 x = valid_aggregate[col_name]
                 y = valid_aggregate["gross_energy_gwh"]
                 plant_capac = self._plant._plant_capacity / 1000.0 * self._hours_in_res
-                
+
                 # Apply bin filter
                 flag = filters.bin_filter(
                     bin_col=y,
@@ -355,9 +357,9 @@ class MonteCarloAEP(object):
                     bin_min=0.01 * plant_capac,
                     bin_max=0.85 * plant_capac,
                     threshold_type="std",
-                    direction="all", # both left and right (from the median)
+                    direction="all",  # both left and right (from the median)
                 )
-                            
+
                 # Continue plotting
                 plt.plot(
                     x.loc[flag],
@@ -371,15 +373,15 @@ class MonteCarloAEP(object):
                     ".",
                     label="Valid data",
                 )
-                
+
                 if self.time_resolution == "D":
                     plt.ylabel("Daily gross energy (GWh)")
                 elif self.time_resolution == "H":
                     plt.ylabel("Hourly gross energy (GWh)")
                 plt.title(col_name)
-                    
+
             plt.xlabel("Wind speed (m/s)")
-                
+
         plt.tight_layout()
         return plt
 
@@ -789,11 +791,17 @@ class MonteCarloAEP(object):
             "loss_threshold": np.random.randint(
                 self.uncertainty_loss_max[0], self.uncertainty_loss_max[1] + 1, self.num_sim
             )
-            / 100.0
+            / 100.0,
         }
         if self.outlier_detection:
-            inputs['outlier_threshold'] = np.random.randint(self.uncertainty_outlier[0] * 10,
-                                                       (self.uncertainty_outlier[1] + 0.1) * 10, self.num_sim) / 10.
+            inputs["outlier_threshold"] = (
+                np.random.randint(
+                    self.uncertainty_outlier[0] * 10,
+                    (self.uncertainty_outlier[1] + 0.1) * 10,
+                    self.num_sim,
+                )
+                / 10.0
+            )
 
         self._inputs = pd.DataFrame(inputs)
 
@@ -837,7 +845,11 @@ class MonteCarloAEP(object):
         df_sub = df_sub.assign(flag_range=filters.range_flag(df_sub[reanal], below=0, above=40))
         if self.reg_temperature:
             # Apply range filter to temperatre
-            df_sub = df_sub.assign(flag_range_T=filters.range_flag(df_sub[reanal + "_temperature_K"], below=200, above=320))
+            df_sub = df_sub.assign(
+                flag_range_T=filters.range_flag(
+                    df_sub[reanal + "_temperature_K"], below=200, above=320
+                )
+            )
         # Apply window range filter
         df_sub.loc[:, "flag_window"] = filters.window_range_flag(
             window_col=df_sub[reanal],
@@ -847,50 +859,51 @@ class MonteCarloAEP(object):
             value_min=0.02 * plant_capac,
             value_max=1.2 * plant_capac,
         )
-        
+
         if self.outlier_detection:
-            if self.time_resolution == 'M':
-                # Monthly linear regression (i.e., few data points): 
+            if self.time_resolution == "M":
+                # Monthly linear regression (i.e., few data points):
                 # filter outliers based on robust linear regression
                 # using Huber algorithm to flag outliers
                 X = sm.add_constant(df_sub[reanal])  # Reanalysis data with constant column
-                y = df_sub['gross_energy_gwh']*30/df_sub['num_days_expected']  # Energy data (normalized to 30-days)
-        
+                y = (
+                    df_sub["gross_energy_gwh"] * 30 / df_sub["num_days_expected"]
+                )  # Energy data (normalized to 30-days)
+
                 # Perform robust linear regression
                 rlm = sm.RLM(y, X, M=sm.robust.norms.HuberT(self._run.outlier_threshold))
                 rlm_results = rlm.fit()
-        
+
                 # Define valid data as points in which the Huber algorithm returned a value of 1
                 df_sub.loc[:, "flag_outliers"] = rlm_results.weights != 1
-            
+
             else:
                 # Daily regressions (i.e., higher number of data points):
                 # Apply bin filter to catch outliers
                 df_sub.loc[:, "flag_outliers"] = filters.bin_filter(
-                        bin_col=df_sub["gross_energy_gwh"],
-                        value_col=df_sub[reanal],
-                        bin_width=0.06 * plant_capac,
-                        threshold=self._run.outlier_threshold,  # wind bin threshold (multiplicative factor of std of <value_col> in bin)
-                        center_type="median",
-                        bin_min=0.01 * plant_capac,
-                        bin_max=0.85 * plant_capac,
-                        threshold_type="std",
-                        direction="all", # both left and right (from the median)
-                    )
+                    bin_col=df_sub["gross_energy_gwh"],
+                    value_col=df_sub[reanal],
+                    bin_width=0.06 * plant_capac,
+                    threshold=self._run.outlier_threshold,  # wind bin threshold (multiplicative factor of std of <value_col> in bin)
+                    center_type="median",
+                    bin_min=0.01 * plant_capac,
+                    bin_max=0.85 * plant_capac,
+                    threshold_type="std",
+                    direction="all",  # both left and right (from the median)
+                )
         else:
             df_sub.loc[:, "flag_outliers"] = False
-            
+
         # Create a 'final' flag which is true if any of the previous flags are true
         df_sub.loc[:, "flag_final"] = (
             (df_sub.loc[:, "flag_range"])
             | (df_sub.loc[:, "flag_window"])
             | (df_sub.loc[:, "flag_outliers"])
-            )
+        )
         if self.reg_temperature:
-            df_sub.loc[:, "flag_final"] = (
-                (df_sub.loc[:, "flag_final"])
-                | (df_sub.loc[:, "flag_range_T"])
-                ) 
+            df_sub.loc[:, "flag_final"] = (df_sub.loc[:, "flag_final"]) | (
+                df_sub.loc[:, "flag_range_T"]
+            )
 
         # Define valid data
         valid_data = df_sub.loc[
@@ -899,7 +912,8 @@ class MonteCarloAEP(object):
         ]
         if self.reg_winddirection:
             valid_data_to_add = df_sub.loc[
-                ~df_sub.loc[:, "flag_final"], [reanal + "_wd", reanal + "_u_ms", reanal + "_v_ms"],
+                ~df_sub.loc[:, "flag_final"],
+                [reanal + "_wd", reanal + "_u_ms", reanal + "_v_ms"],
             ]
             valid_data = pd.concat([valid_data, valid_data_to_add], axis=1)
 
