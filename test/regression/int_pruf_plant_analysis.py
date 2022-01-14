@@ -483,7 +483,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
 
     def check_simulation_results_lin_monthly(self, s):
         # Make sure AEP results are consistent to six decimal places
-        expected_results = [11.401602, 9.789065, 1.131574, 4.766565, 0.059858, 4.847703]
+        expected_results = [11.284629, 10.801102, 1.130812, 4.287147, 0.061666, 5.365357]
 
         calculated_results = [
             s.aep_GWh.mean(),
@@ -498,7 +498,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
 
     def check_simulation_results_gam_daily(self, s):
         # Make sure AEP results are consistent to six decimal places
-        expected_results = [12.807144, 3.959101, 1.320519, 6.294529, 0.049507, 8.152235]
+        expected_results = [12.781636, 4.428628, 1.323524, 6.135826, 0.049333, 8.462634]
 
         calculated_results = [
             s.aep_GWh.mean(),
@@ -513,7 +513,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
 
     def check_simulation_results_gbm_daily(self, s):
         # Make sure AEP results are consistent to six decimal places
-        expected_results = [12.794527, 10.609839, 1.298789, 4.849577, 0.050383, 8.620032]
+        expected_results = [12.957132, 14.928604, 1.310955, 5.248099, 0.049947, 9.21482]
 
         calculated_results = [
             s.aep_GWh.mean(),
@@ -543,7 +543,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
 
     def check_simulation_results_gam_daily_outliers(self, s):
         # Make sure AEP results are consistent to six decimal places
-        expected_results = [13.456155, 7.631475, 1.321492, 6.121169, 0.048311, 7.936318]
+        expected_results = [13.46498, 8.248985, 1.324029, 5.966637, 0.048054, 8.851849]
 
         calculated_results = [
             s.aep_GWh.mean(),
