@@ -85,6 +85,7 @@ class MonteCarloAEP(object):
         uncertainty_outlier=(1, 3),
         uncertainty_nan_energy=0.01,
         time_resolution="M",
+        end_date_lt=None,
         reg_model="lin",
         ml_setup_kwargs={},
         reg_temperature=False,
@@ -104,6 +105,7 @@ class MonteCarloAEP(object):
          uncertainty_outlier(:obj:`tuple`): min and max thresholds (Monte-Carlo sampled) for the outlier detection filter. At monthly resolution, this is the tuning constant for Huber’s t function for a robust linear regression. At daily/hourly resolution, this is the number of stdev of wind speed used as threshold for the bin filter.
          uncertainty_nan_energy(:obj:`float`): threshold to flag days/months based on NaNs
          time_resolution(:obj:`string`): whether to perform the AEP calculation at monthly ('M'), daily ('D') or hourly ('H') time resolution
+         end_date_lt(:obj:`string` or :obj:`pandas.Timestamp`): The last date to use for the long-term correction. Note that only the component of the date corresponding to the time_resolution argument is considered. If None, the end of the last complete month of reanalysis data will be used.
          reg_model(:obj:`string`): which model to use for the regression ('lin' for linear, 'gam', 'gbm', 'etr'). At monthly time resolution only linear regression is allowed because of the reduced number of data points.
          ml_setup_kwargs(:obj:`kwargs`): keyword arguments to MachineLearningSetup class
          reg_temperature(:obj:`bool`): whether to include temperature (True) or not (False) as regression input
@@ -139,6 +141,11 @@ class MonteCarloAEP(object):
         self._hours_in_res = {"M": 30 * 24, "D": 1 * 24, "H": 1}[self.time_resolution]
         self._calendar_samples = {"M": 12, "D": 365, "H": 365 * 24}[self.time_resolution]
         self.num_days_lt = (31, 28.25, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
+
+        if end_date_lt is not None:
+            self.end_date_lt = pd.to_datetime(end_date_lt).replace(minute=0)  # drop minute field
+        else:
+            self.end_date_lt = end_date_lt
 
         # Check that choices for regression inputs are allowed
         if reg_temperature not in [True, False]:
@@ -677,11 +684,72 @@ class MonteCarloAEP(object):
             (None)
         """
 
-        # Define empty data frame that spans past our period of interest
+        # Identify start and end dates for long-term correction
+        # First find date range common to all reanalysis products and drop minute field of start date
+        start_date = max(
+            [self._plant._reanalysis._product[key].df.index.min() for key in self._reanal_products]
+        ).replace(minute=0)
+        end_date = min(
+            [self._plant._reanalysis._product[key].df.index.max() for key in self._reanal_products]
+        )
+
+        # Next, update the start date to make sure it corresponds to a full time period
+        start_date_minus = start_date - pd.DateOffset(hours=1)
+        if (self.time_resolution == "M") & (start_date.month == start_date_minus.month):
+            # If not at the beginning of a month, use the beginning of the next month as the start date
+            start_date = start_date.replace(day=1, hour=0, minute=0) + pd.DateOffset(months=1)
+        elif (self.time_resolution == "D") & (start_date.day == start_date_minus.day):
+            # If not at the beginning of a day, use the beginning of the next day as the start date
+            start_date = start_date.replace(hour=0, minute=0) + pd.DateOffset(days=1)
+
+        # Now determine the end date based on either the user-defined end date or the end of the last full month
+        if self.end_date_lt is not None:
+            # If valid (before the last full time period in the reanalysis data), use the specified end date
+            end_date_lt_plus = self.end_date_lt + pd.DateOffset(hours=1)
+            if (self.time_resolution == "M") & (self.end_date_lt.month == end_date_lt_plus.month):
+                # If not at the end of a month, use the end of the month as the new end date
+                self.end_date_lt = (
+                    self.end_date_lt.replace(day=1, hour=0, minute=0)
+                    + pd.DateOffset(months=1)
+                    - pd.DateOffset(hours=1)
+                )
+            elif (self.time_resolution == "D") & (self.end_date_lt.day == end_date_lt_plus.day):
+                # If not at the end of a day, use the end of the day as the new end date
+                self.end_date_lt = self.end_date_lt.replace(hour=23, minute=0)
+
+            if self.end_date_lt > end_date:
+                raise ValueError(
+                    "Invalid end date for long-term correction. The end date cannot exceed the last full time period (defined by the time resolution) in the provided reanalysis data."
+                )
+            else:
+                # replace end date
+                end_date = self.end_date_lt
+        else:
+            # If not at the end of a month, use the end of the previous month as the end date
+            if end_date.month == (end_date + pd.DateOffset(hours=1)).month:
+                end_date = end_date.replace(day=1, hour=0, minute=0) - pd.DateOffset(hours=1)
+
+        # Define empty data frame that spans our period of interest
         self._reanalysis_aggregate = pd.DataFrame(
-            index=pd.date_range(start="1997-01-01", end="2019-12-31", freq=self._resample_freq),
+            index=pd.date_range(start=start_date, end=end_date, freq=self._resample_freq),
             dtype=float,
         )
+
+        # Check if the date range covers the maximum number of years needed for the windiness correction
+        start_date_required = (
+            self._reanalysis_aggregate.index[-1]
+            + self._reanalysis_aggregate.index.freq
+            - pd.offsets.DateOffset(years=self.uncertainty_windiness[1])
+        )
+        if self._reanalysis_aggregate.index[0] > start_date_required:
+            if self.end_date_lt is not None:
+                raise ValueError(
+                    "Invalid end date argument for long-term correction. This end date does not provide enough reanalysis data for the long-term correction."
+                )
+            else:
+                raise ValueError(
+                    "The date range of the provided reanalysis data is not long enough to perform the long-term correction."
+                )
 
         # Now loop through the different reanalysis products, density-correct wind speeds, and take monthly averages
         for key in self._reanal_products:
@@ -1131,7 +1199,15 @@ class MonteCarloAEP(object):
             )
 
             if self.time_resolution == "M":  # Undo normalization to 30-day months
-                gross_lt = gross_lt * np.tile(self.num_days_lt, self._run.num_years_windiness) / 30
+                # Shift the list of number of days per month to align with the reanalysis data
+                last_month = self._reanalysis_aggregate.index[-1].month
+                gross_lt = (
+                    gross_lt
+                    * np.tile(
+                        np.roll(self.num_days_lt, 12 - last_month), self._run.num_years_windiness
+                    )
+                    / 30
+                )
                 gross_por = np.array(gross_por).flatten() * self.num_days_lt / 30
 
             # Annual values of lt gross energy, needed for IAV
