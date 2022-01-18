@@ -43,9 +43,7 @@ If you use this software in your work, please cite our JOSS article with the fol
 
 ### Requirements
 
-  * Python 3.6-3.8 with pip.
-
-OpenOA should be compatible with newer versions of Python, but one of its dependencies, Shapely, does not yet have binary wheels in pip for Python 3.9 on Mac.
+  * Python 3.6+ with pip.
 
 We strongly recommend using the Anaconda Python distribution and creating a new conda environment for OpenOA. You can download Anaconda through [their website.](https://www.anaconda.com/products/individual)
 
@@ -94,6 +92,12 @@ changes):
 ```
 pip install -e "./OpenOA[develop]"
 pre-commit install
+```
+
+Occasionally, you will need to update the dependencies in the pre-commit workflow, which will provide an error when this needs to happen. When it does, this can normally be resolved with the below code, after which you can continue with your normal git workflow:
+```
+pre-commit autoupdate
+git add .pre-commit-config.yaml
 ```
 
 #### Example Notebooks and Data

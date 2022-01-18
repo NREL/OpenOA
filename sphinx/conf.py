@@ -79,7 +79,7 @@ master_doc = "index"
 
 # General information about the project.
 project = "OpenOA"
-copyright = "2021, NREL"
+copyright = "2022, NREL"
 author = "NREL PRUF OA Team"
 
 

@@ -77,13 +77,30 @@ All code should be paired with a corresponding unit or integration test.
 OpenOA uses pytest and the built in unittest framework.
 For instructions on running tests, please see the [Readme](https://github.com/NREL/OpenOA/tree/develop#Testing).
 
-## Deploying a Package to PyPi
+## Release Process
 
-The repository is equipped with a github action to build and publish new versions to PyPi.
-A maintainer can invoke this workflow by pushing a tag to the NREL/OpenOA reposiory with prefix "v", such as "v1.1.0".
-The action is defined in `.github/workflows/tags-to-pypi.yml`.
-
-```
-git tag -a v1.2.3 -m "Tag messgae for v1.2.3"
-git push origin v1.2.3
-```
+ - Bump version number and metadata in
+   - operational_analysis/__init__.py
+   - operational_analysis/setup.py
+   - sphinx/config.py
+ - Bump version numbers of any dependencies in
+   - setup.py
+   - requirements.txt
+   - sphinx/requirements.txt
+ - Update the changelog, removing the UNRELEASED section and converting it into a release heading.
+ - Make a pull request into develop with these updates
+   - Note: Ensure all tests pass and the documentation is building correctly prior to merging
+ - Merge develop into main through the git command line
+   ```
+    git checkout main
+    git merge develop
+    git push
+    ```
+ - Tag the new release version:
+   ```
+    git tag -a v1.2.3 -m "Tag messgae for v1.2.3"
+    git push origin v1.2.3
+    ```
+ - Deploying a Package to PyPi
+    - The repository is equipped with a github action to build and publish new versions to PyPi. A maintainer can invoke this workflow by pushing a tag to the NREL/OpenOA reposiory with prefix "v", such as "v1.1.0".
+    - The action is defined in `.github/workflows/tags-to-pypi.yml`.
