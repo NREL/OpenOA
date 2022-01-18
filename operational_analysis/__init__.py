@@ -1,4 +1,4 @@
-__version__ = "2.2"
+__version__ = "2.3"
 """
 When bumping version, please be sure to also update parameters in sphinx/conf.py
 """
@@ -10,7 +10,7 @@ import logging.config
 
 
 def setup_logging(default_path="logging.json", default_level=logging.INFO, env_key="LOG_CFG"):
-    """Setup logging configuration """
+    """Setup logging configuration"""
     path = default_path
     value = os.getenv(env_key, None)
     if value:
