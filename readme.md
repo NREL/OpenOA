@@ -94,6 +94,12 @@ pip install -e "./OpenOA[develop]"
 pre-commit install
 ```
 
+Occasionally, you will need to update the dependencies in the pre-commit workflow, which will provide an error when this needs to happen. When it does, this can normally be resolved with the below code, after which you can continue with your normal git workflow:
+```
+pre-commit autoupdate
+git add .pre-commit-config.yaml
+```
+
 #### Example Notebooks and Data
 
 The example data will be automaticaly extracted as needed by the tests. To manually extract the example data for use with the example notebooks, use the following command:
