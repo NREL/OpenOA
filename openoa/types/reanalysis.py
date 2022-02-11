@@ -3,10 +3,9 @@ import importlib
 from pathlib import Path
 
 import numpy as np
-
-import operational_analysis.toolkits.met_data_processing as met
-from operational_analysis.types import timeseries_table
-from operational_analysis.toolkits import reanalysis_downloading
+import openoa.toolkits.met_data_processing as met
+from openoa.types import timeseries_table
+from openoa.toolkits import reanalysis_downloading
 
 
 class ReanalysisData(object):

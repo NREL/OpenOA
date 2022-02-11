@@ -3,16 +3,15 @@ import os
 import json
 import itertools
 
+from openoa.types import timeseries_table
 from dateutil.parser import parse
-
-from operational_analysis.types import timeseries_table
 
 from .asset import AssetData
 from .reanalysis import ReanalysisData
 
 
 class PlantData(object):
-    """ Data object for operational wind plant data.
+    """Data object for operational wind plant data.
 
     This class holds references to all tables associated with a wind plant. The tables are grouped by type:
         - PlantData.scada

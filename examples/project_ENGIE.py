@@ -35,13 +35,12 @@ from zipfile import ZipFile
 
 import numpy as np
 import pandas as pd
-
-import operational_analysis.toolkits.timeseries as ts
-import operational_analysis.toolkits.unit_conversion as un
-import operational_analysis.toolkits.met_data_processing as met
-from operational_analysis import logging, logged_method_call
-from operational_analysis.types import PlantData
-from operational_analysis.toolkits import filters
+import openoa.toolkits.timeseries as ts
+import openoa.toolkits.unit_conversion as un
+import openoa.toolkits.met_data_processing as met
+from openoa import logging, logged_method_call
+from openoa.types import PlantData
+from openoa.toolkits import filters
 
 
 logger = logging.getLogger(__name__)

@@ -5,13 +5,13 @@ from test import example_data_path_str
 import numpy as np
 import numpy.testing as npt
 from examples.project_ENGIE import Project_Engie
-
-from operational_analysis.methods.turbine_long_term_gross_energy import TurbineLongTermGrossEnergy
+from openoa.methods.turbine_long_term_gross_energy import TurbineLongTermGrossEnergy
 
 
 def reset_prng():
     np.random.seed(42)
     random.seed(42)
+
 
 class TestLongTermGrossEnergy(unittest.TestCase):
     def setUp(self):

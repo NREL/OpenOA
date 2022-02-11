@@ -14,17 +14,16 @@ import numpy as np
 import pandas as pd
 import statsmodels.api as sm
 from tqdm import tqdm
+from openoa import logging, logged_method_call
+from openoa.types import timeseries_table
+from openoa.toolkits import filters
+from openoa.toolkits import timeseries as tm
+from openoa.toolkits import unit_conversion as un
+from openoa.toolkits import met_data_processing as mt
 from sklearn.metrics import r2_score, mean_squared_error
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import KFold
-
-from operational_analysis import logging, logged_method_call
-from operational_analysis.types import timeseries_table
-from operational_analysis.toolkits import filters
-from operational_analysis.toolkits import timeseries as tm
-from operational_analysis.toolkits import unit_conversion as un
-from operational_analysis.toolkits import met_data_processing as mt
-from operational_analysis.toolkits.machine_learning_setup import MachineLearningSetup
+from openoa.toolkits.machine_learning_setup import MachineLearningSetup
 
 
 logger = logging.getLogger(__name__)
