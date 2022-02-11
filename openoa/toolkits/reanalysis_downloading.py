@@ -51,6 +51,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import requests
+
 import openoa.toolkits.met_data_processing as met
 
 
@@ -328,7 +329,7 @@ def download_reanalysis_data_planetos(
         save_filename (:obj:`string`, optional): The file name used to save the downloaded reanalysis data (if
             defined). Defaults to None.
         apikey_file (:obj:`string`, optional): The combined path and file name where the PlanetOS API key is saved. If
-            undefined, will assume there is a file called "APIKEY" saved in the operational_analysis.toolkits
+            undefined, will assume there is a file called "APIKEY" saved in the openoa.toolkits
             directory. Defaults to None.
         **api_kwargs: Optional additional keyword arguments used in the PlanetOS API request.
 

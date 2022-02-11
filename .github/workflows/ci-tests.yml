@@ -31,7 +31,7 @@ jobs:
       shell: bash
     - name: Test with pytest
       run: |
-        pytest --cov=operational_analysis --cov-report=xml
+        pytest --cov=openoa --cov-report=xml
       shell: bash
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1

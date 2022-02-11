@@ -63,11 +63,11 @@ git clone https://github.com/NREL/OpenOA.git
 pip install ./OpenOA
 ```
 
-You should now be able to import operational_analysis from the Python interpreter:
+You should now be able to import openoa from the Python interpreter:
 
 ```
 python
->>> import operational_analysis
+>>> import openoa
 ```
 
 #### Common Installation Issues:
@@ -135,7 +135,7 @@ pytest test/unit
 
 To run all tests and generate a code coverage report
 ```
-pytest --cov=operational_analysis
+pytest --cov=openoa
 ```
 
 #### Documentation

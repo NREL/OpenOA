@@ -3,6 +3,7 @@ import importlib
 from pathlib import Path
 
 import numpy as np
+
 import openoa.toolkits.met_data_processing as met
 from openoa.types import timeseries_table
 from openoa.toolkits import reanalysis_downloading
@@ -47,7 +48,7 @@ class ReanalysisData(object):
             lat (:obj:`float`, optional): Latitude (degrees). Used when format = "planetos". Defaults to None.
             lon (:obj:`float`, optional): Longitude (degrees). Used when format = "planetos". Defaults to None.
             **kwargs: Optional keyword arguments passed to
-                :py:func:`operational_analysis.toolkits.reanalysis_downloading.download_reanalysis_data_planetos`
+                :py:func:`openoa.toolkits.reanalysis_downloading.download_reanalysis_data_planetos`
 
         Raises:
             NotImplementedError: When a format other than "csv" or "planetos" is specified
