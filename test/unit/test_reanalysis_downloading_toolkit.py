@@ -1,7 +1,6 @@
 import pandas as pd
 import pytest
-
-from operational_analysis.toolkits import reanalysis_downloading as rd
+from openoa.toolkits import reanalysis_downloading as rd
 
 
 def test_get_dataset_names():

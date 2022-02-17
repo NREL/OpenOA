@@ -80,8 +80,8 @@ For instructions on running tests, please see the [Readme](https://github.com/NR
 ## Release Process
 
  - Bump version number and metadata in
-   - operational_analysis/__init__.py
-   - operational_analysis/setup.py
+   - openoa/__init__.py
+   - openoa/setup.py
    - sphinx/config.py
  - Bump version numbers of any dependencies in
    - setup.py

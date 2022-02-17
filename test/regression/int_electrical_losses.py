@@ -5,8 +5,7 @@ from pathlib import Path
 import numpy as np
 import numpy.testing as npt
 from examples.project_ENGIE import Project_Engie
-
-from operational_analysis.methods.electrical_losses import ElectricalLosses
+from openoa.methods.electrical_losses import ElectricalLosses
 
 
 class TestElectricalLosses(unittest.TestCase):

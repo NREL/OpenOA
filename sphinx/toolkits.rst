@@ -11,7 +11,7 @@ implemented with Pandas.
 Filters
 ---------------------
 
-.. automodule:: operational_analysis.toolkits.filters
+.. automodule:: openoa.toolkits.filters
     :members:
     :undoc-members:
     :show-inheritance:
@@ -20,10 +20,10 @@ Filters
 Power Curve
 ---------------------
 
-.. automodule:: operational_analysis.toolkits.power_curve
+.. automodule:: openoa.toolkits.power_curve
     :undoc-members:
 
-.. automodule:: operational_analysis.toolkits.power_curve.functions
+.. automodule:: openoa.toolkits.power_curve.functions
     :members:
     :undoc-members:
     :show-inheritance:
@@ -32,7 +32,7 @@ Power Curve
 Imputing
 ---------------------
 
-.. automodule:: operational_analysis.toolkits.imputing
+.. automodule:: openoa.toolkits.imputing
     :members:
     :undoc-members:
     :show-inheritance:
@@ -40,7 +40,7 @@ Imputing
 Timeseries
 ---------------------
 
-.. automodule:: operational_analysis.toolkits.timeseries
+.. automodule:: openoa.toolkits.timeseries
     :members:
     :undoc-members:
     :show-inheritance:
@@ -48,7 +48,7 @@ Timeseries
 Met Data Processing
 ---------------------
 
-.. automodule:: operational_analysis.toolkits.met_data_processing
+.. automodule:: openoa.toolkits.met_data_processing
     :members:
     :undoc-members:
     :show-inheritance:
@@ -57,7 +57,7 @@ Met Data Processing
 Metadata Fetch
 ---------------------
 
-.. automodule:: operational_analysis.toolkits.metadata_fetch
+.. automodule:: openoa.toolkits.metadata_fetch
     :members:
     :undoc-members:
     :show-inheritance:
@@ -66,7 +66,7 @@ Metadata Fetch
 Unit Conversion
 ---------------------
 
-.. automodule:: operational_analysis.toolkits.unit_conversion
+.. automodule:: openoa.toolkits.unit_conversion
     :members:
     :undoc-members:
     :show-inheritance:
@@ -75,7 +75,7 @@ Unit Conversion
 Plotting
 ---------------------
 
-.. automodule:: operational_analysis.toolkits.pandas_plotting
+.. automodule:: openoa.toolkits.pandas_plotting
     :members:
     :undoc-members:
     :show-inheritance:
@@ -84,7 +84,7 @@ Plotting
 Reanalysis Downloading
 ----------------------
 
-.. automodule:: operational_analysis.toolkits.reanalysis_downloading
+.. automodule:: openoa.toolkits.reanalysis_downloading
     :members:
     :undoc-members:
     :show-inheritance:

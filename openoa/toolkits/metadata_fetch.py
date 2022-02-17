@@ -5,8 +5,7 @@ This module fetches metadata of wind farms
 import eia
 import numpy as np
 import pandas as pd
-
-from operational_analysis.toolkits import unit_conversion
+from openoa.toolkits import unit_conversion
 
 
 def fetch_eia(api_key, plant_id, file_path):

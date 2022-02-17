@@ -5,8 +5,7 @@ import numpy as np
 import pandas as pd
 from pytz import timezone
 from numpy import testing as nptest
-
-from operational_analysis.toolkits import timeseries
+from openoa.toolkits import timeseries
 
 
 class SimpleTimeseriesTests(unittest.TestCase):

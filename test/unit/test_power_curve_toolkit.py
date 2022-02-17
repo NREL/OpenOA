@@ -3,12 +3,8 @@ import unittest
 import numpy as np
 import pandas as pd
 from numpy import testing as nptest
-
-from operational_analysis.toolkits import power_curve
-from operational_analysis.toolkits.power_curve.parametric_forms import (
-    logistic5param,
-    logistic5param_capped,
-)
+from openoa.toolkits import power_curve
+from openoa.toolkits.power_curve.parametric_forms import logistic5param, logistic5param_capped
 
 
 noise = 0.1

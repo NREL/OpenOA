@@ -6,8 +6,7 @@
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-
-from operational_analysis import logging, logged_method_call
+from openoa import logging, logged_method_call
 
 
 logger = logging.getLogger(__name__)

@@ -810,8 +810,8 @@ def plot_windfarm(
 
             from bokeh.plotting import figure, output_file, show
 
-            from operational_analysis.toolkits.pandas_plotting import plot_windfarm
-            from operational_analysis.types import PlantData
+            from openoa.toolkits.pandas_plotting import plot_windfarm
+            from openoa.types import PlantData
 
             from examples.project_ENGIE import Project_Engie
 

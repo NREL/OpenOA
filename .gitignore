@@ -6,6 +6,7 @@
 observation.egg-info
 operational-analysis.iml
 operational_analysis.egg-info
+openoa.egg-info
 *.p
 
 .git

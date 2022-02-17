@@ -10,7 +10,7 @@ respect the engine parameter of PlantData objects to support multi-platform, sca
 Plant Level Analysis
 --------------------
 
-.. automodule:: operational_analysis.methods.plant_analysis
+.. automodule:: openoa.methods.plant_analysis
     :members:
     :undoc-members:
     :show-inheritance:
@@ -18,7 +18,7 @@ Plant Level Analysis
 Turbine Level Analysis
 ----------------------
 
-.. automodule:: operational_analysis.methods.turbine_long_term_gross_energy
+.. automodule:: openoa.methods.turbine_long_term_gross_energy
     :members:
     :undoc-members:
     :show-inheritance:
@@ -26,7 +26,7 @@ Turbine Level Analysis
 Electrical Losses Analysis
 --------------------------
 
-.. automodule:: operational_analysis.methods.electrical_losses
+.. automodule:: openoa.methods.electrical_losses
     :members:
     :undoc-members:
     :show-inheritance:

@@ -10,11 +10,10 @@ import numpy as np
 import pandas as pd
 import dateutil
 import matplotlib.pyplot as plt
+from openoa import logging, logged_method_call
 from pyproj import Proj
 from dateutil import tz
-
-from operational_analysis import logging, logged_method_call
-from operational_analysis.toolkits import timeseries
+from openoa.toolkits import timeseries
 
 
 Number = Union[int, float]
