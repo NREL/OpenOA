@@ -35,6 +35,7 @@ from zipfile import ZipFile
 
 import numpy as np
 import pandas as pd
+
 import openoa.toolkits.timeseries as ts
 import openoa.toolkits.unit_conversion as un
 import openoa.toolkits.met_data_processing as met
@@ -68,7 +69,7 @@ class Project_Engie(PlantData):
             with ZipFile(self._path + ".zip") as zipfile:
                 zipfile.extractall(self._path)
 
-    def prepare(self):
+    def prepare(self, scada_df=None):
         """
         Do all loading and preparation of the data for this plant.
         """
@@ -91,7 +92,10 @@ class Project_Engie(PlantData):
         # SCADA DATA #
         ###################
         logger.info("Loading SCADA data")
-        self._scada.load(self._path, "la-haute-borne-data-2014-2015", "csv")  # Load Scada data
+        if scada_df is not None:
+            self._scada.df = scada_df  # use the provided scada dataframe
+        else:
+            self._scada.load(self._path, "la-haute-borne-data-2014-2015", "csv")  # Load Scada data
         logger.info("SCADA data loaded")
 
         logger.info("Timestamp QC and conversion to UTC")
@@ -118,6 +122,7 @@ class Project_Engie(PlantData):
         ]
 
         logger.info("Flagging unresponsive sensors")
+
         # Due to data discretization, there appear to be a lot of repeating
         # values. But these filters seem to catch the obvious unresponsive
         # sensors.

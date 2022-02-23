@@ -38,6 +38,7 @@ EXTRAS = {
         "nbmerge",
         "nbsphinx",
     ],
+    "entr": ["pyhive"],
     "wtk": ["h5pyd"],
     "develop": [
         "pre-commit",
