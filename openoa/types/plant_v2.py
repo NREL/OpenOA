@@ -64,11 +64,11 @@ class FromDictMixin:
 
 @attr.s(auto_attribs=True)
 class SCADAMetaData(FromDictMixin):
-    date_time_col: str
-    date_time_freq: str
-    average_power_col: str
-    power_col: str
-    windspeed_col: str
+    date_time_col: str = "Date_time"
+    date_time_freq: str = "10T"
+    average_power_col: str = "P_avg"
+    power_col: str = "Power_W"
+    windspeed_col: str = "Ws_avg"
     # Wa_avg as Wa_avg,
     # Va_avg as Va_avg,
     # Ya_avg as Ya_avg,
@@ -147,86 +147,91 @@ class PlantDataV3:
         self.scada = self.scada.rename(columns=self.metadata.scada.col_map)
 
 
-# @dataclass
-# class PlantDataV2:
-#     scada: pd.DataFrame
-#     meter: pd.DataFrame
-#     tower: pd.DataFrame
-#     status: pd.DataFrame
-#     curtail: pd.DataFrame
-#     asset: pd.DataFrame
-#     reanalysis: pd.DataFrame
+@dataclass
+class PlantDataV2:
+    scada: pd.DataFrame
+    meter: pd.DataFrame
+    tower: pd.DataFrame
+    status: pd.DataFrame
+    curtail: pd.DataFrame
+    asset: pd.DataFrame
+    reanalysis: pd.DataFrame
 
-#     name: str
-#     version: float = 2
+    name: str
+    version: float = 2
 
-# def validate(plant, schema):
-#     pass
 
-# def from_entr(thrift_server_host:str="localhost",
-#               thrift_server_port:int=10000,
-#               database:str="entr_warehouse",
-#               wind_plant:str="",
-#               aggregation:str="",
-#               date_range:list=None):
-#     """
-#     from_entr
+def validate(plant, schema):
+    pass
 
-#     Load a PlantData object from data in an entr_warehouse.
 
-#     Args:
-#         thrift_server_url(str): URL of the Apache Thrift server
-#         database(str): Name of the Hive database
-#         wind_plant(str): Name of the wind plant you'd like to load
-#         aggregation: Not yet implemented
-#         date_range: Not yet implemented
+def from_entr(
+    thrift_server_host: str = "localhost",
+    thrift_server_port: int = 10000,
+    database: str = "entr_warehouse",
+    wind_plant: str = "",
+    aggregation: str = "",
+    date_range: list = None,
+):
+    """
+    from_entr
 
-#     Returns:
-#         plant(PlantData): An OpenOA PlantData object.
-#     """
-#     from pyhive import hive
+    Load a PlantData object from data in an entr_warehouse.
 
-#     conn = hive.Connection(host=thrift_server_host, port=thrift_server_port)
+    Args:
+        thrift_server_url(str): URL of the Apache Thrift server
+        database(str): Name of the Hive database
+        wind_plant(str): Name of the wind plant you'd like to load
+        aggregation: Not yet implemented
+        date_range: Not yet implemented
 
-#     scada_query = """SELECT Wind_turbine_name as Wind_turbine_name,
-#             Date_time as Date_time,
-#             cast(P_avg as float) as P_avg,
-#             cast(Power_W as float) as Power_W,
-#             cast(Ws_avg as float) as Ws_avg,
-#             Wa_avg as Wa_avg,
-#             Va_avg as Va_avg,
-#             Ya_avg as Ya_avg,
-#             Ot_avg as Ot_avg,
-#             Ba_avg as Ba_avg
+    Returns:
+        plant(PlantData): An OpenOA PlantData object.
+    """
+    from pyhive import hive
 
-#      FROM entr_warehouse.la_haute_borne_scada_for_openoa
-#     """
+    conn = hive.Connection(host=thrift_server_host, port=thrift_server_port)
 
-#     plant = PlantDataV2()
+    scada_query = """SELECT Wind_turbine_name as Wind_turbine_name,
+            Date_time as Date_time,
+            cast(P_avg as float) as P_avg,
+            cast(Power_W as float) as Power_W,
+            cast(Ws_avg as float) as Ws_avg,
+            Wa_avg as Wa_avg,
+            Va_avg as Va_avg,
+            Ya_avg as Ya_avg,
+            Ot_avg as Ot_avg,
+            Ba_avg as Ba_avg
 
-#     plant.scada.df = pd.read_sql(scada_query, conn)
+     FROM entr_warehouse.la_haute_borne_scada_for_openoa
+    """
 
-#     conn.close()
+    plant = PlantDataV2()
 
-#     validate(plant)
+    plant.scada.df = pd.read_sql(scada_query, conn)
 
-#     return plant
+    conn.close()
 
-# def from_plantdata_v1(plant_v1:PlantData):
-#     plant_v2 = PlantDataV2()
-#     plant_v2.scada = plant_v1.scada._df
-#     plant_v2.asset = plant_v1.asset._df
-#     plant_v2.meter = plant_v1.meter._df
-#     plant_v2.tower = plant_v1.tower._df
-#     plant_v2.status = plant_v1.status._df
-#     plant_v2.curtail = plant_v1.curtail._df
-#     plant_v2.reanalysis = plant_v1.reanalysis._df
+    validate(plant)
 
-#     # copy any other data members to their new location
+    return plant
 
-#     # validate(plant_v2)
 
-#     return plant_v2
+def from_plantdata_v1(plant_v1: PlantData):
+    plant_v2 = PlantDataV2()
+    plant_v2.scada = plant_v1.scada._df
+    plant_v2.asset = plant_v1.asset._df
+    plant_v2.meter = plant_v1.meter._df
+    plant_v2.tower = plant_v1.tower._df
+    plant_v2.status = plant_v1.status._df
+    plant_v2.curtail = plant_v1.curtail._df
+    plant_v2.reanalysis = plant_v1.reanalysis._df
+
+    # copy any other data members to their new location
+
+    # validate(plant_v2)
+
+    return plant_v2
 
 
 class PlantData(object):
