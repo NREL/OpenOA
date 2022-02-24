@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import io
 import os
 import json
@@ -131,10 +133,15 @@ class PlantMetaData(FromDictMixin):
     reanalysis: ReanalysisMetaData = attr.ib(converter=ReanalysisMetaData.from_dict)
 
 
+metadata = {"scada": {"date_time_col": "col_name"}}
+
+
 @attr.s(auto_attribs=True)
 class PlantDataV3:
-    metadata: PlantMetaData = attr.ib(converter=PlantMetaData.from_dict)
-    scada: pd.DataFrame
+    metadata: PlantMetaData = attr.ib(
+        converter=PlantMetaData.from_dict, on_setattr=[attr.converters, attr.validators]
+    )
+    scada: pd.DataFrame | None
     meter: pd.DataFrame
     tower: pd.DataFrame
     status: pd.DataFrame
@@ -145,6 +152,13 @@ class PlantDataV3:
     @scada.validator  # noqa: disable=F821
     def scada_column_validator(self, instance: attr.Attribute, value: pd.DataFrame):
         self.scada = self.scada.rename(columns=self.metadata.scada.col_map)
+        missing_cols = [
+            col for col in self.metadata.scada.col_map.values() if col not in value.columns
+        ]
+        if len(missing_cols) > 0:
+            raise ValueError(
+                f"Missing the following columns in the `scada` inputs: {missing_cols}."
+            )
 
 
 @dataclass
