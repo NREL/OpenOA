@@ -5,13 +5,14 @@ import os
 import json
 import itertools
 from enum import auto
+from typing import Callable, Sequence
 from datetime import datetime
 from dataclasses import dataclass
-from lib2to3.pytree import convert
 
 import attr
+import numpy as np
 import pandas as pd
-from numpy import average
+from attr import define
 from dateutil.parser import parse
 
 from openoa.types import timeseries_table
@@ -20,7 +21,7 @@ from .asset import AssetData
 from .reanalysis import ReanalysisData
 
 
-@attr.s(auto_attribs=True)
+@define(auto_attribs=True)
 class FromDictMixin:
     """A Mixin class to allow for kwargs overloading when a data class doesn't
     have a specific parameter definied. This allows passing of larger dictionaries
@@ -64,8 +65,13 @@ class FromDictMixin:
         return cls(**kwargs)  # type: ignore
 
 
-@attr.s(auto_attribs=True)
+@define(auto_attribs=True)
 class SCADAMetaData(FromDictMixin):
+    """A metadata schematic to create the necessary column mappings and other validation
+    components, or other data about the SCADA data, that will contribute to a larger
+    plant metadata schema/routine.
+    """
+
     date_time_col: str = "Date_time"
     date_time_freq: str = "10T"
     average_power_col: str = "P_avg"
@@ -92,38 +98,42 @@ class SCADAMetaData(FromDictMixin):
         return col_map
 
 
-@attr.s(auto_attribs=True)
+@define(auto_attribs=True)
 class MeterMetaData(FromDictMixin):
     col: str
 
 
-@attr.s(auto_attribs=True)
+@define(auto_attribs=True)
 class TowerMetaData(FromDictMixin):
     col: str
 
 
-@attr.s(auto_attribs=True)
+@define(auto_attribs=True)
 class StatusMetaData(FromDictMixin):
     col: str
 
 
-@attr.s(auto_attribs=True)
+@define(auto_attribs=True)
 class CurtailMetaData(FromDictMixin):
     col: str
 
 
-@attr.s(auto_attribs=True)
+@define(auto_attribs=True)
 class AssetMetaData(FromDictMixin):
     col: str
 
 
-@attr.s(auto_attribs=True)
+@define(auto_attribs=True)
 class ReanalysisMetaData(FromDictMixin):
     col: str
 
 
-@attr.s(auto_attribs=True)
+@define(auto_attribs=True)
 class PlantMetaData(FromDictMixin):
+    """Composese the individual metadata/validation requirements from each of the
+    individual data "types" that can compose a `PlantData` object.
+    """
+
     scada: SCADAMetaData = attr.ib(converter=SCADAMetaData.from_dict)
     meter: MeterMetaData = attr.ib(converter=MeterMetaData.from_dict)
     tower: TowerMetaData = attr.ib(converter=TowerMetaData.from_dict)
@@ -133,15 +143,68 @@ class PlantMetaData(FromDictMixin):
     reanalysis: ReanalysisMetaData = attr.ib(converter=ReanalysisMetaData.from_dict)
 
 
-metadata = {"scada": {"date_time_col": "col_name"}}
+def convert_to_list(
+    value: Sequence | str | int | float,
+    manipulation: Callable | None = None,
+) -> list:
+    """Converts an unknown element that could be a list or single, non-sequence element
+    to a list of elements.
+
+    Parameters
+    ----------
+    value : Sequence | str | int | float
+        The unknown element to be converted to a list of element(s).
+    manipulation: Callable | None
+        A function to be performed upon the individual elements, by default None.
+
+    Returns
+    -------
+    list
+        The new list of elements.
+    """
+
+    if isinstance(value, (str, int, float)):
+        value = [value]
+    if manipulation is not None:
+        return [manipulation(el) for el in value]
+    return list(value)
 
 
-@attr.s(auto_attribs=True)
+@define(auto_attribs=True)
 class PlantDataV3:
+    """Data object for operational wind plant data, which can serialize all of these
+    structures and reload them them from the cache as needed.
+
+    This class holds references to all tables associated with a wind plant. The tables
+    are grouped by type:
+        - `scada`
+        - `meter`
+        - `tower`
+        - `status`
+        - `curtail`
+        - `asset`
+        - `reanalysis`
+
+    Parameters
+    ----------
+    metadata : PlantMetaData
+        A nested dictionary of the schema definition for each of the data types that
+        will be input. See `SCADAMetaData`, etc. for more information.  <-- TODO
+    scada : pd.DataFrame
+        The SCADA data to be used for analyis. See `SCADAMetaData` for more details
+        on the required columns, and other conventions
+    TODO: FINISH THE DOCSTRING
+
+    Raises:
+        ValueError: Raised if any column names are missing in the input data, as
+            specified in the appropriate schema
+    """
+
     metadata: PlantMetaData = attr.ib(
         converter=PlantMetaData.from_dict, on_setattr=[attr.converters, attr.validators]
     )
-    scada: pd.DataFrame | None
+    analysis_type: list[str] = attr.ib(default=["all"], converter=convert_to_list)
+    scada: pd.DataFrame | None = attr.ib(on_setattr=[attr.validators])
     meter: pd.DataFrame
     tower: pd.DataFrame
     status: pd.DataFrame
@@ -159,6 +222,33 @@ class PlantDataV3:
             raise ValueError(
                 f"Missing the following columns in the `scada` inputs: {missing_cols}."
             )
+
+    # Not necessary, but could provide an additional way in
+    @classmethod
+    def from_entr(
+        cls: PlantDataV3,
+        thrift_server_host: str = "localhost",
+        thrift_server_port: int = 10000,
+        database: str = "entr_warehouse",
+        wind_plant: str = "",
+        aggregation: str = "",
+        date_range: list = None,
+    ):
+        """Load a PlantData object from data in an entr_warehouse.
+
+        Args:
+            thrift_server_url(str): URL of the Apache Thrift server
+            database(str): Name of the Hive database
+            wind_plant(str): Name of the wind plant you'd like to load
+            aggregation: Not yet implemented
+            date_range: Not yet implemented
+
+        Returns:
+            plant(PlantData): An OpenOA PlantData object.
+        """
+        return from_entr(
+            thrift_server_host, thrift_server_port, database, wind_plant, aggregation, date_range
+        )
 
 
 @dataclass
