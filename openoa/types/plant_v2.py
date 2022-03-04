@@ -21,6 +21,9 @@ from .asset import AssetData
 from .reanalysis import ReanalysisData
 
 
+# PlantData V2 with Attrs Dataclass
+
+
 @define(auto_attribs=True)
 class FromDictMixin:
     """A Mixin class to allow for kwargs overloading when a data class doesn't
@@ -251,24 +254,6 @@ class PlantDataV3:
         )
 
 
-@dataclass
-class PlantDataV2:
-    scada: pd.DataFrame
-    meter: pd.DataFrame
-    tower: pd.DataFrame
-    status: pd.DataFrame
-    curtail: pd.DataFrame
-    asset: pd.DataFrame
-    reanalysis: pd.DataFrame
-
-    name: str
-    version: float = 2
-
-
-def validate(plant, schema):
-    pass
-
-
 def from_entr(
     thrift_server_host: str = "localhost",
     thrift_server_port: int = 10000,
@@ -307,18 +292,203 @@ def from_entr(
             Ot_avg as Ot_avg,
             Ba_avg as Ba_avg
 
-     FROM entr_warehouse.la_haute_borne_scada_for_openoa
+    FROM entr_warehouse.la_haute_borne_scada_for_openoa
     """
 
-    plant = PlantDataV2()
+    plant = PlantDataV3()
 
     plant.scada.df = pd.read_sql(scada_query, conn)
 
     conn.close()
 
-    validate(plant)
-
     return plant
+
+
+# PlantData V2 with Python Dataclass
+# requirements:
+# - Holds 7 dataframes with data about one wind plant
+# - Optionally validates data with respect to a schema
+# - Can support loading data from multiple sources and saving itself to disk
+@dataclass
+class PlantDataV2:
+    scada: pd.DataFrame
+    meter: pd.DataFrame
+    tower: pd.DataFrame
+    status: pd.DataFrame
+    curtail: pd.DataFrame
+    asset: pd.DataFrame
+    reanalysis: pd.DataFrame
+
+    name: str
+    version: float = 2
+
+    def __init__(self):
+        self._dataframe_field_names = [
+            "scada",
+            "meter",
+            "tower",
+            "status",
+            "curtail",
+            "asset",
+            "reanalysis",
+        ]
+
+    def _get_dataframes(self) -> dict[str : pd.DataFrame]:
+        return {name: getattr(self, name) for name in self._dataframe_fields}
+
+    def validate(self, schema, fail_if_contains_extra_data=False):
+        """Validate this plant data object against a schema. Returns True if valid, Rasies an exception if not valid.
+
+        Example Usage:
+        ```
+        # Plant is automatically validated when an analysis is run
+        openoa.AEP(plant).run()
+
+        # Manually validate with a schema
+        schema = openoa.AEP.input_schema # schema is a python dict object
+        plant.validate(schema)
+        ```
+        """
+        errors = []
+
+        dataframes = self._get_dataframes()
+        for field in schema["fields"]:
+            field_df = dataframes[field["name"]]
+
+            # Check the dataframe contains the right columns:
+            expected_tags = set([field.name for field in field["fields"]])
+            present_tags = set(field_df.columns)
+
+            # Missing tags
+            missing_tags = expected_tags - present_tags
+            if len(missing_tags) > 0:
+                errors.append(f"Table {field['name']} missing tags {missing_tags}")
+
+            # Extra tags
+            if fail_if_contains_extra_data:
+                extra_tags = present_tags - expected_tags
+                if len(extra_tags > 0):
+                    errors.append(f"Table {field['name']} contains extra tags {extra_tags}")
+
+            # Special validator for scada
+            if field["name"] == "scada":
+                pass
+
+        if len(errors > 0):
+            for error in errors:
+                print(error)
+            raise ValueError(f"Plant {self.name} failed validation")
+        else:
+            return True
+
+    def __repr__(self):
+        print(f"PlantData V{self.version}")
+        print(f"\tPlant: {self.name}")
+        print("=======================================")
+        missing_tables = ["scada", "meter", "tower", "status", "curtail", "asset", "reanalysis"]
+
+        if self.asset is not None and self.asset.shape[0] > 0:
+            missing_tables.remove("asset")
+            print("\tAsset Table:")
+            print(f"\t\tNumber of Assets: {self.asset.shape[0]}")
+
+        if self.scada is not None and self.scada.shape[0] > 0:
+            missing_tables.remove("scada")
+            print("\tScada Table:")
+            print(f"\t\tNumber of Rows: {self.scada.shape[0]}")
+            print(f"\t\tNumber of Columns: {self.scada.shape[1]}")
+            print(f"\t\tTags: {self.scada.columns}")
+
+        print(f"Missing or Empty Tables: {missing_tables}")
+
+    def save(self, path):
+        pass
+
+    @classmethod
+    def from_save(cls, path):
+        pass
+
+    @classmethod
+    def from_entr(
+        cls,
+        thrift_server_host: str = "localhost",
+        thrift_server_port: int = 10000,
+        database: str = "entr_warehouse",
+        wind_plant: str = "",
+        aggregation: str = "",
+        date_range: list = None,
+    ):
+        """
+        from_entr
+
+        Load a PlantData object from data in an entr_warehouse.
+
+        Args:
+            thrift_server_url(str): URL of the Apache Thrift server
+            database(str): Name of the Hive database
+            wind_plant(str): Name of the wind plant you'd like to load
+            aggregation: Not yet implemented
+            date_range: Not yet implemented
+
+        Returns:
+            plant(PlantData): An OpenOA PlantData object.
+        """
+        from pyhive import hive
+
+        conn = hive.Connection(host=thrift_server_host, port=thrift_server_port)
+
+        scada_query = """SELECT Wind_turbine_name as Wind_turbine_name,
+                Date_time as Date_time,
+                cast(P_avg as float) as P_avg,
+                cast(Power_W as float) as Power_W,
+                cast(Ws_avg as float) as Ws_avg,
+                Wa_avg as Wa_avg,
+                Va_avg as Va_avg,
+                Ya_avg as Ya_avg,
+                Ot_avg as Ot_avg,
+                Ba_avg as Ba_avg
+
+        FROM entr_warehouse.la_haute_borne_scada_for_openoa
+        """
+
+        plant = cls()
+
+        plant.scada.df = pd.read_sql(scada_query, conn)
+
+        conn.close()
+
+        return plant
+
+    @classmethod
+    def from_pandas(cls, scada, meter, status, tower, asset, curtail, reanalysis):
+        """
+        from_pandas
+
+        Create a PlantData object from a collection of Pandas data frames.
+
+        Args:
+            scada:
+            meter:
+            status:
+            tower:
+            asset:
+            curtail:
+            reanalysis:
+
+        Returns:
+            plant(PlantData): An OpenOA PlantData object.
+        """
+        plant = cls()
+
+        plant.scada = scada
+        plant.meter = meter
+        plant.status = status
+        plant.tower = tower
+        plant.asset = asset
+        plant.curtail = curtail
+        plant.reanalysis = reanalysis
+
+        plant.validate()
 
 
 def from_plantdata_v1(plant_v1: PlantData):
@@ -338,6 +508,7 @@ def from_plantdata_v1(plant_v1: PlantData):
     return plant_v2
 
 
+# PlantData
 class PlantData(object):
     """Data object for operational wind plant data.
 
