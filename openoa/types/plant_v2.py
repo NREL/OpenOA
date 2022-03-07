@@ -471,7 +471,7 @@ def _get_dtypes(cls, columns: list = []) -> dict:
 def dtype_converter(df: pd.DataFrame, column_types={}) -> None | list[str]:
     """Validates the column data types"""
     errors = []
-    for column, new_type in column_types:
+    for column, new_type in column_types.items():
         try:
             df[column] = df[column].astype(new_type)
         except:  # noqa: disable=E722
@@ -524,25 +524,25 @@ class PlantDataV3:
     reanalysis: pd.DataFrame | None = attr.ib(default=None, on_setattr=[attr.validators])
     analysis_type: list[str] | None = attr.ib(default=["all"], converter=convert_to_list)
 
-    @scada.validator  # noqa: disable=F821
-    def scada_format_validator(self, instance: attr.Attribute, value: pd.DataFrame | None):
+    @meter.validator  # noqa: disable=F821
+    def meter_format_validator(self, instance: attr.Attribute, value: pd.DataFrame | None):
         if value is None:
             return None
-        missing_cols = column_validator(value, column_names=self.metadata.scada.col_map)
+        missing_cols = column_validator(value, column_names=self.metadata.meter.col_map)
 
-        dtypes = _get_dtypes(SCADAMetaData, self.metadata.scada.col_map)
+        dtypes = _get_dtypes(MeterMetaData, self.metadata.meter.col_map)
         data_error_cols = dtype_converter(value, column_types=dtypes)
 
         errors = []
         if missing_cols is not None:
             errors.append(
-                ValueError(f"Missing the following columns in the `scada` inputs: {missing_cols}.")
+                ValueError(f"Missing the following columns in the `meter` inputs: {missing_cols}.")
             )
 
         if data_error_cols is not None:
             errors.append(
                 ValueError(
-                    "The following `scada` columns could not be converted properly, ",
+                    "The following `meter` columns could not be converted properly, ",
                     f"please check the data: {data_error_cols}",
                 )
             )
