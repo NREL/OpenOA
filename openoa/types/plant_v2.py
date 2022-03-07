@@ -510,6 +510,34 @@ class PlantDataV3:
     reanalysis: pd.DataFrame | None = attr.ib(default=None, on_setattr=[attr.validators])
     analysis_type: list[str] | None = attr.ib(default=["all"], converter=convert_to_list)
 
+    @scada.validator
+    def scada_format_validator(self, instance: attr.Attribute, value: pd.DataFrame | None):
+        if value is None:
+            return None
+
+        missing_cols = [
+            col for col in self.metadata.scada.col_map.values() if col not in value.columns
+        ]
+        bad_dtypes = []
+        for key, col in self.metadata.scada.col_map.items():
+            try:
+                dtype = self.metadata.scada.dtypes[key]
+                value[col] = value[col].astype(dtype)
+            except:  # noqa: disable=E722
+                bad_dtypes.append(col)
+
+        errors = []
+        if len(missing_cols) > 0:
+            errors.append(
+                ValueError(f"Missing the following columns in the `scada` inputs: {missing_cols}.")
+            )
+        if len(bad_dtypes) > 0:
+            errors.append(
+                ValueError(
+                    f"The following columns in `scada` were unable to converted to the correct data dtypes: {bad_dtypes}"
+                )
+            )
+
     @meter.validator  # noqa: disable=F821
     def meter_format_validator(self, instance: attr.Attribute, value: pd.DataFrame | None):
         if value is None:
