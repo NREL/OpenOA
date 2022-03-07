@@ -6,12 +6,11 @@ import json
 import itertools
 from typing import Callable, Sequence
 from dataclasses import dataclass
-from multiprocessing.sharedctypes import Value
 
 import attr
 import numpy as np
 import pandas as pd
-from attr import define
+from attr import define, fields, fields_dict
 from dateutil.parser import parse
 
 from openoa.types import timeseries_table
@@ -21,6 +20,8 @@ from .reanalysis import ReanalysisData
 
 
 # PlantData V2 with Attrs Dataclass
+METADATA_DTYPE = "dtype"
+METADATA_UNITS = "units"
 
 
 @define(auto_attribs=True)
@@ -81,6 +82,7 @@ class SCADAMetaData(FromDictMixin):
 
     # DataFrame columns
     time: str = attr.ib(default="time")
+    id: str = attr.ib(default="id")
     power: str = attr.ib(default="power")
     windspeed: str = attr.ib(default="windspeed")
     wind_direction: str = attr.ib(default="wind_direction")
@@ -101,7 +103,7 @@ class SCADAMetaData(FromDictMixin):
             power=np.float64,
             windspeed=np.float64,
             wind_direction=np.float64,
-            stauts=str,
+            status=str,
             pitch=np.float64,
             temp=np.float64,
         ),
@@ -114,7 +116,7 @@ class SCADAMetaData(FromDictMixin):
             power="kW",
             windspeed="m/s",
             wind_direction="deg",
-            stauts=None,
+            status=None,
             pitch="deg",
             temp="C",
         ),
@@ -122,38 +124,278 @@ class SCADAMetaData(FromDictMixin):
     )
 
     def __attrs_post_init__(self) -> None:
-        self.col_map = dict()
+        self.col_map = dict(
+            time=self.time,
+            id=self.id,
+            power=self.power,
+            windspeed=self.windspeed,
+            wind_direction=self.wind_direction,
+            status=self.status,
+            pitch=self.pitch,
+            temperature=self.temperature,
+        )
 
 
 @define(auto_attribs=True)
 class MeterMetaData(FromDictMixin):
-    col: str
+
+    # DataFrame columns
+    time: str = attr.ib(
+        default="time", metadata={METADATA_DTYPE: np.datetime64, METADATA_UNITS: "datetime64[ns]"}
+    )
+    power: str = attr.ib(
+        default="power", metadata={METADATA_DTYPE: np.float64, METADATA_UNITS: "kW"}
+    )
+    energy: str = attr.ib(
+        default="energy", metadata={METADATA_DTYPE: np.float64, METADATA_UNITS: "kW"}
+    )
+
+    # Parameterizations that should not be changed
+    # Prescribed mappings, datatypes, and units for in-code reference.
+    col_map: dict = attr.ib(init=False)
+    # dtypes: dict = attr.ib(
+    #     default=dict(
+    #         time=np.datetime64,
+    #         power=np.float64,
+    #         energy=np.float64,
+    #     ),
+    #     init=False,  # don't allow for user input
+    # )
+    # units: dict = attr.ib(
+    #     default=dict(
+    #         time="datetim64[ns]",
+    #         power="kW",
+    #         energy="kW",
+    #     ),
+    #     init=False,  # don't allow for user input
+    # )
+
+    def __attrs_post_init__(self) -> None:
+        self.col_map = dict(
+            time=self.time,
+            power=self.power,
+            energy=self.energy,
+        )
 
 
 @define(auto_attribs=True)
 class TowerMetaData(FromDictMixin):
-    col: str
+    # DataFrame columns
+    time: str = attr.ib(default="time")
+    id: str = attr.ib(default="id")
+
+    # Parameterizations that should not be changed
+    # Prescribed mappings, datatypes, and units for in-code reference.
+    col_map: dict = attr.ib(init=False)
+    dtypes: dict = attr.ib(
+        default=dict(
+            time=np.datetime64,
+            id=str,
+        ),
+        init=False,  # don't allow for user input
+    )
+    units: dict = attr.ib(
+        default=dict(
+            time="datetim64[ns]",
+            id=None,
+        ),
+        init=False,  # don't allow for user input
+    )
+
+    def __attrs_post_init__(self) -> None:
+        self.col_map = dict(
+            time=self.time,
+            id=self.id,
+        )
 
 
 @define(auto_attribs=True)
 class StatusMetaData(FromDictMixin):
-    col: str
-    levels: int = 1
+    # DataFrame columns
+    time: str = attr.ib(default="time")
+    id: str = attr.ib(default="id")
+    status_id: str = attr.ib(default="status_id")
+    status_code: str = attr.ib(default="status_code")
+    status_text: str = attr.ib(default="status_text")
+
+    # Data about the columns
+    frequency: str = attr.ib(default="10T")
+
+    # Parameterizations that should not be changed
+    # Prescribed mappings, datatypes, and units for in-code reference.
+    col_map: dict = attr.ib(init=False)
+    dtypes: dict = attr.ib(
+        default=dict(
+            time=np.datetime64,
+            id=str,
+            status_id=np.int64,
+            status_code=np.int64,
+            status_text=str,
+        ),
+        init=False,  # don't allow for user input
+    )
+    units: dict = attr.ib(
+        default=dict(
+            time="datetim64[ns]",
+            id=None,
+            status_id=None,
+            status_code=None,
+            status_text=None,
+        ),
+        init=False,  # don't allow for user input
+    )
+
+    def __attrs_post_init__(self) -> None:
+        self.col_map = dict(
+            time=self.time,
+            id=self.id,
+            status_id=self.status_id,
+            status_code=self.status_code,
+            status_text=self.status_text,
+        )
 
 
 @define(auto_attribs=True)
 class CurtailMetaData(FromDictMixin):
-    col: str
+    # DataFrame columns
+    time: str = attr.ib(default="time")
+    curtailment_pct: str = attr.ib(default="curtailment_pct")
+    availability_pct: str = attr.ib(default="availability_pct")
+    net_energy: str = attr.ib(default="net_energy")
+
+    # Data about the columns
+    frequency: str = attr.ib(default="10T")
+
+    # Parameterizations that should not be changed
+    # Prescribed mappings, datatypes, and units for in-code reference.
+    col_map: dict = attr.ib(init=False)
+    dtypes: dict = attr.ib(
+        default=dict(
+            time=np.datetime64,
+            curtailment_pct=np.float64,
+            availability_pct=np.float64,
+            net_energy=np.float64,
+        ),
+        init=False,  # don't allow for user input
+    )
+    units: dict = attr.ib(
+        default=dict(
+            time="datetim64[ns]",
+            curtailment_pct=None,
+            availability_pct=None,
+            net_energy="kW",
+        ),
+        init=False,  # don't allow for user input
+    )
+
+    def __attrs_post_init__(self) -> None:
+        self.col_map = dict(
+            time=self.time,
+            curtailment_pct=self.curtailment_pct,
+            availability_pct=self.availability_pct,
+            net_energy=self.net_energy,
+        )
 
 
 @define(auto_attribs=True)
 class AssetMetaData(FromDictMixin):
-    col: str
+    # DataFrame columns
+    id: str = attr.ib(default="id")
+    latitude: str = attr.ib(default="latitude")
+    longitude: str = attr.ib(default="longitude")
+    rated_power: str = attr.ib(default="rated_power")
+    type: str = attr.ib(default="type")
+
+    # Parameterizations that should not be changed
+    # Prescribed mappings, datatypes, and units for in-code reference.
+    col_map: dict = attr.ib(init=False)
+    dtypes: dict = attr.ib(
+        default=dict(
+            id=str,
+            latitude=np.float64,
+            longitude=np.float64,
+            rated_power=np.float64,
+            type=str,
+        ),
+        init=False,  # don't allow for user input
+    )
+    units: dict = attr.ib(
+        default=dict(
+            id=None,
+            latitude="WGS84",
+            longitude="WGS84",
+            rated_power="kW",
+            type=None,
+        ),
+        init=False,  # don't allow for user input
+    )
+
+    def __attrs_post_init__(self) -> None:
+        self.col_map = dict(
+            id=self.id,
+            latitude=self.latitude,
+            longitude=self.longitude,
+            rated_power=self.rated_power,
+            type=self.type,
+        )
 
 
 @define(auto_attribs=True)
 class ReanalysisMetaData(FromDictMixin):
-    col: str
+    # DataFrame columns
+    time: str = attr.ib(default="time")
+    id: str = attr.ib(default="id")
+    power: str = attr.ib(default="power")
+    windspeed: str = attr.ib(default="windspeed")
+    wind_direction: str = attr.ib(default="wind_direction")
+    status: str = attr.ib(default="status")
+    pitch: str = attr.ib(default="pitch")
+    temperature: str = attr.ib(default="temperature")
+
+    # Data about the columns
+    frequency: str = attr.ib(default="10T")
+
+    # Parameterizations that should not be changed
+    # Prescribed mappings, datatypes, and units for in-code reference.
+    col_map: dict = attr.ib(init=False)
+    dtypes: dict = attr.ib(
+        default=dict(
+            time=np.datetime64,
+            id=str,
+            power=np.float64,
+            windspeed=np.float64,
+            wind_direction=np.float64,
+            status=str,
+            pitch=np.float64,
+            temp=np.float64,
+        ),
+        init=False,  # don't allow for user input
+    )
+    units: dict = attr.ib(
+        default=dict(
+            time="datetim64[ns]",
+            id=None,
+            power="kW",
+            windspeed="m/s",
+            wind_direction="deg",
+            status=None,
+            pitch="deg",
+            temp="C",
+        ),
+        init=False,  # don't allow for user input
+    )
+
+    def __attrs_post_init__(self) -> None:
+        self.col_map = dict(
+            time=self.time,
+            id=self.id,
+            power=self.power,
+            windspeed=self.windspeed,
+            wind_direction=self.wind_direction,
+            status=self.status,
+            pitch=self.pitch,
+            temperature=self.temperature,
+        )
 
 
 # def validate_longitude(instance, attribute, value):
@@ -168,13 +410,13 @@ class PlantMetaData(FromDictMixin):
     individual data "types" that can compose a `PlantData` object.
     """
 
-    scada: SCADAMetaData = attr.ib(converter=SCADAMetaData.from_dict)
-    meter: MeterMetaData = attr.ib(converter=MeterMetaData.from_dict)
-    tower: TowerMetaData = attr.ib(converter=TowerMetaData.from_dict)
-    status: StatusMetaData = attr.ib(converter=StatusMetaData.from_dict)
-    curtail: CurtailMetaData = attr.ib(converter=CurtailMetaData.from_dict)
-    asset: AssetMetaData = attr.ib(converter=AssetMetaData.from_dict)
-    reanalysis: ReanalysisMetaData = attr.ib(converter=ReanalysisMetaData.from_dict)
+    scada: SCADAMetaData = attr.ib(default={}, converter=SCADAMetaData.from_dict)
+    meter: MeterMetaData = attr.ib(default={}, converter=MeterMetaData.from_dict)
+    tower: TowerMetaData = attr.ib(default={}, converter=TowerMetaData.from_dict)
+    status: StatusMetaData = attr.ib(default={}, converter=StatusMetaData.from_dict)
+    curtail: CurtailMetaData = attr.ib(default={}, converter=CurtailMetaData.from_dict)
+    asset: AssetMetaData = attr.ib(default={}, converter=AssetMetaData.from_dict)
+    reanalysis: ReanalysisMetaData = attr.ib(default={}, converter=ReanalysisMetaData.from_dict)
 
 
 def convert_to_list(
@@ -214,6 +456,32 @@ my_data = {
 }
 
 
+def column_validator(df: pd.DataFrame, column_names={}) -> None | list[str]:
+    """Validates the column names"""
+    missing = set(column_names.values()).difference(df.columns)
+    if missing:
+        return list(missing)
+    return None
+
+
+def _get_dtypes(cls, columns: list = []) -> dict:
+    return {col: fields_dict(cls)[col].metadata[METADATA_DTYPE] for col in columns}
+
+
+def dtype_converter(df: pd.DataFrame, column_types={}) -> None | list[str]:
+    """Validates the column data types"""
+    errors = []
+    for column, new_type in column_types:
+        try:
+            df[column] = df[column].astype(new_type)
+        except Exception:
+            errors.append(column)
+
+    if errors:
+        return errors
+    return None
+
+
 @define(auto_attribs=True)
 class PlantDataV3:
     """Data object for operational wind plant data, which can serialize all of these
@@ -245,31 +513,41 @@ class PlantDataV3:
     """
 
     metadata: PlantMetaData = attr.ib(
-        converter=PlantMetaData.from_dict, on_setattr=[attr.converters, attr.validators]
+        default={}, converter=PlantMetaData.from_dict, on_setattr=[attr.converters, attr.validators]
     )
-    scada: pd.DataFrame | None = attr.ib(on_setattr=[attr.validators])
-    meter: pd.DataFrame = attr.ib(on_setattr=[attr.validators])
-    tower: pd.DataFrame = attr.ib(on_setattr=[attr.validators])
-    status: pd.DataFrame = attr.ib(on_setattr=[attr.validators])
-    curtail: pd.DataFrame = attr.ib(on_setattr=[attr.validators])
-    asset: pd.DataFrame = attr.ib(on_setattr=[attr.validators])
-    reanalysis: pd.DataFrame = attr.ib(on_setattr=[attr.validators])
-    analysis_type: list[str] = attr.ib(default=["all"], converter=convert_to_list)
+    scada: pd.DataFrame | None = attr.ib(default=None, on_setattr=[attr.validators])
+    meter: pd.DataFrame | None = attr.ib(default=None, on_setattr=[attr.validators])
+    tower: pd.DataFrame | None = attr.ib(default=None, on_setattr=[attr.validators])
+    status: pd.DataFrame | None = attr.ib(default=None, on_setattr=[attr.validators])
+    curtail: pd.DataFrame | None = attr.ib(default=None, on_setattr=[attr.validators])
+    asset: pd.DataFrame | None = attr.ib(default=None, on_setattr=[attr.validators])
+    reanalysis: pd.DataFrame | None = attr.ib(default=None, on_setattr=[attr.validators])
+    analysis_type: list[str] | None = attr.ib(default=["all"], converter=convert_to_list)
 
     @scada.validator  # noqa: disable=F821
-    def scada_column_validator(self, instance: attr.Attribute, value: pd.DataFrame | None):
+    def scada_format_validator(self, instance: attr.Attribute, value: pd.DataFrame | None):
         if value is None:
-            # The data value isn't required for the analysis type
-            return
+            return None
+        missing_cols = column_validator(value, column_names=self.metadata.scada.col_map)
 
-        self.scada = self.scada.rename(columns=self.metadata.scada.col_map)
-        missing_cols = [
-            col for col in self.metadata.scada.col_map.values() if col not in value.columns
-        ]
-        if len(missing_cols) > 0:
-            raise ValueError(
-                f"Missing the following columns in the `scada` inputs: {missing_cols}."
+        dtypes = _get_dtypes(SCADAMetaData, self.metadata.scada.col_map)
+        data_error_cols = dtype_converter(value, column_types=dtypes)
+
+        errors = []
+        if missing_cols is not None:
+            errors.append(
+                ValueError(f"Missing the following columns in the `scada` inputs: {missing_cols}.")
             )
+
+        if data_error_cols is not None:
+            errors.append(
+                ValueError(
+                    "The following `scada` columns could not be converted properly, ",
+                    f"please check the data: {data_error_cols}",
+                )
+            )
+        if errors:
+            raise Exception(errors)
 
     # Not necessary, but could provide an additional way in
     @classmethod
