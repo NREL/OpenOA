@@ -344,13 +344,9 @@ class AssetMetaData(FromDictMixin):
 class ReanalysisMetaData(FromDictMixin):
     # DataFrame columns
     time: str = attr.ib(default="time")
-    id: str = attr.ib(default="id")
-    power: str = attr.ib(default="power")
     windspeed: str = attr.ib(default="windspeed")
     wind_direction: str = attr.ib(default="wind_direction")
-    status: str = attr.ib(default="status")
-    pitch: str = attr.ib(default="pitch")
-    temperature: str = attr.ib(default="temperature")
+    rho: str = attr.ib(default="rho")
 
     # Data about the columns
     frequency: str = attr.ib(default="10T")
@@ -361,26 +357,18 @@ class ReanalysisMetaData(FromDictMixin):
     dtypes: dict = attr.ib(
         default=dict(
             time=np.datetime64,
-            id=str,
-            power=np.float64,
             windspeed=np.float64,
             wind_direction=np.float64,
-            status=str,
-            pitch=np.float64,
-            temp=np.float64,
+            rho=np.float64,
         ),
         init=False,  # don't allow for user input
     )
     units: dict = attr.ib(
         default=dict(
             time="datetim64[ns]",
-            id=None,
-            power="kW",
             windspeed="m/s",
             wind_direction="deg",
-            status=None,
-            pitch="deg",
-            temp="C",
+            rho="kg/m^3",
         ),
         init=False,  # don't allow for user input
     )
@@ -388,13 +376,9 @@ class ReanalysisMetaData(FromDictMixin):
     def __attrs_post_init__(self) -> None:
         self.col_map = dict(
             time=self.time,
-            id=self.id,
-            power=self.power,
             windspeed=self.windspeed,
             wind_direction=self.wind_direction,
-            status=self.status,
-            pitch=self.pitch,
-            temperature=self.temperature,
+            rho=self.rho,
         )
 
 
@@ -449,7 +433,9 @@ def convert_to_list(
 my_data = {
     "metadata": {
         "scada": {
-            "date_time_col": "Date_time",
+            "time": "Date_time",
+            "id": "Asset_ID",
+            "freq": "10T",
         }
     },
     "scada": pd.DataFrame,
