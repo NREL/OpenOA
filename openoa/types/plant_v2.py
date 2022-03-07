@@ -474,7 +474,7 @@ def dtype_converter(df: pd.DataFrame, column_types={}) -> None | list[str]:
     for column, new_type in column_types:
         try:
             df[column] = df[column].astype(new_type)
-        except Exception:
+        except:  # noqa: disable=E722
             errors.append(column)
 
     if errors:
