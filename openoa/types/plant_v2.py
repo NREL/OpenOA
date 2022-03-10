@@ -95,6 +95,7 @@ class SCADAMetaData(FromDictMixin):
 
     # Parameterizations that should not be changed
     # Prescribed mappings, datatypes, and units for in-code reference.
+    name: str = attr.ib(default="scada", init=False)
     col_map: dict = attr.ib(init=False)
     dtypes: dict = attr.ib(
         default=dict(
@@ -152,6 +153,7 @@ class MeterMetaData(FromDictMixin):
 
     # Parameterizations that should not be changed
     # Prescribed mappings, datatypes, and units for in-code reference.
+    name: str = attr.ib(default="meter", init=False)
     col_map: dict = attr.ib(init=False)
     # dtypes: dict = attr.ib(
     #     default=dict(
@@ -186,6 +188,7 @@ class TowerMetaData(FromDictMixin):
 
     # Parameterizations that should not be changed
     # Prescribed mappings, datatypes, and units for in-code reference.
+    name: str = attr.ib(default="tower", init=False)
     col_map: dict = attr.ib(init=False)
     dtypes: dict = attr.ib(
         default=dict(
@@ -223,6 +226,7 @@ class StatusMetaData(FromDictMixin):
 
     # Parameterizations that should not be changed
     # Prescribed mappings, datatypes, and units for in-code reference.
+    name: str = attr.ib(default="status", init=False)
     col_map: dict = attr.ib(init=False)
     dtypes: dict = attr.ib(
         default=dict(
@@ -268,6 +272,7 @@ class CurtailMetaData(FromDictMixin):
 
     # Parameterizations that should not be changed
     # Prescribed mappings, datatypes, and units for in-code reference.
+    name: str = attr.ib(default="curtail", init=False)
     col_map: dict = attr.ib(init=False)
     dtypes: dict = attr.ib(
         default=dict(
@@ -308,6 +313,7 @@ class AssetMetaData(FromDictMixin):
 
     # Parameterizations that should not be changed
     # Prescribed mappings, datatypes, and units for in-code reference.
+    name: str = attr.ib(default="asset", init=False)
     col_map: dict = attr.ib(init=False)
     dtypes: dict = attr.ib(
         default=dict(
@@ -353,6 +359,7 @@ class ReanalysisMetaData(FromDictMixin):
 
     # Parameterizations that should not be changed
     # Prescribed mappings, datatypes, and units for in-code reference.
+    name: str = attr.ib(default="reanalysis", init=False)
     col_map: dict = attr.ib(init=False)
     dtypes: dict = attr.ib(
         default=dict(
@@ -563,6 +570,41 @@ class PlantDataV3:
         if errors:
             raise Exception(errors)
 
+    def validate(self, column_names: bool = True, column_dtypes: bool = True) -> None:
+        """Explicit validation method for post-hoc validation.
+
+        NOTE: This serves as another alternative way into the validation routines, and
+            the methods as written are in no way a satisfactory final/optimized version
+        """
+        # NOTE: This is purely pseudo-python code and will not at all work
+        error_messages = []
+        meta_list = self.metadata.values()  # not real method but could be useful
+        schema_list = self.metadata.types()  # not a real method but could be useful
+        data_list = self.values()  # not a real method but could be a valuable mapping
+        for schema, metadata, data in zip(meta_list, schema_list, data_list):
+            name = metadata.name
+            # Check for the appropriate columns
+            if column_names:
+                missing_cols = column_validator(data, column_names=metadata.col_map)
+                if missing_cols:
+                    error_messages.append(
+                        f"{name} is missing the following columns: {missing_cols}"
+                    )
+
+            # Check for the appropriate columns
+            if column_dtypes:
+                dtypes = _get_dtypes(schema, metadata.col_map)
+                data_error_cols = dtype_converter(data, column_types=dtypes)
+                if missing_cols:
+                    error_messages.append(
+                        f"{name} encountered errors in converting the following columns: {data_error_cols}"
+                    )
+
+            # Check for extra columns
+            # TODO
+
+            # TODO: define other checks
+
     # Not necessary, but could provide an additional way in
     @classmethod
     def from_entr(
@@ -589,6 +631,14 @@ class PlantDataV3:
         return from_entr(
             thrift_server_host, thrift_server_port, database, wind_plant, aggregation, date_range
         )
+
+    def turbine_ids(self) -> list[str]:
+        """Convenience method for getting the unique turbine IDs from the scada data.
+
+        Returns:
+            list[str]: List of unique turbine identifiers.
+        """
+        return self.scada[self.metadata.scada.id].unique()
 
 
 def from_entr(
