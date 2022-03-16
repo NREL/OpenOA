@@ -14,114 +14,6 @@ from .reanalysis import ReanalysisData
 import pandas as pd
 
 
-schema = openoa.analysis.aep.getSchema()
-schema = {"power_kw":"10T", ...}
-
-# No prepare needed
-plant = openoa.plant.from_entr("Bobkitten", schema)
-
-scada = pd.read_csv('file.csv')
-scada.rename({})
-plant = openoa.plant.from_pandas(scada, schema)
-toolkit.planetos.fetch(plant)
-## plant.validate(schema)
-
-# Prepare needed
-plant = openoa.plant.from_csv(files, schema_mapper?)
-
-openoa.analysis.aep(plant)
-
-@dataclass
-class PlantDataV2:
-    scada: pd.DataFrame
-    meter: pd.DataFrame
-    tower: pd.DataFrame
-    status: pd.DataFrame
-    curtail: pd.DataFrame
-    asset: pd.DataFrame
-    reanalysis: pd.DataFrame
-    name: str
-    version: float = 2
-
-    def __init__(self, schema):
-
-
-
-def validate(plant, schema):
-    pass
-
-def from_pandas(col_mapping={}):
-
-def from_csv(col_mapping={}):
-
-
-def from_entr(thrift_server_host:str="localhost",
-              thrift_server_port:int=10000,
-              database:str="entr_warehouse",
-              wind_plant:str="",
-              aggregation:str="",
-              date_range:list=None):
-    """
-    from_entr
-
-    Load a PlantData object from data in an entr_warehouse.
-
-    Args:
-        thrift_server_url(str): URL of the Apache Thrift server
-        database(str): Name of the Hive database
-        wind_plant(str): Name of the wind plant you'd like to load
-        aggregation: Not yet implemented
-        date_range: Not yet implemented
-
-    Returns:
-        plant(PlantData): An OpenOA PlantData object.
-    """
-    from pyhive import hive
-
-    conn = hive.Connection(host=thrift_server_host, port=thrift_server_port)
-
-    scada_query = """SELECT Wind_turbine_name as Wind_turbine_name, 
-            Date_time as Date_time, 
-            cast(P_avg as float) as P_avg,
-            cast(Power_W as float) as Power_W,
-            cast(Ws_avg as float) as Ws_avg,
-            Wa_avg as Wa_avg,
-            Va_avg as Va_avg, 
-            Ya_avg as Ya_avg, 
-            Ot_avg as Ot_avg, 
-            Ba_avg as Ba_avg 
-            
-     FROM entr_warehouse.la_haute_borne_scada_for_openoa
-    """
-
-    plant = PlantDataV2()
-
-    plant.scada.df = pd.read_sql(scada_query, conn)
-
-    conn.close()
-
-    validate(plant)
-
-    return plant
-
-def from_plantdata_v1(plant_v1:PlantData):
-    plant_v2 = PlantDataV2()
-    plant_v2.scada = plant_v1.scada._df
-    plant_v2.asset = plant_v1.asset._df
-    plant_v2.meter = plant_v1.meter._df
-    plant_v2.tower = plant_v1.tower._df
-    plant_v2.status = plant_v1.status._df
-    plant_v2.curtail = plant_v1.curtail._df
-    plant_v2.reanalysis = plant_v1.reanalysis._df
-
-    # copy any other data members to their new location
-
-    # validate(plant_v2)
-
-    return plant_v2
-
-
-
 
 class PlantData(object):
     """ Data object for operational wind plant data.
@@ -344,7 +236,7 @@ class PlantData(object):
     def from_entr(cls, thrift_server_host="localhost",
                        thrift_server_port=10000,
                        database="entr_warehouse",
-                       wind_plant="",
+                       wind_plant="La Haute Borne",
                        aggregation="",
                        date_range=None):
         """
@@ -368,20 +260,70 @@ class PlantData(object):
 
         conn = hive.Connection(host=thrift_server_host, port=thrift_server_port)
 
-        scada_query = f"""SELECT Wind_turbine_name as Wind_turbine_name, 
-                Date_time as Date_time, 
-                cast(P_avg as float) as P_avg,
-                cast(Power_W as float) as Power_W,
-                cast(Ws_avg as float) as Ws_avg,
-                Wa_avg as Wa_avg,
-                Va_avg as Va_avg, 
-                Ya_avg as Ya_avg, 
-                Ot_avg as Ot_avg, 
-                Ba_avg as Ba_avg 
-                
-        FROM {database}.{wind_plant}
+        ## Plant Metadata
+        metadata_query = f"""
+        SELECT
+            plant_id,
+            plant_name,
+            latitude,
+            longitude,
+            plant_capacity,
+            number_of_turbines,
+            turbine_capacity
+        FROM
+            entr_warehouse.dim_asset_plant
+        WHERE
+            plant_name = "{wind_plant}";
         """
+        metadata = pd.read_sql(metadata_query, conn)
+        assert len(metadata)<2, f"Multiple plants matching name {wind_plant}"
+        assert len(metadata)>0, f"No plant matching name {wind_plant}"
 
+        plant.latitude = metadata["latitude"][0]
+        plant.longitude = metadata["longitude"][0]
+        plant.capacity = metadata["plant_capacity"][0]
+
+        ## Asset Table
+        asset_query = f"""
+        SELECT
+            plant_id,
+            wind_turbine_id,
+            wind_turbine_name,
+            latitude,
+            longitude,
+            elevation,
+            hub_height,
+            rotor_diameter,
+            rated_power,
+            manufacturer,
+            model
+        FROM
+            entr_warehouse.dim_asset_wind_turbine
+        WHERE
+            plant_id = {metadata['plant_id'][0]};
+        """
+        plant._asset = pd.read_sql(asset_query, conn)
+
+        ## Scada Table
+        scada_query = f"""
+        SELECT
+            entr_warehouse.rpt_openoa_wtg_scada.wind_turbine_name,
+            date_time,
+            `WROT.BlPthAngVal`,
+            `WTUR.W`,
+            `WMET.HorWdSpd`,
+            `WMET.HorWdDirRel`,
+            `WMET.EnvTmp`,
+            `WNAC.Dir`,
+            `WMET.HorWdDir`
+        FROM
+            entr_warehouse.rpt_openoa_wtg_scada
+            LEFT JOIN
+                entr_warehouse.dim_asset_wind_turbine
+            ON entr_warehouse.rpt_openoa_wtg_scada.wind_turbine_name = entr_warehouse.dim_asset_wind_turbine.wind_turbine_name
+        WHERE
+            plant_id = {metadata['plant_id'][0]};
+        """
         plant.scada.df = pd.read_sql(scada_query, conn)
 
         conn.close()
