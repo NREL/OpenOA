@@ -238,7 +238,8 @@ class PlantData(object):
                        database="entr_warehouse",
                        wind_plant="La Haute Borne",
                        aggregation="",
-                       date_range=None):
+                       date_range=None,
+                       conn=None):
         """
         from_entr
 
@@ -255,80 +256,92 @@ class PlantData(object):
         Returns:
             plant(PlantData): An OpenOA PlantData object.
         """
-        from pyhive import hive
-        plant = cls(database, wind_plant) ## Passing in database as the path and wind_plant as the name for now.
-
-        conn = hive.Connection(host=thrift_server_host, port=thrift_server_port)
-
-        ## Plant Metadata
-        metadata_query = f"""
-        SELECT
-            plant_id,
-            plant_name,
-            latitude,
-            longitude,
-            plant_capacity,
-            number_of_turbines,
-            turbine_capacity
-        FROM
-            entr_warehouse.dim_asset_plant
-        WHERE
-            plant_name = "{wind_plant}";
-        """
-        metadata = pd.read_sql(metadata_query, conn)
-        assert len(metadata)<2, f"Multiple plants matching name {wind_plant}"
-        assert len(metadata)>0, f"No plant matching name {wind_plant}"
-
-        plant.latitude = metadata["latitude"][0]
-        plant.longitude = metadata["longitude"][0]
-        plant.capacity = metadata["plant_capacity"][0]
-
-        ## Asset Table
-        asset_query = f"""
-        SELECT
-            plant_id,
-            wind_turbine_id,
-            wind_turbine_name,
-            latitude,
-            longitude,
-            elevation,
-            hub_height,
-            rotor_diameter,
-            rated_power,
-            manufacturer,
-            model
-        FROM
-            entr_warehouse.dim_asset_wind_turbine
-        WHERE
-            plant_id = {metadata['plant_id'][0]};
-        """
-        plant._asset = pd.read_sql(asset_query, conn)
-
-        ## Scada Table
-        scada_query = f"""
-        SELECT
-            entr_warehouse.rpt_openoa_wtg_scada.wind_turbine_name,
-            date_time,
-            `WROT.BlPthAngVal`,
-            `WTUR.W`,
-            `WMET.HorWdSpd`,
-            `WMET.HorWdDirRel`,
-            `WMET.EnvTmp`,
-            `WNAC.Dir`,
-            `WMET.HorWdDir`
-        FROM
-            entr_warehouse.rpt_openoa_wtg_scada
-            LEFT JOIN
-                entr_warehouse.dim_asset_wind_turbine
-            ON entr_warehouse.rpt_openoa_wtg_scada.wind_turbine_name = entr_warehouse.dim_asset_wind_turbine.wind_turbine_name
-        WHERE
-            plant_id = {metadata['plant_id'][0]};
-        """
-        plant.scada.df = pd.read_sql(scada_query, conn)
-
-        conn.close()
-
+        import operational_analysis.toolkits.entr as entr
+        plant = entr.load_openoa_project_from_warehouse(cls,
+                       thrift_server_host,
+                       thrift_server_port,
+                       database,
+                       wind_plant,
+                       aggregation,
+                       date_range,
+                       conn)
         return plant
+        # plant = cls(database, wind_plant) ## Passing in database as the path and wind_plant as the name for now.
+
+        # if conn is None:
+        #     from pyhive import hive
+        #     conn = hive.Connection(host=thrift_server_host, port=thrift_server_port)
+
+        # ## Plant Metadata
+        # metadata_query = f"""
+        # SELECT
+        #     plant_id,
+        #     plant_name,
+        #     latitude,
+        #     longitude,
+        #     plant_capacity,
+        #     number_of_turbines,
+        #     turbine_capacity
+        # FROM
+        #     entr_warehouse.dim_asset_plant
+        # WHERE
+        #     plant_name = "{wind_plant}";
+        # """
+        # metadata = pd.read_sql(metadata_query, conn)
+        # assert len(metadata)<2, f"Multiple plants matching name {wind_plant}"
+        # assert len(metadata)>0, f"No plant matching name {wind_plant}"
+
+        # plant.latitude = metadata["latitude"][0]
+        # plant.longitude = metadata["longitude"][0]
+        # plant.capacity = metadata["plant_capacity"][0]
+
+        # ## Asset Table
+        # asset_query = f"""
+        # SELECT
+        #     plant_id,
+        #     wind_turbine_id,
+        #     wind_turbine_name,
+        #     latitude,
+        #     longitude,
+        #     elevation,
+        #     hub_height,
+        #     rotor_diameter,
+        #     rated_power,
+        #     manufacturer,
+        #     model
+        # FROM
+        #     entr_warehouse.dim_asset_wind_turbine
+        # WHERE
+        #     plant_id = {metadata['plant_id'][0]};
+        # """
+        # #plant._asset = pyspark.sql(asset_query).to_pandas()
+        # plant._asset = pd.read_sql(asset_query, conn)
+
+        # ## Scada Table
+        # scada_query = f"""
+        # SELECT
+        #     entr_warehouse.rpt_openoa_wtg_scada.wind_turbine_name,
+        #     date_time,
+        #     `WROT.BlPthAngVal`,
+        #     `WTUR.W`,
+        #     `WMET.HorWdSpd`,
+        #     `WMET.HorWdDirRel`,
+        #     `WMET.EnvTmp`,
+        #     `WNAC.Dir`,
+        #     `WMET.HorWdDir`
+        # FROM
+        #     entr_warehouse.rpt_openoa_wtg_scada
+        #     LEFT JOIN
+        #         entr_warehouse.dim_asset_wind_turbine
+        #     ON entr_warehouse.rpt_openoa_wtg_scada.wind_turbine_name = entr_warehouse.dim_asset_wind_turbine.wind_turbine_name
+        # WHERE
+        #     plant_id = {metadata['plant_id'][0]};
+        # """
+        # plant.scada.df = pd.read_sql(scada_query, conn)
+
+        # conn.close()
+
+        # return plant
 
 
 
