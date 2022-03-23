@@ -44,7 +44,9 @@ def load_metadata(conn, plant):
 
     plant.latitude = metadata["latitude"][0]
     plant.longitude = metadata["longitude"][0]
-    plant.capacity = metadata["plant_capacity"][0]
+    plant._plant_capacity = metadata["plant_capacity"][0]
+    plant._num_turbines = metadata["number_of_turbines"][0]
+    plant._turbine_capacity = metadata["turbine_capacity"][0]
     plant._entr_plant_id = metadata["plant_id"][0]
 
 def load_asset(conn, plant):
@@ -69,7 +71,28 @@ def load_asset(conn, plant):
     #plant._asset = pyspark.sql(asset_query).to_pandas()
     plant._asset = pd.read_sql(asset_query, conn)
 
+def load_scada_meta(conn, plant):
+    query = f"""
+    SELECT
+        interval_n,
+        interval_units,
+        value_type,
+        value_units
+    FROM
+        entr_warehouse.rpt_openoa_wtg_scada_tag_metadata
+    WHERE
+        entr_tag_name = 'WTUR.W';
+    """
+    meter_meta_df = pd.read_sql(query, conn)
+
+    # Parse frequency
+    freq, _, _ = check_metadata_row(meter_meta_df.iloc[0], allowed_freq=['10T'], allowed_types=["average"], allowed_units=["kW"])
+    plant._scada_freq = freq
+
 def load_scada(conn, plant):
+
+    load_scada_meta(conn, plant)
+    
     scada_query = f"""
     SELECT
         entr_warehouse.rpt_openoa_wtg_scada.wind_turbine_name,
