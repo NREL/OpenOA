@@ -24,6 +24,8 @@ REQUIRED = [
     "matplotlib>=2.1.0",
     "bokeh==2.3.*",
     "pytz",
+    "pyspark",  # TODO: confirm if options required [sql] or [pandas_on_spark]
+    "attrs",
 ]
 
 TESTS = ["pytest>=5.4.2", "pytest-cov>=2.8.1"]

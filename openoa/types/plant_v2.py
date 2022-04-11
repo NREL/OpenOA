@@ -6,6 +6,7 @@ import json
 import itertools
 from typing import Callable, Sequence
 from dataclasses import dataclass
+from distutils.log import error
 
 import attr
 import numpy as np
@@ -22,6 +23,45 @@ from .reanalysis import ReanalysisData
 # PlantData V2 with Attrs Dataclass
 METADATA_DTYPE = "dtype"
 METADATA_UNITS = "units"
+
+ANALYSIS_REQUIREMENTS = {
+    "MonteCarloAEP": {
+        "meter": {
+            "columns": ["energy"],
+            "freq": ("MS", "D", "H", "T"),
+        },
+        "curtail": {
+            "columns": ["availability", "curtailment"],
+            "freq": ("MS", "D", "H", "T"),
+        },
+        "reanalysis": {
+            "columns": ["windspeed", "rho"],
+            "conditional_columns": {
+                "reg_temperature": ["temperature"],
+                "reg_winddirection": ["windspeed_u", "windspeed_v"],
+            },
+        },
+    },
+    "TurbineLongTermGrossEnergy": {
+        "scada": {
+            "columns": ["id", "windspeed", "power"],  # TODO: wtur_W_avg vs energy_kwh ?
+            "freq": ("D", "H", "T"),
+        },
+        "reanalysis": {
+            "columns": ["windspeed", "wind_direction", "rho"],
+        },
+    },
+    "ElectricalLosses": {
+        "scada": {
+            "columns": ["energy"],
+            "freq": ("D", "H", "T"),
+        },
+        "meter": {
+            "columns": ["energy"],
+            "freq": ("MS", "D", "H", "T"),
+        },
+    },
+}
 
 
 @define(auto_attribs=True)
@@ -101,12 +141,12 @@ class SCADAMetaData(FromDictMixin):
         default=dict(
             time=np.datetime64,
             id=str,
-            power=np.float64,
-            windspeed=np.float64,
-            wind_direction=np.float64,
+            power=float,
+            windspeed=float,
+            wind_direction=float,
             status=str,
-            pitch=np.float64,
-            temp=np.float64,
+            pitch=float,
+            temperature=float,
         ),
         init=False,  # don't allow for user input
     )
@@ -119,7 +159,7 @@ class SCADAMetaData(FromDictMixin):
             wind_direction="deg",
             status=None,
             pitch="deg",
-            temp="C",
+            temperature="C",
         ),
         init=False,  # don't allow for user input
     )
@@ -141,36 +181,30 @@ class SCADAMetaData(FromDictMixin):
 class MeterMetaData(FromDictMixin):
 
     # DataFrame columns
-    time: str = attr.ib(
-        default="time", metadata={METADATA_DTYPE: np.datetime64, METADATA_UNITS: "datetime64[ns]"}
-    )
-    power: str = attr.ib(
-        default="power", metadata={METADATA_DTYPE: np.float64, METADATA_UNITS: "kW"}
-    )
-    energy: str = attr.ib(
-        default="energy", metadata={METADATA_DTYPE: np.float64, METADATA_UNITS: "kW"}
-    )
+    time: str = attr.ib(default="time")
+    power: str = attr.ib(default="power")
+    energy: str = attr.ib(default="energy")
 
     # Parameterizations that should not be changed
     # Prescribed mappings, datatypes, and units for in-code reference.
     name: str = attr.ib(default="meter", init=False)
     col_map: dict = attr.ib(init=False)
-    # dtypes: dict = attr.ib(
-    #     default=dict(
-    #         time=np.datetime64,
-    #         power=np.float64,
-    #         energy=np.float64,
-    #     ),
-    #     init=False,  # don't allow for user input
-    # )
-    # units: dict = attr.ib(
-    #     default=dict(
-    #         time="datetim64[ns]",
-    #         power="kW",
-    #         energy="kW",
-    #     ),
-    #     init=False,  # don't allow for user input
-    # )
+    dtypes: dict = attr.ib(
+        default=dict(
+            time=np.datetime64,
+            power=float,
+            energy=float,
+        ),
+        init=False,  # don't allow for user input
+    )
+    units: dict = attr.ib(
+        default=dict(
+            time="datetim64[ns]",
+            power="kW",
+            energy="kW",
+        ),
+        init=False,  # don't allow for user input
+    )
 
     def __attrs_post_init__(self) -> None:
         self.col_map = dict(
@@ -263,8 +297,8 @@ class StatusMetaData(FromDictMixin):
 class CurtailMetaData(FromDictMixin):
     # DataFrame columns
     time: str = attr.ib(default="time")
-    curtailment_pct: str = attr.ib(default="curtailment_pct")
-    availability_pct: str = attr.ib(default="availability_pct")
+    curtailment: str = attr.ib(default="curtailment")
+    availability: str = attr.ib(default="availability")
     net_energy: str = attr.ib(default="net_energy")
 
     # Data about the columns
@@ -277,17 +311,17 @@ class CurtailMetaData(FromDictMixin):
     dtypes: dict = attr.ib(
         default=dict(
             time=np.datetime64,
-            curtailment_pct=np.float64,
-            availability_pct=np.float64,
-            net_energy=np.float64,
+            curtailment=float,
+            availability=float,
+            net_energy=float,
         ),
         init=False,  # don't allow for user input
     )
     units: dict = attr.ib(
         default=dict(
             time="datetim64[ns]",
-            curtailment_pct=None,
-            availability_pct=None,
+            curtailment=float,
+            availability=float,
             net_energy="kW",
         ),
         init=False,  # don't allow for user input
@@ -296,8 +330,8 @@ class CurtailMetaData(FromDictMixin):
     def __attrs_post_init__(self) -> None:
         self.col_map = dict(
             time=self.time,
-            curtailment_pct=self.curtailment_pct,
-            availability_pct=self.availability_pct,
+            curtailment=self.curtailment,
+            availability=self.availability,
             net_energy=self.net_energy,
         )
 
@@ -318,9 +352,9 @@ class AssetMetaData(FromDictMixin):
     dtypes: dict = attr.ib(
         default=dict(
             id=str,
-            latitude=np.float64,
-            longitude=np.float64,
-            rated_power=np.float64,
+            latitude=float,
+            longitude=float,
+            rated_power=float,
             type=str,
         ),
         init=False,  # don't allow for user input
@@ -351,7 +385,10 @@ class ReanalysisMetaData(FromDictMixin):
     # DataFrame columns
     time: str = attr.ib(default="time")
     windspeed: str = attr.ib(default="windspeed")
+    windspeed_u: str = attr.ib(default="windspeed_u")
+    windspeed_v: str = attr.ib(default="windspeed_v")
     wind_direction: str = attr.ib(default="wind_direction")
+    temperature: str = attr.ib(default="temperature")
     rho: str = attr.ib(default="rho")
 
     # Data about the columns
@@ -364,9 +401,12 @@ class ReanalysisMetaData(FromDictMixin):
     dtypes: dict = attr.ib(
         default=dict(
             time=np.datetime64,
-            windspeed=np.float64,
-            wind_direction=np.float64,
-            rho=np.float64,
+            windspeed=float,
+            windspeed_u=float,
+            windspeed_v=float,
+            wind_direction=float,
+            temperature=float,
+            rho=float,
         ),
         init=False,  # don't allow for user input
     )
@@ -374,7 +414,10 @@ class ReanalysisMetaData(FromDictMixin):
         default=dict(
             time="datetim64[ns]",
             windspeed="m/s",
+            windspeed_u="m/s",
+            windspeed_v="m/s",
             wind_direction="deg",
+            temperature="K",
             rho="kg/m^3",
         ),
         init=False,  # don't allow for user input
@@ -387,12 +430,6 @@ class ReanalysisMetaData(FromDictMixin):
             wind_direction=self.wind_direction,
             rho=self.rho,
         )
-
-
-# def validate_longitude(instance, attribute, value):
-
-#     if value > x or value < y:
-#         raise ValueError("Bad longitude, must be between x and y")
 
 
 @define(auto_attribs=True)
@@ -408,6 +445,32 @@ class PlantMetaData(FromDictMixin):
     curtail: CurtailMetaData = attr.ib(default={}, converter=CurtailMetaData.from_dict)
     asset: AssetMetaData = attr.ib(default={}, converter=AssetMetaData.from_dict)
     reanalysis: ReanalysisMetaData = attr.ib(default={}, converter=ReanalysisMetaData.from_dict)
+
+    @property
+    def column_map(self):
+        values = dict(
+            scada=self.scada.col_map,
+            meter=self.meter.col_map,
+            tower=self.tower.col_map,
+            status=self.status.col_map,
+            asset=self.asset.col_map,
+            curtail=self.curtail.col_map,
+            reanalysis=self.reanalysis.col_map,
+        )
+        return values
+
+    @property
+    def type_map(self):
+        types = dict(
+            scada=self.scada.dtypes,
+            meter=self.meter.dtypes,
+            tower=self.tower.dtypes,
+            status=self.status.dtypes,
+            asset=self.asset.dtypes,
+            curtail=self.curtail.dtypes,
+            reanalysis=self.reanalysis.dtypes,
+        )
+        return types
 
 
 def convert_to_list(
@@ -437,34 +500,48 @@ def convert_to_list(
     return list(value)
 
 
-my_data = {
-    "metadata": {
-        "scada": {
-            "time": "Date_time",
-            "id": "Asset_ID",
-            "freq": "10T",
-        }
-    },
-    "scada": pd.DataFrame,
-}
-
-
 def column_validator(df: pd.DataFrame, column_names={}) -> None | list[str]:
-    """Validates the column names"""
-    missing = set(column_names.values()).difference(df.columns)
+    """Validates that the column names exist as provided for each expected column.
+
+    Args:
+        df (pd.DataFrame): The DataFrame for column naming validation
+        column_names (dict, optional): Dictionary of column type (key) to real column
+            value (value) pairs. Defaults to {}.
+
+    Returns:
+        None | list[str]: A list of error messages that can be raised at a later step
+            in the validation process.
+    """
+    try:  # TODO: delete this once the analysis mapping is figured out
+        missing = set(column_names.values()).difference(df.columns)
+    except AttributeError:  # Catches 'NoneType' object has no attribute 'columns' for no data
+        missing = column_names.values()
     if missing:
         return list(missing)
     return None
 
 
-def _get_dtypes(cls, columns: list = []) -> dict:
-    return {col: fields_dict(cls)[col].metadata[METADATA_DTYPE] for col in columns}
-
-
 def dtype_converter(df: pd.DataFrame, column_types={}) -> None | list[str]:
-    """Validates the column data types"""
+    """Converts the columns provided in `column_types` of `df` to the appropriate data
+    type.
+
+    Args:
+        df (pd.DataFrame): The DataFrame for type validation/conversion
+        column_types (dict, optional): Dictionary of column name (key) and data type
+            (value) pairs. Defaults to {}.
+
+    Returns:
+        None | list[str]: List of error messages that were encountered in the conversion
+            process that will be raised at another step of the data validation.
+    """
     errors = []
     for column, new_type in column_types.items():
+        if new_type in (np.datetime64, pd.DatetimeIndex):
+            try:
+                df[column] = pd.to_datetime(df[column], utc=True)
+            except Exception as e:  # noqa: disable=E722
+                errors.append(column)
+            continue
         try:
             df[column] = df[column].astype(new_type)
         except:  # noqa: disable=E722
@@ -508,67 +585,108 @@ class PlantDataV3:
     metadata: PlantMetaData = attr.ib(
         default={}, converter=PlantMetaData.from_dict, on_setattr=[attr.converters, attr.validators]
     )
-    scada: pd.DataFrame | None = attr.ib(default=None, on_setattr=[attr.validators])
-    meter: pd.DataFrame | None = attr.ib(default=None, on_setattr=[attr.validators])
-    tower: pd.DataFrame | None = attr.ib(default=None, on_setattr=[attr.validators])
-    status: pd.DataFrame | None = attr.ib(default=None, on_setattr=[attr.validators])
-    curtail: pd.DataFrame | None = attr.ib(default=None, on_setattr=[attr.validators])
-    asset: pd.DataFrame | None = attr.ib(default=None, on_setattr=[attr.validators])
-    reanalysis: pd.DataFrame | None = attr.ib(default=None, on_setattr=[attr.validators])
-    analysis_type: list[str] | None = attr.ib(default=["all"], converter=convert_to_list)
+    scada: pd.DataFrame | None = attr.ib(default=None)
+    meter: pd.DataFrame | None = attr.ib(default=None)
+    tower: pd.DataFrame | None = attr.ib(default=None)
+    status: pd.DataFrame | None = attr.ib(default=None)
+    curtail: pd.DataFrame | None = attr.ib(default=None)
+    asset: pd.DataFrame | None = attr.ib(default=None)
+    reanalysis: pd.DataFrame | None = attr.ib(default=None)
+    analysis_type: list[str] | None = attr.ib(default=["all"])
+
+    # Error catching in validation
+    _errors: dict[str, list[str]] = attr.ib(
+        factory=dict, init=False
+    )  # No user initialization required
+
+    def __attrs_post_init__(self):
+        if "all" in self.analysis_type:
+            if self._errors:
+                raise ValueError("\n".join(itertools.chain(*self._errors.values())))
 
     @scada.validator
-    def scada_format_validator(self, instance: attr.Attribute, value: pd.DataFrame | None):
+    @meter.validator
+    @tower.validator
+    @status.validator
+    @curtail.validator
+    @asset.validator
+    def data_validator(self, instance: attr.Attribute, value: pd.DataFrame | None) -> None:
+        """Validator function for each of the data buckets in `PlantData`.
+
+        Args:
+            instance (attr.Attribute): The `attr` attribute details
+            value (pd.DataFrame | None): The attributes user-provided value.
+        """
         if value is None:
             return None
-
-        missing_cols = [
-            col for col in self.metadata.scada.col_map.values() if col not in value.columns
+        name = instance.name
+        error_messages = [
+            *self._validate_column_names(category=name),
+            *self._validate_types(category=name),
         ]
-        bad_dtypes = []
-        for key, col in self.metadata.scada.col_map.items():
-            try:
-                dtype = self.metadata.scada.dtypes[key]
-                value[col] = value[col].astype(dtype)
-            except:  # noqa: disable=E722
-                bad_dtypes.append(col)
+        if error_messages:
+            self._errors[name] = error_messages
 
-        errors = []
-        if len(missing_cols) > 0:
-            errors.append(
-                ValueError(f"Missing the following columns in the `scada` inputs: {missing_cols}.")
-            )
-        if len(bad_dtypes) > 0:
-            errors.append(
-                ValueError(
-                    f"The following columns in `scada` were unable to converted to the correct data dtypes: {bad_dtypes}"
+    @property
+    def analysis_values(self):
+        # if self.analysis_type == "x":
+        #     return self.scada, self, self.meter, self.asset
+        values = dict(
+            scada=self.scada,
+            meter=self.meter,
+            tower=self.tower,
+            asset=self.asset,
+            status=self.status,
+            curtail=self.curtail,
+            reanalysis=self.reanalysis,
+        )
+        return values
+
+    def _validate_column_names(self, category: str = "all") -> list[str]:
+        error_messages = []
+        column_map = self.metadata.column_map
+
+        if category != "all":
+            df = self.analysis_values[category]
+            missing_cols = column_validator(df, column_names=column_map[category])
+            if missing_cols:
+                error_messages.append(
+                    f"{category} is missing the following columns: {missing_cols}"
                 )
+            return error_messages
+
+        for name, df in self.analysis_values.items():
+            missing_cols = column_validator(df, column_names=column_map[name])
+            if missing_cols:
+                error_messages.append(f"{name} is missing the following columns: {missing_cols}")
+        return error_messages
+
+    def _validate_types(self, category: str = "all") -> list[str]:
+        error_messages = []
+        column_name_map = self.metadata.column_map
+        column_type_map = self.metadata.type_map
+        column_map = {}
+        for name in column_name_map:
+            column_map[name] = dict(
+                zip(column_name_map[name].values(), column_type_map[name].values())
             )
 
-    @meter.validator  # noqa: disable=F821
-    def meter_format_validator(self, instance: attr.Attribute, value: pd.DataFrame | None):
-        if value is None:
-            return None
-        missing_cols = column_validator(value, column_names=self.metadata.meter.col_map)
-
-        dtypes = _get_dtypes(MeterMetaData, self.metadata.meter.col_map)
-        data_error_cols = dtype_converter(value, column_types=dtypes)
-
-        errors = []
-        if missing_cols is not None:
-            errors.append(
-                ValueError(f"Missing the following columns in the `meter` inputs: {missing_cols}.")
-            )
-
-        if data_error_cols is not None:
-            errors.append(
-                ValueError(
-                    "The following `meter` columns could not be converted properly, ",
-                    f"please check the data: {data_error_cols}",
+        if category != "all":
+            df = self.analysis_values[category]
+            error_cols = dtype_converter(df, column_types=column_map[category])
+            if error_cols:
+                error_messages.append(
+                    f"{category} encountered errors in converting the following columns: {error_cols}"
                 )
-            )
-        if errors:
-            raise Exception(errors)
+            return error_messages
+
+        for name, df in self.analysis_values.items():
+            error_cols = dtype_converter(df, column_types=column_map[name])
+            if error_cols:
+                error_messages.append(
+                    f"{name} encountered errors in converting the following columns: {error_cols}"
+                )
+        return error_messages
 
     def validate(self, column_names: bool = True, column_dtypes: bool = True) -> None:
         """Explicit validation method for post-hoc validation.
@@ -578,32 +696,19 @@ class PlantDataV3:
         """
         # NOTE: This is purely pseudo-python code and will not at all work
         error_messages = []
-        meta_list = self.metadata.values()  # not real method but could be useful
-        schema_list = self.metadata.types()  # not a real method but could be useful
-        data_list = self.values()  # not a real method but could be a valuable mapping
-        for schema, metadata, data in zip(meta_list, schema_list, data_list):
-            name = metadata.name
-            # Check for the appropriate columns
-            if column_names:
-                missing_cols = column_validator(data, column_names=metadata.col_map)
-                if missing_cols:
-                    error_messages.append(
-                        f"{name} is missing the following columns: {missing_cols}"
-                    )
+        if column_names:
+            error_messages.extend(self._validate_column_names())
 
-            # Check for the appropriate columns
-            if column_dtypes:
-                dtypes = _get_dtypes(schema, metadata.col_map)
-                data_error_cols = dtype_converter(data, column_types=dtypes)
-                if missing_cols:
-                    error_messages.append(
-                        f"{name} encountered errors in converting the following columns: {data_error_cols}"
-                    )
+        if column_dtypes:
+            error_messages.extend(self._validate_types())
 
-            # Check for extra columns
-            # TODO
+        # Check for extra columns
+        # TODO
 
-            # TODO: define other checks
+        # TODO: define other checks
+
+        if error_messages:
+            raise ValueError("\n".join(error_messages))
 
     # Not necessary, but could provide an additional way in
     @classmethod
