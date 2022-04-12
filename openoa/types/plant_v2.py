@@ -64,6 +64,17 @@ ANALYSIS_REQUIREMENTS = {
 }
 
 
+ANALYSIS_TYPES = [*ANALYSIS_REQUIREMENTS, *[el.lower() for el in ANALYSIS_REQUIREMENTS]]
+
+
+def analysis_type_validator(instance, attribute: attr.Attribute, value: list[str]) -> None:
+    incorrect_types = set(value).difference(ANALYSIS_TYPES)
+    if incorrect_types:
+        instance._errors["analysis_type"] = [
+            f"The provided `analysis_type`(s) are invalid: {incorrect_types}"
+        ]
+
+
 @define(auto_attribs=True)
 class FromDictMixin:
     """A Mixin class to allow for kwargs overloading when a data class doesn't
@@ -592,7 +603,9 @@ class PlantDataV3:
     curtail: pd.DataFrame | None = attr.ib(default=None)
     asset: pd.DataFrame | None = attr.ib(default=None)
     reanalysis: pd.DataFrame | None = attr.ib(default=None)
-    analysis_type: list[str] | None = attr.ib(default=["all"])
+    analysis_type: list[str] | None = attr.ib(
+        default=["all"], converter=convert_to_list, validator=analysis_type_validator
+    )
 
     # Error catching in validation
     _errors: dict[str, list[str]] = attr.ib(
@@ -600,9 +613,8 @@ class PlantDataV3:
     )  # No user initialization required
 
     def __attrs_post_init__(self):
-        if "all" in self.analysis_type:
-            if self._errors:
-                raise ValueError("\n".join(itertools.chain(*self._errors.values())))
+        if self._errors:
+            raise ValueError("\n".join(itertools.chain(*self._errors.values())))
 
     @scada.validator
     @meter.validator
