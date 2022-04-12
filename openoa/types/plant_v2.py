@@ -12,6 +12,7 @@ import attr
 import numpy as np
 import pandas as pd
 from attr import define, fields, fields_dict
+from black import E
 from dateutil.parser import parse
 
 from openoa.types import timeseries_table
@@ -64,11 +65,19 @@ ANALYSIS_REQUIREMENTS = {
 }
 
 
-ANALYSIS_TYPES = [*ANALYSIS_REQUIREMENTS, *[el.lower() for el in ANALYSIS_REQUIREMENTS]]
+def analysis_type_validator(
+    instance: PlantDataV3, attribute: attr.Attribute, value: list[str]
+) -> None:
+    """Validates the input from `PlantDataV3` against the analysis requirements in
+    `ANALYSIS_REQUIREMENTS`. If there is an error, then it gets added to the
+    `PlantDataV3._errors` dictionary to be raised in the post initialization hook.
 
-
-def analysis_type_validator(instance, attribute: attr.Attribute, value: list[str]) -> None:
-    incorrect_types = set(value).difference(ANALYSIS_TYPES)
+    Args:
+        instance (PlantDataV3): The PlantData object.
+        attribute (attr.Attribute): The converted `analysis_type` attribute object.
+        value (list[str]): The input value from `analysis_type`.
+    """
+    incorrect_types = set(value).difference(set(ANALYSIS_REQUIREMENTS))
     if incorrect_types:
         instance._errors["analysis_type"] = [
             f"The provided `analysis_type`(s) are invalid: {incorrect_types}"
@@ -529,7 +538,7 @@ def column_validator(df: pd.DataFrame, column_names={}) -> None | list[str]:
         missing = column_names.values()
     if missing:
         return list(missing)
-    return None
+    return []
 
 
 def dtype_converter(df: pd.DataFrame, column_types={}) -> None | list[str]:
@@ -560,7 +569,49 @@ def dtype_converter(df: pd.DataFrame, column_types={}) -> None | list[str]:
 
     if errors:
         return errors
-    return None
+    return []
+
+
+def analysis_filter(error_dict: dict, analysis_types: list[str] = ["all"]) -> dict:
+    if "all" in analysis_types:
+        return error_dict
+
+    categories = ("scada", "meter", "tower", "curtail", "reanalysis", "asset")
+    requirements = {key: ANALYSIS_REQUIREMENTS[key] for key in analysis_types}
+    column_requirements = {
+        cat: set(
+            itertools.chain(*[r.get(cat, {}).get("columns", []) for r in requirements.values()])
+        )
+        for cat in categories
+    }
+    error_dict["missing"] = {
+        key: values.intersection(error_dict["missing"].get(key, []))
+        for key, values in column_requirements.items()
+    }
+
+    # TODO: Finish the dtype filtering
+    return error_dict
+
+
+def compose_error_message(error_dict: dict, analysis_types: list[str] = ["all"]) -> str:
+    if "all" not in analysis_types:
+        error_dict = analysis_filter(error_dict, analysis_types)
+
+    # from pprint import pprint
+    # pprint(error_dict)
+    messages = [
+        f"`{name}` data is missing the following columns: {cols}"
+        for name, cols in error_dict["missing"].items()
+        if len(cols) > 0
+    ]
+    messages.extend(
+        [
+            f"`{name}` data columns were of the wrong type: {cols}"
+            for name, cols in error_dict["dtype"].items()
+            if len(cols) > 0
+        ]
+    )
+    return "\n".join(messages)
 
 
 @define(auto_attribs=True)
@@ -596,6 +647,9 @@ class PlantDataV3:
     metadata: PlantMetaData = attr.ib(
         default={}, converter=PlantMetaData.from_dict, on_setattr=[attr.converters, attr.validators]
     )
+    analysis_type: list[str] | None = attr.ib(
+        default=["all"], converter=convert_to_list, validator=analysis_type_validator
+    )
     scada: pd.DataFrame | None = attr.ib(default=None)
     meter: pd.DataFrame | None = attr.ib(default=None)
     tower: pd.DataFrame | None = attr.ib(default=None)
@@ -603,18 +657,20 @@ class PlantDataV3:
     curtail: pd.DataFrame | None = attr.ib(default=None)
     asset: pd.DataFrame | None = attr.ib(default=None)
     reanalysis: pd.DataFrame | None = attr.ib(default=None)
-    analysis_type: list[str] | None = attr.ib(
-        default=["all"], converter=convert_to_list, validator=analysis_type_validator
-    )
 
     # Error catching in validation
     _errors: dict[str, list[str]] = attr.ib(
-        factory=dict, init=False
+        default={"missing": {}, "dtype": {}}, init=False
     )  # No user initialization required
 
     def __attrs_post_init__(self):
-        if self._errors:
-            raise ValueError("\n".join(itertools.chain(*self._errors.values())))
+        # Check the errors againts the analysis requirements
+        # from pprint import pprint
+        # pprint(self._errors)
+        error_message = compose_error_message(self._errors, analysis_types=self.analysis_type)
+        if error_message != "":
+            # raise ValueError("\n".join(itertools.chain(*self._errors.values())))
+            raise ValueError(error_message)
 
     @scada.validator
     @meter.validator
@@ -629,15 +685,18 @@ class PlantDataV3:
             instance (attr.Attribute): The `attr` attribute details
             value (pd.DataFrame | None): The attributes user-provided value.
         """
-        if value is None:
-            return None
         name = instance.name
-        error_messages = [
-            *self._validate_column_names(category=name),
-            *self._validate_types(category=name),
-        ]
-        if error_messages:
-            self._errors[name] = error_messages
+        if value is None:
+            self._errors["missing"].update(
+                {name: list(getattr(self.metadata, instance.name).col_map.values())}
+            )
+            self._errors["dtype"].update(
+                {name: list(getattr(self.metadata, instance.name).dtypes.keys())}
+            )
+
+        else:
+            self._errors["missing"].update(self._validate_column_names(category=name))
+            self._errors["dtype"].update(self._validate_types(category=name))
 
     @property
     def analysis_values(self):
@@ -654,27 +713,24 @@ class PlantDataV3:
         )
         return values
 
-    def _validate_column_names(self, category: str = "all") -> list[str]:
-        error_messages = []
+    def _validate_column_names(self, category: str = "all") -> dict[str, list[str]]:
         column_map = self.metadata.column_map
 
         if category != "all":
             df = self.analysis_values[category]
-            missing_cols = column_validator(df, column_names=column_map[category])
-            if missing_cols:
-                error_messages.append(
-                    f"{category} is missing the following columns: {missing_cols}"
-                )
-            return error_messages
+            missing_cols = {category: column_validator(df, column_names=column_map[category])}
+            return missing_cols if isinstance(missing_cols, dict) else {}
 
-        for name, df in self.analysis_values.items():
-            missing_cols = column_validator(df, column_names=column_map[name])
-            if missing_cols:
-                error_messages.append(f"{name} is missing the following columns: {missing_cols}")
-        return error_messages
+        missing_cols = {
+            name: column_validator(df, column_names=column_map[name])
+            for name, df in self.analysis_values.items()
+        }
+        return missing_cols if isinstance(missing_cols, dict) else {}
 
-    def _validate_types(self, category: str = "all") -> list[str]:
-        error_messages = []
+    def _validate_types(self, category: str = "all") -> dict[str, list[str]]:
+
+        # Create a new mapping of the data's column names to the expected dtype
+        # TODO: Consider if this should be a encoded in the metadata/plantdata object elsewhere
         column_name_map = self.metadata.column_map
         column_type_map = self.metadata.type_map
         column_map = {}
@@ -685,20 +741,14 @@ class PlantDataV3:
 
         if category != "all":
             df = self.analysis_values[category]
-            error_cols = dtype_converter(df, column_types=column_map[category])
-            if error_cols:
-                error_messages.append(
-                    f"{category} encountered errors in converting the following columns: {error_cols}"
-                )
-            return error_messages
+            error_cols = {category: dtype_converter(df, column_types=column_map[category])}
+            return error_cols if isinstance(error_cols, dict) else {}
 
-        for name, df in self.analysis_values.items():
-            error_cols = dtype_converter(df, column_types=column_map[name])
-            if error_cols:
-                error_messages.append(
-                    f"{name} encountered errors in converting the following columns: {error_cols}"
-                )
-        return error_messages
+        error_cols = {
+            name: dtype_converter(df, column_types=column_map[name])
+            for name, df in self.analysis_values.items()
+        }
+        return error_cols if isinstance(error_cols, dict) else {}
 
     def validate(self, column_names: bool = True, column_dtypes: bool = True) -> None:
         """Explicit validation method for post-hoc validation.
@@ -719,6 +769,9 @@ class PlantDataV3:
 
         # TODO: define other checks
 
+        ######################################################################
+        # TODO: Redefine this function to align with the new validation style
+        ######################################################################
         if error_messages:
             raise ValueError("\n".join(error_messages))
 
