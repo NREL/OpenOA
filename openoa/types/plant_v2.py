@@ -12,7 +12,6 @@ import attr
 import numpy as np
 import pandas as pd
 from attr import define, fields, fields_dict
-from black import E
 from dateutil.parser import parse
 
 from openoa.types import timeseries_table
@@ -532,9 +531,10 @@ def column_validator(df: pd.DataFrame, column_names={}) -> None | list[str]:
         None | list[str]: A list of error messages that can be raised at a later step
             in the validation process.
     """
-    try:  # TODO: delete this once the analysis mapping is figured out
+    try:
         missing = set(column_names.values()).difference(df.columns)
-    except AttributeError:  # Catches 'NoneType' object has no attribute 'columns' for no data
+    except AttributeError:
+        # Catches 'NoneType' object has no attribute 'columns' for no data
         missing = column_names.values()
     if missing:
         return list(missing)
@@ -584,12 +584,19 @@ def analysis_filter(error_dict: dict, analysis_types: list[str] = ["all"]) -> di
         )
         for cat in categories
     }
+
+    # Filter the missing columns, so only analysis-specific columns are provided
     error_dict["missing"] = {
         key: values.intersection(error_dict["missing"].get(key, []))
         for key, values in column_requirements.items()
     }
 
-    # TODO: Finish the dtype filtering
+    # Filter the bad dtype columns, so only analysis-specific columns are provided
+    error_dict["dtype"] = {
+        key: values.intersection(error_dict["dtype"].get(key, []))
+        for key, values in column_requirements.items()
+    }
+
     return error_dict
 
 
@@ -648,7 +655,10 @@ class PlantDataV3:
         default={}, converter=PlantMetaData.from_dict, on_setattr=[attr.converters, attr.validators]
     )
     analysis_type: list[str] | None = attr.ib(
-        default=["all"], converter=convert_to_list, validator=analysis_type_validator
+        default=["all"],
+        converter=convert_to_list,
+        validator=analysis_type_validator,
+        on_setattr=attr.setters.convert,
     )
     scada: pd.DataFrame | None = attr.ib(default=None)
     meter: pd.DataFrame | None = attr.ib(default=None)
@@ -757,23 +767,14 @@ class PlantDataV3:
             the methods as written are in no way a satisfactory final/optimized version
         """
         # NOTE: This is purely pseudo-python code and will not at all work
-        error_messages = []
-        if column_names:
-            error_messages.extend(self._validate_column_names())
+        error_dict = {"missing": self._validate_column_names(), "dtype": self._validate_types()}
 
-        if column_dtypes:
-            error_messages.extend(self._validate_types())
+        # TODO: Check for extra columns?
+        # TODO: Define other checks?
 
-        # Check for extra columns
-        # TODO
-
-        # TODO: define other checks
-
-        ######################################################################
-        # TODO: Redefine this function to align with the new validation style
-        ######################################################################
-        if error_messages:
-            raise ValueError("\n".join(error_messages))
+        error_message = compose_error_message(error_dict, self.analysis_type)
+        if error_message:
+            raise ValueError(error_message)
 
     # Not necessary, but could provide an additional way in
     @classmethod
