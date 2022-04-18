@@ -5,16 +5,19 @@ import os
 import json
 import itertools
 from typing import Callable, Sequence
+from pathlib import Path
 from dataclasses import dataclass
-from distutils.log import error
 
 import attr
+import yaml
 import numpy as np
 import pandas as pd
+import pyspark as spark
 from attr import define, fields, fields_dict
 from dateutil.parser import parse
 
 from openoa.types import timeseries_table
+from openoa.toolkits.reanalysis_downloading import download_reanalysis_data_planetos
 
 from .asset import AssetData
 from .reanalysis import ReanalysisData
@@ -78,9 +81,9 @@ def analysis_type_validator(
     """
     incorrect_types = set(value).difference(set(ANALYSIS_REQUIREMENTS))
     if incorrect_types:
-        instance._errors["analysis_type"] = [
-            f"The provided `analysis_type`(s) are invalid: {incorrect_types}"
-        ]
+        raise ValueError(
+            f"{attribute.name} input: {incorrect_types} is invalid, must be one of 'all' or a combination of: {[*ANALYSIS_REQUIREMENTS]}"
+        )
 
 
 @define(auto_attribs=True)
@@ -601,6 +604,18 @@ def analysis_filter(error_dict: dict, analysis_types: list[str] = ["all"]) -> di
 
 
 def compose_error_message(error_dict: dict, analysis_types: list[str] = ["all"]) -> str:
+    """Takes a dictionary of error messages from the `PlantDataV3` validation routines,
+    filters out errors unrelated to the intended analysis types, and creates a
+    human-readable error message.
+
+    Args:
+        error_dict (dict): See `PlantDataV3._errors` for more details.
+        analysis_types (list[str], optional): The user-input analysis types, which are
+            used to filter out unlreated errors. Defaults to ["all"].
+
+    Returns:
+        str: The human-readable error message breakdown.
+    """
     if "all" not in analysis_types:
         error_dict = analysis_filter(error_dict, analysis_types)
 
@@ -619,6 +634,91 @@ def compose_error_message(error_dict: dict, analysis_types: list[str] = ["all"])
         ]
     )
     return "\n".join(messages)
+
+
+def load_meta(data: str | Path | dict | PlantMetaData) -> PlantMetaData:
+    """Generates a `PlantMetaData` object from a variety of input data.
+
+    Args:
+        data (str | Path | dict | PlantMetaData): The input JSON/YAML file or dictionary
+            that needs to be converted.
+
+    Raises:
+        ValueError: Raised if an invalid file type was passed.
+        ValueError: Riased if an invalid data type was passed.
+
+    Returns:
+        PlantMetaData: The validation meta data object.
+    """
+    if isinstance(data, str):
+        data = Path(data).resolve()
+
+    if isinstance(data, Path):
+        with open(data, "r") as f:
+            if data.suffix == "json":
+                data = json.load(f)
+            elif data.suffix in (".yml", ".yaml"):
+                data = yaml.safe_load(data)
+            else:
+                raise ValueError(
+                    f"The input filepath: {data} must be of the following: .json, .yml, .yaml"
+                )
+
+    if isinstance(data, dict):
+        return PlantMetaData.from_dict(data)
+    elif isinstance(data, PlantMetaData):
+        return data
+    else:
+        raise ValueError("The input data must be a valid file path or dictionary object")
+
+
+def load_to_pandas(data: str | Path | pd.DataFrame | spark.DataFrame) -> pd.DataFrame | None:
+    """Loads the input data or filepath to apandas DataFrame.
+
+    Args:
+        data (str | Path | pd.DataFrame | spark.DataFrame): The input data.
+
+    Raises:
+        ValueError: Raised if an invalid data type was passed.
+
+    Returns:
+        pd.DataFrame | None: The passed `None` or the converted pandas DataFrame object.
+    """
+    if data is None:
+        return data
+    elif isinstance(data, (str, Path)):
+        return pd.read_csv(data)
+    elif isinstance(data, pd.DataFrame):
+        return data
+    elif isinstance(data, spark.sql.DataFrame):
+        return data.toPandas()
+    else:
+        raise ValueError("Input data could not be converted to pandas")
+
+
+def load_reanalysis(data: dict) -> dict[str, pd.DataFrame]:
+    """Loads the reanalyis data from PlanetOS, file, or data object.
+
+    Args:
+        data (dict): Dictionary of reanalysis product name (keys) and input data (values).
+
+    Raises:
+        ValueError: _description_
+        ValueError: _description_
+        ValueError: _description_
+        RuntimeError: _description_
+        NotImplementedError: _description_
+
+    Returns:
+        dict[str, pd.DataFrame]: A dictioanry of product_name: data aligning with
+            analysis methods expectations.
+    """
+    for name, value in data.items():
+        if isinstance(value, dict):
+            data[name] = download_reanalysis_data_planetos(**value)
+        else:
+            data[name] = load_to_pandas(value)
+    return data
 
 
 @define(auto_attribs=True)
@@ -652,7 +752,7 @@ class PlantDataV3:
     """
 
     metadata: PlantMetaData = attr.ib(
-        default={}, converter=PlantMetaData.from_dict, on_setattr=[attr.converters, attr.validators]
+        default={}, converter=load_meta, on_setattr=[attr.converters, attr.validators]
     )
     analysis_type: list[str] | None = attr.ib(
         default=["all"],
@@ -660,13 +760,13 @@ class PlantDataV3:
         validator=analysis_type_validator,
         on_setattr=attr.setters.convert,
     )
-    scada: pd.DataFrame | None = attr.ib(default=None)
-    meter: pd.DataFrame | None = attr.ib(default=None)
-    tower: pd.DataFrame | None = attr.ib(default=None)
-    status: pd.DataFrame | None = attr.ib(default=None)
-    curtail: pd.DataFrame | None = attr.ib(default=None)
-    asset: pd.DataFrame | None = attr.ib(default=None)
-    reanalysis: pd.DataFrame | None = attr.ib(default=None)
+    scada: pd.DataFrame | None = attr.ib(default=None, converter=load_to_pandas)
+    meter: pd.DataFrame | None = attr.ib(default=None, converter=load_to_pandas)
+    tower: pd.DataFrame | None = attr.ib(default=None, converter=load_to_pandas)
+    status: pd.DataFrame | None = attr.ib(default=None, converter=load_to_pandas)
+    curtail: pd.DataFrame | None = attr.ib(default=None, converter=load_to_pandas)
+    asset: pd.DataFrame | None = attr.ib(default=None, converter=load_to_pandas)
+    reanalysis: dict[str, pd.DataFrame] | None = attr.ib(default=None)
 
     # Error catching in validation
     _errors: dict[str, list[str]] = attr.ib(
@@ -707,6 +807,14 @@ class PlantDataV3:
         else:
             self._errors["missing"].update(self._validate_column_names(category=name))
             self._errors["dtype"].update(self._validate_types(category=name))
+
+    @reanalysis.validator
+    def reanalysis_validation(self, instance: attr.Attribute, value: dict | None) -> None:
+        # name = instance.name
+        if value is None:
+            self.data_validator(instance, value)
+        else:
+            pass  # TODO: loop through the reanalysis products and run the above methods functionality
 
     @property
     def analysis_values(self):

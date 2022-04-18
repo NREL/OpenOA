@@ -26,6 +26,7 @@ REQUIRED = [
     "pytz",
     "pyspark",  # TODO: confirm if options required [sql] or [pandas_on_spark]
     "attrs",
+    "pyyaml",
 ]
 
 TESTS = ["pytest>=5.4.2", "pytest-cov>=2.8.1"]
