@@ -460,6 +460,8 @@ class PlantMetaData(FromDictMixin):
     individual data "types" that can compose a `PlantData` object.
     """
 
+    latitude: float = attr.ib(default=0, converter=float)
+    longitude: float = attr.ib(default=0, converter=float)
     scada: SCADAMetaData = attr.ib(default={}, converter=SCADAMetaData.from_dict)
     meter: MeterMetaData = attr.ib(default={}, converter=MeterMetaData.from_dict)
     tower: TowerMetaData = attr.ib(default={}, converter=TowerMetaData.from_dict)
@@ -493,6 +495,15 @@ class PlantMetaData(FromDictMixin):
             reanalysis=self.reanalysis.dtypes,
         )
         return types
+
+    @property
+    def coordinates(self) -> tuple[float, float]:
+        """Returns the latitude, longitude pair for the wind power plant.
+
+        Returns:
+            tuple[float, float]: The (latitude, longitude) pair
+        """
+        return self.latitude, self.longitude
 
 
 def convert_to_list(
@@ -774,6 +785,7 @@ class PlantDataV3:
     )  # No user initialization required
 
     def __attrs_post_init__(self):
+        self.reanalysis_validation()
         # Check the errors againts the analysis requirements
         # from pprint import pprint
         # pprint(self._errors)
@@ -808,13 +820,44 @@ class PlantDataV3:
             self._errors["missing"].update(self._validate_column_names(category=name))
             self._errors["dtype"].update(self._validate_types(category=name))
 
-    @reanalysis.validator
-    def reanalysis_validation(self, instance: attr.Attribute, value: dict | None) -> None:
-        # name = instance.name
-        if value is None:
-            self.data_validator(instance, value)
-        else:
-            pass  # TODO: loop through the reanalysis products and run the above methods functionality
+    def reanalysis_validation(self) -> None:
+        """Provides the reanalysis data initialization and validation routine.
+
+        Control Flow:
+         - If `None` is provided, then run the `data_validator` method to collect
+           missing columns and bad data types
+         - If the dictionary values are a dictionary, then the reanalysis data will
+           be downloaded using the dictionary as kwargs passed to the PlanetOS API
+           in `openoa.toolkits.reanslysis_downloading`, with the product name and site
+           coordinates being provided automatically.
+        - If a non-dictionary input is provided for a reanalysis product type, then the
+          `load_to_pandas` method will be called on the input data.
+
+        Raises:
+            ValueError: Raised if reanalysis input is not a dictionary.
+        """
+        if self.reanalysis is None:
+            self.data_validator(PlantDataV3.reanalysis, self.reanalysis)
+            return
+
+        if not isinstance(self.reanalysis, dict):
+            raise ValueError(
+                "Reanalysis data should be provided as a dictionary of product name (keys) and api kwargs or data"
+            )
+
+        for name, value in self.reanalysis.items():
+            if isinstance(value, dict):
+                value.update(
+                    dict(dataset=name, lat=self.metadata.latitude, lon=self.metadata.longitude)
+                )
+                self.reanalysis = download_reanalysis_data_planetos(**value)
+            else:
+                self.reanalysis = load_to_pandas(value)
+
+            missing = self._validate_column_names(category="reanalysis")
+            dtype = self._validate_types(category="reanalysis")
+            self._errors["missing"][f"reanalysis-{name}"] = missing["reanalysis"]
+            self._errors["dtype"][f"reanalysis-{name}"] = dtype["reanalysis"]
 
     @property
     def analysis_values(self):
