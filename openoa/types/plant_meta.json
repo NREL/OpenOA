@@ -1,0 +1,47 @@
+{
+  "asset": {
+    "id": "id",
+    "latitude": "latitude",
+    "longitude": "longitude",
+    "rated_power": "rated_power_kw"
+  },
+  "curtail": {
+    "availability": "availability_kwh",
+    "curtailment": "curtailment_kwh",
+    "frequency": "10T",
+    "net_energy": "net_energy_kwh",
+    "time": "time_utc"
+  },
+  "meter": {
+    "energy": "net_energy_kwh",
+    "time": "time_utc"
+  },
+  "reanalysis": {
+    "era5": {
+      "frequency": "H",
+      "time": "datetime",
+      "windspeed": "ws_100m",
+      "windspeed_u": "u_100",
+      "windspeed_v": "v_100"
+    },
+    "merra2": {
+      "frequency": "H",
+      "rho": "rho_kgm",
+      "temperature": "temperature_K",
+      "time": "datetime",
+      "windspeed": "windspeed_ms",
+      "windspeed_u": "u_ms",
+      "windspeed_v": "v_ms"
+    }
+  },
+  "scada": {
+    "frequency": "10T",
+    "id": "Wind_turbine_name",
+    "pitch": "Ba_avg",
+    "power": "P_avg",
+    "temperature": "Ot_avg",
+    "time": "Date_time",
+    "wind_direction": "Wa_avg",
+    "windspeed": "Ws_avg"
+  }
+}

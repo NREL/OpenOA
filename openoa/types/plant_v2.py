@@ -79,7 +79,8 @@ def analysis_type_validator(
         attribute (attr.Attribute): The converted `analysis_type` attribute object.
         value (list[str]): The input value from `analysis_type`.
     """
-    incorrect_types = set(value).difference(set(ANALYSIS_REQUIREMENTS))
+    valid_types = [*ANALYSIS_REQUIREMENTS] + ["all"]
+    incorrect_types = set(value).difference(set(valid_types))
     if incorrect_types:
         raise ValueError(
             f"{attribute.name} input: {incorrect_types} is invalid, must be one of 'all' or a combination of: {[*ANALYSIS_REQUIREMENTS]}"
@@ -454,6 +455,10 @@ class ReanalysisMetaData(FromDictMixin):
         )
 
 
+def convert_reanalysis(value: dict[str, dict]):
+    return {k: ReanalysisMetaData.from_dict(v) for k, v in value.items()}
+
+
 @define(auto_attribs=True)
 class PlantMetaData(FromDictMixin):
     """Composese the individual metadata/validation requirements from each of the
@@ -468,7 +473,7 @@ class PlantMetaData(FromDictMixin):
     status: StatusMetaData = attr.ib(default={}, converter=StatusMetaData.from_dict)
     curtail: CurtailMetaData = attr.ib(default={}, converter=CurtailMetaData.from_dict)
     asset: AssetMetaData = attr.ib(default={}, converter=AssetMetaData.from_dict)
-    reanalysis: ReanalysisMetaData = attr.ib(default={}, converter=ReanalysisMetaData.from_dict)
+    reanalysis: dict[str, ReanalysisMetaData] = attr.ib(default={}, converter=convert_reanalysis)
 
     @property
     def column_map(self):
@@ -479,7 +484,7 @@ class PlantMetaData(FromDictMixin):
             status=self.status.col_map,
             asset=self.asset.col_map,
             curtail=self.curtail.col_map,
-            reanalysis=self.reanalysis.col_map,
+            reanalysis={k: v.col_map for k, v in self.reanalysis.items()},
         )
         return values
 
@@ -492,7 +497,7 @@ class PlantMetaData(FromDictMixin):
             status=self.status.dtypes,
             asset=self.asset.dtypes,
             curtail=self.curtail.dtypes,
-            reanalysis=self.reanalysis.dtypes,
+            reanalysis={k: v.dtypes for k, v in self.reanalysis.items()},
         )
         return types
 
@@ -504,6 +509,45 @@ class PlantMetaData(FromDictMixin):
             tuple[float, float]: The (latitude, longitude) pair
         """
         return self.latitude, self.longitude
+
+    @classmethod
+    def from_json(cls, metadata_file: str | Path) -> PlantMetaData:
+        metadata_file = Path(metadata_file).resolve()
+        if not metadata_file.is_file():
+            raise FileExistsError(f"Input JSON file: {metadata_file} is an invalid input.")
+
+        with open(metadata_file) as f:
+            return cls.from_dict(json.load(f))
+
+    @classmethod
+    def from_yaml(cls, metadata_file: str | Path) -> PlantMetaData:
+        metadata_file = Path(metadata_file).resolve()
+        if not metadata_file.is_file():
+            raise FileExistsError(f"Input YAML file: {metadata_file} is an invalid input.")
+
+        with open(metadata_file) as f:
+            return cls.from_dict(yaml.safe_load(f))
+
+    @classmethod
+    def load(cls, data: str | Path | dict | PlantMetaData) -> PlantMetaData:
+        if isinstance(data, PlantMetaData):
+            return data
+
+        if isinstance(data, str):
+            data = Path(data).resolve()
+
+        if isinstance(data, Path):
+            if data.suffix == ".json":
+                return cls.from_json(data)
+            elif data.suffix in (".yaml", ".yml"):
+                return cls.from_yaml(data)
+            else:
+                raise ValueError("Bad input file extension, must be one of: .json, .yml, or .yaml")
+
+        if isinstance(data, dict):
+            return cls.from_dict(data)
+
+        raise ValueError("PlantMetaData can only be loaded from str, Path, or dict objects.")
 
 
 def convert_to_list(
@@ -647,40 +691,40 @@ def compose_error_message(error_dict: dict, analysis_types: list[str] = ["all"])
     return "\n".join(messages)
 
 
-def load_meta(data: str | Path | dict | PlantMetaData) -> PlantMetaData:
-    """Generates a `PlantMetaData` object from a variety of input data.
+# def load_meta(data: str | Path | dict | PlantMetaData) -> PlantMetaData:
+#     """Generates a `PlantMetaData` object from a variety of input data.
 
-    Args:
-        data (str | Path | dict | PlantMetaData): The input JSON/YAML file or dictionary
-            that needs to be converted.
+#     Args:
+#         data (str | Path | dict | PlantMetaData): The input JSON/YAML file or dictionary
+#             that needs to be converted.
 
-    Raises:
-        ValueError: Raised if an invalid file type was passed.
-        ValueError: Riased if an invalid data type was passed.
+#     Raises:
+#         ValueError: Raised if an invalid file type was passed.
+#         ValueError: Riased if an invalid data type was passed.
 
-    Returns:
-        PlantMetaData: The validation meta data object.
-    """
-    if isinstance(data, str):
-        data = Path(data).resolve()
+#     Returns:
+#         PlantMetaData: The validation meta data object.
+#     """
+#     if isinstance(data, str):
+#         data = Path(data).resolve()
 
-    if isinstance(data, Path):
-        with open(data, "r") as f:
-            if data.suffix == "json":
-                data = json.load(f)
-            elif data.suffix in (".yml", ".yaml"):
-                data = yaml.safe_load(data)
-            else:
-                raise ValueError(
-                    f"The input filepath: {data} must be of the following: .json, .yml, .yaml"
-                )
+#     if isinstance(data, Path):
+#         with open(data, "r") as f:
+#             if data.suffix == "json":
+#                 data = json.load(f)
+#             elif data.suffix in (".yml", ".yaml"):
+#                 data = yaml.safe_load(data)
+#             else:
+#                 raise ValueError(
+#                     f"The input filepath: {data} must be of the following: .json, .yml, .yaml"
+#                 )
 
-    if isinstance(data, dict):
-        return PlantMetaData.from_dict(data)
-    elif isinstance(data, PlantMetaData):
-        return data
-    else:
-        raise ValueError("The input data must be a valid file path or dictionary object")
+#     if isinstance(data, dict):
+#         return PlantMetaData.from_dict(data)
+#     elif isinstance(data, PlantMetaData):
+#         return data
+#     else:
+#         raise ValueError("The input data must be a valid file path or dictionary object")
 
 
 def load_to_pandas(data: str | Path | pd.DataFrame | spark.DataFrame) -> pd.DataFrame | None:
@@ -705,31 +749,6 @@ def load_to_pandas(data: str | Path | pd.DataFrame | spark.DataFrame) -> pd.Data
         return data.toPandas()
     else:
         raise ValueError("Input data could not be converted to pandas")
-
-
-def load_reanalysis(data: dict) -> dict[str, pd.DataFrame]:
-    """Loads the reanalyis data from PlanetOS, file, or data object.
-
-    Args:
-        data (dict): Dictionary of reanalysis product name (keys) and input data (values).
-
-    Raises:
-        ValueError: _description_
-        ValueError: _description_
-        ValueError: _description_
-        RuntimeError: _description_
-        NotImplementedError: _description_
-
-    Returns:
-        dict[str, pd.DataFrame]: A dictioanry of product_name: data aligning with
-            analysis methods expectations.
-    """
-    for name, value in data.items():
-        if isinstance(value, dict):
-            data[name] = download_reanalysis_data_planetos(**value)
-        else:
-            data[name] = load_to_pandas(value)
-    return data
 
 
 @define(auto_attribs=True)
@@ -763,7 +782,7 @@ class PlantDataV3:
     """
 
     metadata: PlantMetaData = attr.ib(
-        default={}, converter=load_meta, on_setattr=[attr.converters, attr.validators]
+        default={}, converter=PlantMetaData.load, on_setattr=[attr.converters, attr.validators]
     )
     analysis_type: list[str] | None = attr.ib(
         default=["all"],
@@ -829,7 +848,8 @@ class PlantDataV3:
          - If the dictionary values are a dictionary, then the reanalysis data will
            be downloaded using the dictionary as kwargs passed to the PlanetOS API
            in `openoa.toolkits.reanslysis_downloading`, with the product name and site
-           coordinates being provided automatically.
+           coordinates being provided automatically. NOTE: This also calculates the
+           derived variables such as wind direction upon downloading.
         - If a non-dictionary input is provided for a reanalysis product type, then the
           `load_to_pandas` method will be called on the input data.
 
@@ -848,16 +868,19 @@ class PlantDataV3:
         for name, value in self.reanalysis.items():
             if isinstance(value, dict):
                 value.update(
-                    dict(dataset=name, lat=self.metadata.latitude, lon=self.metadata.longitude)
+                    dict(
+                        dataset=name,
+                        lat=self.metadata.latitude,
+                        lon=self.metadata.longitude,
+                        calc_derived_vars=True,
+                    )
                 )
-                self.reanalysis = download_reanalysis_data_planetos(**value)
+                self.reanalysis[name] = download_reanalysis_data_planetos(**value)
             else:
-                self.reanalysis = load_to_pandas(value)
+                self.reanalysis[name] = load_to_pandas(value)
 
-            missing = self._validate_column_names(category="reanalysis")
-            dtype = self._validate_types(category="reanalysis")
-            self._errors["missing"][f"reanalysis-{name}"] = missing["reanalysis"]
-            self._errors["dtype"][f"reanalysis-{name}"] = dtype["reanalysis"]
+        self._errors["missing"].update(self._validate_column_names(category="reanalysis"))
+        self._errors["dtype"].update(self._validate_types(category="reanalysis"))
 
     @property
     def analysis_values(self):
@@ -877,6 +900,13 @@ class PlantDataV3:
     def _validate_column_names(self, category: str = "all") -> dict[str, list[str]]:
         column_map = self.metadata.column_map
 
+        if category == "reanalysis":
+            missing_cols = {
+                f"{category}-{name}": column_validator(df, column_names=column_map[category][name])
+                for name, df in self.analysis_values[category].items()
+            }
+            return missing_cols if isinstance(missing_cols, dict) else {}
+
         if category != "all":
             df = self.analysis_values[category]
             missing_cols = {category: column_validator(df, column_names=column_map[category])}
@@ -885,7 +915,16 @@ class PlantDataV3:
         missing_cols = {
             name: column_validator(df, column_names=column_map[name])
             for name, df in self.analysis_values.items()
+            if name != "reanalysis"
         }
+        missing_cols.update(
+            {
+                f"reanalysis-{name}": column_validator(
+                    df, column_names=column_map["reanalysis"][name]
+                )
+                for name, df, in self.analysis_values["reanalysis"].items()
+            }
+        )
         return missing_cols if isinstance(missing_cols, dict) else {}
 
     def _validate_types(self, category: str = "all") -> dict[str, list[str]]:
@@ -896,9 +935,26 @@ class PlantDataV3:
         column_type_map = self.metadata.type_map
         column_map = {}
         for name in column_name_map:
-            column_map[name] = dict(
-                zip(column_name_map[name].values(), column_type_map[name].values())
-            )
+            if name == "reanalysis":
+                column_map["reanalysis"] = {}
+                for name in column_name_map["reanalysis"]:
+                    column_map["reanalysis"][name] = dict(
+                        zip(
+                            column_name_map["reanalysis"][name].values(),
+                            column_type_map["reanalysis"][name].values(),
+                        )
+                    )
+            else:
+                column_map[name] = dict(
+                    zip(column_name_map[name].values(), column_type_map[name].values())
+                )
+
+        if category == "reanalysis":
+            error_cols = {
+                f"{category}-{name}": dtype_converter(df, column_types=column_map[category][name])
+                for name, df in self.analysis_values[category].items()
+            }
+            return error_cols if isinstance(error_cols, dict) else {}
 
         if category != "all":
             df = self.analysis_values[category]
@@ -918,12 +974,13 @@ class PlantDataV3:
             the methods as written are in no way a satisfactory final/optimized version
         """
         # NOTE: This is purely pseudo-python code and will not at all work
-        error_dict = {"missing": self._validate_column_names(), "dtype": self._validate_types()}
+        self._errors = {"missing": self._validate_column_names(), "dtype": self._validate_types()}
+        self.reanalysis_validation()
 
         # TODO: Check for extra columns?
         # TODO: Define other checks?
 
-        error_message = compose_error_message(error_dict, self.analysis_type)
+        error_message = compose_error_message(self._errors, self.analysis_type)
         if error_message:
             raise ValueError(error_message)
 
