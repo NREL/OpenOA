@@ -425,7 +425,7 @@ def turbine_polar_line(
     """Polar plot (<r>, <theta>) overlaying plot of surrounding array, centered on turbine <tid>
 
     Args:
-        array(:obj:`pandas dataframe`): index by (string) labels of assets, 'x' and 'y' coordinate columns
+        array(:obj:`pandas dataframe`): index by (string) labels of asset_df, 'x' and 'y' coordinate columns
         theta(:obj:`pandas series, np array, list`): anglular coordinates of points, in degrees
         r(:obj:`pandas series, np array, list`): radial coordinates of points
         line_label(:obj:`str`): legend label
@@ -499,7 +499,7 @@ def turbine_polar_4Dscatter(array, tid, theta, r, color, size, cmap="autumn_r"):
     """Polar plot (<r>, <theta>) overlaying plot of surrounding array, centered on turbine <tid>
 
     Args:
-        array(:obj:`pandas dataframe`): index by (string) labels of assets, 'x' and 'y' coordinate columns
+        array(:obj:`pandas dataframe`): index by (string) labels of asset_df, 'x' and 'y' coordinate columns
         tid(:obj:`str`): index of asset on which to center carthesian axes
         theta(:obj:`pandas series, np array, list`): anglular coordinates of points, in degrees
         r(:obj:`pandas series, np array, list`): radial coordinates of points
@@ -573,7 +573,7 @@ def turbine_polar_contourf(array, tid, theta, r, c, cmap="autumn_r"):
     """Polar plot (<r>, <theta>) overlaying plot of surrounding array, centered on turbine <tid>
 
     Args:
-        array(:obj:`pandas dataframe`): index by (string) labels of assets, 'x' and 'y' coordinate columns
+        array(:obj:`pandas dataframe`): index by (string) labels of asset_df, 'x' and 'y' coordinate columns
         tid(:obj:`str`): index of asset on which to center carthesian axes
         theta(:obj:`pandas series, np array, list`): anglular coordinates of points, in degrees
         r(:obj:`pandas series, np array, list`): radial coordinates of points
@@ -642,7 +642,7 @@ def turbine_polar_contour(
     """Polar plot (<r>, <theta>) overlaying plot of surrounding array, centered on turbine <tid>
 
     Args:
-        array(:obj:`pandas dataframe`): index by (string) labels of assets, 'x' and 'y' coordinate columns
+        array(:obj:`pandas dataframe`): index by (string) labels of asset_df, 'x' and 'y' coordinate columns
         tid(:obj:`str`): index of asset on which to center carthesian axes
         theta(:obj:`pandas series, np array, list`): anglular coordinates of points, in degrees
         r(:obj:`pandas series, np array, list`): radial coordinates of points
@@ -780,7 +780,7 @@ def color_to_rgb(color):
 
 
 def plot_windfarm(
-    project,
+    asset_df,
     tile_name="OpenMap",
     plot_width=800,
     plot_height=800,
@@ -792,7 +792,7 @@ def plot_windfarm(
     """Plot the windfarm spatially on a map using the Bokeh plotting libaray.
 
     Args:
-        project(:obj:`plant object`): project to be plotted
+        asset_df(:obj:`pd.DataFrame`): PlantData.asset object containing the asset metadata.
         tile_name(:obj:`str`): tile set to be used for the underlay, e.g. OpenMap, ESRI, OpenTopoMap
         plot_width(:obj:`scalar`): width of plot
         plot_height(:obj:`scalar`): height of plot
@@ -803,6 +803,7 @@ def plot_windfarm(
     Returns:
         Bokeh_plot(:obj:`axes handle`): windfarm map
 
+    # TODO: UPDATE THIS DOCSTRING
     Example:
         .. bokeh-plot::
 
@@ -837,11 +838,10 @@ def plot_windfarm(
     # Use pyproj to transform longitude and latitude into web-mercator and add to a copy of the asset dataframe
     TRANSFORM_4326_TO_3857 = Transformer.from_crs("EPSG:4326", "EPSG:3857")
 
-    assets = project.asset.df.copy()
-    assets["x"], assets["y"] = TRANSFORM_4326_TO_3857.transform(
-        assets["latitude"], assets["longitude"]
+    asset_df["x"], asset_df["y"] = TRANSFORM_4326_TO_3857.transform(
+        asset_df["latitude"], asset_df["longitude"]
     )
-    assets["coordinates"] = tuple(zip(assets["latitude"], assets["longitude"]))
+    asset_df["coordinates"] = tuple(zip(asset_df["latitude"], asset_df["longitude"]))
 
     # Define default and then update figure and marker options based on kwargs
     figure_options = {
@@ -867,35 +867,35 @@ def plot_windfarm(
     if marker_options["fill_color"] == "auto_fill_color":
         color_grouping = marker_options["legend_group"]
 
-        assets = assets.sort_values(color_grouping)
+        asset_df = asset_df.sort_values(color_grouping)
 
-        if len(set(assets[color_grouping])) <= 10:
+        if len(set(asset_df[color_grouping])) <= 10:
             color_palette = list(Category10[10])
         else:
-            color_palette = viridis(len(set(assets[color_grouping])))
+            color_palette = viridis(len(set(asset_df[color_grouping])))
 
-        color_mapping = dict(zip(set(assets[color_grouping]), color_palette))
-        assets["auto_fill_color"] = assets[color_grouping].map(color_mapping)
-        assets["auto_fill_color"] = assets["auto_fill_color"].apply(color_to_rgb)
-        assets["auto_line_color"] = [
-            "black" if luminance(color) > 0.5 else "white" for color in assets["auto_fill_color"]
+        color_mapping = dict(zip(set(asset_df[color_grouping]), color_palette))
+        asset_df["auto_fill_color"] = asset_df[color_grouping].map(color_mapping)
+        asset_df["auto_fill_color"] = asset_df["auto_fill_color"].apply(color_to_rgb)
+        asset_df["auto_line_color"] = [
+            "black" if luminance(color) > 0.5 else "white" for color in asset_df["auto_fill_color"]
         ]
 
     else:
-        if marker_options["fill_color"] in assets.columns:
-            assets[marker_options["fill_color"]] = assets[marker_options["fill_color"]].apply(
+        if marker_options["fill_color"] in asset_df.columns:
+            asset_df[marker_options["fill_color"]] = asset_df[marker_options["fill_color"]].apply(
                 color_to_rgb
             )
-            assets["auto_line_color"] = [
+            asset_df["auto_line_color"] = [
                 "black" if luminance(color) > 0.5 else "white"
-                for color in assets[marker_options["fill_color"]]
+                for color in asset_df[marker_options["fill_color"]]
             ]
 
         else:
-            assets["auto_line_color"] = "black"
+            asset_df["auto_line_color"] = "black"
 
     # Create the bokeh data source
-    source = ColumnDataSource(assets)
+    source = ColumnDataSource(asset_df)
 
     # Create a bokeh figure with tiles
     plot_map = figure(

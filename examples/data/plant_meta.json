@@ -1,9 +1,12 @@
 {
   "asset": {
+    "elevation": "elevation_m",
+    "hub_height": "Hub_height_m",
     "id": "id",
-    "latitude": "latitude",
-    "longitude": "longitude",
-    "rated_power": "rated_power_kw"
+    "latitude": "Latitude",
+    "longitude": "Longitude",
+    "rated_power": "Rated_power",
+    "rotor_diameter": "Rotor_diameter_m"
   },
   "curtail": {
     "availability": "availability_kwh",
@@ -12,6 +15,8 @@
     "net_energy": "net_energy_kwh",
     "time": "time_utc"
   },
+  "latitude": 48.4497,
+  "longitude": 5.5896,
   "meter": {
     "energy": "net_energy_kwh",
     "time": "time_utc"

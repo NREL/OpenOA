@@ -15,6 +15,7 @@ import pandas as pd
 import pyspark as spark
 from attr import define, fields, fields_dict
 from dateutil.parser import parse
+from sklearn.linear_model import HuberRegressor
 
 import openoa.toolkits.met_data_processing as met
 from openoa.types import timeseries_table
@@ -370,6 +371,9 @@ class AssetMetaData(FromDictMixin):
     latitude: str = attr.ib(default="latitude")
     longitude: str = attr.ib(default="longitude")
     rated_power: str = attr.ib(default="rated_power")
+    hub_height: str = attr.ib(default="hub_height")
+    rotor_diameter: str = attr.ib(default="rotor_diameter")
+    elevation: str = attr.ib(default="elevation")
     type: str = attr.ib(default="type")
 
     # Parameterizations that should not be changed
@@ -382,6 +386,9 @@ class AssetMetaData(FromDictMixin):
             latitude=float,
             longitude=float,
             rated_power=float,
+            hub_height=float,
+            rotor_diameter=float,
+            elevation=float,
             type=str,
         ),
         init=False,  # don't allow for user input
@@ -392,6 +399,9 @@ class AssetMetaData(FromDictMixin):
             latitude="WGS84",
             longitude="WGS84",
             rated_power="kW",
+            hub_height="m",
+            rotor_diameter="m",
+            elevation="m",
             type=None,
         ),
         init=False,  # don't allow for user input
@@ -403,6 +413,9 @@ class AssetMetaData(FromDictMixin):
             latitude=self.latitude,
             longitude=self.longitude,
             rated_power=self.rated_power,
+            hub_height=self.rated_power,
+            rotor_diameter=self.rated_power,
+            elevation=self.rated_power,
             type=self.type,
         )
 
