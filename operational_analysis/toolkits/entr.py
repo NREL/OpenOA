@@ -4,6 +4,8 @@ Provides utility functions to load data from ENTR warehouse into PlantData objec
 """
 
 import pandas as pd
+import operational_analysis.toolkits.unit_conversion as un
+import operational_analysis.toolkits.met_data_processing as met
 
 _conn = None
 
@@ -33,7 +35,7 @@ def load_metadata(conn, plant):
         number_of_turbines,
         turbine_capacity
     FROM
-        entr_warehouse.dim_asset_plant
+        entr_warehouse.dim_asset_wind_plant
     WHERE
         plant_name = "{plant.name}";
     """
@@ -79,7 +81,7 @@ def load_scada_meta(conn, plant):
         value_type,
         value_units
     FROM
-        entr_warehouse.rpt_openoa_wtg_scada_tag_metadata
+        entr_warehouse.openoa_wtg_scada_tag_metadata
     WHERE
         entr_tag_name = 'WTUR.W';
     """
@@ -95,7 +97,7 @@ def load_scada(conn, plant):
     
     scada_query = f"""
     SELECT
-        entr_warehouse.rpt_openoa_wtg_scada.wind_turbine_name,
+        entr_warehouse.openoa_wtg_scada.wind_turbine_name,
         date_time,
         `WROT.BlPthAngVal`,
         `WTUR.W`,
@@ -105,14 +107,52 @@ def load_scada(conn, plant):
         `WNAC.Dir`,
         `WMET.HorWdDir`
     FROM
-        entr_warehouse.rpt_openoa_wtg_scada
-        LEFT JOIN
-            entr_warehouse.dim_asset_wind_turbine
-        ON entr_warehouse.rpt_openoa_wtg_scada.wind_turbine_name = entr_warehouse.dim_asset_wind_turbine.wind_turbine_name
+        entr_warehouse.openoa_wtg_scada
     WHERE
         plant_id = {plant._entr_plant_id};
     """
     plant.scada.df = pd.read_sql(scada_query, conn)
+
+    load_scada_prepare(plant)
+
+def load_scada_prepare(plant):
+    
+    plant._scada.df['time'] = pd.to_datetime(plant._scada.df['date_time'],utc=True).dt.tz_localize(None)
+
+    # # Remove duplicated timestamps and turbine id
+    plant._scada.df = plant._scada.df.drop_duplicates(subset=['time','wind_turbine_name'],keep='first')
+
+    # # Set time as index
+    plant._scada.df.set_index('time',inplace=True,drop=False)
+
+    plant._scada.df = plant._scada.df[(plant._scada.df["WMET.EnvTmp"]>=-15.0) & (plant._scada.df["WMET.EnvTmp"]<=45.0)]
+
+    plant._scada.df["WTUR.W"] = plant._scada.df["WTUR.W"] * 1000
+
+    # # Convert pitch to range -180 to 180.
+    plant._scada.df["WROT.BlPthAngVal"] = plant._scada.df["WROT.BlPthAngVal"] % 360
+    plant._scada.df.loc[plant._scada.df["WROT.BlPthAngVal"] > 180.0,"WROT.BlPthAngVal"] \
+        = plant._scada.df.loc[plant._scada.df["WROT.BlPthAngVal"] > 180.0,"WROT.BlPthAngVal"] - 360.0
+
+    # # Calculate energy
+    plant._scada.df['energy_kwh'] = un.convert_power_to_energy(plant._scada.df["WTUR.W"], plant._scada_freq) / 1000
+
+    # # Note: there is no vane direction variable defined in -25, so
+    # # making one up
+    scada_map = {
+                "date_time"                 : "time",
+                "wind_turbine_name"    : "id",
+                "WTUR.W"              : "wtur_W_avg",
+
+                "WMET.HorWdSpd"          : "wmet_wdspd_avg",
+                "WMET.HorWdDirRel"       : "wmet_HorWdDir_avg",
+                "WMET.HorWdDir"          : "wmet_VaneDir_avg",
+                "WNAC.Dir"               : "wyaw_YwAng_avg",
+                "WMET.EnvTmp"            : "wmet_EnvTmp_avg",
+                "WROT.BlPthAngVal"       : "wrot_BlPthAngVal1_avg",
+                }
+
+    plant._scada.df.rename(scada_map, axis="columns", inplace=True)
 
 def check_metadata_row(row, allowed_freq=["10T"], allowed_types=["sum"], allowed_units=["kWh"]):
     
@@ -138,12 +178,13 @@ def load_curtailment_meta(conn, plant):
         value_type,
         value_units
     FROM
-        entr_warehouse.rpt_openoa_curtailment_and_availability_tag_metadata
+        entr_warehouse.openoa_curtailment_and_availability_tag_metadata
     WHERE
         entr_tag_name in ('IAVL.DnWh', 'IAVL.ExtPwrDnWh')
     """
     meter_meta_df = pd.read_sql(query, conn)
-    # TODO: Check metadata using check_metadata_row 
+    freq, _, _ = check_metadata_row(meter_meta_df.iloc[0], allowed_freq=['10T'], allowed_types=["sum"], allowed_units=["kWh"])
+    plant._curtail_freq = freq
 
 def load_curtailment(conn, plant):
 
@@ -155,10 +196,7 @@ def load_curtailment(conn, plant):
         `IAVL.DnWh`,
         `IAVL.ExtPwrDnWh`
     FROM
-        entr_warehouse.rpt_openoa_curtailment_and_availability
-        LEFT JOIN
-            entr_warehouse.dim_asset_plant
-        ON entr_warehouse.rpt_openoa_curtailment_and_availability.plant_name = entr_warehouse.dim_asset_plant.plant_name
+        entr_warehouse.openoa_curtailment_and_availability
     WHERE
         plant_id = {plant._entr_plant_id}
     ORDER BY
@@ -166,6 +204,16 @@ def load_curtailment(conn, plant):
     """
     plant.curtail.df = pd.read_sql(query, conn)
 
+    load_curtailment_prepare(plant)
+
+def load_curtailment_prepare(plant):
+
+    curtail_map = {
+        'IAVL.DnWh':'availability_kwh',
+        'IAVL.ExtPwrDnWh':'curtailment_kwh'
+    }
+
+    plant._curtail.df.rename(curtail_map, axis="columns", inplace=True)
 
 def load_meter_meta(conn, plant):
     query = f"""
@@ -175,7 +223,7 @@ def load_meter_meta(conn, plant):
         value_type,
         value_units
     FROM
-        entr_warehouse.rpt_openoa_revenue_meter_tag_metadata
+        entr_warehouse.openoa_revenue_meter_tag_metadata
     WHERE
         entr_tag_name = 'MMTR.SupWh'
     """
@@ -194,14 +242,24 @@ def load_meter(conn, plant):
         date_time,
         `MMTR.SupWh`
     FROM
-        entr_warehouse.rpt_openoa_revenue_meter
-        LEFT JOIN
-            entr_warehouse.dim_asset_plant
-        ON entr_warehouse.rpt_openoa_revenue_meter.plant_name = entr_warehouse.dim_asset_plant.plant_name
+        entr_warehouse.openoa_revenue_meter
     WHERE
         plant_id = {plant._entr_plant_id};
     """
     plant.meter.df = pd.read_sql(meter_query, conn)
+
+    load_meter_prepare(plant)
+
+def load_meter_prepare(plant):
+
+    plant._meter.df['time'] = pd.to_datetime(plant._meter.df["date_time"]).dt.tz_localize(None)
+    plant._meter.df.set_index('time',inplace=True,drop=False)
+
+    meter_map = {
+        "MMTR.SupWh": "energy_kwh"
+    }
+
+    plant._meter.df.rename(meter_map, axis="columns", inplace=True)
 
 def load_openoa_project_from_warehouse(cls, thrift_server_host="localhost",
                        thrift_server_port=10000,

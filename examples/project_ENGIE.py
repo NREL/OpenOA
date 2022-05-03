@@ -253,3 +253,6 @@ class Project_Engie(PlantData):
         self._asset._asset.drop(["Wind_turbine_name","Latitude","Longitude",
                                 "Rated_power","Hub_height_m",
                                 "Rotor_diameter_m"], axis=1,inplace=True)
+
+
+

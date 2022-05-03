@@ -933,3 +933,4 @@ class MonteCarloAEP(object):
 
         # Return long-term availabilty and curtailment 
         return mc_avail_lt, mc_curt_lt
+
