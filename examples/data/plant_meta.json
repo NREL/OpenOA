@@ -19,19 +19,19 @@
   "reanalysis": {
     "era5": {
       "frequency": "H",
+      "surface_pressure": "surf_pres",
+      "temperature": "t_2m",
       "time": "datetime",
-      "windspeed": "ws_100m",
       "windspeed_u": "u_100",
       "windspeed_v": "v_100"
     },
     "merra2": {
       "frequency": "H",
-      "rho": "rho_kgm",
-      "temperature": "temperature_K",
+      "surface_pressure": "surface_pressure",
+      "temperature": "temp_10m",
       "time": "datetime",
-      "windspeed": "windspeed_ms",
-      "windspeed_u": "u_ms",
-      "windspeed_v": "v_ms"
+      "windspeed_u": "u_50",
+      "windspeed_v": "v_50"
     }
   },
   "scada": {

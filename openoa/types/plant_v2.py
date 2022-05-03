@@ -16,7 +16,8 @@ import pyspark as spark
 from attr import define, fields, fields_dict
 from dateutil.parser import parse
 
-from openoa.types import timeseries_table
+import openoa.toolkits.met_data_processing as met
+from openoa.types import reanalysis, timeseries_table
 from openoa.toolkits.reanalysis_downloading import download_reanalysis_data_planetos
 
 from .asset import AssetData
@@ -38,7 +39,7 @@ ANALYSIS_REQUIREMENTS = {
             "freq": ("MS", "D", "H", "T"),
         },
         "reanalysis": {
-            "columns": ["windspeed", "rho"],
+            "columns": ["windspeed", "density"],
             "conditional_columns": {
                 "reg_temperature": ["temperature"],
                 "reg_winddirection": ["windspeed_u", "windspeed_v"],
@@ -51,7 +52,7 @@ ANALYSIS_REQUIREMENTS = {
             "freq": ("D", "H", "T"),
         },
         "reanalysis": {
-            "columns": ["windspeed", "wind_direction", "rho"],
+            "columns": ["windspeed", "wind_direction", "density"],
         },
     },
     "ElectricalLosses": {
@@ -131,6 +132,9 @@ class FromDictMixin:
         return cls(**kwargs)  # type: ignore
 
 
+#########################################
+# Define the meta data validation classes
+#########################################
 @define(auto_attribs=True)
 class SCADAMetaData(FromDictMixin):
     """A metadata schematic to create the necessary column mappings and other validation
@@ -412,7 +416,8 @@ class ReanalysisMetaData(FromDictMixin):
     windspeed_v: str = attr.ib(default="windspeed_v")
     wind_direction: str = attr.ib(default="wind_direction")
     temperature: str = attr.ib(default="temperature")
-    rho: str = attr.ib(default="rho")
+    density: str = attr.ib(default="density")
+    surface_pressure: str = attr.ib(default="surface_pressure")
 
     # Data about the columns
     frequency: str = attr.ib(default="10T")
@@ -429,7 +434,8 @@ class ReanalysisMetaData(FromDictMixin):
             windspeed_v=float,
             wind_direction=float,
             temperature=float,
-            rho=float,
+            density=float,
+            surface_pressure=float,
         ),
         init=False,  # don't allow for user input
     )
@@ -441,7 +447,8 @@ class ReanalysisMetaData(FromDictMixin):
             windspeed_v="m/s",
             wind_direction="deg",
             temperature="K",
-            rho="kg/m^3",
+            density="kg/m^3",
+            surface_pressure="Pa",
         ),
         init=False,  # don't allow for user input
     )
@@ -450,8 +457,12 @@ class ReanalysisMetaData(FromDictMixin):
         self.col_map = dict(
             time=self.time,
             windspeed=self.windspeed,
+            windspeed_u=self.windspeed_u,
+            windspeed_v=self.windspeed_v,
             wind_direction=self.wind_direction,
-            rho=self.rho,
+            temperature=self.temperature,
+            density=self.density,
+            surface_pressure=self.surface_pressure,
         )
 
 
@@ -548,6 +559,11 @@ class PlantMetaData(FromDictMixin):
             return cls.from_dict(data)
 
         raise ValueError("PlantMetaData can only be loaded from str, Path, or dict objects.")
+
+
+####################################################
+# Define the data validator and conversion functions
+####################################################
 
 
 def convert_to_list(
@@ -691,42 +707,6 @@ def compose_error_message(error_dict: dict, analysis_types: list[str] = ["all"])
     return "\n".join(messages)
 
 
-# def load_meta(data: str | Path | dict | PlantMetaData) -> PlantMetaData:
-#     """Generates a `PlantMetaData` object from a variety of input data.
-
-#     Args:
-#         data (str | Path | dict | PlantMetaData): The input JSON/YAML file or dictionary
-#             that needs to be converted.
-
-#     Raises:
-#         ValueError: Raised if an invalid file type was passed.
-#         ValueError: Riased if an invalid data type was passed.
-
-#     Returns:
-#         PlantMetaData: The validation meta data object.
-#     """
-#     if isinstance(data, str):
-#         data = Path(data).resolve()
-
-#     if isinstance(data, Path):
-#         with open(data, "r") as f:
-#             if data.suffix == "json":
-#                 data = json.load(f)
-#             elif data.suffix in (".yml", ".yaml"):
-#                 data = yaml.safe_load(data)
-#             else:
-#                 raise ValueError(
-#                     f"The input filepath: {data} must be of the following: .json, .yml, .yaml"
-#                 )
-
-#     if isinstance(data, dict):
-#         return PlantMetaData.from_dict(data)
-#     elif isinstance(data, PlantMetaData):
-#         return data
-#     else:
-#         raise ValueError("The input data must be a valid file path or dictionary object")
-
-
 def load_to_pandas(data: str | Path | pd.DataFrame | spark.DataFrame) -> pd.DataFrame | None:
     """Loads the input data or filepath to apandas DataFrame.
 
@@ -749,6 +729,11 @@ def load_to_pandas(data: str | Path | pd.DataFrame | spark.DataFrame) -> pd.Data
         return data.toPandas()
     else:
         raise ValueError("Input data could not be converted to pandas")
+
+
+############################
+# Define the PlantData class
+############################
 
 
 @define(auto_attribs=True)
@@ -865,6 +850,7 @@ class PlantDataV3:
                 "Reanalysis data should be provided as a dictionary of product name (keys) and api kwargs or data"
             )
 
+        reanalysis = {}
         for name, value in self.reanalysis.items():
             if isinstance(value, dict):
                 value.update(
@@ -875,9 +861,12 @@ class PlantDataV3:
                         calc_derived_vars=True,
                     )
                 )
-                self.reanalysis[name] = download_reanalysis_data_planetos(**value)
+                reanalysis[name] = download_reanalysis_data_planetos(**value)
             else:
-                self.reanalysis[name] = load_to_pandas(value)
+                reanalysis[name] = load_to_pandas(value)
+
+        self.reanalysis = reanalysis
+        self._calculate_reanalysis_columns()
 
         self._errors["missing"].update(self._validate_column_names(category="reanalysis"))
         self._errors["dtype"].update(self._validate_types(category="reanalysis"))
@@ -983,6 +972,39 @@ class PlantDataV3:
         error_message = compose_error_message(self._errors, self.analysis_type)
         if error_message:
             raise ValueError(error_message)
+
+    def _calculate_reanalysis_columns(self) -> None:
+        """Calculates extra variables such as wind_direction from the provided
+        reanalysis data if they don't already exist.
+        """
+        if self.reanalysis is None:
+            return
+        reanalysis = {}
+        for name, df in self.reanalysis.items():
+            col_map = self.metadata.reanalysis[name].col_map
+            u = col_map["windspeed_u"]
+            v = col_map["windspeed_v"]
+            has_u_v = (u in df) & (v in df)
+
+            ws = col_map["windspeed"]
+            if ws not in df:
+                if has_u_v:
+                    df[ws] = np.sqrt(df[u].values ** 2 + df[v].values ** 2)
+
+            wd = col_map["wind_direction"]
+            if wd not in df:
+                if has_u_v:
+                    df[wd] = met.compute_wind_direction(df[u], df[v])
+
+            dens = col_map["density"]
+            sp = col_map["surface_pressure"]
+            temp = col_map["temperature"]
+            if dens not in df:
+                if (sp in df) & (temp in df):
+                    df[dens] = met.compute_air_density(df[temp], df[sp])
+
+            reanalysis[name] = df
+        self.reanalysis = reanalysis
 
     # Not necessary, but could provide an additional way in
     @classmethod
