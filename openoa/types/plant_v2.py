@@ -17,7 +17,7 @@ from attr import define, fields, fields_dict
 from dateutil.parser import parse
 
 import openoa.toolkits.met_data_processing as met
-from openoa.types import reanalysis, timeseries_table
+from openoa.types import timeseries_table
 from openoa.toolkits.reanalysis_downloading import download_reanalysis_data_planetos
 
 from .asset import AssetData
@@ -731,6 +731,25 @@ def load_to_pandas(data: str | Path | pd.DataFrame | spark.DataFrame) -> pd.Data
         raise ValueError("Input data could not be converted to pandas")
 
 
+def rename_columns(df: pd.DataFrame, col_map: dict, reverse: bool = True) -> pd.DataFrame:
+    """Renames the pandas DataFrame columns using col_map. Intended to be used in
+    conjunction with the a data objects meta data column mapping (reverse=True).
+
+        Args:
+            df (pd.DataFrame): The DataFrame to have its columns remapped.
+            col_map (dict): Dictionary of existing column names and new column names.
+            reverse (bool, optional): True, if the new column names are the keys (using the
+                xxMetaData.col_map as input), or False, if the current column names are the
+                values. Defaults to True.
+
+        Returns:
+            pd.DataFrame: Input DataFrame with remapped column names.
+    """
+    if reverse:
+        col_map = {v: k for k, v in col_map.items()}
+    return df.rename(columns=col_map)
+
+
 ############################
 # Define the PlantData class
 ############################
@@ -797,6 +816,7 @@ class PlantDataV3:
         if error_message != "":
             # raise ValueError("\n".join(itertools.chain(*self._errors.values())))
             raise ValueError(error_message)
+        self.update_column_names()
 
     @scada.validator
     @meter.validator
@@ -973,6 +993,8 @@ class PlantDataV3:
         if error_message:
             raise ValueError(error_message)
 
+        self.update_column_names()
+
     def _calculate_reanalysis_columns(self) -> None:
         """Calculates extra variables such as wind_direction from the provided
         reanalysis data if they don't already exist.
@@ -1005,6 +1027,29 @@ class PlantDataV3:
 
             reanalysis[name] = df
         self.reanalysis = reanalysis
+
+    def update_column_names(self, to_original: bool = False) -> None:
+        meta = self.metadata
+        reverse = not to_original
+        if self.scada is not None:
+            self.scada = rename_columns(self.scada, meta.scada.col_map, reverse=reverse)
+        if self.meter is not None:
+            self.meter = rename_columns(self.meter, meta.meter.col_map, reverse=reverse)
+        if self.tower is not None:
+            self.tower = rename_columns(self.tower, meta.tower.col_map, reverse=reverse)
+        if self.status is not None:
+            self.status = rename_columns(self.status, meta.status.col_map, reverse=reverse)
+        if self.curtail is not None:
+            self.curtail = rename_columns(self.curtail, meta.curtail.col_map, reverse=reverse)
+        if self.asset is not None:
+            self.asset = rename_columns(self.asset, meta.asset.col_map)
+        if self.reanalysis is not None:
+            reanalysis = {}
+            for name, df in self.reanalysis.items():
+                reanalysis[name] = rename_columns(
+                    df, meta.reanalysis[name].col_map, reverse=reverse
+                )
+            self.reanalysis = reanalysis
 
     # Not necessary, but could provide an additional way in
     @classmethod
