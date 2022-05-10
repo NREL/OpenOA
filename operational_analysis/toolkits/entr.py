@@ -11,7 +11,10 @@ _conn = None
 
 def get_connection(thrift_server_host,thrift_server_port):
     """
-    If connection is not valid, get a new connection and return it.
+    Using the host and port to get a connection to the thrift server.
+    If a connection is already instantiated, it will return that same connection.
+
+    Returns: PyHive.Connection
     """
     global _conn
     if _conn is None:
@@ -20,8 +23,13 @@ def get_connection(thrift_server_host,thrift_server_port):
     return _conn
 
 def do_query(conn, query):
+    """
+    Use the connection object to run a query, returning a dataframe.
+    """
     df = pd.read_sql(query, conn)
     return df
+
+## --- PLANT LEVEL METADATA ---
 
 def load_metadata(conn, plant):
     ## Plant Metadata
@@ -51,6 +59,8 @@ def load_metadata(conn, plant):
     plant._turbine_capacity = metadata["turbine_capacity"][0]
     plant._entr_plant_id = metadata["plant_id"][0]
 
+## --- ASSET ---
+
 def load_asset(conn, plant):
     asset_query = f"""
     SELECT
@@ -72,6 +82,8 @@ def load_asset(conn, plant):
     """
     #plant._asset = pyspark.sql(asset_query).to_pandas()
     plant._asset = pd.read_sql(asset_query, conn)
+
+## --- SCADA ---
 
 def load_scada_meta(conn, plant):
     query = f"""
@@ -170,6 +182,8 @@ def check_metadata_row(row, allowed_freq=["10T"], allowed_types=["sum"], allowed
 
     return accepted_freq, row["value_type"], row["value_units"]
 
+## --- CURTAILMENT ---
+
 def load_curtailment_meta(conn, plant):
     query = f"""
     SELECT
@@ -214,6 +228,8 @@ def load_curtailment_prepare(plant):
     }
 
     plant._curtail.df.rename(curtail_map, axis="columns", inplace=True)
+
+## --- METER ---
 
 def load_meter_meta(conn, plant):
     query = f"""
@@ -261,23 +277,35 @@ def load_meter_prepare(plant):
 
     plant._meter.df.rename(meter_map, axis="columns", inplace=True)
 
-def load_openoa_project_from_warehouse(cls, thrift_server_host="localhost",
-                       thrift_server_port=10000,
-                       database="entr_warehouse",
-                       wind_plant="La Haute Borne",
-                       aggregation="",
-                       date_range=None,
-                       conn=None):
-    plant = cls(database, wind_plant) ## Passing in database as the path and wind_plant as the name for now.
-        
-    plant.name = wind_plant
+## --- REANALYSIS ---
 
-    conn = get_connection(thrift_server_host, thrift_server_port)
+def load_reanalysis_meta(conn, plant):
+    pass
 
-    load_metadata(conn, plant)
-    load_asset(conn, plant)
-    load_scada(conn, plant)
-    load_curtailment(conn, plant)
-    load_meter(conn, plant)
+def load_reanalysis(conn, plant, reanalysis_products):
 
-    return plant
+    #load_reanalysis_meta(conn, plant)
+    if reanalysis_products is None:
+        return ## No reanalysis products were requested
+
+    for product in reanalysis_products:
+        reanalysis_query = f"""
+        SELECT
+            date_time,
+            `WMETR.HorWdSpdU`,
+            `WMETR.HorWdSpdV`,
+            `WMETR.EnvTmp`,
+            `WMETR.EnvPres`,
+            `WMETR.HorWdSpd`,
+            `WMETR.HorWdDir`,
+            `WMETR.AirDen`
+        FROM
+            entr_warehouse.openoa_reanalysis
+        WHERE
+            plant_id = {plant._entr_plant_id} AND
+            reanalysis_dataset_name = "{product.upper()}";
+        """
+        plant.reanalysis._product[product.lower()].df = pd.read_sql(reanalysis_query, conn)
+
+
+## --- Main Function ---

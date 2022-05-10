@@ -239,6 +239,7 @@ class PlantData(object):
                        wind_plant="La Haute Borne",
                        aggregation="",
                        date_range=None,
+                       reanalysis_products=None,
                        conn=None):
         """
         from_entr
@@ -250,6 +251,7 @@ class PlantData(object):
             thrift_server_port(int): Port of the Apache Thrift server
             database(str): Name of the Hive database
             wind_plant(str): Name of the wind plant you'd like to load
+            reanalysis_products(list[str]): Reanalysis products to load from the warehouse.
             aggregation: Not yet implemented
             date_range: Not yet implemented
 
@@ -257,14 +259,19 @@ class PlantData(object):
             plant(PlantData): An OpenOA PlantData object.
         """
         import operational_analysis.toolkits.entr as entr
-        plant = entr.load_openoa_project_from_warehouse(cls,
-                       thrift_server_host,
-                       thrift_server_port,
-                       database,
-                       wind_plant,
-                       aggregation,
-                       date_range,
-                       conn)
+        plant = cls(database, wind_plant) ## Passing in database as the path and wind_plant as the name for now.
+            
+        plant.name = wind_plant
+
+        conn = entr.get_connection(thrift_server_host, thrift_server_port)
+
+        entr.load_metadata(conn, plant)
+        entr.load_asset(conn, plant)
+        entr.load_scada(conn, plant)
+        entr.load_curtailment(conn, plant)
+        entr.load_meter(conn, plant)
+        entr.load_reanalysis(conn, plant, reanalysis_products)
+
         return plant
         # plant = cls(database, wind_plant) ## Passing in database as the path and wind_plant as the name for now.
 
