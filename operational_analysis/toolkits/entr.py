@@ -224,10 +224,16 @@ def load_curtailment_prepare(plant):
 
     curtail_map = {
         'IAVL.DnWh':'availability_kwh',
-        'IAVL.ExtPwrDnWh':'curtailment_kwh'
+        'IAVL.ExtPwrDnWh':'curtailment_kwh',
+        'date_time':'time'
     }
 
     plant._curtail.df.rename(curtail_map, axis="columns", inplace=True)
+
+    # Create datetime field
+    plant._curtail.df['time'] = pd.to_datetime(plant._curtail.df.time).dt.tz_localize(None)
+    plant._curtail.df.set_index('time',inplace=True,drop=False)
+
 
 ## --- METER ---
 
@@ -307,5 +313,44 @@ def load_reanalysis(conn, plant, reanalysis_products):
         """
         plant.reanalysis._product[product.lower()].df = pd.read_sql(reanalysis_query, conn)
 
+        load_reanalysis_prepare(plant, product=product)
 
-## --- Main Function ---
+def load_reanalysis_prepare(plant, product):
+
+    # CASE: MERRA2
+    if product.lower() == "merra2":
+        
+        # calculate wind direction from u, v
+        plant._reanalysis._product['merra2'].df["winddirection_deg"] \
+            = met.compute_wind_direction(plant._reanalysis._product['merra2'].df["WMETR.HorWdSpdU"], \
+            plant._reanalysis._product['merra2'].df["WMETR.HorWdSpdV"])
+
+        plant._reanalysis._product['merra2'].rename_columns({"time":"date_time",
+                                    "windspeed_ms": "WMETR.HorWdSpd",
+                                    "u_ms": "WMETR.HorWdSpdU",
+                                    "v_ms": "WMETR.HorWdSpdV",
+                                    "temperature_K": "WMETR.EnvTmp",
+                                    "rho_kgm-3": "WMETR.AirDen"})
+        #plant._reanalysis._product['merra2'].normalize_time_to_datetime("%Y-%m-%d %H:%M:%S")
+        plant._reanalysis._product['merra2'].df['time'] = pd.to_datetime(plant._reanalysis._product['merra2'].df['time']).dt.tz_localize(None)
+        plant._reanalysis._product['merra2'].df.set_index('time',inplace=True,drop=False)
+
+    # CASE: ERA5
+    elif product.lower() == 'era5':
+
+        # calculate wind direction from u, v
+        plant._reanalysis._product['era5'].df["winddirection_deg"] \
+            = met.compute_wind_direction(plant._reanalysis._product['era5'].df["WMETR.HorWdSpdU"], \
+            plant._reanalysis._product['era5'].df["WMETR.HorWdSpdV"])
+
+        plant._reanalysis._product['era5'].rename_columns({"time":"date_time",
+                                    "windspeed_ms": "WMETR.HorWdSpd",
+                                    "u_ms": "WMETR.HorWdSpdU",
+                                    "v_ms": "WMETR.HorWdSpdV",
+                                    "temperature_K": "WMETR.EnvTmp",
+                                    "rho_kgm-3": "WMETR.AirDen"})
+        #plant._reanalysis._product['era5'].normalize_time_to_datetime("%Y-%m-%d %H:%M:%S")
+        plant._reanalysis._product['era5'].df['time'] = pd.to_datetime(plant._reanalysis._product['era5'].df['time']).dt.tz_localize(None)
+        plant._reanalysis._product['era5'].df.set_index('time',inplace=True,drop=False)
+
+
