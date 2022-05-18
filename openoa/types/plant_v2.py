@@ -4,6 +4,7 @@ import io
 import os
 import json
 import itertools
+from ast import Call
 from typing import Callable, Sequence
 from pathlib import Path
 from dataclasses import dataclass
@@ -720,7 +721,7 @@ def compose_error_message(error_dict: dict, analysis_types: list[str] = ["all"])
     return "\n".join(messages)
 
 
-def load_to_pandas(data: str | Path | pd.DataFrame | spark.DataFrame) -> pd.DataFrame | None:
+def load_to_pandas(data: str | Path | pd.DataFrame | spark.sql.DataFrame) -> pd.DataFrame | None:
     """Loads the input data or filepath to apandas DataFrame.
 
     Args:
@@ -814,6 +815,7 @@ class PlantDataV3:
     curtail: pd.DataFrame | None = attr.ib(default=None, converter=load_to_pandas)
     asset: pd.DataFrame | None = attr.ib(default=None, converter=load_to_pandas)
     reanalysis: dict[str, pd.DataFrame] | None = attr.ib(default=None)
+    preprocess: Callable | None = attr.ib(default=None)
 
     # Error catching in validation
     _errors: dict[str, list[str]] = attr.ib(
@@ -830,6 +832,11 @@ class PlantDataV3:
             # raise ValueError("\n".join(itertools.chain(*self._errors.values())))
             raise ValueError(error_message)
         self.update_column_names()
+
+        if self.preprocess is not None:
+            self.preprocess(
+                self
+            )  # TODO: should be a user-defined method to run the data cleansing steps
 
     @scada.validator
     @meter.validator
