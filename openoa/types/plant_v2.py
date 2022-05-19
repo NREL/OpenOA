@@ -4,8 +4,7 @@ import io
 import os
 import json
 import itertools
-from ast import Call
-from typing import Callable, Sequence
+from typing import Callable, Optional, Sequence
 from pathlib import Path
 from dataclasses import dataclass
 
@@ -16,7 +15,6 @@ import pandas as pd
 import pyspark as spark
 from attr import define, fields, fields_dict
 from dateutil.parser import parse
-from sklearn.linear_model import HuberRegressor
 
 import openoa.toolkits.met_data_processing as met
 from openoa.types import timeseries_table
@@ -82,7 +80,10 @@ def analysis_type_validator(
         attribute (attr.Attribute): The converted `analysis_type` attribute object.
         value (list[str]): The input value from `analysis_type`.
     """
-    valid_types = [*ANALYSIS_REQUIREMENTS] + ["all"]
+    if None in value:
+        UserWarning("`None` was provided to `analysis_type`, so no validation will occur.")
+
+    valid_types = [*ANALYSIS_REQUIREMENTS] + ["all", None]
     incorrect_types = set(value).difference(set(valid_types))
     if incorrect_types:
         raise ValueError(
@@ -803,10 +804,10 @@ class PlantDataV3:
         default={}, converter=PlantMetaData.load, on_setattr=[attr.converters, attr.validators]
     )
     analysis_type: list[str] | None = attr.ib(
-        default=["all"],
+        default=None,
         converter=convert_to_list,
         validator=analysis_type_validator,
-        on_setattr=attr.setters.convert,
+        on_setattr=[attr.setters.convert, attr.setters.validate],
     )
     scada: pd.DataFrame | None = attr.ib(default=None, converter=load_to_pandas)
     meter: pd.DataFrame | None = attr.ib(default=None, converter=load_to_pandas)
@@ -851,6 +852,8 @@ class PlantDataV3:
             instance (attr.Attribute): The `attr` attribute details
             value (pd.DataFrame | None): The attributes user-provided value.
         """
+        if None in self.analysis_type:
+            return
         name = instance.name
         if value is None:
             self._errors["missing"].update(
@@ -881,6 +884,8 @@ class PlantDataV3:
         Raises:
             ValueError: Raised if reanalysis input is not a dictionary.
         """
+        if None in self.analysis_type:
+            return
         if self.reanalysis is None:
             self.data_validator(PlantDataV3.reanalysis, self.reanalysis)
             return
@@ -996,13 +1001,20 @@ class PlantDataV3:
         }
         return error_cols if isinstance(error_cols, dict) else {}
 
-    def validate(self, column_names: bool = True, column_dtypes: bool = True) -> None:
-        """Explicit validation method for post-hoc validation.
+    def validate(self, metadata: Optional[dict | str | Path | PlantMetaData] = None) -> None:
+        """Secondary method to validate the plant data objects after loading or changing
+        data with option to provide an updated `metadata` object/file as well
 
-        NOTE: This serves as another alternative way into the validation routines, and
-            the methods as written are in no way a satisfactory final/optimized version
+        Args:
+            metadata (Optional[dict]): Updated metadata object, dictionary, or file to
+            create the updated metadata for data validation.
+
+        Raises:
+            ValueError: Raised at the end if errors are caught in the validation steps.
         """
-        # NOTE: This is purely pseudo-python code and will not at all work
+        if metadata is not None:
+            self.metadata = metadata
+
         self._errors = {"missing": self._validate_column_names(), "dtype": self._validate_types()}
         self.reanalysis_validation()
 
