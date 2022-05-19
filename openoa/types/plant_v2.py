@@ -841,7 +841,7 @@ class PlantDataV3:
 
     @scada.validator
     @meter.validator
-    @tower.validator
+    # @tower.validator
     @status.validator
     @curtail.validator
     @asset.validator
