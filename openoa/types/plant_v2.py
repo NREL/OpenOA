@@ -25,18 +25,21 @@ from .reanalysis import ReanalysisData
 
 
 # PlantData V2 with Attrs Dataclass
-METADATA_DTYPE = "dtype"
-METADATA_UNITS = "units"
+
+# Datetime frequency checks
+_at_least_monthly = ("M", "MS", "W", "D", "H", "T", "min", "S", "L", "ms", "U", "us", "N")
+_at_least_daily = ("D", "H", "T", "min", "S", "L", "ms", "U", "us", "N")
+_at_least_hourly = ("H", "T", "min", "S", "L", "ms", "U", "us", "N")
 
 ANALYSIS_REQUIREMENTS = {
     "MonteCarloAEP": {
         "meter": {
             "columns": ["energy"],
-            "freq": ("MS", "D", "H", "T"),
+            "freq": _at_least_monthly,
         },
         "curtail": {
             "columns": ["availability", "curtailment"],
-            "freq": ("MS", "D", "H", "T"),
+            "freq": _at_least_monthly,
         },
         "reanalysis": {
             "columns": ["windspeed", "density"],
@@ -44,25 +47,27 @@ ANALYSIS_REQUIREMENTS = {
                 "reg_temperature": ["temperature"],
                 "reg_winddirection": ["windspeed_u", "windspeed_v"],
             },
+            "freq": _at_least_monthly,
         },
     },
     "TurbineLongTermGrossEnergy": {
         "scada": {
             "columns": ["id", "windspeed", "power"],  # TODO: wtur_W_avg vs energy_kwh ?
-            "freq": ("D", "H", "T"),
+            "freq": _at_least_daily,
         },
         "reanalysis": {
             "columns": ["windspeed", "wind_direction", "density"],
+            "freq": _at_least_daily,
         },
     },
     "ElectricalLosses": {
         "scada": {
             "columns": ["energy"],
-            "freq": ("D", "H", "T"),
+            "freq": _at_least_daily,
         },
         "meter": {
             "columns": ["energy"],
-            "freq": ("MS", "D", "H", "T"),
+            "freq": _at_least_monthly,
         },
     },
 }
@@ -89,6 +94,33 @@ def analysis_type_validator(
         raise ValueError(
             f"{attribute.name} input: {incorrect_types} is invalid, must be one of 'all' or a combination of: {[*ANALYSIS_REQUIREMENTS]}"
         )
+
+
+def frequency_validator(
+    actual_freq: str, desired_freq: Optional[str | set[str]], exact: bool
+) -> bool:
+    """Helper function to check if the actual datetime stamp frequency is valid compared
+    to what is required.
+
+    Args:
+        actual_freq (str): The frequency of the datetime stamp, or `df.index.freq`.
+        desired_freq (Optional[str  |  set[str]]): Either the exact frequency required,
+            or a set of options that are also valid, in which case any numeric
+            information encoded in `actual_freq` will be dropped.
+        exact (bool): If the provided frequency codes should be exact matches (`True`),
+            or, if `False`, the check should be for a combination of matches.
+
+    Returns:
+        bool: If the actual datetime frequency is sufficient, per the match requirements.
+    """
+    if exact:
+        return actual_freq != desired_freq
+
+    if desired_freq is None:
+        return True
+
+    actual_freq = "".join(filter(str.isalpha, actual_freq))
+    return actual_freq in desired_freq
 
 
 @define(auto_attribs=True)
@@ -575,6 +607,35 @@ class PlantMetaData(FromDictMixin):
 
         raise ValueError("PlantMetaData can only be loaded from str, Path, or dict objects.")
 
+    def frequency_requirements(self, analysis_types: list[str | None]) -> dict[str, set[str]]:
+        """Creates the frequency requirements
+
+        Args:
+            analysis_types (list[str  |  None]): _description_
+
+        Returns:
+            dict[str, set[str]]: _description_
+        """
+        requirements = {key: ANALYSIS_REQUIREMENTS[key] for key in analysis_types}
+        frequency_requirements = {
+            key: {name: value["freq"] for name, value in values.items()}
+            for key, values in requirements.items()
+        }
+        frequency = {
+            k: []
+            for k in set(
+                itertools.chain.from_iterable([[*val] for val in frequency_requirements.values()])
+            )
+        }
+        for vals in frequency_requirements.values():
+            for name, req in vals.items():
+                reqs = frequency[name]
+                if reqs == []:
+                    frequency[name] = set(req)
+                else:
+                    frequency[name] = reqs.intersection(req)
+        return frequency
+
 
 ####################################################
 # Define the data validator and conversion functions
@@ -582,7 +643,7 @@ class PlantMetaData(FromDictMixin):
 
 
 def convert_to_list(
-    value: Sequence | str | int | float,
+    value: Sequence | str | int | float | None,
     manipulation: Callable | None = None,
 ) -> list:
     """Converts an unknown element that could be a list or single, non-sequence element
@@ -601,7 +662,7 @@ def convert_to_list(
         The new list of elements.
     """
 
-    if isinstance(value, (str, int, float)):
+    if isinstance(value, (str, int, float, None)):
         value = [value]
     if manipulation is not None:
         return [manipulation(el) for el in value]
@@ -686,6 +747,12 @@ def analysis_filter(error_dict: dict, analysis_types: list[str] = ["all"]) -> di
         for key, values in column_requirements.items()
     }
 
+    # Filter the incorrect frequencies, so only analysis-specific categories are provided
+    # TODO
+    # error_dict["frequency"] = {
+    #     key: value["freq"] for key, value in requirements if value["freq"] not in frequency
+    # }
+
     return error_dict
 
 
@@ -705,8 +772,6 @@ def compose_error_message(error_dict: dict, analysis_types: list[str] = ["all"])
     if "all" not in analysis_types:
         error_dict = analysis_filter(error_dict, analysis_types)
 
-    # from pprint import pprint
-    # pprint(error_dict)
     messages = [
         f"`{name}` data is missing the following columns: {cols}"
         for name, cols in error_dict["missing"].items()
@@ -719,6 +784,7 @@ def compose_error_message(error_dict: dict, analysis_types: list[str] = ["all"])
             if len(cols) > 0
         ]
     )
+    messages.extend([f"`{name}` data is of the wrong frequecy" for name in error_dict["frequency"]])
     return "\n".join(messages)
 
 
@@ -820,14 +886,12 @@ class PlantDataV3:
 
     # Error catching in validation
     _errors: dict[str, list[str]] = attr.ib(
-        default={"missing": {}, "dtype": {}}, init=False
+        default={"missing": {}, "dtype": {}, "frequency": []}, init=False
     )  # No user initialization required
 
     def __attrs_post_init__(self):
         self.reanalysis_validation()
         # Check the errors againts the analysis requirements
-        # from pprint import pprint
-        # pprint(self._errors)
         error_message = compose_error_message(self._errors, analysis_types=self.analysis_type)
         if error_message != "":
             # raise ValueError("\n".join(itertools.chain(*self._errors.values())))
@@ -915,6 +979,7 @@ class PlantDataV3:
 
         self._errors["missing"].update(self._validate_column_names(category="reanalysis"))
         self._errors["dtype"].update(self._validate_types(category="reanalysis"))
+        self._errors["frequency"].extend(self._validate_frequency(category="reanalysis"))
 
     @property
     def analysis_values(self):
@@ -1001,6 +1066,54 @@ class PlantDataV3:
         }
         return error_cols if isinstance(error_cols, dict) else {}
 
+    def _validate_frequency(self, category: str = "all") -> list[str]:
+        frequency_requirements = self.metadata.frequency_requirements(self.analysis_type)
+        actual_frequencies = {
+            name: df.index.freq for name, df in self.analysis_values if name != "reanalysis"
+        }
+        actual_frequencies["reanalysis"] = {
+            name: df.index.freq for name, df in self.analysis_values["reanalysis"]
+        }
+        # TODO: ACTUALLY MATCH AGAINST REAL, AND CHECK IF THAT MATTERS, AND IF SO
+        # CHECK AGAINST THE REQUIREMENTS
+        if category == "reanalysis":
+            invalid_freq = [
+                f"{category}-{name}"
+                for name, df in self.analysis_values[category].items()
+                if frequency_validator(
+                    df.index.freq, getattr(self.metadata, category)[name].frequency, True
+                )
+                or frequency_validator(df.index.freq, frequency_requirements.get(category), False)
+            ]
+            return invalid_freq
+
+        if category != "all":
+            freq = self.analysis_values[category].index.freq
+            if frequency_validator(
+                freq, getattr(self.metadata, category).frequency, True
+            ) or frequency_validator(freq, frequency_requirements.get(category), False):
+                return [category]
+            else:
+                return []
+
+        invalid_freq = [
+            name
+            for name, df in self.analysis_values.items()
+            if frequency_validator(df.index.freq, getattr(self.metadata, name).frequency, True)
+            or frequency_validator(df.index.freq, frequency_requirements.get(name), False)
+        ]
+        invalid_freq.extend(
+            [
+                f"reanalysis-{name}"
+                for name, df, in self.analysis_values["reanalysis"].items()
+                if frequency_validator(
+                    df.index.freq, getattr(self.metadata, category)[name].frequency, True
+                )
+                or frequency_validator(df.index.freq, frequency_requirements.get(category), False)
+            ]
+        )
+        return invalid_freq
+
     def validate(self, metadata: Optional[dict | str | Path | PlantMetaData] = None) -> None:
         """Secondary method to validate the plant data objects after loading or changing
         data with option to provide an updated `metadata` object/file as well
@@ -1015,7 +1128,11 @@ class PlantDataV3:
         if metadata is not None:
             self.metadata = metadata
 
-        self._errors = {"missing": self._validate_column_names(), "dtype": self._validate_types()}
+        self._errors = {
+            "missing": self._validate_column_names(),
+            "dtype": self._validate_types(),
+            "frequency": self._validate_frequency(),
+        }
         self.reanalysis_validation()
 
         # TODO: Check for extra columns?
