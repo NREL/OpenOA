@@ -1077,6 +1077,9 @@ class PlantDataV3:
         # TODO: ACTUALLY MATCH AGAINST REAL, AND CHECK IF THAT MATTERS, AND IF SO
         # CHECK AGAINST THE REQUIREMENTS
         if category == "reanalysis":
+            # Check if this category requires a check
+            if category not in frequency_requirements:
+                return {}
             invalid_freq = [
                 f"{category}-{name}"
                 for name, df in self.analysis_values[category].items()
