@@ -24,7 +24,7 @@ To work on a feature, please fork OpenOA first and then create a feature branch 
 Work out of this feature branch before submitting a pull request.
 Be sure to periodically synchronize the upstream develop branch into your feature branch to avoid conflicts in the pull request.
 
-When the feature branch is ready, make a pull request to NREL/OpenOA through the Github.com UI.  You will need to accept the Contributor License Agreement(CLA) for pull requests greater than 20 lines in length. [CLA Language](https://gist.github.com/Dynorat/118aaa0c8277be986c59c32029898faa)
+When the feature branch is ready, make a pull request to NREL/OpenOA through the Github.com UI. When submitting a pull request, you will need to accept the Contributor License Agreement(CLA). [CLA Language](https://gist.github.com/Dynorat/118aaa0c8277be986c59c32029898faa)
 
 [![CLA assistant](https://cla-assistant.io/readme/badge/NREL/OpenOA)](https://cla-assistant.io/NREL/OpenOA)
 
@@ -54,11 +54,15 @@ work is fully covered.
 
 ## Coding Style
 
-This code follows the PEP 8 style guide and uses the ``pycodestyle`` linter to check for compliance.
-The only exception is the line length limit of 120 characters.
+This code uses a ``pre-commit`` workflow where code styling and linting is taken care of when a user
+commits their code. Specifically, this code utilizes ``black`` for automatic formatting (line length, quotation usage, hanging
+lines, etc.), ``isort`` for automatic import sorting, and ``flake8`` for linting.
+
+To activate the ``pre-commit`` workflow, the user must install the develop version as outlined in the
+[Readme](https://github.com/NREL/OpenOA/tree/develop#Development), and run the following line:
 
 ```
-pylint --max-line-length=120 operational_analysis
+pre-commit install
 ```
 
 ## Documentation Style
@@ -73,13 +77,30 @@ All code should be paired with a corresponding unit or integration test.
 OpenOA uses pytest and the built in unittest framework.
 For instructions on running tests, please see the [Readme](https://github.com/NREL/OpenOA/tree/develop#Testing).
 
-## Deploying a Package to PyPi
+## Release Process
 
-The repository is equipped with a github action to build and publish new versions to PyPi.
-A maintainer can invoke this workflow by pushing a tag to the NREL/OpenOA reposiory with prefix "v", such as "v1.1.0".
-The action is defined in `.github/workflows/tags-to-pypi.yml`.
-
-```
-git tag -a v1.2.3 -m "Tag messgae for v1.2.3"
-git push origin v1.2.3
-```
+ - Bump version number and metadata in
+   - operational_analysis/__init__.py
+   - operational_analysis/setup.py
+   - sphinx/config.py
+ - Bump version numbers of any dependencies in
+   - setup.py
+   - requirements.txt
+   - sphinx/requirements.txt
+ - Update the changelog, removing the UNRELEASED section and converting it into a release heading.
+ - Make a pull request into develop with these updates
+   - Note: Ensure all tests pass and the documentation is building correctly prior to merging
+ - Merge develop into main through the git command line
+   ```
+    git checkout main
+    git merge develop
+    git push
+    ```
+ - Tag the new release version:
+   ```
+    git tag -a v1.2.3 -m "Tag messgae for v1.2.3"
+    git push origin v1.2.3
+    ```
+ - Deploying a Package to PyPi
+    - The repository is equipped with a github action to build and publish new versions to PyPi. A maintainer can invoke this workflow by pushing a tag to the NREL/OpenOA reposiory with prefix "v", such as "v1.1.0".
+    - The action is defined in `.github/workflows/tags-to-pypi.yml`.

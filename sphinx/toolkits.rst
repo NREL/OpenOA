@@ -70,3 +70,21 @@ Unit Conversion
     :members:
     :undoc-members:
     :show-inheritance:
+
+
+Plotting
+---------------------
+
+.. automodule:: operational_analysis.toolkits.pandas_plotting
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+Reanalysis Downloading
+----------------------
+
+.. automodule:: operational_analysis.toolkits.reanalysis_downloading
+    :members:
+    :undoc-members:
+    :show-inheritance:

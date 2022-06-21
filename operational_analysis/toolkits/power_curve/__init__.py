@@ -4,4 +4,4 @@ power generation.
 
 """
 
-from .functions import *
+from .functions import IEC, gam, gam_3param, logistic_5_parametric

@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/pycqa/isort
-    rev: 5.6.3
+    rev: 5.10.1
     hooks:
       - id: isort
         additional_dependencies: [toml]
@@ -16,7 +16,7 @@ repos:
 
 
   - repo: https://github.com/psf/black
-    rev: stable
+    rev: 21.12b0
     hooks:
         - id: black
           name: black
@@ -24,7 +24,7 @@ repos:
           language_version: python3.7
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v2.3.0
+    rev: v4.1.0
     hooks:
     -   id: trailing-whitespace
     -   id: end-of-file-fixer
@@ -36,6 +36,8 @@ repos:
     -   id: mixed-line-ending
     -   id: pretty-format-json
         args: [--autofix]
-    -   id: flake8
-        additional_dependencies: [flake8-docstrings]
-        exclude: ^tests/
+
+  -   repo: https://github.com/pycqa/flake8
+      rev: '4.0.1'
+      hooks:
+      -   id: flake8

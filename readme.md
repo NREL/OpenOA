@@ -24,11 +24,26 @@ such as Dask and Spark, in the future.
 
 If you would like to try out the code before installation or simply explore the possibilities, please see our examples on [Binder](https://mybinder.org/v2/gh/NREL/OpenOA/main?filepath=examples).
 
+If you use this software in your work, please cite our JOSS article with the following BibTex:
+
+```
+@article{Perr-Sauer2021,
+  doi = {10.21105/joss.02171},
+  url = {https://doi.org/10.21105/joss.02171},
+  year = {2021},
+  publisher = {The Open Journal},
+  volume = {6},
+  number = {58},
+  pages = {2171},
+  author = {Jordan Perr-Sauer and Mike Optis and Jason M. Fields and Nicola Bodini and Joseph C.Y. Lee and Austin Todd and Eric Simley and Robert Hammond and Caleb Phillips and Monte Lunacek and Travis Kemper and Lindy Williams and Anna Craig and Nathan Agarwal and Shawn Sheng and John Meissner},
+  title = {OpenOA: An Open-Source Codebase For Operational Analysis of Wind Farms},
+  journal = {Journal of Open Source Software}
+}
+```
+
 ### Requirements
 
-  * Python 3.6-3.8 with pip.
-
-OpenOA should be compatible with newer versions of Python, but one of its dependencies, Shapely, does not yet have binary wheels in pip for Python 3.9 on Mac.
+  * Python 3.6+ with pip.
 
 We strongly recommend using the Anaconda Python distribution and creating a new conda environment for OpenOA. You can download Anaconda through [their website.](https://www.anaconda.com/products/individual)
 
@@ -39,7 +54,7 @@ conda create --name openoa-env python=3.8
 conda activate openoa-env
 ```
 
-### Installation:
+### Installation
 
 Clone the repository and install the library and its dependencies using pip:
 
@@ -71,16 +86,18 @@ pip install --upgrade pywin32==255
 
 ### Development
 
-Development dependencies are provided through the develop extra flag in setup.py. Here, we install OpenOA, with development dependencies, in editable mode:
+Development dependencies are provided through the develop extra flag in setup.py. Here, we install OpenOA, with development dependencies, in editable mode, and activate the pre-commit workflow (note: this second step must be done before committing any
+changes):
 
 ```
-pip install -e ./OpenOA[develop]
-```
-
-Optionally, activate git precommit to automatically run the linting pipeline for committed files:
-
-```
+pip install -e "./OpenOA[develop]"
 pre-commit install
+```
+
+Occasionally, you will need to update the dependencies in the pre-commit workflow, which will provide an error when this needs to happen. When it does, this can normally be resolved with the below code, after which you can continue with your normal git workflow:
+```
+pre-commit autoupdate
+git add .pre-commit-config.yaml
 ```
 
 #### Example Notebooks and Data
