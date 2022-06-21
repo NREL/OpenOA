@@ -88,8 +88,7 @@ def load_asset(conn, plant):
 def load_scada_meta(conn, plant):
     query = f"""
     SELECT
-        interval_n,
-        interval_units,
+        interval_s,
         value_type,
         value_units
     FROM
@@ -169,7 +168,7 @@ def load_scada_prepare(plant):
 def check_metadata_row(row, allowed_freq=["10T"], allowed_types=["sum"], allowed_units=["kWh"]):
     
     accepted_freq = None
-    freq_long_str = f"{row['interval_n']} {row['interval_units']}"
+    freq_long_str = f"{row['interval_s']} sec"
     freq_timedelta = pd.Timedelta(freq_long_str)
     for freq in allowed_freq:
         if freq_timedelta == pd.Timedelta(freq): 
@@ -187,8 +186,7 @@ def check_metadata_row(row, allowed_freq=["10T"], allowed_types=["sum"], allowed
 def load_curtailment_meta(conn, plant):
     query = f"""
     SELECT
-        interval_n,
-        interval_units,
+        interval_s,
         value_type,
         value_units
     FROM
@@ -240,8 +238,7 @@ def load_curtailment_prepare(plant):
 def load_meter_meta(conn, plant):
     query = f"""
     SELECT
-        interval_n,
-        interval_units,
+        interval_s,
         value_type,
         value_units
     FROM
@@ -297,8 +294,6 @@ def load_reanalysis(conn, plant, reanalysis_products):
     for product in reanalysis_products:
 
         product_query_string = product.upper()
-        if product_query_string == "MERRA2":
-            product_query_string = "MERRA-2"
 
         reanalysis_query = f"""
         SELECT
