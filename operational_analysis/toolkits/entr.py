@@ -295,6 +295,11 @@ def load_reanalysis(conn, plant, reanalysis_products):
         return ## No reanalysis products were requested
 
     for product in reanalysis_products:
+
+        product_query_string = product.upper()
+        if product_query_string == "MERRA2":
+            product_query_string = "MERRA-2"
+
         reanalysis_query = f"""
         SELECT
             date_time,
@@ -309,7 +314,7 @@ def load_reanalysis(conn, plant, reanalysis_products):
             entr_warehouse.openoa_reanalysis
         WHERE
             plant_id = {plant._entr_plant_id} AND
-            reanalysis_dataset_name = "{product.upper()}";
+            reanalysis_dataset_name = "{product_query_string}";
         """
         plant.reanalysis._product[product.lower()].df = pd.read_sql(reanalysis_query, conn)
 
