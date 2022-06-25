@@ -2,6 +2,8 @@
 This module provides methods for processing meteorological data.
 """
 
+import warnings
+
 import numpy as np
 import pandas as pd
 import scipy.constants as const
@@ -145,80 +147,71 @@ def compute_turbulence_intensity(mean_col, std_col):
     return std_col / mean_col
 
 
-def compute_shear(df, windspeed_heights, ref_col="empty"):
+def compute_shear(data: pd.DataFrame, ws_heights: dict) -> np.array:
     """
-    Compute shear coefficient between wind speed measurements
+    Computes shear coefficient between wind speed measurements using the power law.
+    The shear coefficient is obtained by evaluating the expression for an OLS regression coefficient.
 
     Args:
-        df(:obj:`pandas.DataFrame`): dataframe with wind speed columns
-        windspeed_heights(:obj:`dict`): keys are strings of columns in <df> containing wind speed data, values are
+        data(:obj:`pandas.DataFrame`): dataframe with wind speed columns
+        ws_heights(:obj:`dict`): keys are strings of columns in <df> containing wind speed data, values are
             associated sensor heights (m)
-        ref_col(:obj:`str`): data column name for the data to use as the normalization value; only pertinent if
-            optimizing over multiple measurements
 
     Returns:
-        :obj:`pandas.Series`: shear coefficient (unitless)
+        :obj:`numpy.array`: shear coefficient (unitless)
     """
 
-    # Convert wind speed heights to float
-    windspeed_heights = dict(
-        list(
-            zip(
-                list(windspeed_heights.keys()),
-                [float(value) for value in list(windspeed_heights.values())],
-            )
-        )
-    )
+    # create "u" 2-D array; where element [i,j] is the wind speed measurement at the ith timestep and jth sensor height
+    u: np.ndarray = data[ws_heights.keys()].to_numpy()
 
-    keys = list(windspeed_heights.keys())
-    if len(keys) <= 1:
-        raise Exception("More than one wind speed measurement required to compute shear.")
-    elif len(keys) == 2:
-        # If there are only two measurements, no optimization possible
-        wind_a = keys[0]
-        wind_b = keys[1]
-        height_a = windspeed_heights[wind_a]
-        height_b = windspeed_heights[wind_b]
-        return (np.log(df[wind_b]) - np.log(df[wind_a])) / (np.log(height_b) - np.log(height_a))
-    else:
-        from scipy.optimize import curve_fit
+    # create "z" 2_D array; columns are filled with the sensor height
+    n: int = len(data)
+    heights: list = [np.full(n, height) for height in ws_heights.values()]
+    z: np.ndarray = np.column_stack(tuple(heights))
 
-        def power_law(x, alpha):
-            return (x) ** alpha
+    # take log of z & u
+    with warnings.catch_warnings():  # suppress log division by zero warning.
+        warnings.filterwarnings("ignore", r"divide by zero encountered in log")
+        u = np.log(u)
+        z = np.log(z)
 
-        # Normalize wind speeds and heights to reference values
-        df_norm = df[keys].div(df[ref_col], axis=0)
-        h0 = windspeed_heights[ref_col]
-        windspeed_heights = {k: v / h0 for k, v in windspeed_heights.items()}
+    # correct -inf or NaN if any.
+    nan_or_ninf = np.logical_or(np.isneginf(u), np.isnan(u))
+    if np.any(nan_or_ninf):
+        # replace -inf or NaN with zero or NaN in u and corresponding location in z such that these
+        # elements are excluded from the regression.
+        u[nan_or_ninf] = 0
+        z[nan_or_ninf] = np.nan
 
-        # Rename columns to be windspeed measurement heights
-        df_norm = df_norm.rename(columns=windspeed_heights)
+    # shift rows of z by the mean of z to simplify shear calculation
+    z = z - (np.nanmean(z, axis=1))[:, None]
 
-        alpha = pd.DataFrame(
-            np.ones((len(df_norm), 1)) * np.nan, index=df_norm.index, columns=["alpha"]
-        )
+    # finally, replace NaN's in z by zero so those points are effectively excluded from the regression
+    z[np.isnan(z)] = 0
 
-        # For each row
-        for time in df_norm.index:
+    # compute shear based on simple linear regression
+    alpha = (z * u).sum(axis=1) / (z * z).sum(axis=1)
 
-            t = (
-                df_norm.loc[time]  # Take the row as a series, the index will be the column names,
-                .reset_index()  # Resetting the index yields the heights as a column
-                .to_numpy()
-            )  # Numpy array: each row a sensor, column 0 the heights, column 1 the measurment
-            t = t[~np.isnan(t).any(axis=1)]  # Drop rows (sensors) for which the measurement was nan
-            h = t[:, 0]  # The measurement heights
-            u = t[:, 1]  # The measurements
-            if (
-                np.shape(u)[0] <= 1
-            ):  # If less than two measurements were available, leave value as nan
-                continue
-            else:
-                alpha.loc[time, "alpha"] = curve_fit(power_law, h, u)[0][
-                    0
-                ]  # perform least square optimization
+    return alpha
 
-        return alpha["alpha"]
+
+def extrapolate_windspeed(v1, z1: float, z2: float, shear):
+    """
+    Extrapolates wind speed vertically using the Power Law.
+
+    Args:
+        v1(:obj: `pandas.Series` | `numpy.array` | `float`): Wind speed measurements at the reference height.
+        z1(:obj:`float`): Height of reference wind speed measurements; units in meters
+        z2(:obj:`float`): Target extrapolation height; units in meters
+        shear(:obj: `pandas.Series` | `numpy.array` | `float`): Shear value(s)
+
+    Returns:
+        :obj: (`pandas.Series` | `numpy.array` | `float`): Wind speed extrapolated to target height.
+    """
+
+    target_ws = v1 * (z2 / z1) ** shear
+
+    return target_ws
 
 
 def compute_veer(wind_a, height_a, wind_b, height_b):
