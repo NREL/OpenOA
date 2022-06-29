@@ -1066,7 +1066,7 @@ class PlantData:
     def _validate_frequency(self, category: str = "all") -> list[str]:
         frequency_requirements = self.metadata.frequency_requirements(self.analysis_type)
         actual_frequencies = {
-            name: df.index.freq for name, df in self.analysis_values if name != "reanalysis"
+            name: df.index.freq for name, df in self.analysis_values.items() if name != "reanalysis"
         }
         actual_frequencies["reanalysis"] = {
             name: df.index.freq for name, df in self.analysis_values["reanalysis"]

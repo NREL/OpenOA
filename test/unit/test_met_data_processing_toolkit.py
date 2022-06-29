@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import pandas as pd
 from numpy import testing as nptest
-from openoa.toolkits import met_data_processing as mt
+from openoa.utils import met_data_processing as mt
 
 
 class SimpleMetProcessing(unittest.TestCase):

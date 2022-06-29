@@ -10,8 +10,8 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 from openoa import logging, logged_method_call
-from openoa.toolkits import filters, imputing, timeseries, met_data_processing
-from openoa.toolkits.power_curve import functions
+from openoa.utils import filters, imputing, timeseries, met_data_processing
+from openoa.utils.power_curve import functions
 
 
 logger = logging.getLogger(__name__)

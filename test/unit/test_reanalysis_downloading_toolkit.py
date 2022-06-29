@@ -1,6 +1,6 @@
 import pandas as pd
 import pytest
-from openoa.toolkits import reanalysis_downloading as rd
+from openoa.utils import reanalysis_downloading as rd
 
 
 def test_get_dataset_names():

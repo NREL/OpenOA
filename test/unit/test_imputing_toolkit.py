@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import pandas as pd
 from numpy import testing as nptest
-from openoa.toolkits import imputing
+from openoa.utils import imputing
 
 
 class SimpleFilters(unittest.TestCase):

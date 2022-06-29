@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import pandas as pd
 from numpy import testing as nptest
-from openoa.toolkits import unit_conversion
+from openoa.utils import unit_conversion
 
 
 class SimpleUnitConversionTests(unittest.TestCase):
