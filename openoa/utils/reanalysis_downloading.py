@@ -52,7 +52,7 @@ import numpy as np
 import pandas as pd
 import requests
 
-import openoa.toolkits.met_data_processing as met
+import openoa.utils.met_data_processing as met
 
 
 def _get_dataset_names(dataset):

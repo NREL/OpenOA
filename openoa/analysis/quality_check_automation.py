@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 from openoa import logging, logged_method_call
 from pyproj import Proj
 from dateutil import tz
-from openoa.toolkits import timeseries
+from openoa.utils import timeseries
 
 
 Number = Union[int, float]

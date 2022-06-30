@@ -36,12 +36,12 @@ from zipfile import ZipFile
 import numpy as np
 import pandas as pd
 
-import openoa.toolkits.timeseries as ts
-import openoa.toolkits.unit_conversion as un
-import openoa.toolkits.met_data_processing as met
+import openoa.utils.timeseries as ts
+import openoa.utils.unit_conversion as un
+import openoa.utils.met_data_processing as met
 from openoa import logging, logged_method_call
 from openoa.types import PlantData
-from openoa.toolkits import filters
+from openoa.utils import filters
 
 
 logger = logging.getLogger(__name__)

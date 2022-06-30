@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import pandas as pd
 from numpy import testing as nptest
-from openoa.toolkits import filters
+from openoa.utils import filters
 
 
 class SimpleFilters(unittest.TestCase):

@@ -1,4 +1,4 @@
-__version__ = "2.3"
+__version__ = "3.0.0"
 """
 When bumping version, please be sure to also update parameters in sphinx/conf.py
 """
@@ -8,6 +8,11 @@ import json
 import logging
 import logging.config
 
+## API Shortcuts
+
+from openoa.plant import PlantData
+
+## Logging
 
 def setup_logging(default_path="logging.json", default_level=logging.INFO, env_key="LOG_CFG"):
     """Setup logging configuration"""

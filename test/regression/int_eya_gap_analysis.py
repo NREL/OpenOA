@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 import numpy.testing as npt
-from openoa.methods.eya_gap_analysis import EYAGapAnalysis
+from openoa.analysis.eya_gap_analysis import EYAGapAnalysis
 
 
 class EYAGAPAnalysis(unittest.TestCase):

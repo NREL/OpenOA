@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import pytest
 from numpy import testing as nptest
-from openoa.methods import plant_analysis
+from openoa.analysis import plant_analysis
 from examples.project_ENGIE import Project_Engie
 
 
