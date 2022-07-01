@@ -20,7 +20,6 @@ import openoa.utils.met_data_processing as met
 from openoa.utils.reanalysis_downloading import download_reanalysis_data_planetos
 
 
-
 # PlantData V2 with Attrs Dataclass
 
 # Datetime frequency checks
@@ -613,7 +612,9 @@ class PlantMetaData(FromDictMixin):
         Returns:
             dict[str, set[str]]: _description_
         """
-        requirements = {key: ANALYSIS_REQUIREMENTS[key] for key in analysis_types}
+        requirements = {
+            key: ANALYSIS_REQUIREMENTS[key] for key in analysis_types if key is not None
+        }
         frequency_requirements = {
             key: {name: value["freq"] for name, value in values.items()}
             for key, values in requirements.items()
@@ -659,7 +660,7 @@ def convert_to_list(
         The new list of elements.
     """
 
-    if isinstance(value, (str, int, float, None)):
+    if isinstance(value, (str, int, float)) or value is None:
         value = [value]
     if manipulation is not None:
         return [manipulation(el) for el in value]
@@ -723,6 +724,9 @@ def analysis_filter(error_dict: dict, analysis_types: list[str] = ["all"]) -> di
     if "all" in analysis_types:
         return error_dict
 
+    if None in analysis_types:
+        return {}
+
     categories = ("scada", "meter", "tower", "curtail", "reanalysis", "asset")
     requirements = {key: ANALYSIS_REQUIREMENTS[key] for key in analysis_types}
     column_requirements = {
@@ -769,6 +773,9 @@ def compose_error_message(error_dict: dict, analysis_types: list[str] = ["all"])
     if "all" not in analysis_types:
         error_dict = analysis_filter(error_dict, analysis_types)
 
+    if None in analysis_types:
+        return ""
+
     messages = [
         f"`{name}` data is missing the following columns: {cols}"
         for name, cols in error_dict["missing"].items()
@@ -807,6 +814,16 @@ def load_to_pandas(data: str | Path | pd.DataFrame | spark.sql.DataFrame) -> pd.
         return data.toPandas()
     else:
         raise ValueError("Input data could not be converted to pandas")
+
+
+def load_to_pandas_dict(
+    data: dict[str | Path | pd.DataFrame | spark.sql.DataFrame],
+) -> dict[str, pd.DataFrame] | None:
+    if data is None:
+        return data
+    for key, val in data.items():
+        data[key] = load_to_pandas(val)
+    return data
 
 
 def rename_columns(df: pd.DataFrame, col_map: dict, reverse: bool = True) -> pd.DataFrame:
@@ -878,7 +895,9 @@ class PlantData:
     status: pd.DataFrame | None = attr.ib(default=None, converter=load_to_pandas)
     curtail: pd.DataFrame | None = attr.ib(default=None, converter=load_to_pandas)
     asset: pd.DataFrame | None = attr.ib(default=None, converter=load_to_pandas)
-    reanalysis: dict[str, pd.DataFrame] | None = attr.ib(default=None)
+    reanalysis: dict[str, pd.DataFrame] | None = attr.ib(
+        default=None, converter=load_to_pandas_dict
+    )
     preprocess: Callable | None = attr.ib(default=None)
 
     # Error catching in validation
