@@ -54,9 +54,13 @@ def extract_data(path="data/la_haute_borne"):
             zipfile.extractall(path)
 
 
-def prepare(path="data/la_haute_borne", scada_df = None):
+def prepare(path="data/la_haute_borne", scada_df = None, return_value="plantdata"):
     """
     Do all loading and preparation of the data for this plant.
+    args:
+    - path (str): Path to la_haute_borne data folder. If it doesn't exist, we will try to extract a zip file of the same name.
+    - scada_df (pandas.DataFrame): Override the scada dataframe with one provided by the user.
+    - return_value (str): "plantdata" will return a fully constructed PlantData object. "dataframes" will return a list of dataframes instead.
     """
 
     # Extract data if necessary
@@ -251,7 +255,7 @@ def prepare(path="data/la_haute_borne", scada_df = None):
     ##############
     # ASSET DATA #
     ##############
-    asset_df = pd.read_csv(f"{path}/era5_wind_la_haute_borne.csv")
+    asset_df = pd.read_csv(f"{path}/la-haute-borne_asset_table.csv")
 
     asset_df.rename(
         {
@@ -268,15 +272,18 @@ def prepare(path="data/la_haute_borne", scada_df = None):
     # Assign type to turbine for all assets
     asset_df["type"] = "turbine"
 
-    # Build and return PlantData
-    engie_plantdata = PlantData(
-        analysis_type="MonteCarloAEP",  # Choosing a random type that doesn't fail validation
-        metadata="data/plant_meta.yml",
-        scada=scada_df,
-        meter=meter_df,
-        curtail=curtail_df,
-        asset=asset_df,
-        reanalysis=dict(era5=reanalysis_era5_df, merra2=reanalysis_merra2_df),
-    )
+    if return_value == "dataframes":
+        return scada_df, meter_df, curtail_df, asset_df, dict(era5=reanalysis_era5_df, merra2=reanalysis_merra2_df)
+    elif return_value == "plantdata":
+        # Build and return PlantData
+        engie_plantdata = PlantData(
+            analysis_type="MonteCarloAEP",  # Choosing a random type that doesn't fail validation
+            metadata="data/plant_meta.yml",
+            scada=scada_df,
+            meter=meter_df,
+            curtail=curtail_df,
+            asset=asset_df,
+            reanalysis=dict(era5=reanalysis_era5_df, merra2=reanalysis_merra2_df),
+        )
 
-    return engie_plantdata
+        return engie_plantdata

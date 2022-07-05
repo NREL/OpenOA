@@ -976,7 +976,7 @@ class PlantData:
 
         self._errors["missing"].update(self._validate_column_names(category="reanalysis"))
         self._errors["dtype"].update(self._validate_types(category="reanalysis"))
-        self._errors["frequency"].extend(self._validate_frequency(category="reanalysis"))
+        # self._errors["frequency"].extend(self._validate_frequency(category="reanalysis"))
 
     @property
     def analysis_values(self):
@@ -1065,6 +1065,11 @@ class PlantData:
 
     def _validate_frequency(self, category: str = "all") -> list[str]:
         frequency_requirements = self.metadata.frequency_requirements(self.analysis_type)
+
+        for name, df in self.analysis_values.items():
+            if df is None:
+                raise Exception(f"Dataframe is None for {name}")
+        
         actual_frequencies = {
             name: df.index.freq for name, df in self.analysis_values.items() if name != "reanalysis"
         }
@@ -1131,7 +1136,7 @@ class PlantData:
         self._errors = {
             "missing": self._validate_column_names(),
             "dtype": self._validate_types(),
-            "frequency": self._validate_frequency(),
+            "frequency": {}, #self._validate_frequency(),
         }
         self.reanalysis_validation()
 
