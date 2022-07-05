@@ -1,20 +1,16 @@
 from __future__ import annotations
 
-import io
-import os
 import json
 import itertools
 from typing import Callable, Optional, Sequence
 from pathlib import Path
-from dataclasses import dataclass
 
 import attr
 import yaml
 import numpy as np
 import pandas as pd
 import pyspark as spark
-from attr import define, fields, fields_dict
-from dateutil.parser import parse
+from attr import define
 
 import openoa.utils.met_data_processing as met
 from openoa.utils.reanalysis_downloading import download_reanalysis_data_planetos
@@ -604,13 +600,16 @@ class PlantMetaData(FromDictMixin):
         raise ValueError("PlantMetaData can only be loaded from str, Path, or dict objects.")
 
     def frequency_requirements(self, analysis_types: list[str | None]) -> dict[str, set[str]]:
-        """Creates the frequency requirements
+        """Creates a frequency requirements dictionary for each data type with the name
+        as the key and a set of valid frequency fields as the values.
 
         Args:
-            analysis_types (list[str  |  None]): _description_
+            analysis_types (list[str  |  None]): The analyses the data is intended to be
+                used for, which will determine what data need to be checked.
 
         Returns:
-            dict[str, set[str]]: _description_
+            dict[str, set[str]]: The dictionary of data type name and valid frequencies
+                for the datetime stamps.
         """
         requirements = {
             key: ANALYSIS_REQUIREMENTS[key] for key in analysis_types if key is not None
@@ -706,7 +705,7 @@ def dtype_converter(df: pd.DataFrame, column_types={}) -> None | list[str]:
     for column, new_type in column_types.items():
         if new_type in (np.datetime64, pd.DatetimeIndex):
             try:
-                df[column] = pd.to_datetime(df[column], utc=True)
+                df[column] = pd.DatetimeIndex(pd.to_datetime(df[column], utc=True))
             except Exception as e:  # noqa: disable=E722
                 errors.append(column)
             continue
@@ -907,6 +906,8 @@ class PlantData:
 
     def __attrs_post_init__(self):
         self.reanalysis_validation()
+        self._set_index_columns()
+        self._validate_frequency()
         # Check the errors againts the analysis requirements
         error_message = compose_error_message(self._errors, analysis_types=self.analysis_type)
         if error_message != "":
@@ -946,6 +947,48 @@ class PlantData:
         else:
             self._errors["missing"].update(self._validate_column_names(category=name))
             self._errors["dtype"].update(self._validate_types(category=name))
+
+    def _set_index_columns(self) -> None:
+        """Sets the index value for each of the `PlantData` objects that are not `None`."""
+        if self.scada is not None:
+            time_col = self.metadata.scada.col_map["time"]
+            id_col = self.metadata.scada.col_map["id"]
+            self.scada[time_col] = pd.DatetimeIndex(self.scada[time_col])
+            self.scada = self.scada.set_index([time_col, id_col], drop=False)
+            self.scada.index.names = ["time", "id"]
+
+        if self.meter is not None:
+            time_col = self.metadata.meter.col_map["time"]
+            self.meter[time_col] = pd.DatetimeIndex(self.meter[time_col])
+            self.meter = self.meter.set_index([time_col], drop=False)
+            self.meter.index.name = "time"
+
+        if self.status is not None:
+            time_col = self.metadata.status.col_map["time"]
+            id_col = self.metadata.status.col_map["id"]
+            self.status[time_col] = pd.DatetimeIndex(self.status[time_col])
+            self.status = self.status.set_index([time_col, id_col], drop=False)
+            self.status.index.names = ["time", "id"]
+
+        if self.curtail is not None:
+            time_col = self.metadata.curtail.col_map["time"]
+            self.curtail[time_col] = pd.DatetimeIndex(self.curtail[time_col])
+            self.curtail = self.curtail.set_index([time_col], drop=False)
+            self.curtail.index.name = "time"
+
+        if self.asset is not None:
+            id_col = self.metadata.asset.col_map["id"]
+            self.asset = self.asset.set_index([id_col])
+            self.asset.index.name = "id"
+
+        if self.reanalysis is not None:
+            for name in self.reanalysis:
+                time_col = self.metadata.reanalysis["name"].col_map["time"]
+                self.reanalysis["name"][time_col] = pd.DatetimeIndex(
+                    self.reanalysis["name"][time_col]
+                )
+                self.reanalysis["name"] = self.reanalysis["name"].set_index([time_col], drop=False)
+                self.reanalysis["name"].index.name = "time"
 
     def reanalysis_validation(self) -> None:
         """Provides the reanalysis data initialization and validation routine.
@@ -995,7 +1038,6 @@ class PlantData:
 
         self._errors["missing"].update(self._validate_column_names(category="reanalysis"))
         self._errors["dtype"].update(self._validate_types(category="reanalysis"))
-        self._errors["frequency"].extend(self._validate_frequency(category="reanalysis"))
 
     @property
     def analysis_values(self):
@@ -1004,7 +1046,7 @@ class PlantData:
         values = dict(
             scada=self.scada,
             meter=self.meter,
-            tower=self.tower,
+            # tower=self.tower,  # NOT IN USE CURRENTLY
             asset=self.asset,
             status=self.status,
             curtail=self.curtail,
@@ -1082,14 +1124,72 @@ class PlantData:
         }
         return error_cols if isinstance(error_cols, dict) else {}
 
+    def _get_frequency(self, category: str = "all") -> dict:
+        """Retrieves the frequency values for each of the requested data types.
+
+        Args:
+            category (str, optional): The focal data type to get the timestamp frequency, or for all
+                available ("all"). Defaults to "all".
+
+        Returns:
+            dict: Dictionary mapping of data type to frequency, or nested dictionary for reanalysis.
+        """
+        data_dict = self.analysis_values
+
+        # Process single category cases first
+        if category in ("asset"):
+            return {category: None}
+        elif category in ("scada", "status"):
+            df = data_dict[category]
+            freq = df.index.get_level_values("time").freq
+            if freq is None:
+                freq = pd.infer_freq(df.index.get_level_values("time"))
+            return {category: freq}
+        elif category in ("meter", "curtail"):
+            df = data_dict[category]
+            freq = df.index.freq
+            if freq is None:
+                freq = pd.infer_freq(df.index)
+            return {category: freq}
+        elif category == "reanalysis":
+            freq_dict = {"reanalysis": {}}
+            for key, df in data_dict[category].items():
+                freq = df.index.freq
+                if freq is None:
+                    freq = pd.infer_freq(df.index)
+                freq_dict["reanalysis"][key] = freq
+            return freq_dict
+        elif category != "all":
+            raise ValueError(f"{category} is an invalid data type")
+
+        # Process the "all" case
+        freq_dict = {}
+        for name, df in self.analysis_values.items():
+            if name in ("asset"):
+                freq_dict[name] = None
+            elif name in ("scada", "status"):
+                freq = df.index.get_level_values("time").freq
+                if freq is None:
+                    freq = pd.infer_freq(df.index.get_level_values("time"))
+                freq_dict[name] = freq
+            elif name in ("meter", "curtail"):
+                freq = df.index.freq
+                if freq is None:
+                    freq = pd.infer_freq(df.index)
+                freq_dict[name] = freq
+            elif name == "reanalysis":
+                freq_dict = {"reanalysis": {}}
+                for key, df in data_dict[name].items():
+                    freq = df.index.freq
+                    if freq is None:
+                        freq = pd.infer_freq(df.index)
+                    freq_dict["reanalysis"][key] = freq
+        return freq_dict
+
     def _validate_frequency(self, category: str = "all") -> list[str]:
         frequency_requirements = self.metadata.frequency_requirements(self.analysis_type)
-        actual_frequencies = {
-            name: df.index.freq for name, df in self.analysis_values.items() if name != "reanalysis"
-        }
-        actual_frequencies["reanalysis"] = {
-            name: df.index.freq for name, df in self.analysis_values["reanalysis"]
-        }
+        actual_frequencies = self._get_frequency(category=category)
+
         # TODO: ACTUALLY MATCH AGAINST REAL, AND CHECK IF THAT MATTERS, AND IF SO
         # CHECK AGAINST THE REQUIREMENTS
         if category == "reanalysis":
