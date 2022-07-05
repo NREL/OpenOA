@@ -111,6 +111,9 @@ def frequency_validator(
     if desired_freq is None:
         return True
 
+    if actual_freq is None:
+        return False
+
     actual_freq = "".join(filter(str.isalpha, actual_freq))
     return actual_freq in desired_freq
 
@@ -1137,9 +1140,7 @@ class PlantData:
         data_dict = self.analysis_values
 
         # Process single category cases first
-        if category in ("asset"):
-            return {category: None}
-        elif category in ("scada", "status"):
+        if category in ("scada", "status"):
             df = data_dict[category]
             freq = df.index.get_level_values("time").freq
             if freq is None:
@@ -1160,14 +1161,13 @@ class PlantData:
                 freq_dict["reanalysis"][key] = freq
             return freq_dict
         elif category != "all":
+            # Asset data does not have a time dependency, and any other input is invalid
             raise ValueError(f"{category} is an invalid data type")
 
         # Process the "all" case
         freq_dict = {}
         for name, df in self.analysis_values.items():
-            if name in ("asset"):
-                freq_dict[name] = None
-            elif name in ("scada", "status"):
+            if name in ("scada", "status"):
                 freq = df.index.get_level_values("time").freq
                 if freq is None:
                     freq = pd.infer_freq(df.index.get_level_values("time"))
@@ -1190,47 +1190,20 @@ class PlantData:
         frequency_requirements = self.metadata.frequency_requirements(self.analysis_type)
         actual_frequencies = self._get_frequency(category=category)
 
-        # TODO: ACTUALLY MATCH AGAINST REAL, AND CHECK IF THAT MATTERS, AND IF SO
-        # CHECK AGAINST THE REQUIREMENTS
-        if category == "reanalysis":
-            # Check if this category requires a check
-            if category not in frequency_requirements:
-                return {}
-            invalid_freq = [
-                f"{category}-{name}"
-                for name, df in self.analysis_values[category].items()
-                if frequency_validator(
-                    df.index.freq, getattr(self.metadata, category)[name].frequency, True
-                )
-                or frequency_validator(df.index.freq, frequency_requirements.get(category), False)
-            ]
-            return invalid_freq
+        invalid_freq = []
+        for name, freq in actual_frequencies.items():
+            if name == "reanalysis":
+                for sub_name, freq in freq.items():
+                    is_valid = frequency_validator(freq, frequency_requirements[name], True)
+                    is_valid |= frequency_validator(freq, frequency_requirements[name], False)
+                    if not is_valid:
+                        invalid_freq.append(f"{name}-{sub_name}")
+                continue
+            is_valid = frequency_validator(freq, frequency_requirements[name], True)
+            is_valid |= frequency_validator(freq, frequency_requirements[name], False)
+            if not is_valid:
+                invalid_freq.append(name)
 
-        if category != "all":
-            freq = self.analysis_values[category].index.freq
-            if frequency_validator(
-                freq, getattr(self.metadata, category).frequency, True
-            ) or frequency_validator(freq, frequency_requirements.get(category), False):
-                return [category]
-            else:
-                return []
-
-        invalid_freq = [
-            name
-            for name, df in self.analysis_values.items()
-            if frequency_validator(df.index.freq, getattr(self.metadata, name).frequency, True)
-            or frequency_validator(df.index.freq, frequency_requirements.get(name), False)
-        ]
-        invalid_freq.extend(
-            [
-                f"reanalysis-{name}"
-                for name, df, in self.analysis_values["reanalysis"].items()
-                if frequency_validator(
-                    df.index.freq, getattr(self.metadata, category)[name].frequency, True
-                )
-                or frequency_validator(df.index.freq, frequency_requirements.get(category), False)
-            ]
-        )
         return invalid_freq
 
     def validate(self, metadata: Optional[dict | str | Path | PlantMetaData] = None) -> None:
