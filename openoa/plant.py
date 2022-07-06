@@ -106,7 +106,7 @@ def frequency_validator(
         bool: If the actual datetime frequency is sufficient, per the match requirements.
     """
     if exact:
-        return actual_freq != desired_freq
+        return actual_freq in desired_freq
 
     if desired_freq is None:
         return True
@@ -1039,6 +1039,8 @@ class PlantData:
         self.reanalysis = reanalysis
         self._calculate_reanalysis_columns()
 
+        # Capture the errors, but note that the frequency validation handles reanalysis
+        # and doesn't need to be run separately
         self._errors["missing"].update(self._validate_column_names(category="reanalysis"))
         self._errors["dtype"].update(self._validate_types(category="reanalysis"))
 
@@ -1187,22 +1189,32 @@ class PlantData:
         return freq_dict
 
     def _validate_frequency(self, category: str = "all") -> list[str]:
+        """Internal method to check the actual datetime frequencies against the required
+        frequencies for the specified analysis types, and produces a list of data types
+        that do not meet the frequency criteria.
+
+        Args:
+            category (str, optional): The data type category. Defaults to "all".
+
+        Returns:
+            list[str]: The list of data types that don't meet the required datetime frequency.
+        """
         frequency_requirements = self.metadata.frequency_requirements(self.analysis_type)
         actual_frequencies = self._get_frequency(category=category)
 
-        invalid_freq = []
+        invalid_freq = {}
         for name, freq in actual_frequencies.items():
             if name == "reanalysis":
                 for sub_name, freq in freq.items():
                     is_valid = frequency_validator(freq, frequency_requirements[name], True)
                     is_valid |= frequency_validator(freq, frequency_requirements[name], False)
                     if not is_valid:
-                        invalid_freq.append(f"{name}-{sub_name}")
+                        invalid_freq.update({f"{name}-{sub_name}": freq})
                 continue
             is_valid = frequency_validator(freq, frequency_requirements[name], True)
             is_valid |= frequency_validator(freq, frequency_requirements[name], False)
             if not is_valid:
-                invalid_freq.append(name)
+                invalid_freq.update({name: freq})
 
         return invalid_freq
 
