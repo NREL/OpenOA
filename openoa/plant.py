@@ -242,6 +242,9 @@ class MeterMetaData(FromDictMixin):
     power: str = attr.ib(default="power")
     energy: str = attr.ib(default="energy")
 
+    # Data about the columns
+    frequency: str = attr.ib(default="10T")
+
     # Parameterizations that should not be changed
     # Prescribed mappings, datatypes, and units for in-code reference.
     name: str = attr.ib(default="meter", init=False)
@@ -276,6 +279,9 @@ class TowerMetaData(FromDictMixin):
     # DataFrame columns
     time: str = attr.ib(default="time")
     id: str = attr.ib(default="id")
+
+    # Data about the columns
+    frequency: str = attr.ib(default="10T")
 
     # Parameterizations that should not be changed
     # Prescribed mappings, datatypes, and units for in-code reference.
@@ -788,7 +794,12 @@ def compose_error_message(error_dict: dict, analysis_types: list[str] = ["all"])
             if len(cols) > 0
         ]
     )
-    messages.extend([f"`{name}` data is of the wrong frequecy" for name in error_dict["frequency"]])
+    messages.extend(
+        [
+            f"`{name}` data is of the wrong frequency: {freq}"
+            for name, freq in error_dict["frequency"].items()
+        ]
+    )
     return "\n".join(messages)
 
 
@@ -906,9 +917,9 @@ class PlantData:
     )  # No user initialization required
 
     def __attrs_post_init__(self):
-        self.reanalysis_validation()
+        self._calculate_reanalysis_columns()
         self._set_index_columns()
-        self._validate_frequency()
+
         # Check the errors againts the analysis requirements
         error_message = compose_error_message(self._errors, analysis_types=self.analysis_type)
         if error_message != "":
@@ -927,27 +938,49 @@ class PlantData:
     @status.validator
     @curtail.validator
     @asset.validator
+    @reanalysis.validator
     def data_validator(self, instance: attr.Attribute, value: pd.DataFrame | None) -> None:
         """Validator function for each of the data buckets in `PlantData`.
 
         Args:
             instance (attr.Attribute): The `attr` attribute details
-            value (pd.DataFrame | None): The attributes user-provided value.
+            value (pd.DataFrame | None): The attribute's user-provided value.
         """
         if None in self.analysis_type:
             return
         name = instance.name
         if value is None:
             self._errors["missing"].update(
-                {name: list(getattr(self.metadata, instance.name).col_map.values())}
+                {name: list(getattr(self.metadata, name).col_map.values())}
             )
-            self._errors["dtype"].update(
-                {name: list(getattr(self.metadata, instance.name).dtypes.keys())}
-            )
+            self._errors["dtype"].update({name: list(getattr(self.metadata, name).dtypes.keys())})
 
         else:
             self._errors["missing"].update(self._validate_column_names(category=name))
             self._errors["dtype"].update(self._validate_dtypes(category=name))
+
+    @scada.validator
+    @meter.validator
+    @curtail.validator
+    @status.validator
+    @reanalysis.validator
+    def data_frequency_validator(
+        self, instance: attr.Attribute, value: pd.DataFrame | None
+    ) -> None:
+        """Validator method for each of the time-based data types: `scada`, `meter`, `curtail`,
+        `status`, and `reanalysis`.
+
+        Args:
+            instance (attr.Attribute): The `attr` attribute details
+            value (pd.DataFrame | None): The attribute's user-provided value.
+        """
+
+        name = instance.name
+        if value is None:
+            self._errors.update({name: getattr(self.metadata, name).frequency})
+
+        else:
+            self.errors["frequency"].update(self._validate_frequency(category=name))
 
     def _set_index_columns(self) -> None:
         """Sets the index value for each of the `PlantData` objects that are not `None`."""
@@ -990,57 +1023,6 @@ class PlantData:
                 )
                 self.reanalysis["name"] = self.reanalysis["name"].set_index([time_col], drop=False)
                 self.reanalysis["name"].index.name = "time"
-
-    def reanalysis_validation(self) -> None:
-        """Provides the reanalysis data initialization and validation routine.
-
-        Control Flow:
-         - If `None` is provided, then run the `data_validator` method to collect
-           missing columns and bad data types
-         - If the dictionary values are a dictionary, then the reanalysis data will
-           be downloaded using the dictionary as kwargs passed to the PlanetOS API
-           in `openoa.toolkits.reanslysis_downloading`, with the product name and site
-           coordinates being provided automatically. NOTE: This also calculates the
-           derived variables such as wind direction upon downloading.
-        - If a non-dictionary input is provided for a reanalysis product type, then the
-          `load_to_pandas` method will be called on the input data.
-
-        Raises:
-            ValueError: Raised if reanalysis input is not a dictionary.
-        """
-        if None in self.analysis_type:
-            return
-        if self.reanalysis is None:
-            self.data_validator(PlantData.reanalysis, self.reanalysis)
-            return
-
-        if not isinstance(self.reanalysis, dict):
-            raise ValueError(
-                "Reanalysis data should be provided as a dictionary of product name (keys) and api kwargs or data"
-            )
-
-        reanalysis = {}
-        for name, value in self.reanalysis.items():
-            if isinstance(value, dict):
-                value.update(
-                    dict(
-                        dataset=name,
-                        lat=self.metadata.latitude,
-                        lon=self.metadata.longitude,
-                        calc_derived_vars=True,
-                    )
-                )
-                reanalysis[name] = download_reanalysis_data_planetos(**value)
-            else:
-                reanalysis[name] = load_to_pandas(value)
-
-        self.reanalysis = reanalysis
-        self._calculate_reanalysis_columns()
-
-        # Capture the errors, but note that the frequency validation handles reanalysis
-        # and doesn't need to be run separately
-        self._errors["missing"].update(self._validate_column_names(category="reanalysis"))
-        self._errors["dtype"].update(self._validate_dtypes(category="reanalysis"))
 
     @property
     def analysis_values(self):
@@ -1208,7 +1190,6 @@ class PlantData:
             "dtype": self._validate_dtypes(),
             "frequency": self._validate_frequency(),
         }
-        self.reanalysis_validation()
 
         # TODO: Check for extra columns?
         # TODO: Define other checks?
