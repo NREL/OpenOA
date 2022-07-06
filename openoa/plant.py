@@ -1129,65 +1129,6 @@ class PlantData:
         }
         return error_cols if isinstance(error_cols, dict) else {}
 
-    def _get_frequency(self, category: str = "all") -> dict:
-        """Retrieves the frequency values for each of the requested data types.
-
-        Args:
-            category (str, optional): The focal data type to get the timestamp frequency, or for all
-                available ("all"). Defaults to "all".
-
-        Returns:
-            dict: Dictionary mapping of data type to frequency, or nested dictionary for reanalysis.
-        """
-        data_dict = self.analysis_values
-
-        # Process single category cases first
-        if category in ("scada", "status"):
-            df = data_dict[category]
-            freq = df.index.get_level_values("time").freq
-            if freq is None:
-                freq = pd.infer_freq(df.index.get_level_values("time"))
-            return {category: freq}
-        elif category in ("meter", "curtail"):
-            df = data_dict[category]
-            freq = df.index.freq
-            if freq is None:
-                freq = pd.infer_freq(df.index)
-            return {category: freq}
-        elif category == "reanalysis":
-            freq_dict = {"reanalysis": {}}
-            for key, df in data_dict[category].items():
-                freq = df.index.freq
-                if freq is None:
-                    freq = pd.infer_freq(df.index)
-                freq_dict["reanalysis"][key] = freq
-            return freq_dict
-        elif category != "all":
-            # Asset data does not have a time dependency, and any other input is invalid
-            raise ValueError(f"{category} is an invalid data type")
-
-        # Process the "all" case
-        freq_dict = {}
-        for name, df in self.analysis_values.items():
-            if name in ("scada", "status"):
-                freq = df.index.get_level_values("time").freq
-                if freq is None:
-                    freq = pd.infer_freq(df.index.get_level_values("time"))
-                freq_dict[name] = freq
-            elif name in ("meter", "curtail"):
-                freq = df.index.freq
-                if freq is None:
-                    freq = pd.infer_freq(df.index)
-                freq_dict[name] = freq
-            elif name == "reanalysis":
-                freq_dict = {"reanalysis": {}}
-                for key, df in data_dict[name].items():
-                    freq = df.index.freq
-                    if freq is None:
-                        freq = pd.infer_freq(df.index)
-                    freq_dict["reanalysis"][key] = freq
-        return freq_dict
-
     def _validate_frequency(self, category: str = "all") -> list[str]:
         """Internal method to check the actual datetime frequencies against the required
         frequencies for the specified analysis types, and produces a list of data types
@@ -1200,10 +1141,37 @@ class PlantData:
             list[str]: The list of data types that don't meet the required datetime frequency.
         """
         frequency_requirements = self.metadata.frequency_requirements(self.analysis_type)
-        actual_frequencies = self._get_frequency(category=category)
+
+        # Collect all the frequencies for each of the data types
+        data_dict = self.analysis_values
+        actual_frequencies = {}
+        for name, df in data_dict.items():
+            if df is None:
+                continue
+
+            if name in ("scada", "status"):
+                freq = df.index.get_level_values("time").freq
+                if freq is None:
+                    freq = pd.infer_freq(df.index.get_level_values("time"))
+                actual_frequencies[name] = freq
+            elif name in ("meter", "curtail"):
+                freq = df.index.freq
+                if freq is None:
+                    freq = pd.infer_freq(df.index)
+                actual_frequencies[name] = freq
+            elif name == "reanalysis":
+                actual_frequencies["reanalysis"] = {}
+                for sub_name, df in data_dict[name].items():
+                    freq = df.index.freq
+                    if freq is None:
+                        freq = pd.infer_freq(df.index)
+                    actual_frequencies["reanalysis"][sub_name] = freq
 
         invalid_freq = {}
         for name, freq in actual_frequencies.items():
+            if category != "all" and category != name:
+                # If only checking one data type, then skip all others
+                continue
             if name == "reanalysis":
                 for sub_name, freq in freq.items():
                     is_valid = frequency_validator(freq, frequency_requirements[name], True)
