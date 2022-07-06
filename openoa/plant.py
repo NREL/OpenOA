@@ -1058,34 +1058,32 @@ class PlantData:
         return values
 
     def _validate_column_names(self, category: str = "all") -> dict[str, list[str]]:
+        """Validates that the column names in each of the data types matches the mapping
+        provided in the `metadata` object.
+
+        Args:
+            category (str, optional): _description_. Defaults to "all".
+
+        Returns:
+            dict[str, list[str]]: _description_
+        """
         column_map = self.metadata.column_map
 
-        if category == "reanalysis":
-            missing_cols = {
-                f"{category}-{name}": column_validator(df, column_names=column_map[category][name])
-                for name, df in self.analysis_values[category].items()
-            }
-            return missing_cols if isinstance(missing_cols, dict) else {}
+        missing_cols = {}
+        for name, df in self.analysis_values.items():
+            if category != "all" and category != "name":
+                # Skip any irrelevant columns if not processing all data types
+                continue
 
-        if category != "all":
-            df = self.analysis_values[category]
-            missing_cols = {category: column_validator(df, column_names=column_map[category])}
-            return missing_cols if isinstance(missing_cols, dict) else {}
+            if name == "reanalysis":
+                for sub_name, df in df.items():
+                    missing_cols[f"{name}-{sub_name}"] = column_validator(
+                        df, column_names=column_map[name][sub_name]
+                    )
+                continue
 
-        missing_cols = {
-            name: column_validator(df, column_names=column_map[name])
-            for name, df in self.analysis_values.items()
-            if name != "reanalysis"
-        }
-        missing_cols.update(
-            {
-                f"reanalysis-{name}": column_validator(
-                    df, column_names=column_map["reanalysis"][name]
-                )
-                for name, df, in self.analysis_values["reanalysis"].items()
-            }
-        )
-        return missing_cols if isinstance(missing_cols, dict) else {}
+            missing_cols[name] = column_validator(df, column_names=column_map[name])
+        return missing_cols
 
     def _validate_dtypes(self, category: str = "all") -> dict[str, list[str]]:
         """Validates the dtype for each column for the specified `category`.
@@ -1132,7 +1130,6 @@ class PlantData:
                 continue
 
             error_cols[name] = dtype_converter(df, column_types=column_map[name])
-
         return error_cols
 
     def _validate_frequency(self, category: str = "all") -> list[str]:
