@@ -691,7 +691,7 @@ def column_validator(df: pd.DataFrame, column_names={}) -> None | list[str]:
     return []
 
 
-def dtype_converter(df: pd.DataFrame, column_types={}) -> None | list[str]:
+def dtype_converter(df: pd.DataFrame, column_types={}) -> list[str]:
     """Converts the columns provided in `column_types` of `df` to the appropriate data
     type.
 
@@ -717,9 +717,7 @@ def dtype_converter(df: pd.DataFrame, column_types={}) -> None | list[str]:
         except:  # noqa: disable=E722
             errors.append(column)
 
-    if errors:
-        return errors
-    return []
+    return errors
 
 
 def analysis_filter(error_dict: dict, analysis_types: list[str] = ["all"]) -> dict:
@@ -949,7 +947,7 @@ class PlantData:
 
         else:
             self._errors["missing"].update(self._validate_column_names(category=name))
-            self._errors["dtype"].update(self._validate_types(category=name))
+            self._errors["dtype"].update(self._validate_dtypes(category=name))
 
     def _set_index_columns(self) -> None:
         """Sets the index value for each of the `PlantData` objects that are not `None`."""
@@ -1042,7 +1040,7 @@ class PlantData:
         # Capture the errors, but note that the frequency validation handles reanalysis
         # and doesn't need to be run separately
         self._errors["missing"].update(self._validate_column_names(category="reanalysis"))
-        self._errors["dtype"].update(self._validate_types(category="reanalysis"))
+        self._errors["dtype"].update(self._validate_dtypes(category="reanalysis"))
 
     @property
     def analysis_values(self):
@@ -1089,8 +1087,17 @@ class PlantData:
         )
         return missing_cols if isinstance(missing_cols, dict) else {}
 
-    def _validate_types(self, category: str = "all") -> dict[str, list[str]]:
+    def _validate_dtypes(self, category: str = "all") -> dict[str, list[str]]:
+        """Validates the dtype for each column for the specified `category`.
 
+        Args:
+            category (str, optional): The name of the data that should be checked, or "all" to
+                validate all of the data types. Defaults to "all".
+
+        Returns:
+            dict[str, list[str]]: A dictionary of each data type and any columns that  don't
+                match the required dtype and can't be converted to it successfully.
+        """
         # Create a new mapping of the data's column names to the expected dtype
         # TODO: Consider if this should be a encoded in the metadata/plantdata object elsewhere
         column_name_map = self.metadata.column_map
@@ -1111,23 +1118,22 @@ class PlantData:
                     zip(column_name_map[name].values(), column_type_map[name].values())
                 )
 
-        if category == "reanalysis":
-            error_cols = {
-                f"{category}-{name}": dtype_converter(df, column_types=column_map[category][name])
-                for name, df in self.analysis_values[category].items()
-            }
-            return error_cols if isinstance(error_cols, dict) else {}
+        error_cols = {}
+        for name, df in self.analysis_values.items():
+            if category != "all" and category != name:
+                # Skip irrelevant data types if not checking all data types
+                continue
 
-        if category != "all":
-            df = self.analysis_values[category]
-            error_cols = {category: dtype_converter(df, column_types=column_map[category])}
-            return error_cols if isinstance(error_cols, dict) else {}
+            if name == "reanalysis":
+                for sub_name, df in df.items():
+                    error_cols[f"{category}-{name}"] = dtype_converter(
+                        df, column_types=column_map[name][sub_name]
+                    )
+                continue
 
-        error_cols = {
-            name: dtype_converter(df, column_types=column_map[name])
-            for name, df in self.analysis_values.items()
-        }
-        return error_cols if isinstance(error_cols, dict) else {}
+            error_cols[name] = dtype_converter(df, column_types=column_map[name])
+
+        return error_cols
 
     def _validate_frequency(self, category: str = "all") -> list[str]:
         """Internal method to check the actual datetime frequencies against the required
@@ -1202,7 +1208,7 @@ class PlantData:
 
         self._errors = {
             "missing": self._validate_column_names(),
-            "dtype": self._validate_types(),
+            "dtype": self._validate_dtypes(),
             "frequency": self._validate_frequency(),
         }
         self.reanalysis_validation()
