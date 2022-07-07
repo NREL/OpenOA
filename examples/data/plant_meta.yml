@@ -34,10 +34,10 @@ reanalysis:
     windspeed_v: v_50
 scada:
   frequency: 10T
-  id: Wind_turbine_name
+  id: id
   pitch: Ba_avg
   power: P_avg
   temperature: Ot_avg
-  time: Date_time
+  time: time
   wind_direction: Wa_avg
   windspeed: Ws_avg

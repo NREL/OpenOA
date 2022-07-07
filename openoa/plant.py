@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import itertools
+from copy import deepcopy
 from typing import Callable, Optional, Sequence
 from pathlib import Path
 
@@ -13,10 +14,7 @@ import pyspark as spark
 from attr import define
 
 import openoa.utils.met_data_processing as met
-from openoa.utils.reanalysis_downloading import download_reanalysis_data_planetos
 
-
-# PlantData V2 with Attrs Dataclass
 
 # Datetime frequency checks
 _at_least_monthly = ("M", "MS", "W", "D", "H", "T", "min", "S", "L", "ms", "U", "us", "N")
@@ -264,7 +262,7 @@ class MeterMetaData(FromDictMixin):
         default=dict(
             time="datetim64[ns]",
             power="kW",
-            energy="kW",
+            energy="kWh",
         ),
         init=False,  # don't allow for user input
     )
@@ -451,9 +449,9 @@ class AssetMetaData(FromDictMixin):
             latitude=self.latitude,
             longitude=self.longitude,
             rated_power=self.rated_power,
-            hub_height=self.rated_power,
-            rotor_diameter=self.rated_power,
-            elevation=self.rated_power,
+            hub_height=self.hub_height,
+            rotor_diameter=self.rotor_diameter,
+            elevation=self.elevation,
             type=self.type,
         )
 
@@ -623,9 +621,12 @@ class PlantMetaData(FromDictMixin):
             dict[str, set[str]]: The dictionary of data type name and valid frequencies
                 for the datetime stamps.
         """
-        requirements = {
-            key: ANALYSIS_REQUIREMENTS[key] for key in analysis_types if key is not None
-        }
+        if "all" in analysis_types:
+            requirements = deepcopy(ANALYSIS_REQUIREMENTS)
+        else:
+            requirements = {
+                key: ANALYSIS_REQUIREMENTS[key] for key in analysis_types if key is not None
+            }
         frequency_requirements = {
             key: {name: value["freq"] for name, value in values.items()}
             for key, values in requirements.items()
@@ -922,6 +923,7 @@ class PlantData:
     def __attrs_post_init__(self):
         self._calculate_reanalysis_columns()
         self._set_index_columns()
+        self._validate_frequency()
 
         # Check the errors againts the analysis requirements
         error_message = compose_error_message(self._errors, analysis_types=self.analysis_type)
@@ -962,28 +964,28 @@ class PlantData:
             self._errors["missing"].update(self._validate_column_names(category=name))
             self._errors["dtype"].update(self._validate_dtypes(category=name))
 
-    @scada.validator
-    @meter.validator
-    @curtail.validator
-    @status.validator
-    @reanalysis.validator
-    def data_frequency_validator(
-        self, instance: attr.Attribute, value: pd.DataFrame | None
-    ) -> None:
-        """Validator method for each of the time-based data types: `scada`, `meter`, `curtail`,
-        `status`, and `reanalysis`.
+    # @scada.validator
+    # @meter.validator
+    # @curtail.validator
+    # @status.validator
+    # @reanalysis.validator
+    # def data_frequency_validator(
+    #     self, instance: attr.Attribute, value: pd.DataFrame | None
+    # ) -> None:
+    #     """Validator method for each of the time-based data types: `scada`, `meter`, `curtail`,
+    #     `status`, and `reanalysis`.
 
-        Args:
-            instance (attr.Attribute): The `attr` attribute details
-            value (pd.DataFrame | None): The attribute's user-provided value.
-        """
+    #     Args:
+    #         instance (attr.Attribute): The `attr` attribute details
+    #         value (pd.DataFrame | None): The attribute's user-provided value.
+    #     """
 
-        name = instance.name
-        if value is None:
-            self._errors.update({name: getattr(self.metadata, name).frequency})
+    #     name = instance.name
+    #     if value is None:
+    #         self._errors.update({name: getattr(self.metadata, name).frequency})
 
-        else:
-            self._errors["frequency"].update(self._validate_frequency(category=name))
+    #     else:
+    #         self._errors["frequency"].update(self._validate_frequency(category=name))
 
     def _set_index_columns(self) -> None:
         """Sets the index value for each of the `PlantData` objects that are not `None`."""
@@ -1015,26 +1017,27 @@ class PlantData:
 
         if self.asset is not None:
             id_col = self.metadata.asset.col_map["id"]
-            self.asset = self.asset.set_index([id_col])
+            self.asset = self.asset.set_index([id_col], drop=False)
             self.asset.index.name = "id"
 
         if self.reanalysis is not None:
             for name in self.reanalysis:
-                time_col = self.metadata.reanalysis["name"].col_map["time"]
-                self.reanalysis["name"][time_col] = pd.DatetimeIndex(
-                    self.reanalysis["name"][time_col]
-                )
-                self.reanalysis["name"] = self.reanalysis["name"].set_index([time_col], drop=False)
-                self.reanalysis["name"].index.name = "time"
+                time_col = self.metadata.reanalysis[name].col_map["time"]
+                self.reanalysis[name][time_col] = pd.DatetimeIndex(self.reanalysis[name][time_col])
+                self.reanalysis[name] = self.reanalysis[name].set_index([time_col], drop=False)
+                self.reanalysis[name].index.name = "time"
 
     @property
-    def analysis_values(self):
-        # if self.analysis_type == "x":
-        #     return self.scada, self, self.meter, self.asset
+    def analysis_values(self) -> dict[str, pd.DataFrame]:
+        """Property that returns a dictionary of the data contained in the `PlantData` object.
+
+        Returns:
+            dict[str, pd.DataFrame]: A mapping of the data type's name and the `DataFrame`.
+        """
         values = dict(
             scada=self.scada,
             meter=self.meter,
-            # tower=self.tower,  # NOT IN USE CURRENTLY
+            tower=self.tower,
             asset=self.asset,
             status=self.status,
             curtail=self.curtail,
@@ -1180,12 +1183,17 @@ class PlantData:
 
         Args:
             metadata (Optional[dict]): Updated metadata object, dictionary, or file to
-            create the updated metadata for data validation.
+                create the updated metadata for data validation, which should align with
+                the mapped column names during initialization.
 
         Raises:
             ValueError: Raised at the end if errors are caught in the validation steps.
         """
-        if metadata is not None:
+        # Initialization will have converted the column naming convention, but an updated
+        # metadata should account for the renaming of the columns
+        if metadata is None:
+            self.update_column_names(to_original=True)
+        else:
             self.metadata = metadata
 
         self._errors = {
