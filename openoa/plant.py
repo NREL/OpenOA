@@ -89,15 +89,15 @@ def analysis_type_validator(
 
 
 def frequency_validator(
-    actual_freq: str, desired_freq: Optional[str | set[str]], exact: bool
+    actual_freq: str, desired_freq: Optional[str | None | set[str]], exact: bool
 ) -> bool:
     """Helper function to check if the actual datetime stamp frequency is valid compared
     to what is required.
 
     Args:
         actual_freq (str): The frequency of the datetime stamp, or `df.index.freq`.
-        desired_freq (Optional[str  |  set[str]]): Either the exact frequency required,
-            or a set of options that are also valid, in which case any numeric
+        desired_freq (Optional[str  |  None  |  set[str]]): Either the exact frequency,
+            required or a set of options that are also valid, in which case any numeric
             information encoded in `actual_freq` will be dropped.
         exact (bool): If the provided frequency codes should be exact matches (`True`),
             or, if `False`, the check should be for a combination of matches.
@@ -105,14 +105,17 @@ def frequency_validator(
     Returns:
         bool: If the actual datetime frequency is sufficient, per the match requirements.
     """
-    if exact:
-        return actual_freq in desired_freq
-
     if desired_freq is None:
         return True
 
     if actual_freq is None:
         return False
+
+    if isinstance(desired_freq, str):
+        desired_freq = set([desired_freq])
+
+    if exact:
+        return actual_freq in desired_freq
 
     actual_freq = "".join(filter(str.isalpha, actual_freq))
     return actual_freq in desired_freq
@@ -913,7 +916,7 @@ class PlantData:
 
     # Error catching in validation
     _errors: dict[str, list[str]] = attr.ib(
-        default={"missing": {}, "dtype": {}, "frequency": []}, init=False
+        default={"missing": {}, "dtype": {}, "frequency": {}}, init=False
     )  # No user initialization required
 
     def __attrs_post_init__(self):
@@ -980,7 +983,7 @@ class PlantData:
             self._errors.update({name: getattr(self.metadata, name).frequency})
 
         else:
-            self.errors["frequency"].update(self._validate_frequency(category=name))
+            self._errors["frequency"].update(self._validate_frequency(category=name))
 
     def _set_index_columns(self) -> None:
         """Sets the index value for each of the `PlantData` objects that are not `None`."""
@@ -1159,13 +1162,13 @@ class PlantData:
                 continue
             if name == "reanalysis":
                 for sub_name, freq in freq.items():
-                    is_valid = frequency_validator(freq, frequency_requirements[name], True)
-                    is_valid |= frequency_validator(freq, frequency_requirements[name], False)
+                    is_valid = frequency_validator(freq, frequency_requirements.get(name), True)
+                    is_valid |= frequency_validator(freq, frequency_requirements.get(name), False)
                     if not is_valid:
                         invalid_freq.update({f"{name}-{sub_name}": freq})
                 continue
-            is_valid = frequency_validator(freq, frequency_requirements[name], True)
-            is_valid |= frequency_validator(freq, frequency_requirements[name], False)
+            is_valid = frequency_validator(freq, frequency_requirements.get(name), True)
+            is_valid |= frequency_validator(freq, frequency_requirements.get(name), False)
             if not is_valid:
                 invalid_freq.update({name: freq})
 
