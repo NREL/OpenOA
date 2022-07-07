@@ -718,7 +718,7 @@ def dtype_converter(df: pd.DataFrame, column_types={}) -> list[str]:
     for column, new_type in column_types.items():
         if new_type in (np.datetime64, pd.DatetimeIndex):
             try:
-                df[column] = pd.DatetimeIndex(pd.to_datetime(df[column], utc=True))
+                df[column] = pd.DatetimeIndex(df[column])
             except Exception as e:  # noqa: disable=E722
                 errors.append(column)
             continue
@@ -850,12 +850,12 @@ def rename_columns(df: pd.DataFrame, col_map: dict, reverse: bool = True) -> pd.
             col_map (dict): Dictionary of existing column names and new column names.
             reverse (bool, optional): True, if the new column names are the keys (using the
                 xxMetaData.col_map as input), or False, if the current column names are the
-                values. Defaults to True.
+                values (original column names). Defaults to True.
 
         Returns:
             pd.DataFrame: Input DataFrame with remapped column names.
     """
-    if reverse:
+    if not reverse:
         col_map = {v: k for k, v in col_map.items()}
     return df.rename(columns=col_map)
 
@@ -939,7 +939,7 @@ class PlantData:
 
     @scada.validator
     @meter.validator
-    # @tower.validator
+    @tower.validator
     @status.validator
     @curtail.validator
     @asset.validator
@@ -964,29 +964,6 @@ class PlantData:
             self._errors["missing"].update(self._validate_column_names(category=name))
             self._errors["dtype"].update(self._validate_dtypes(category=name))
 
-    # @scada.validator
-    # @meter.validator
-    # @curtail.validator
-    # @status.validator
-    # @reanalysis.validator
-    # def data_frequency_validator(
-    #     self, instance: attr.Attribute, value: pd.DataFrame | None
-    # ) -> None:
-    #     """Validator method for each of the time-based data types: `scada`, `meter`, `curtail`,
-    #     `status`, and `reanalysis`.
-
-    #     Args:
-    #         instance (attr.Attribute): The `attr` attribute details
-    #         value (pd.DataFrame | None): The attribute's user-provided value.
-    #     """
-
-    #     name = instance.name
-    #     if value is None:
-    #         self._errors.update({name: getattr(self.metadata, name).frequency})
-
-    #     else:
-    #         self._errors["frequency"].update(self._validate_frequency(category=name))
-
     def _set_index_columns(self) -> None:
         """Sets the index value for each of the `PlantData` objects that are not `None`."""
         if self.scada is not None:
@@ -1008,6 +985,13 @@ class PlantData:
             self.status[time_col] = pd.DatetimeIndex(self.status[time_col])
             self.status = self.status.set_index([time_col, id_col], drop=False)
             self.status.index.names = ["time", "id"]
+
+        if self.tower is not None:
+            time_col = self.metadata.tower.col_map["time"]
+            id_col = self.metadata.tower.col_map["id"]
+            self.tower[time_col] = pd.DatetimeIndex(self.tower[time_col])
+            self.tower = self.tower.set_index([time_col, id_col], drop=False)
+            self.tower.index.names = ["time", "id"]
 
         if self.curtail is not None:
             time_col = self.metadata.curtail.col_map["time"]
@@ -1112,7 +1096,7 @@ class PlantData:
 
             if name == "reanalysis":
                 for sub_name, df in df.items():
-                    error_cols[f"{category}-{name}"] = dtype_converter(
+                    error_cols[f"{name}-{sub_name}"] = dtype_converter(
                         df, column_types=column_map[name][sub_name]
                     )
                 continue
@@ -1140,7 +1124,7 @@ class PlantData:
             if df is None:
                 continue
 
-            if name in ("scada", "status"):
+            if name in ("scada", "status", "tower"):
                 freq = df.index.get_level_values("time").freq
                 if freq is None:
                     freq = pd.infer_freq(df.index.get_level_values("time"))
@@ -1245,25 +1229,32 @@ class PlantData:
         self.reanalysis = reanalysis
 
     def update_column_names(self, to_original: bool = False) -> None:
+        """Renames the columns of each dataframe to the be the keys from the
+        `metadata.xx.col_map` that was passed during initialization.
+
+        Args:
+            to_original (bool, optional): An indicator to map the column names back to
+                the originally passed values. Defaults to False.
+        """
         meta = self.metadata
-        reverse = not to_original
+
         if self.scada is not None:
-            self.scada = rename_columns(self.scada, meta.scada.col_map, reverse=reverse)
+            self.scada = rename_columns(self.scada, meta.scada.col_map, reverse=to_original)
         if self.meter is not None:
-            self.meter = rename_columns(self.meter, meta.meter.col_map, reverse=reverse)
+            self.meter = rename_columns(self.meter, meta.meter.col_map, reverse=to_original)
         if self.tower is not None:
-            self.tower = rename_columns(self.tower, meta.tower.col_map, reverse=reverse)
+            self.tower = rename_columns(self.tower, meta.tower.col_map, reverse=to_original)
         if self.status is not None:
-            self.status = rename_columns(self.status, meta.status.col_map, reverse=reverse)
+            self.status = rename_columns(self.status, meta.status.col_map, reverse=to_original)
         if self.curtail is not None:
-            self.curtail = rename_columns(self.curtail, meta.curtail.col_map, reverse=reverse)
+            self.curtail = rename_columns(self.curtail, meta.curtail.col_map, reverse=to_original)
         if self.asset is not None:
-            self.asset = rename_columns(self.asset, meta.asset.col_map)
+            self.asset = rename_columns(self.asset, meta.asset.col_map, reverse=to_original)
         if self.reanalysis is not None:
             reanalysis = {}
             for name, df in self.reanalysis.items():
                 reanalysis[name] = rename_columns(
-                    df, meta.reanalysis[name].col_map, reverse=reverse
+                    df, meta.reanalysis[name].col_map, reverse=to_original
                 )
             self.reanalysis = reanalysis
 
