@@ -39,11 +39,12 @@ import pandas as pd
 import openoa.utils.timeseries as ts
 import openoa.utils.unit_conversion as un
 import openoa.utils.met_data_processing as met
-from openoa import logging, logged_method_call
-from openoa import PlantData
+from openoa import PlantData, logging, logged_method_call
 from openoa.utils import filters
 
+
 logger = logging.getLogger()
+
 
 def extract_data(path="data/la_haute_borne"):
     """
@@ -54,7 +55,24 @@ def extract_data(path="data/la_haute_borne"):
             zipfile.extractall(path)
 
 
-def prepare(path="data/la_haute_borne", scada_df = None, return_value="plantdata"):
+def convert_timestamps(df: pd.DataFrame, time_col: str, new_col: str) -> pd.DataFrame:
+    """Converts the timestamp data into a proper pandas datetime object in a new column
+    to preserve the originally encoded data.
+
+    Args:
+        df (pd.DataFrame): The `pd.DataFrame` containing a timestamp column.
+        time_col (str): Name of the column containing the timestamps.
+        new_col (str): A new column name for the new timestamp data.
+
+    Returns:
+        pd.DataFrame: The originally provided `df`, but with an additional column (`new_col`)
+            that contains the properly encoded datetime objects in the UTC timezone.
+    """
+    df[new_col] = pd.to_datetime(df[time_col], utc=True).dt.tz_localize(None)
+    return df
+
+
+def prepare(path="data/la_haute_borne", scada_df=None, return_value="plantdata"):
     """
     Do all loading and preparation of the data for this plant.
     args:
@@ -86,16 +104,14 @@ def prepare(path="data/la_haute_borne", scada_df = None, return_value="plantdata
     logger.info("SCADA data loaded")
 
     logger.info("Timestamp QC and conversion to UTC")
-    # Get 'time' field in datetime format. Local time zone information is
-    # encoded, so convert to UTC
 
-    scada_df["time"] = pd.to_datetime(
-        scada_df["Date_time"], utc=True
-    ).dt.tz_localize(None)
+    # Get 'time' field in datetime format. Local time zone information is encoded, so convert to UTC
+    scada_df = convert_timestamps(scada_df, "Date_time", "time")
 
     # Remove duplicated timestamps and turbine id
     scada_df = scada_df.drop_duplicates(
-        subset=["time", "Wind_turbine_name"], keep="first",
+        subset=["time", "Wind_turbine_name"],
+        keep="first",
     )
 
     # Set time as index
@@ -104,9 +120,7 @@ def prepare(path="data/la_haute_borne", scada_df = None, return_value="plantdata
     logger.info("Correcting for out of range of temperature variables")
     # Handle extrema values for temperature. All other variables appear to
     # be reasonable.
-    scada_df = scada_df[
-        (scada_df["Ot_avg"] >= -15.0) & (scada_df["Ot_avg"] <= 45.0)
-    ]
+    scada_df = scada_df[(scada_df["Ot_avg"] >= -15.0) & (scada_df["Ot_avg"] <= 45.0)]
 
     logger.info("Flagging unresponsive sensors")
 
@@ -124,9 +138,7 @@ def prepare(path="data/la_haute_borne", scada_df = None, return_value="plantdata
         temp_flag = filters.unresponsive_flag(
             scada_df.loc[scada_df.Wind_turbine_name == id, "Ot_avg"], 20
         )
-        scada_df.loc[
-            (scada_df.Wind_turbine_name == id) & (temp_flag), "Ot_avg"
-        ] = np.nan
+        scada_df.loc[(scada_df.Wind_turbine_name == id) & (temp_flag), "Ot_avg"] = np.nan
 
     # Put power in watts
     scada_df["Power_W"] = scada_df["P_avg"] * 1000
@@ -138,9 +150,7 @@ def prepare(path="data/la_haute_borne", scada_df = None, return_value="plantdata
     )
 
     # Calculate energy
-    scada_df["energy_kwh"] = (
-        un.convert_power_to_energy(scada_df["Power_W"], scada_freq) / 1000
-    )
+    scada_df["energy_kwh"] = un.convert_power_to_energy(scada_df["Power_W"], scada_freq) / 1000
 
     logger.info("Converting field names to IEC 61400-25 standard")
     # Map to -25 standards
@@ -174,9 +184,7 @@ def prepare(path="data/la_haute_borne", scada_df = None, return_value="plantdata
     meter_df.set_index("time", inplace=True, drop=False)
 
     # Drop the fields we don't need
-    meter_df.drop(
-        ["time_utc", "availability_kwh", "curtailment_kwh"], axis=1, inplace=True
-    )
+    meter_df.drop(["time_utc", "availability_kwh", "curtailment_kwh"], axis=1, inplace=True)
 
     meter_df.rename(columns={"net_energy_kwh": "energy_kwh"}, inplace=True)
 
@@ -216,15 +224,14 @@ def prepare(path="data/la_haute_borne", scada_df = None, return_value="plantdata
             "temp_2m": "temperature_K",
             "dens_50m": "rho_kgm-3",
         },
-        axis="columns", inplace=True
+        axis="columns",
+        inplace=True,
     )
     reanalysis_merra2_df["time"] = pd.to_datetime(reanalysis_merra2_df["time"])
     reanalysis_merra2_df.set_index("time", inplace=True, drop=False)
 
     # Drop the fields we don't need
-    reanalysis_merra2_df.drop(
-        ["Unnamed: 0"], axis=1, inplace=True
-    )
+    reanalysis_merra2_df.drop(["Unnamed: 0"], axis=1, inplace=True)
 
     # era5
     reanalysis_era5_df = pd.read_csv(f"{path}/era5_wind_la_haute_borne.csv")
@@ -244,7 +251,8 @@ def prepare(path="data/la_haute_borne", scada_df = None, return_value="plantdata
             "t_2m": "temperature_K",
             "dens_100m": "rho_kgm-3",
         },
-        axis="columns", inplace=True
+        axis="columns",
+        inplace=True,
     )
     reanalysis_era5_df["time"] = pd.to_datetime(reanalysis_era5_df["time"])
     reanalysis_era5_df.set_index("time", inplace=True, drop=False)
@@ -266,14 +274,21 @@ def prepare(path="data/la_haute_borne", scada_df = None, return_value="plantdata
             "Hub_height_m": "hub_height_m",
             "Rotor_diameter_m": "rotor_diameter_m",
         },
-        axis="columns", inplace=True
+        axis="columns",
+        inplace=True,
     )
 
     # Assign type to turbine for all assets
     asset_df["type"] = "turbine"
 
     if return_value == "dataframes":
-        return scada_df, meter_df, curtail_df, asset_df, dict(era5=reanalysis_era5_df, merra2=reanalysis_merra2_df)
+        return (
+            scada_df,
+            meter_df,
+            curtail_df,
+            asset_df,
+            dict(era5=reanalysis_era5_df, merra2=reanalysis_merra2_df),
+        )
     elif return_value == "plantdata":
         # Build and return PlantData
         engie_plantdata = PlantData(
