@@ -234,7 +234,7 @@ def gap_time_identification(
     t_utc = f"{time_col}_utc"
     t_local = f"{time_col}_localized"
 
-    time_dups = timeseries.find_time_gaps(df[time_col], freq=freq)
+    time_gaps = timeseries.find_time_gaps(df[time_col], freq=freq)
     time_gaps_utc = None
     time_gaps_local = None
 
@@ -244,20 +244,21 @@ def gap_time_identification(
     if t_local in df.columns:
         time_gaps_local = timeseries.find_time_gaps(df[t_local], freq=freq)
 
-    return time_dups, time_gaps_local, time_gaps_utc
+    return time_gaps, time_gaps_local, time_gaps_utc
 
 
-def describe(df: pd.DataFrame) -> pd.DataFrame:
+def describe(df: pd.DataFrame, **kwargs) -> pd.DataFrame:
     """Thin wrapper for `pd.DataFrame.describe()`, but transposes the results to be easier to read.`
 
     Args:
         df (:obj: `pd.DataFrame`): The resulting SCADA dataframe from `convert_datetime_column()`, otherwise
             the UTC and localized column checks will return `None`.
+        kwargs (:obj: `dict`): Dictionary of additional arguments to pass to `df.describe()`.
 
     Returns:
         pd.DataFrame: The results of `df.describe().T`.
     """
-    return df.describe(include="all").T
+    return df.describe(**kwargs).T
 
 
 def dalyight_savings_plot(
@@ -266,7 +267,6 @@ def dalyight_savings_plot(
     id_col: str,
     time_col: str,
     power_col: str,
-    ws_col: str,
     freq: str,
     hour_window: int = 3,
 ):

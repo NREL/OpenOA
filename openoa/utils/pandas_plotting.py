@@ -5,6 +5,7 @@ This module provides helpful functions for creating various plots
 
 # Import required packages
 import numpy as np
+import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
 from pyproj import Transformer
@@ -912,3 +913,68 @@ def plot_windfarm(
     plot_map.scatter(x="x", y="y", source=source, size=marker_size, **marker_options)
 
     return plot_map
+
+
+def plot_by_id(
+    df: pd.DataFrame, id_col: str, x_axis: str, y_axis: str, return_fig: bool = False
+) -> None:
+    """Function to plot any two fields against each other in a dataframe with unique plots for each
+    ID.
+
+    Args:
+        id_col(:obj:`String`): The id column (or index column) in `df`.
+        x_axis(:obj:'String'): Independent variable to plot, should align with a column in `df`.
+        y_axis(:obj:'String'): Dependent variable to plot, should align with a column in `df`.
+
+    Returns:
+        (:obj: `None`)
+    """
+    # Operate on a totally new copy of the data so that transofrmations don't carry through
+    df = df.copy()
+
+    # Get the id_col as the first index in the multi index or ensure it is the primary index
+    if not isinstance(df.index, pd.MultiIndex):
+        if id_col != df.index.name:
+            df = df.set_index(id_col, append=True)
+    elif id_col not in df.index.names:
+        df = df.set_index(id_col, append=True)
+
+    if isinstance(df.index, pd.MultiIndex):
+        df = df.swaplevel(id_col, 0)
+
+    # Check that the columns are valid
+    if x_axis not in df.columns:
+        raise ValueError(f"'{x_axis}' is not a valid column")
+    if y_axis not in df.columns:
+        raise ValueError(f"'{x_axis}' is not a valid column")
+
+    # Create the plotting parameters
+    id_arrary = df.index.get_level_values(id_col).unique()
+    max_cols = 4
+    num_id = id_arrary.size
+    num_rows = int(np.ceil(num_id / max_cols))
+
+    # Create the plot
+    fig, axes_list = plt.subplots(
+        num_rows, max_cols, sharex=True, sharey=True, figsize=(15, num_rows * 5)
+    )
+    for i, (t_id, ax) in enumerate(zip(id_arrary, axes_list)):
+        scada = df.loc[t_id]
+        ax.scatter(scada[x_axis], scada[y_axis], s=5)
+
+        # Add a grid as the bottom layer
+        ax.grid()
+        ax.set_axisbelow(True)
+
+        ax.set_title(t_id)
+
+        # Only add axis labels for the bottom row and leftmost column
+        if np.floor(i / 4) + 1 == num_rows:
+            ax.set_xlabel(x_axis)
+        if i % 4 == 0:
+            ax.set_ylabel(y_axis)
+
+    fig.tight_layout()
+    plt.show()
+    if return_fig:
+        return fig, axes_list
