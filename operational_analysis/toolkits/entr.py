@@ -1,20 +1,54 @@
 """
 ENTR OpenOA Toolkit
-Provides utility functions to load data from ENTR warehouse into PlantData objects
+
+Provides low-level utility functions to load data from ENTR warehouse into PlantData objects using the PyHive library.
+
+With an existing OpenOA PlantData object, you can use the functions from this file as follows:
+
+```
+conn = entr.get_connection(thrift_server_host, thrift_server_port)
+entr.load_metadata(conn, plant)
+entr.load_asset(conn, plant)
+entr.load_scada(conn, plant)
+entr.load_curtailment(conn, plant)
+entr.load_meter(conn, plant)
+entr.load_reanalysis(conn, plant, reanalysis_products)
+```
+
+This usage pattern is implemented in PlantData.from_entr()
+
+Most functions in this file follow a pattern:
+
+    load_TABLE_meta:
+        Function that loads data from the metadata tables associated with a given table.
+
+    load_TABLE_prepare:
+        Function that takes raw data from the ENTR warehouse table, and does the necessary transformations so they are ready to load into OpenOA.
+
+    load_TABLE:
+        Function that loads all data from a given table.
+
+In some cases, check_metadata_row is called to assert properties about a table's metadata.
 """
 
 import pandas as pd
 import operational_analysis.toolkits.unit_conversion as un
 import operational_analysis.toolkits.met_data_processing as met
 
+## --- DATABASE FUNCTIONS ---
+
 _conn = None
 
 def get_connection(thrift_server_host,thrift_server_port):
     """
-    Using the host and port to get a connection to the thrift server.
-    If a connection is already instantiated, it will return that same connection.
+    Get Python DBAPI2 connection object for ENTR Warehouse.
 
-    Returns: PyHive.Connection
+    Args:
+        thrift_server_host(:obj:`str`): URL of Apache Thrift2 server
+        thrift_server_port(:obj:`int`): Port of Apache Thrift2 server
+
+    Returns:
+        (:obj:`connection`): Connection object.
     """
     global _conn
     if _conn is None:
@@ -24,7 +58,14 @@ def get_connection(thrift_server_host,thrift_server_port):
 
 def do_query(conn, query):
     """
-    Use the connection object to run a query, returning a dataframe.
+    Execute a query string using a connection object, and return the result as a dataframe.
+
+    Args:
+        conn(:obj:`connection`): Python DBAPI2 connection object.
+        query(:obj:`str`): Query string to execute
+
+    Returns:
+        (:obj:`pd.DataFrame`): Result of the query in Pandas dataframe format.
     """
     df = pd.read_sql(query, conn)
     return df
@@ -165,7 +206,9 @@ def load_scada_prepare(plant):
     plant._scada.df.rename(scada_map, axis="columns", inplace=True)
 
 def check_metadata_row(row, allowed_freq=["10T"], allowed_types=["sum"], allowed_units=["kWh"]):
-    
+    """
+    Check the result of an ENTR Warehouse metadata query to make sure the values conform to our expectation.
+    """
     accepted_freq = None
     freq_long_str = f"{row['interval_s']} sec"
     freq_timedelta = pd.Timedelta(freq_long_str)

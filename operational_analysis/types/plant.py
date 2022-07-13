@@ -84,6 +84,53 @@ class PlantData(object):
             "_reanalysis",
         ]
 
+    def __repr__(self):
+        """
+        String representation of the PlantData Object
+
+        Args: None
+        Returns: String
+        """
+        plant=self
+
+        def reanalysis_tables_head():
+            output = ""
+            for product in plant.reanalysis._product.keys():
+                if plant.reanalysis._product[product].df is not None:
+                    output = output + "\tProduct = "+product+"\n"
+                    output = output + str(plant.reanalysis._product[product.lower()].df.head())
+            return output
+
+        return f"""
+Plant Name: {plant.name}
+
+===============
+
+meter freq: {plant._meter_freq}
+curtail freq: {plant._curtail_freq}
+scada freq: {plant._scada_freq}
+plant capacity: {plant._plant_capacity}
+num turbines: {plant._num_turbines}
+turbine capacity: {plant._turbine_capacity}
+
+latitude, longitude: {plant.latitude}, {plant.longitude}
+
+*** SCADA ***
+{str(plant.scada.df.head())}
+
+*** ASSET ***
+{str(plant.asset.head())}
+
+*** METER ***
+{str(plant.meter.df.head())}
+
+*** CURTIAL ***
+{str(plant.curtail.df.head())}
+
+*** REANALYSIS ***
+{reanalysis_tables_head()}
+        """
+
     def amend_std(self, dfname, new_fields):
         """
         Amend a dataframe standard with new or changed fields. Consider running ensure_columns afterward to
