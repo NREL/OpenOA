@@ -467,3 +467,160 @@ def dalyight_savings_plot(
 
     plt.tight_layout()
     plt.show()
+
+
+def wtk_coordinate_indices(
+    fn: h5pyd.File, latitude: float, longitude: float
+) -> tuple[float, float]:
+    """Finds the nearest x/y coordinates for a given latitude and longitude using the Proj4 library
+    to find the nearest valid point in the Wind Toolkit coordinates database, and converts it to
+    an (x, y) pair.
+
+    ... note:: This relies on the Wind Toolkit HSDS API and h5pyd must be installed.
+
+    Args:
+        fn (:obj: `h5pyd.File`): The h5pyd file to be used for coordinate extraction.
+        latitude (:obj: `float`): The latitude of the wind power plant's center.
+        longitude (:obj: `float`): The longitude of the wind power plant's center.
+
+    Returns:
+        tuple[float, float]: The nearest valid x and y coordinates to the provided `latitude` and
+            `longitude`.
+    """
+    coordinates = fn["coordinates"]
+    project_coord_string = """
+        +proj=lcc +lat_1=30 +lat_2=60
+        +lat_0=38.47240422490422 +lon_0=-96.0
+        +x_0=0 +y_0=0 +ellps=sphere
+        +units=m +no_defs
+    """
+    projectLcc = Proj(project_coord_string)
+    origin = projectLcc(*reversed(coordinates[0][0]))  # Grab origin directly from database
+
+    project_coords = projectLcc(longitude, latitude)
+    delta = np.subtract(project_coords, origin)
+    xy = reversed([int(round(x / 2000)) for x in delta])
+    return tuple(xy)
+
+
+def wtk_diurnal_prep(
+    latitude: float,
+    longitude: float,
+    fn: str = "/nrel/wtk-us.h5",
+    start_date: str = "2007-01-01",
+    end_date: str = "2013-12-31",
+) -> pd.Series:
+    """Links to the WIND Toolkit (WTK) data on AWS as a data source to capture the wind speed data
+    and calculate the diurnal hourly averages.
+
+    Args:
+        latitude (:obj: `float`): The latitude of the wind power plant's center.
+        longitude (:obj: `float`): The longitude of the wind power plant's center.
+        fn (:obj: `str`, optional): The path and name of the WTK API file. Defaults to "/nrel/wtk-us.h5".
+        start_date (:obj: `str`, optional): Starting date for the WTK data. Defaults to "2007-01-01".
+        end_date (:obj: `str`, optional): Ending date for the WTK data. Defaults to "2013-12-31".
+
+    Raises:
+        IndexError: Raised if the latitude and longitude are not found within the WTK data set.
+
+    Returns:
+        pd.Series: The diurnal hourly average wind speed.
+    """
+    # Startup the API and grab the database
+    f = h5pyd.File(fn, "r")
+    wtk_coordinates = f["coordinates"]
+    wtk_dt = f["datetime"]
+    wtk_ws = f["windspeed_80m"]
+
+    # Set up the date and time requirements
+    dt = pd.DataFrame({"datetime": wtk_dt}, index=range(wtk_dt.shape[0]))
+    dt["datetime"] = dt["datetime"].apply(dateutil.parser.parse)
+
+    project_ix = wtk_coordinate_indices(f, latitude, longitude)
+    try:
+        _ = wtk_coordinates[project_ix[0]][project_ix[1]]
+    except ValueError:
+        msg = f"Project Coordinates (lat, long) = ({latitude}, {longitude}) are outside the WIND Toolkit domain."
+        raise IndexError(msg)
+
+    window_ix = dt.loc[(dt.datetime >= start_date) & (dt.datetime <= end_date)].index
+    ws = pd.DataFrame(
+        wtk_ws[min(window_ix) : max(window_ix) + 1, project_ix[0], project_ix[1]],
+        columns=["ws"],
+        index=dt.loc[window_ix, "datetime"],
+    )
+    ws_diurnal = ws.groupby(ws.index.hour).mean()
+    return ws_diurnal
+
+
+def wtk_diurnal_plot(
+    wtk_df: pd.DataFrame | None,
+    scada_df: pd.DataFrame,
+    time_col: str,
+    power_col: str,
+    *,
+    latitude: float = 0,
+    longitude: float = 0,
+    fn: str = "/nrel/wtk-us.h5",
+    start_date: str = "2007-01-01",
+    end_date: str = "2013-12-31",
+    return_fig: bool = False,
+) -> None:
+    """Plots the WTK diurnal wind profile alongside the hourly power averages from the `scada_df`
+
+    Args:
+        wtk_df (:obj: `pd.DataFrame` | `None`): The WTK diurnal profile data produced in
+            `wtk_diurnal_prep`. If `None`, then this method will be run internally as the following
+            keyword arguments are provided: `latitude`, `longitude`, `fn`, `start_date`, and
+            `end_date`.
+        scada_df (:obj: `pd.DataFrame` | None): The SCADA data that was produced in `convert_datetime_column`.
+        time_col (:obj: `str`): The name of the time column in `scada_df`.
+        power_col (:obj: `str`): The name of the power column in `scada_df`
+        latitude (:obj: `float`): The latitude of the wind power plant's center.
+        longitude (:obj: `float`): The longitude of the wind power plant's center.
+        fn (:obj: `str`, optional): WTK API file path and location. Defaults to "/nrel/wtk-us.h5".
+        start_date (:obj: `str` | None, optional): Starting date for the WTK data. If None, then it
+            uses the starting date of `scada_df`. Defaults to None.
+        end_date (:obj: `str` | None, optional): Ending date for the WTK data. If None, then it
+            uses the ending date of `scada_df`. Defaults to None.
+        return_fig(:obj:`String`): Indicator for if the figure and axes objects should be returned,
+            by default False.
+    """
+    # Get the WTK data if needed
+    if wtk_df is None:
+        if latitude == longitude == 0:
+            raise ValueError(
+                "If `wtk_df` is not provided, then the WTK accessor information must "
+                "be provided to create the data set"
+            )
+        else:
+            utc_time = f"{time_col}_utc"
+            if start_date is None:
+                start_date = scada_df[utc_time].min()
+            if end_date is None:
+                end_date = scada_df[utc_time].max()
+            wtk_df = wtk_diurnal_prep(latitude, longitude, fn, start_date, end_date)
+
+    sum_power_df = scada_df.groupby(scada_df.index).sum()[[power_col]]
+    power_diurnal_df = sum_power_df.groupby(sum_power_df.index.hour).mean()[[power_col]]
+
+    ws_norm = wtk_df / wtk_df.mean()
+    power_norm = power_diurnal_df / power_diurnal_df.mean()
+
+    fig = plt.figure(figsize=(8, 5))
+    ax = fig.add_subplot(111)
+
+    ax.plot(ws_norm, label="WTK Wind Speed")
+    ax.plot(power_norm, label="Measured Power")
+
+    ax.grid()
+    ax.set_axisbelow(True)
+    ax.legend()
+
+    ax.set_xlabel("Hour of Day (UTC)")
+    ax.set_ylabel("Normalized Values")
+    ax.set_title("WTK and Measured Data Comparison")
+    fig.tight_layout()
+    plt.show()
+    if return_fig:
+        return fig, ax
