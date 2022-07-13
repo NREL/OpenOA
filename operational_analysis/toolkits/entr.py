@@ -99,7 +99,7 @@ def load_scada_meta(conn, plant):
     meter_meta_df = pd.read_sql(query, conn)
 
     # Parse frequency
-    freq, _, _ = check_metadata_row(meter_meta_df.iloc[0], allowed_freq=['10T'], allowed_types=["average"], allowed_units=["kW"])
+    freq, _, _ = check_metadata_row(meter_meta_df.iloc[0], allowed_freq=['10T'], allowed_types=["average"], allowed_units=["W","Wh"])
     plant._scada_freq = freq
 
 def load_scada(conn, plant):
@@ -116,7 +116,8 @@ def load_scada(conn, plant):
         `WMET.HorWdDirRel`,
         `WMET.EnvTmp`,
         `WNAC.Dir`,
-        `WMET.HorWdDir`
+        `WMET.HorWdDir`,
+        `WTUR.SupWh`
     FROM
         entr_warehouse.openoa_wtg_scada
     WHERE
@@ -138,15 +139,13 @@ def load_scada_prepare(plant):
 
     plant._scada.df = plant._scada.df[(plant._scada.df["WMET.EnvTmp"]>=-15.0) & (plant._scada.df["WMET.EnvTmp"]<=45.0)]
 
-    plant._scada.df["WTUR.W"] = plant._scada.df["WTUR.W"] * 1000
-
     # # Convert pitch to range -180 to 180.
     plant._scada.df["WROT.BlPthAngVal"] = plant._scada.df["WROT.BlPthAngVal"] % 360
     plant._scada.df.loc[plant._scada.df["WROT.BlPthAngVal"] > 180.0,"WROT.BlPthAngVal"] \
         = plant._scada.df.loc[plant._scada.df["WROT.BlPthAngVal"] > 180.0,"WROT.BlPthAngVal"] - 360.0
 
     # # Calculate energy
-    plant._scada.df['energy_kwh'] = un.convert_power_to_energy(plant._scada.df["WTUR.W"], plant._scada_freq) / 1000
+    plant._scada.df['energy_kwh'] = plant._scada.df['WTUR.SupWh'] / 1000.0
 
     # # Note: there is no vane direction variable defined in -25, so
     # # making one up
