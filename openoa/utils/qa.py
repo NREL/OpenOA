@@ -410,6 +410,8 @@ def dalyight_savings_plot(
         plt.ylabel("Power")
         plt.xlabel("Date")
         plt.legend(loc="lower left")
+        plt.xticks(rotation=30)
+        plt.grid(True)
 
         plt.subplot(num_years, 2, 2 * i + 2)
         if np.sum(~np.isnan(data_fall[power_col])) > 0:
@@ -460,6 +462,8 @@ def dalyight_savings_plot(
         plt.ylabel("Power")
         plt.xlabel("Date")
         plt.legend(loc="lower left")
+        plt.xticks(rotation=30)
+        plt.grid(True)
 
     plt.tight_layout()
     plt.show()

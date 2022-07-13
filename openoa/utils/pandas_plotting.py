@@ -922,9 +922,12 @@ def plot_by_id(
     ID.
 
     Args:
+        df(:obj:`pd.DataFrame`): The dataframe for comparing values.
         id_col(:obj:`String`): The id column (or index column) in `df`.
         x_axis(:obj:'String'): Independent variable to plot, should align with a column in `df`.
         y_axis(:obj:'String'): Dependent variable to plot, should align with a column in `df`.
+        return_fig(:obj:`String`): Indicator for if the figure and axes objects should be returned,
+            by default False.
 
     Returns:
         (:obj: `None`)
@@ -958,7 +961,7 @@ def plot_by_id(
     fig, axes_list = plt.subplots(
         num_rows, max_cols, sharex=True, sharey=True, figsize=(15, num_rows * 5)
     )
-    for i, (t_id, ax) in enumerate(zip(id_arrary, axes_list)):
+    for i, (t_id, ax) in enumerate(zip(id_arrary, axes_list.flatten())):
         scada = df.loc[t_id]
         ax.scatter(scada[x_axis], scada[y_axis], s=5)
 
@@ -973,6 +976,55 @@ def plot_by_id(
             ax.set_xlabel(x_axis)
         if i % 4 == 0:
             ax.set_ylabel(y_axis)
+
+    # Delete the extra axes
+    num_axes = axes_list.size
+    if i < num_axes - 1:
+        for j in range(i + 1, num_axes):
+            fig.delaxes(axes_list.flatten()[j])
+
+    fig.tight_layout()
+    plt.show()
+    if return_fig:
+        return fig, axes_list
+
+
+def column_histograms(df: pd.DataFrame, return_fig: bool = False):
+    """Produces a histogram plot for each numeric column in `df`s.
+
+    Args:
+        df(:obj:`pd.DataFrame`): The dataframe for plotting.
+        return_fig(:obj:`String`): Indicator for if the figure and axes objects should be returned,
+            by default False.
+
+    Returns:
+        (None)
+    """
+    df = df.select_dtypes((int, float)).copy()
+    columns = df.columns.values
+    num_cols = columns.size
+    max_cols = 3
+    num_rows = int(np.ceil(num_cols / max_cols))
+
+    fig, axes_list = plt.subplots(num_rows, max_cols, figsize=(15, num_rows * 5))
+    for i, (col, ax) in enumerate(zip(columns, axes_list.flatten())):
+        data = df.loc[:, col].dropna().values
+        ax.hist(data, 40)
+        ax.set_title(col)
+
+        # Add a grid as the bottom layer
+        ax.grid()
+        ax.set_axisbelow(True)
+
+        # Only add axis labels for the bottom row
+        if i % 4 == 0:
+            ax.set_ylabel("Count of Occurrences")
+
+    # Delete the extra axes
+    num_axes = axes_list.size
+    if i < num_axes - 1:
+        for j in range(i + 1, num_axes):
+            fig.delaxes(axes_list.flatten()[j])
 
     fig.tight_layout()
     plt.show()
