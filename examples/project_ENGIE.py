@@ -30,6 +30,8 @@ steps taken to correct the raw data for use in the PRUF OA code.
 - Wind speed, wind direction, temperature, and density
 
 """
+from __future__ import annotations
+
 from pathlib import Path
 from zipfile import ZipFile
 
@@ -95,7 +97,7 @@ def clean_scada(scada_file: str | Path) -> pd.DataFrame:
         scada_df.loc[t_id].loc[ix_flag, sensor_cols] = np.nan
 
         # Cancel out the temperature readings where the value repeats more than 20 times in a row
-        ix_flag = filters.unresponsive_flag(scada_df.loc[t_id], 20)
+        ix_flag = filters.unresponsive_flag(scada_df.loc[t_id, "Ot_avg"], 20)
         scada_df.loc[t_id].loc[ix_flag, "Ot_avg"] = np.nan
 
     logger.info("Converting pitch to the range [-180, 180]")
@@ -108,7 +110,7 @@ def clean_scada(scada_file: str | Path) -> pd.DataFrame:
     return scada_df
 
 
-def prepare(path="data/la_haute_borne", scada_df=None, return_value="plantdata"):
+def prepare(path="data/la_haute_borne", return_value="plantdata"):
     """
     Do all loading and preparation of the data for this plant.
     args:
