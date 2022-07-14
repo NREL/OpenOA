@@ -867,32 +867,64 @@ def rename_columns(df: pd.DataFrame, col_map: dict, reverse: bool = True) -> pd.
 
 @define(auto_attribs=True)
 class PlantData:
-    """Data object for operational wind plant data, which can serialize all of these
-    structures and reload them them from the cache as needed.
+    """Overarching data object used for storing, accessing, and acting on the primary
+    operational analysis data types, including: SCADA, meter, tower, status, curtailment,
+    asset, and reanalysis data. As of version 3.0, this class provides an automated
+    validation scheme through the use of `analysis_type` as well as a secondary scheme
+    that can be run after further manipulations are performed. Additionally, version 3.0
+    incorporates a metadata scheme `PlantMetaData` to map between user column naming
+    conventions and the internal column naming conventions for both usability and code
+    consistency.
 
-    This class holds references to all tables associated with a wind plant. The tables
-    are grouped by type:
-        - `scada`
-        - `meter`
-        - `tower`
-        - `status`
-        - `curtail`
-        - `asset`
-        - `reanalysis`
-
-    Parameters
-    ----------
-    metadata : PlantMetaData
-        A nested dictionary of the schema definition for each of the data types that
-        will be input. See `SCADAMetaData`, etc. for more information.  <-- TODO
-    scada : pd.DataFrame
-        The SCADA data to be used for analyis. See `SCADAMetaData` for more details
-        on the required columns, and other conventions
-    TODO: FINISH THE DOCSTRING
+    Args:
+        metadata (:obj: `PlantMetaData`): A nested dictionary of the schema definition
+            for each of the data types that will be input, and some additional plant
+            parameters. See `PlantMetaData`, `SCADAMetaData`, `MeterMetaData`,
+            `TowerMetaData`, `StatusMetaData`, `CurtailMetaData`, `AssetMetaData`,
+            and/or `ReanalysisMetaData` for more information.
+        analysis_type (:obj: `list[str]`): A single, or list of, analysis type(s) that
+            will be run, that are configured in `ANALYSIS_REQUIREMENTS`.
+            - None: Don't raise any errors for errors found in the data. This is intended
+              for loading in messy data, but `validate()` should be run later if planning
+              on running any analyses.
+            - "all": This is to check that all columns specified in the metadata schema
+              align with the data provided, as well as data types and frequencies (where
+              applicable).
+            - "MonteCarloAEP": Checks the data components that are relevant to a Monte
+              Carlo AEP analysis. See `ANALYSIS_REQUIREMENTS` for requirements details.
+            - "TurbineLongTermGrossEnergy": Checks the data components that are relevant
+              to a turbine long term gross energy analysis. See `ANALYSIS_REQUIREMENTS`
+              for requirements details.
+            - "ElectricalLosses": Checks the data components that are relevant to an
+              electrical losses analysis. See `ANALYSIS_REQUIREMENTS` for requirements
+              details.
+        scada (:obj: `pd.DataFrame`): Either the SCADA data that's been pre-loaded to a
+            pandas `DataFrame`, or a path to the location of the data to be imported.
+            See `SCADAMetaData` for column data specifications.
+        meter (:obj: `pd.DataFrame`): Either the meter data that's been pre-loaded to a
+            pandas `DataFrame`, or a path to the location of the data to be imported.
+            See `MeterMetaData` for column data specifications.
+        tower (:obj: `pd.DataFrame`): Either the met tower data that's been pre-loaded
+            to a pandas `DataFrame`, or a path to the location of the data to be
+            imported. See `TowerMetaDsata` for column data specifications.
+        status (:obj: `pd.DataFrame`): Either the status data that's been pre-loaded to
+            a pandas `DataFrame`, or a path to the location of the data to be imported.
+            See `StatusMetaData` for column data specifications.
+        curtail (:obj: `pd.DataFrame`): Either the curtailment data that's been
+            pre-loaded to a pandas `DataFrame`, or a path to the location of the data to
+            be imported. See `CurtailMetaData` for column data specifications.
+        asset (:obj: `pd.DataFrame`): Either the asset summary data that's been
+            pre-loaded to a pandas `DataFrame`, or a path to the location of the data to
+            be imported. See `AssetMetaData` for column data specifications.
+        reanalysis (:obj: `dict[str, pd.DataFrame]`): Either the reanalysis data that's
+            been pre-loaded to a dictionary of pandas `DataFrame`s with keys indicating
+            the data source, such as "era5" or "merra2", or a dictionary of paths to the
+            location of the data to be imported following the same key naming convention.
+            See `ReanalysisMetaData` for column data specifications.
 
     Raises:
-        ValueError: Raised if any column names are missing in the input data, as
-            specified in the appropriate schema
+        ValueError: Raised if any analysis specific validation checks don't pass with an
+            error message highlighting the appropriate issues.
     """
 
     metadata: PlantMetaData = attr.ib(
@@ -928,7 +960,6 @@ class PlantData:
         # Check the errors againts the analysis requirements
         error_message = compose_error_message(self._errors, analysis_types=self.analysis_type)
         if error_message != "":
-            # raise ValueError("\n".join(itertools.chain(*self._errors.values())))
             raise ValueError(error_message)
         self.update_column_names()
 
@@ -944,12 +975,19 @@ class PlantData:
     @curtail.validator
     @asset.validator
     @reanalysis.validator
-    def data_validator(self, instance: attr.Attribute, value: pd.DataFrame | None) -> None:
-        """Validator function for each of the data buckets in `PlantData`.
+    def data_validator(
+        self, instance: attr.Attribute, value: pd.DataFrame | dict[pd.DataFrame] | None
+    ) -> None:
+        """Validator function for each of the data buckets in `PlantData` that checks
+        that the appropriate columns exist for each dataframe, each column is of the
+        right type, and that the timestamp frequencies are appropriate for the given
+        `analysis_type`.
 
         Args:
             instance (attr.Attribute): The `attr` attribute details
-            value (pd.DataFrame | None): The attribute's user-provided value.
+            value (pd.DataFrame | dict[pd.DataFrame] | None): The attribute's
+                user-provided value. A dictionary of dataframes is expected for
+                reanalysis data only.
         """
         if None in self.analysis_type:
             return
@@ -1012,7 +1050,7 @@ class PlantData:
                 self.reanalysis[name].index.name = "time"
 
     @property
-    def analysis_values(self) -> dict[str, pd.DataFrame]:
+    def data_dict(self) -> dict[str, pd.DataFrame]:
         """Property that returns a dictionary of the data contained in the `PlantData` object.
 
         Returns:
@@ -1042,7 +1080,7 @@ class PlantData:
         column_map = self.metadata.column_map
 
         missing_cols = {}
-        for name, df in self.analysis_values.items():
+        for name, df in self.data_dict.items():
             if category != "all" and category != "name":
                 # Skip any irrelevant columns if not processing all data types
                 continue
@@ -1061,12 +1099,13 @@ class PlantData:
         """Validates the dtype for each column for the specified `category`.
 
         Args:
-            category (str, optional): The name of the data that should be checked, or "all" to
-                validate all of the data types. Defaults to "all".
+            category (:obj: `str`, optional): The name of the data that should be
+                checked, or "all" to validate all of the data types. Defaults to "all".
 
         Returns:
-            dict[str, list[str]]: A dictionary of each data type and any columns that  don't
-                match the required dtype and can't be converted to it successfully.
+            (:obj: `dict[str, list[str]]`): A dictionary of each data type and any
+                columns that  don't match the required dtype and can't be converted to
+                it successfully.
         """
         # Create a new mapping of the data's column names to the expected dtype
         # TODO: Consider if this should be a encoded in the metadata/plantdata object elsewhere
@@ -1089,7 +1128,7 @@ class PlantData:
                 )
 
         error_cols = {}
-        for name, df in self.analysis_values.items():
+        for name, df in self.data_dict.items():
             if category != "all" and category != name:
                 # Skip irrelevant data types if not checking all data types
                 continue
@@ -1110,7 +1149,7 @@ class PlantData:
         that do not meet the frequency criteria.
 
         Args:
-            category (str, optional): The data type category. Defaults to "all".
+            category (:obj: `str`, optional): The data type category. Defaults to "all".
 
         Returns:
             list[str]: The list of data types that don't meet the required datetime frequency.
@@ -1118,7 +1157,7 @@ class PlantData:
         frequency_requirements = self.metadata.frequency_requirements(self.analysis_type)
 
         # Collect all the frequencies for each of the data types
-        data_dict = self.analysis_values
+        data_dict = self.data_dict
         actual_frequencies = {}
         for name, df in data_dict.items():
             if df is None:

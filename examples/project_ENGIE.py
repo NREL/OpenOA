@@ -88,25 +88,26 @@ def clean_scada(scada_file: str | Path) -> pd.DataFrame:
     # Due to data discretization, there appear to be a large number of repeating values
     logger.info("Flagging unresponsive sensors")
     turbine_id_list = scada_df.Wind_turbine_name.unique()
-    scada_df = scada_df.set_index("Wind_turbine_name", drop=False)
     sensor_cols = ["Ba_avg", "P_avg", "Ws_avg", "Va_avg", "Ot_avg", "Ya_avg", "Wa_avg"]
     for t_id in turbine_id_list:
+        ix_turbine = scada_df["Wind_turbine_name"] == t_id
 
         # Cancel out readings where the wind vane direction repeats more than 3 times in a row
-        ix_flag = filters.unresponsive_flag(scada_df.loc[t_id, "Va_avg"], 3)
-        scada_df.loc[t_id].loc[ix_flag, sensor_cols] = np.nan
+        ix_flag = filters.unresponsive_flag(scada_df.loc[ix_turbine, "Va_avg"], 3)
+        scada_df.loc[ix_turbine & ix_flag, sensor_cols] = np.nan
 
         # Cancel out the temperature readings where the value repeats more than 20 times in a row
-        ix_flag = filters.unresponsive_flag(scada_df.loc[t_id, "Ot_avg"], 20)
-        scada_df.loc[t_id].loc[ix_flag, "Ot_avg"] = np.nan
+        ix_flag = filters.unresponsive_flag(scada_df.loc[ix_turbine, "Ot_avg"], 20)
+        scada_df.loc[ix_turbine & ix_flag, "Ot_avg"] = np.nan
 
     logger.info("Converting pitch to the range [-180, 180]")
-    scada_df["Ba_avg"] = scada_df["Ba_avg"] % 360
+    scada_df.loc[:, "Ba_avg"] = scada_df["Ba_avg"] % 360
     ix_gt_180 = scada_df["Ba_avg"] > 180.0
     scada_df.loc[ix_gt_180, "Ba_avg"] = scada_df.loc[ix_gt_180, "Ba_avg"] - 360.0
 
     logger.info("Calculating energy production")
     scada_df["energy_kwh"] = un.convert_power_to_energy(scada_df.P_avg * 1000, scada_freq) / 1000
+
     return scada_df
 
 
