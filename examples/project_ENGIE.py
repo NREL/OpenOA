@@ -30,16 +30,15 @@ steps taken to correct the raw data for use in the PRUF OA code.
 - Wind speed, wind direction, temperature, and density
 
 """
-import os
+from pathlib import Path
 from zipfile import ZipFile
 
 import numpy as np
 import pandas as pd
 
-import openoa.utils.timeseries as ts
 import openoa.utils.unit_conversion as un
 import openoa.utils.met_data_processing as met
-from openoa import PlantData, logging, logged_method_call
+from openoa import PlantData, logging
 from openoa.utils import filters
 
 
@@ -50,9 +49,63 @@ def extract_data(path="data/la_haute_borne"):
     """
     Extract zip file containing project engie data.
     """
-    if not os.path.exists(path):
-        with ZipFile(path + ".zip") as zipfile:
+    path = Path(path).resolve()
+    if not path.exists():
+        logger.info("Extracting compressed data files")
+        with ZipFile(path.with_suffix(".zip")) as zipfile:
             zipfile.extractall(path)
+
+
+def clean_scada(scada_file: str | Path) -> pd.DataFrame:
+    """Reads in and cleans up the SCADA data
+
+    Args:
+        scada_file (:obj: `str` | `Path`): The file object corresponding to the SCADA data.
+
+    Returns:
+        pd.DataFrame: The cleaned up SCADA data that is ready for loading into a `PlantData` object.
+    """
+    scada_freq = "10T"
+
+    logger.info("Loading SCADA data")
+    scada_df = pd.read_csv(scada_file)
+    logger.info("SCADA data loaded")
+
+    # We know that the timestamps are in local time, so we want to convert them to UTC
+    logger.info("Timestamp conversion to dateteims and UTC")
+    scada_df["time"] = pd.to_datetime(scada_df["Date_time"], utc=True).dt.tz_localize(None)
+
+    # There are duplicated timestamps, so let's ensure we drop the duplicates for each turbine
+    scada_df = scada_df.drop_duplicates(subset=["time", "Wind_turbine_name"], keep="first")
+
+    # Remove extreme values from the temperature field
+    logger.info("Removing out of range of temperature readings")
+    scada_df = scada_df[(scada_df["Ot_avg"] >= -15.0) & (scada_df["Ot_avg"] <= 45.0)]
+
+    # Filter out the unresponsive sensors
+    # Due to data discretization, there appear to be a large number of repeating values
+    logger.info("Flagging unresponsive sensors")
+    turbine_id_list = scada_df.Wind_turbine_name.unique()
+    scada_df = scada_df.set_index("Wind_turbine_name", drop=False)
+    sensor_cols = ["Ba_avg", "P_avg", "Ws_avg", "Va_avg", "Ot_avg", "Ya_avg", "Wa_avg"]
+    for t_id in turbine_id_list:
+
+        # Cancel out readings where the wind vane direction repeats more than 3 times in a row
+        ix_flag = filters.unresponsive_flag(scada_df.loc[t_id, "Va_avg"], 3)
+        scada_df.loc[t_id].loc[ix_flag, sensor_cols] = np.nan
+
+        # Cancel out the temperature readings where the value repeats more than 20 times in a row
+        ix_flag = filters.unresponsive_flag(scada_df.loc[t_id], 20)
+        scada_df.loc[t_id].loc[ix_flag, "Ot_avg"] = np.nan
+
+    logger.info("Converting pitch to the range [-180, 180]")
+    scada_df["Ba_avg"] = scada_df["Ba_avg"] % 360
+    ix_gt_180 = scada_df["Ba_avg"] > 180.0
+    scada_df.loc[ix_gt_180, "Ba_avg"] = scada_df.loc[ix_gt_180, "Ba_avg"] - 360.0
+
+    logger.info("Calculating energy production")
+    scada_df["energy_kwh"] = un.convert_power_to_energy(scada_df.P_avg * 1000, scada_freq) / 1000
+    return scada_df
 
 
 def prepare(path="data/la_haute_borne", scada_df=None, return_value="plantdata"):
@@ -67,12 +120,10 @@ def prepare(path="data/la_haute_borne", scada_df=None, return_value="plantdata")
     # Extract data if necessary
     extract_data(path)
 
-    # Set time frequencies of data in minutes
-    # meter_freq = "10T"  # Daily meter data
-    # curtail_freq = "10T"  # Daily curtailment data
-    scada_freq = "10T"  # 10-min
+    ###################
+    # Plant Metadata - not used
+    ###################
 
-    # Load meta data
     # lat_lon = (48.452, 5.588)
     # plant_capacity = 8.2  # MW
     # num_turbines = 4
@@ -81,108 +132,28 @@ def prepare(path="data/la_haute_borne", scada_df=None, return_value="plantdata")
     ###################
     # SCADA DATA #
     ###################
-    logger.info("Loading SCADA data")
-    if scada_df is None:
-        scada_df = pd.read_csv(f"{path}/la-haute-borne-data-2014-2015.csv")
-    logger.info("SCADA data loaded")
-
-    logger.info("Timestamp QC and conversion to UTC")
-    # Get 'time' field in datetime format. Local time zone information is
-    # encoded, so convert to UTC
-
-    scada_df["time"] = pd.to_datetime(scada_df["Date_time"], utc=True).dt.tz_localize(None)
-
-    # Remove duplicated timestamps and turbine id
-    scada_df = scada_df.drop_duplicates(
-        subset=["time", "Wind_turbine_name"],
-        keep="first",
-    )
-
-    # Set time as index
-    scada_df.set_index("time", inplace=True, drop=False)
-
-    logger.info("Correcting for out of range of temperature variables")
-    # Handle extrema values for temperature. All other variables appear to
-    # be reasonable.
-    scada_df = scada_df[(scada_df["Ot_avg"] >= -15.0) & (scada_df["Ot_avg"] <= 45.0)]
-
-    logger.info("Flagging unresponsive sensors")
-
-    # Due to data discretization, there appear to be a lot of repeating
-    # values. But these filters seem to catch the obvious unresponsive
-    # sensors.
-    for id in scada_df.Wind_turbine_name.unique():
-        temp_flag = filters.unresponsive_flag(
-            scada_df.loc[scada_df.Wind_turbine_name == id, "Va_avg"], 3
-        )
-        scada_df.loc[
-            (scada_df.Wind_turbine_name == id) & (temp_flag),
-            ["Ba_avg", "P_avg", "Ws_avg", "Va_avg", "Ot_avg", "Ya_avg", "Wa_avg"],
-        ] = np.nan
-        temp_flag = filters.unresponsive_flag(
-            scada_df.loc[scada_df.Wind_turbine_name == id, "Ot_avg"], 20
-        )
-        scada_df.loc[(scada_df.Wind_turbine_name == id) & (temp_flag), "Ot_avg"] = np.nan
-
-    # Put power in watts
-    scada_df["Power_W"] = scada_df["P_avg"] * 1000
-
-    # Convert pitch to range -180 to 180.
-    scada_df["Ba_avg"] = scada_df["Ba_avg"] % 360
-    scada_df.loc[scada_df["Ba_avg"] > 180.0, "Ba_avg"] = (
-        scada_df.loc[scada_df["Ba_avg"] > 180.0, "Ba_avg"] - 360.0
-    )
-
-    # Calculate energy
-    scada_df["energy_kwh"] = un.convert_power_to_energy(scada_df["Power_W"], scada_freq) / 1000
-
-    logger.info("Converting field names to IEC 61400-25 standard")
-    # Map to -25 standards
-
-    # Note: there is no vane direction variable defined in -25, so
-    # making one up
-    # scada_map = {
-    #     "time": "time",
-    #     "Wind_turbine_name": "id",
-    #     "Power_W": "wtur_W_avg",
-    #     "Ws_avg": "wmet_wdspd_avg",
-    #     "Wa_avg": "wmet_HorWdDir_avg",
-    #     "Va_avg": "wmet_VaneDir_avg",
-    #     "Ya_avg": "wyaw_YwAng_avg",
-    #     "Ot_avg": "wmet_EnvTmp_avg",
-    #     "Ba_avg": "wrot_BlPthAngVal1_avg",
-    # }
-
-    # scada_df.rename(scada_map, axis="columns", inplace=True)
-
-    # Remove the fields we are not yet interested in
-    # scada_df.drop(["Date_time", "time", "P_avg"], axis=1, inplace=True)
-    scada_df.drop(["Date_time"], axis=1, inplace=True)
+    scada_df = clean_scada(f"{path}/la-haute-borne-data-2014-2015.csv")
 
     ##############
     # METER DATA #
     ##############
-    meter_df = pd.read_csv(f"{path}/plant_data.csv")  # Load Meter data
+    logger.info("Reading in the meter data")
+    meter_df = pd.read_csv(f"{path}/plant_data.csv")
 
     # Create datetime field
     meter_df["time"] = pd.to_datetime(meter_df.time_utc).dt.tz_localize(None)
-    # meter_df.set_index("time", inplace=True, drop=False)
 
     # Drop the fields we don't need
     meter_df.drop(["time_utc", "availability_kwh", "curtailment_kwh"], axis=1, inplace=True)
 
-    # meter_df.rename(columns={"net_energy_kwh": "energy_kwh"}, inplace=True)
-
     #####################################
     # Availability and Curtailment Data #
     #####################################
+    logger.info("Reading in the curtailment data")
     curtail_df = pd.read_csv(f"{path}/plant_data.csv")  # Load Availability and Curtail data
 
-    # Create datetime field
+    # Create datetime field with a UTC base
     curtail_df["time"] = pd.to_datetime(curtail_df.time_utc).dt.tz_localize(None)
-    curtail_df.set_index("time", inplace=True, drop=False)
-
-    # Already have availability and curtailment in kwh, so not much to do.
 
     # Drop the fields we don't need
     curtail_df.drop(["time_utc"], axis=1, inplace=True)
@@ -190,9 +161,13 @@ def prepare(path="data/la_haute_borne", scada_df=None, return_value="plantdata")
     ###################
     # REANALYSIS DATA #
     ###################
+    logger.info("Reading in the reanalysis data and calculating the extra fields")
 
-    # merra2
+    # MERRA2
     reanalysis_merra2_df = pd.read_csv(f"{path}/merra2_la_haute_borne.csv")
+
+    # Create datetime field with a UTC base
+    reanalysis_merra2_df["datetime"] = pd.to_datetime(reanalysis_merra2_df["datetime"])
 
     # calculate wind direction from u, v
     reanalysis_merra2_df["winddirection_deg"] = met.compute_wind_direction(
@@ -200,25 +175,10 @@ def prepare(path="data/la_haute_borne", scada_df=None, return_value="plantdata")
         reanalysis_merra2_df["v_50"],
     )
 
-    # reanalysis_merra2_df.rename(
-    #     {
-    #         "datetime": "time",
-    #         "ws_50m": "windspeed_ms",
-    #         "u_50": "u_ms",
-    #         "v_50": "v_ms",
-    #         "temp_2m": "temperature_K",
-    #         "dens_50m": "rho_kgm-3",
-    #     },
-    #     axis="columns", inplace=True
-    # )
-    # reanalysis_merra2_df.set_index("time", inplace=True, drop=False)
-    # reanalysis_merra2_df["time"] = pd.to_datetime(reanalysis_merra2_df["time"])
-    reanalysis_merra2_df["datetime"] = pd.to_datetime(reanalysis_merra2_df["datetime"])
-
     # Drop the fields we don't need
     reanalysis_merra2_df.drop(["Unnamed: 0"], axis=1, inplace=True)
 
-    # era5
+    # ERA5
     reanalysis_era5_df = pd.read_csv(f"{path}/era5_wind_la_haute_borne.csv")
 
     # remove a duplicated datetime column
@@ -229,20 +189,7 @@ def prepare(path="data/la_haute_borne", scada_df=None, return_value="plantdata")
         reanalysis_era5_df["u_100"],
         reanalysis_era5_df["v_100"],
     )
-
-    # reanalysis_era5_df.rename(
-    #     {
-    #         "datetime": "time",
-    #         "ws_100m": "windspeed_ms",
-    #         "u_100": "u_ms",
-    #         "v_100": "v_ms",
-    #         "t_2m": "temperature_K",
-    #         "dens_100m": "rho_kgm-3",
-    #     },
-    #     axis="columns", inplace=True
-    # )
-    # reanalysis_era5_df.set_index("time", inplace=True, drop=False)
-    # reanalysis_era5_df["time"] = pd.to_datetime(reanalysis_era5_df["time"])
+    # Create datetime field with a UTC base
     reanalysis_era5_df["datetime"] = pd.to_datetime(reanalysis_era5_df["datetime"])
 
     # Drop the fields we don't need
@@ -251,23 +198,14 @@ def prepare(path="data/la_haute_borne", scada_df=None, return_value="plantdata")
     ##############
     # ASSET DATA #
     ##############
-    asset_df = pd.read_csv(f"{path}/la-haute-borne_asset_table.csv")
 
-    # asset_df.rename(
-    #     {
-    #         "Wind_turbine_name": "id",
-    #         "Latitude": "latitude",
-    #         "Longitude": "longitude",
-    #         "Rated_power": "rated_power_kw",
-    #         "Hub_height_m": "hub_height_m",
-    #         "Rotor_diameter_m": "rotor_diameter_m",
-    #     },
-    #     axis="columns", inplace=True
-    # )
+    logger.info("Reading in the asset data")
+    asset_df = pd.read_csv(f"{path}/la-haute-borne_asset_table.csv")
 
     # Assign type to turbine for all assets
     asset_df["type"] = "turbine"
 
+    # Return the appropriate data format
     if return_value == "dataframes":
         return (
             scada_df,
