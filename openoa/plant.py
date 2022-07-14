@@ -521,8 +521,28 @@ def convert_reanalysis(value: dict[str, dict]):
 
 @define(auto_attribs=True)
 class PlantMetaData(FromDictMixin):
-    """Composese the individual metadata/validation requirements from each of the
-    individual data "types" that can compose a `PlantData` object.
+    """Composese the metadata/validation requirements from each of the individual data
+    types that can compose a `PlantData` object.
+
+    Args:
+        latitude (:obj: `float`): The wind power plant's center point latitude.
+        longitude (:obj: `float`): The wind power plant's center point longitude.
+        scada (:obj: `SCADAMetaData`): A dictionary containing the `SCADAMetaData`
+            column mapping and frequency parameters. See `SCADAMetaData` for more details.
+        meter (:obj: `MeterMetaData`): A dictionary containing the `MeterMetaData`
+            column mapping and frequency parameters. See `MeterMetaData` for more details.
+        tower (:obj: `TowerMetaData`): A dictionary containing the `TowerMetaData`
+            column mapping and frequency parameters. See `TowerMetaData` for more details.
+        status (:obj: `StatusMetaData`): A dictionary containing the `StatusMetaData`
+            column mapping parameters. See `StatusMetaData` for more details.
+        curtail (:obj: `CurtailMetaData`): A dictionary containing the `CurtailMetaData`
+            column mapping and frequency parameters. See `CurtailMetaData` for more details.
+        asset (:obj: `AssetMetaData`): A dictionary containing the `AssetMetaData`
+            column mapping parameters. See `AssetMetaData` for more details.
+        reanalysis (:obj: `dict[str, ReanalysisMetaData]`): A dictionary containing the
+            reanalysis type (as keys, such as "era5" or "merra2") and `ReanalysisMetaData`
+            column mapping and frequency parameters for each type of reanalysis data
+            provided. See `ReanalysisMetaData` for more details.
     """
 
     latitude: float = attr.ib(default=0, converter=float)
@@ -536,7 +556,10 @@ class PlantMetaData(FromDictMixin):
     reanalysis: dict[str, ReanalysisMetaData] = attr.ib(default={}, converter=convert_reanalysis)
 
     @property
-    def column_map(self):
+    def column_map(self) -> dict[str, dict]:
+        """Provides the column mapping for all of the available data types with
+        the name of each data type as the key and the dictionary mapping as the values.
+        """
         values = dict(
             scada=self.scada.col_map,
             meter=self.meter.col_map,
@@ -549,7 +572,10 @@ class PlantMetaData(FromDictMixin):
         return values
 
     @property
-    def type_map(self):
+    def type_map(self) -> dict[str, dict]:
+        """Provides the column dtype matching for all of the available data types with
+        the name of each data type as the keys, and the column dtype mapping as values.
+        """
         types = dict(
             scada=self.scada.dtypes,
             meter=self.meter.dtypes,
@@ -572,6 +598,17 @@ class PlantMetaData(FromDictMixin):
 
     @classmethod
     def from_json(cls, metadata_file: str | Path) -> PlantMetaData:
+        """Loads the metadata from a JSON file.
+
+        Args:
+            metadata_file (:obj: `str | Path`): The full path and file name of the JSON file.
+
+        Raises:
+            FileExistsError: Raised if the file doesn't exist at the provided location.
+
+        Returns:
+            PlantMetaData
+        """
         metadata_file = Path(metadata_file).resolve()
         if not metadata_file.is_file():
             raise FileExistsError(f"Input JSON file: {metadata_file} is an invalid input.")
@@ -581,6 +618,17 @@ class PlantMetaData(FromDictMixin):
 
     @classmethod
     def from_yaml(cls, metadata_file: str | Path) -> PlantMetaData:
+        """Loads the metadata from a YAML file with a PyYAML encoding.
+
+        Args:
+            metadata_file (:obj: `str | Path`): The full path and file name of the YAML file.
+
+        Raises:
+            FileExistsError: Raised if the file doesn't exist at the provided location.
+
+        Returns:
+            PlantMetaData
+        """
         metadata_file = Path(metadata_file).resolve()
         if not metadata_file.is_file():
             raise FileExistsError(f"Input YAML file: {metadata_file} is an invalid input.")
@@ -590,6 +638,19 @@ class PlantMetaData(FromDictMixin):
 
     @classmethod
     def load(cls, data: str | Path | dict | PlantMetaData) -> PlantMetaData:
+        """Loads the metadata from either a dictionary or file such as a JSON or YAML file.
+
+        Args:
+            metadata_file (:obj: `str | Path | dict`): Either a pre-loaded dictionary or
+                the full path and file name of the JSON or YAML file.
+
+        Raises:
+            ValueError: Raised if the file name doesn't reflect a JSON or YAML encoding.
+            ValueError: Raised if the data provided isn't of the correct data type.
+
+        Returns:
+            PlantMetaData
+        """
         if isinstance(data, PlantMetaData):
             return data
 
@@ -731,6 +792,21 @@ def dtype_converter(df: pd.DataFrame, column_types={}) -> list[str]:
 
 
 def analysis_filter(error_dict: dict, analysis_types: list[str] = ["all"]) -> dict:
+    """Filters the errors found by the analysis requirements  provided by the `analysis_types`.
+
+    Args:
+        error_dict (:obj: `dict`): The dictionary of errors separated by the keys:
+            "missing", "dtype", and "frequency".
+        analysis_types (:obj: `list[str]`, optional): The list of analysis types to
+            consider for validation. If "all" is contained in the list, then all errors
+            are returned back, and if `None` is contained in the list, then no errors
+            are returned, otherwise the union of analysis requirements is returned back.
+            Defaults to ["all"].
+
+    Returns:
+        dict: The missing column, bad dtype, and incorrect timestamp frequency errors
+            corresponding to the user's analysis types.
+    """
     if "all" in analysis_types:
         return error_dict
 
@@ -757,12 +833,6 @@ def analysis_filter(error_dict: dict, analysis_types: list[str] = ["all"]) -> di
         key: values.intersection(error_dict["dtype"].get(key, []))
         for key, values in column_requirements.items()
     }
-
-    # Filter the incorrect frequencies, so only analysis-specific categories are provided
-    # TODO
-    # error_dict["frequency"] = {
-    #     key: value["freq"] for key, value in requirements if value["freq"] not in frequency
-    # }
 
     return error_dict
 
@@ -834,6 +904,16 @@ def load_to_pandas(data: str | Path | pd.DataFrame | spark.sql.DataFrame) -> pd.
 def load_to_pandas_dict(
     data: dict[str | Path | pd.DataFrame | spark.sql.DataFrame],
 ) -> dict[str, pd.DataFrame] | None:
+    """Converts a dictionary of data or data locations to a dictionary of `pd.DataFrame`s
+    by iterating over the dictionary and passing each value to `load_to_pandas`.
+
+    Args:
+        data (dict[str  |  Path  |  pd.DataFrame  |  spark.sql.DataFrame]): The input data.
+
+    Returns:
+        dict[str, pd.DataFrame] | None: The passed `None` or the converted `pd.DataFrame`
+            object.
+    """
     if data is None:
         return data
     for key, val in data.items():
