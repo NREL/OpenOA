@@ -74,7 +74,7 @@ def clean_scada(scada_file: str | Path) -> pd.DataFrame:
     logger.info("SCADA data loaded")
 
     # We know that the timestamps are in local time, so we want to convert them to UTC
-    logger.info("Timestamp conversion to dateteims and UTC")
+    logger.info("Timestamp conversion to datetime and UTC")
     scada_df["time"] = pd.to_datetime(scada_df["Date_time"], utc=True).dt.tz_localize(None)
 
     # There are duplicated timestamps, so let's ensure we drop the duplicates for each turbine
