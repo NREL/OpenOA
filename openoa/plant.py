@@ -572,7 +572,7 @@ class PlantMetaData(FromDictMixin):
         return values
 
     @property
-    def type_map(self) -> dict[str, dict]:
+    def dtype_map(self) -> dict[str, dict]:
         """Provides the column dtype matching for all of the available data types with
         the name of each data type as the keys, and the column dtype mapping as values.
         """
@@ -1190,7 +1190,7 @@ class PlantData:
         # Create a new mapping of the data's column names to the expected dtype
         # TODO: Consider if this should be a encoded in the metadata/plantdata object elsewhere
         column_name_map = self.metadata.column_map
-        column_type_map = self.metadata.type_map
+        column_dtype_map = self.metadata.dtype_map
         column_map = {}
         for name in column_name_map:
             if name == "reanalysis":
@@ -1199,12 +1199,12 @@ class PlantData:
                     column_map["reanalysis"][name] = dict(
                         zip(
                             column_name_map["reanalysis"][name].values(),
-                            column_type_map["reanalysis"][name].values(),
+                            column_dtype_map["reanalysis"][name].values(),
                         )
                     )
             else:
                 column_map[name] = dict(
-                    zip(column_name_map[name].values(), column_type_map[name].values())
+                    zip(column_name_map[name].values(), column_dtype_map[name].values())
                 )
 
         error_cols = {}
@@ -1244,19 +1244,19 @@ class PlantData:
                 continue
 
             if name in ("scada", "status", "tower"):
-                freq = df.index.get_level_values("time").freq
+                freq = df.index.get_level_values("time").freqstr
                 if freq is None:
                     freq = pd.infer_freq(df.index.get_level_values("time"))
                 actual_frequencies[name] = freq
             elif name in ("meter", "curtail"):
-                freq = df.index.freq
+                freq = df.index.freqstrs
                 if freq is None:
                     freq = pd.infer_freq(df.index)
                 actual_frequencies[name] = freq
             elif name == "reanalysis":
                 actual_frequencies["reanalysis"] = {}
                 for sub_name, df in data_dict[name].items():
-                    freq = df.index.freq
+                    freq = df.index.freqstr
                     if freq is None:
                         freq = pd.infer_freq(df.index)
                     actual_frequencies["reanalysis"][sub_name] = freq
