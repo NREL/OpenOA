@@ -32,6 +32,7 @@ steps taken to correct the raw data for use in the PRUF OA code.
 """
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from zipfile import ZipFile
 
@@ -41,7 +42,7 @@ import pandas as pd
 import openoa.utils.unit_conversion as un
 import openoa.utils.met_data_processing as met
 from openoa import PlantData, logging
-from openoa.utils import filters
+from openoa.utils import filters, timeseries
 
 
 logger = logging.getLogger()
@@ -170,7 +171,7 @@ def prepare(path="data/la_haute_borne", return_value="plantdata"):
     reanalysis_merra2_df = pd.read_csv(f"{path}/merra2_la_haute_borne.csv")
 
     # Create datetime field with a UTC base
-    reanalysis_merra2_df["datetime"] = pd.to_datetime(reanalysis_merra2_df["datetime"])
+    reanalysis_merra2_df["datetime"] = pd.to_datetime(reanalysis_merra2_df["datetime"], utc=True)
 
     # calculate wind direction from u, v
     reanalysis_merra2_df["winddirection_deg"] = met.compute_wind_direction(
@@ -187,13 +188,19 @@ def prepare(path="data/la_haute_borne", return_value="plantdata"):
     # remove a duplicated datetime column
     reanalysis_era5_df = reanalysis_era5_df.loc[:, ~reanalysis_era5_df.columns.duplicated()].copy()
 
+    # Create datetime field with a UTC base
+    reanalysis_era5_df["datetime"] = pd.to_datetime(reanalysis_era5_df["datetime"], utc=True)
+
+    # Fill the 2 missing time stamps with NaN values
+    reanalysis_era5_df = reanalysis_era5_df.set_index(pd.DatetimeIndex(reanalysis_era5_df.datetime))
+    reanalysis_era5_df = reanalysis_era5_df.asfreq("1H")
+    reanalysis_era5_df["datetime"] = reanalysis_era5_df.index
+
     # calculate wind direction from u, v
     reanalysis_era5_df["winddirection_deg"] = met.compute_wind_direction(
         reanalysis_era5_df["u_100"],
         reanalysis_era5_df["v_100"],
     )
-    # Create datetime field with a UTC base
-    reanalysis_era5_df["datetime"] = pd.to_datetime(reanalysis_era5_df["datetime"])
 
     # Drop the fields we don't need
     reanalysis_era5_df.drop(["Unnamed: 0"], axis=1, inplace=True)
