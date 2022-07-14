@@ -82,7 +82,7 @@ def analysis_type_validator(
     incorrect_types = set(value).difference(set(valid_types))
     if incorrect_types:
         raise ValueError(
-            f"{attribute.name} input: {incorrect_types} is invalid, must be one of 'all' or a combination of: {[*ANALYSIS_REQUIREMENTS]}"
+            f"{attribute.name} input: {incorrect_types} is invalid, must be one of 'all' or a combination of: {[*valid_types]}"
         )
 
 
@@ -1249,7 +1249,7 @@ class PlantData:
                     freq = pd.infer_freq(df.index.get_level_values("time"))
                 actual_frequencies[name] = freq
             elif name in ("meter", "curtail"):
-                freq = df.index.freqstrs
+                freq = df.index.freqstr
                 if freq is None:
                     freq = pd.infer_freq(df.index)
                 actual_frequencies[name] = freq
