@@ -55,23 +55,6 @@ def extract_data(path="data/la_haute_borne"):
             zipfile.extractall(path)
 
 
-def convert_timestamps(df: pd.DataFrame, time_col: str, new_col: str) -> pd.DataFrame:
-    """Converts the timestamp data into a proper pandas datetime object in a new column
-    to preserve the originally encoded data.
-
-    Args:
-        df (pd.DataFrame): The `pd.DataFrame` containing a timestamp column.
-        time_col (str): Name of the column containing the timestamps.
-        new_col (str): A new column name for the new timestamp data.
-
-    Returns:
-        pd.DataFrame: The originally provided `df`, but with an additional column (`new_col`)
-            that contains the properly encoded datetime objects in the UTC timezone.
-    """
-    df[new_col] = pd.to_datetime(df[time_col], utc=True).dt.tz_localize(None)
-    return df
-
-
 def prepare(path="data/la_haute_borne", scada_df=None, return_value="plantdata"):
     """
     Do all loading and preparation of the data for this plant.
@@ -85,15 +68,15 @@ def prepare(path="data/la_haute_borne", scada_df=None, return_value="plantdata")
     extract_data(path)
 
     # Set time frequencies of data in minutes
-    meter_freq = "10T"  # Daily meter data
-    curtail_freq = "10T"  # Daily curtailment data
+    # meter_freq = "10T"  # Daily meter data
+    # curtail_freq = "10T"  # Daily curtailment data
     scada_freq = "10T"  # 10-min
 
     # Load meta data
-    lat_lon = (48.452, 5.588)
-    plant_capacity = 8.2  # MW
-    num_turbines = 4
-    turbine_capacity = 2.05  # MW
+    # lat_lon = (48.452, 5.588)
+    # plant_capacity = 8.2  # MW
+    # num_turbines = 4
+    # turbine_capacity = 2.05  # MW
 
     ###################
     # SCADA DATA #
@@ -104,9 +87,10 @@ def prepare(path="data/la_haute_borne", scada_df=None, return_value="plantdata")
     logger.info("SCADA data loaded")
 
     logger.info("Timestamp QC and conversion to UTC")
+    # Get 'time' field in datetime format. Local time zone information is
+    # encoded, so convert to UTC
 
-    # Get 'time' field in datetime format. Local time zone information is encoded, so convert to UTC
-    scada_df = convert_timestamps(scada_df, "Date_time", "time")
+    scada_df["time"] = pd.to_datetime(scada_df["Date_time"], utc=True).dt.tz_localize(None)
 
     # Remove duplicated timestamps and turbine id
     scada_df = scada_df.drop_duplicates(
@@ -157,22 +141,23 @@ def prepare(path="data/la_haute_borne", scada_df=None, return_value="plantdata")
 
     # Note: there is no vane direction variable defined in -25, so
     # making one up
-    scada_map = {
-        "time": "time",
-        "Wind_turbine_name": "id",
-        "Power_W": "wtur_W_avg",
-        "Ws_avg": "wmet_wdspd_avg",
-        "Wa_avg": "wmet_HorWdDir_avg",
-        "Va_avg": "wmet_VaneDir_avg",
-        "Ya_avg": "wyaw_YwAng_avg",
-        "Ot_avg": "wmet_EnvTmp_avg",
-        "Ba_avg": "wrot_BlPthAngVal1_avg",
-    }
+    # scada_map = {
+    #     "time": "time",
+    #     "Wind_turbine_name": "id",
+    #     "Power_W": "wtur_W_avg",
+    #     "Ws_avg": "wmet_wdspd_avg",
+    #     "Wa_avg": "wmet_HorWdDir_avg",
+    #     "Va_avg": "wmet_VaneDir_avg",
+    #     "Ya_avg": "wyaw_YwAng_avg",
+    #     "Ot_avg": "wmet_EnvTmp_avg",
+    #     "Ba_avg": "wrot_BlPthAngVal1_avg",
+    # }
 
-    scada_df.rename(scada_map, axis="columns", inplace=True)
+    # scada_df.rename(scada_map, axis="columns", inplace=True)
 
     # Remove the fields we are not yet interested in
-    scada_df.drop(["Date_time", "time", "P_avg"], axis=1, inplace=True)
+    # scada_df.drop(["Date_time", "time", "P_avg"], axis=1, inplace=True)
+    scada_df.drop(["Date_time"], axis=1, inplace=True)
 
     ##############
     # METER DATA #
@@ -181,12 +166,12 @@ def prepare(path="data/la_haute_borne", scada_df=None, return_value="plantdata")
 
     # Create datetime field
     meter_df["time"] = pd.to_datetime(meter_df.time_utc).dt.tz_localize(None)
-    meter_df.set_index("time", inplace=True, drop=False)
+    # meter_df.set_index("time", inplace=True, drop=False)
 
     # Drop the fields we don't need
     meter_df.drop(["time_utc", "availability_kwh", "curtailment_kwh"], axis=1, inplace=True)
 
-    meter_df.rename(columns={"net_energy_kwh": "energy_kwh"}, inplace=True)
+    # meter_df.rename(columns={"net_energy_kwh": "energy_kwh"}, inplace=True)
 
     #####################################
     # Availability and Curtailment Data #
@@ -200,7 +185,7 @@ def prepare(path="data/la_haute_borne", scada_df=None, return_value="plantdata")
     # Already have availability and curtailment in kwh, so not much to do.
 
     # Drop the fields we don't need
-    curtail_df.drop(["time_utc", "net_energy_kwh"], axis=1, inplace=True)
+    curtail_df.drop(["time_utc"], axis=1, inplace=True)
 
     ###################
     # REANALYSIS DATA #
@@ -215,20 +200,20 @@ def prepare(path="data/la_haute_borne", scada_df=None, return_value="plantdata")
         reanalysis_merra2_df["v_50"],
     )
 
-    reanalysis_merra2_df.rename(
-        {
-            "datetime": "time",
-            "ws_50m": "windspeed_ms",
-            "u_50": "u_ms",
-            "v_50": "v_ms",
-            "temp_2m": "temperature_K",
-            "dens_50m": "rho_kgm-3",
-        },
-        axis="columns",
-        inplace=True,
-    )
-    reanalysis_merra2_df["time"] = pd.to_datetime(reanalysis_merra2_df["time"])
-    reanalysis_merra2_df.set_index("time", inplace=True, drop=False)
+    # reanalysis_merra2_df.rename(
+    #     {
+    #         "datetime": "time",
+    #         "ws_50m": "windspeed_ms",
+    #         "u_50": "u_ms",
+    #         "v_50": "v_ms",
+    #         "temp_2m": "temperature_K",
+    #         "dens_50m": "rho_kgm-3",
+    #     },
+    #     axis="columns", inplace=True
+    # )
+    # reanalysis_merra2_df.set_index("time", inplace=True, drop=False)
+    # reanalysis_merra2_df["time"] = pd.to_datetime(reanalysis_merra2_df["time"])
+    reanalysis_merra2_df["datetime"] = pd.to_datetime(reanalysis_merra2_df["datetime"])
 
     # Drop the fields we don't need
     reanalysis_merra2_df.drop(["Unnamed: 0"], axis=1, inplace=True)
@@ -236,26 +221,29 @@ def prepare(path="data/la_haute_borne", scada_df=None, return_value="plantdata")
     # era5
     reanalysis_era5_df = pd.read_csv(f"{path}/era5_wind_la_haute_borne.csv")
 
+    # remove a duplicated datetime column
+    reanalysis_era5_df = reanalysis_era5_df.loc[:, ~reanalysis_era5_df.columns.duplicated()].copy()
+
     # calculate wind direction from u, v
     reanalysis_era5_df["winddirection_deg"] = met.compute_wind_direction(
         reanalysis_era5_df["u_100"],
         reanalysis_era5_df["v_100"],
     )
 
-    reanalysis_era5_df.rename(
-        {
-            "datetime": "time",
-            "ws_100m": "windspeed_ms",
-            "u_100": "u_ms",
-            "v_100": "v_ms",
-            "t_2m": "temperature_K",
-            "dens_100m": "rho_kgm-3",
-        },
-        axis="columns",
-        inplace=True,
-    )
-    reanalysis_era5_df["time"] = pd.to_datetime(reanalysis_era5_df["time"])
-    reanalysis_era5_df.set_index("time", inplace=True, drop=False)
+    # reanalysis_era5_df.rename(
+    #     {
+    #         "datetime": "time",
+    #         "ws_100m": "windspeed_ms",
+    #         "u_100": "u_ms",
+    #         "v_100": "v_ms",
+    #         "t_2m": "temperature_K",
+    #         "dens_100m": "rho_kgm-3",
+    #     },
+    #     axis="columns", inplace=True
+    # )
+    # reanalysis_era5_df.set_index("time", inplace=True, drop=False)
+    # reanalysis_era5_df["time"] = pd.to_datetime(reanalysis_era5_df["time"])
+    reanalysis_era5_df["datetime"] = pd.to_datetime(reanalysis_era5_df["datetime"])
 
     # Drop the fields we don't need
     reanalysis_era5_df.drop(["Unnamed: 0"], axis=1, inplace=True)
@@ -265,18 +253,17 @@ def prepare(path="data/la_haute_borne", scada_df=None, return_value="plantdata")
     ##############
     asset_df = pd.read_csv(f"{path}/la-haute-borne_asset_table.csv")
 
-    asset_df.rename(
-        {
-            "Wind_turbine_name": "id",
-            "Latitude": "latitude",
-            "Longitude": "longitude",
-            "Rated_power": "rated_power_kw",
-            "Hub_height_m": "hub_height_m",
-            "Rotor_diameter_m": "rotor_diameter_m",
-        },
-        axis="columns",
-        inplace=True,
-    )
+    # asset_df.rename(
+    #     {
+    #         "Wind_turbine_name": "id",
+    #         "Latitude": "latitude",
+    #         "Longitude": "longitude",
+    #         "Rated_power": "rated_power_kw",
+    #         "Hub_height_m": "hub_height_m",
+    #         "Rotor_diameter_m": "rotor_diameter_m",
+    #     },
+    #     axis="columns", inplace=True
+    # )
 
     # Assign type to turbine for all assets
     asset_df["type"] = "turbine"
