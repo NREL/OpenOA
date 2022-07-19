@@ -1147,6 +1147,78 @@ class PlantData:
         )
         return values
 
+    def to_csv(
+        self,
+        save_path: str | Path,
+        with_openoa_col_names: bool = True,
+        metadata: str = "metadata",
+        scada: str = "scada",
+        meter: str = "meter",
+        tower: str = "tower",
+        asset: str = "asset",
+        status: str = "status",
+        curtail: str = "curtail",
+        reanalysis: str = "reanalysis",
+    ) -> None:
+        """Saves all of the dataframe objects to a CSV file in the provided `save_path` directory.
+
+        Args:
+            save_path (str | Path): The folder where all the data should be saved.
+            with_openoa_col_names (bool, optional): Use the PlantData column names (True), or
+                convert the column names back to the originally provided values. Defaults to True.
+            metadata (str, optional): File name (without extension) to be used for the metadata. Defaults to "metadata".
+            scada (str, optional): File name (without extension) to be used for the SCADA data. Defaults to "scada".
+            meter (str, optional): File name (without extension) to be used for the meter data. Defaults to "meter".
+            tower (str, optional): File name (without extension) to be used for the tower data. Defaults to "tower".
+            asset (str, optional): File name (without extension) to be used for the asset data. Defaults to "scada".
+            status (str, optional): File name (without extension) to be used for the status data. Defaults to "status".
+            curtail (str, optional): File name (without extension) to be used for the curtailment data. Defaults to "curtail".
+            reanalysis (str, optional): Base file name (without extension) to be used for the reanalysis data, where
+                each dataset will use the name provided to form the following file name: {save_path}/{reanalysis}_{name}.
+                Defaults to "reanalysis".
+        """
+        save_path = Path(save_path).resolve()
+        if not save_path.exists():
+            save_path.mkdir()
+
+        meta = self.metadata.column_map
+
+        if not with_openoa_col_names:
+            self.update_column_names(to_original=True)
+        else:
+            for name, col_map in meta.items():
+                if name == "reanalysis":
+                    for re_name, re_col_map in col_map.items():
+                        re_col_map = {k: k for k in re_col_map}
+                        re_col_map["frequency"] = self.metadata.reanalysis[re_name].frequency
+                        meta[name][re_name] = re_col_map
+                    continue
+                col_map = {k: k for k in col_map}
+                meta_obj = getattr(self.metadata, name)
+                if hasattr(meta_obj, "frequency"):
+                    col_map["frequency"] = meta_obj.frequency
+                meta[name] = col_map
+
+        with open((save_path / metadata).with_suffix(".yml"), "w") as f:
+            yaml.safe_dump(meta, f, default_flow_style=False, sort_keys=False)
+        if self.scada is not None:
+            self.scada.to_csv((save_path / scada).with_suffix(".csv"), index_label=["time", "id"])
+        if self.status is not None:
+            self.status.to_csv((save_path / status).with_suffix(".csv"), index_label=["time", "id"])
+        if self.tower is not None:
+            self.tower.to_csv((save_path / tower).with_suffix(".csv"), index_label=["time", "id"])
+        if self.meter is not None:
+            self.meter.to_csv((save_path / meter).with_suffix(".csv"), index_label=["time"])
+        if self.curtail is not None:
+            self.curtail.to_csv((save_path / curtail).with_suffix(".csv"), index_label=["time"])
+        if self.asset is not None:
+            self.asset.to_csv((save_path / asset).with_suffix(".csv"), index_label=["id"])
+        if self.reanalysis is not None:
+            for name, df in self.reanalysis.items():
+                df.to_csv(
+                    (save_path / f"{reanalysis}_{name}").with_suffix(".csv"), index_label=["time"]
+                )
+
     def _validate_column_names(self, category: str = "all") -> dict[str, list[str]]:
         """Validates that the column names in each of the data types matches the mapping
         provided in the `metadata` object.
@@ -1328,21 +1400,19 @@ class PlantData:
             has_u_v = (u in df) & (v in df)
 
             ws = col_map["windspeed"]
-            if ws not in df:
-                if has_u_v:
-                    df[ws] = np.sqrt(df[u].values ** 2 + df[v].values ** 2)
+            if ws not in df and has_u_v:
+                df[ws] = np.sqrt(df[u].values ** 2 + df[v].values ** 2)
 
             wd = col_map["wind_direction"]
-            if wd not in df:
-                if has_u_v:
-                    df[wd] = met.compute_wind_direction(df[u], df[v])
+            if wd not in df and has_u_v:
+                df[wd] = met.compute_wind_direction(df[u], df[v])
 
             dens = col_map["density"]
             sp = col_map["surface_pressure"]
             temp = col_map["temperature"]
-            if dens not in df:
-                if (sp in df) & (temp in df):
-                    df[dens] = met.compute_air_density(df[temp], df[sp])
+            has_sp_temp = (sp in df) & (temp in df)
+            if dens not in df and has_sp_temp:
+                df[dens] = met.compute_air_density(df[temp], df[sp])
 
             reanalysis[name] = df
         self.reanalysis = reanalysis
