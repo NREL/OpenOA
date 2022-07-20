@@ -1088,45 +1088,45 @@ class PlantData:
             time_col = self.metadata.scada.col_map["time"]
             id_col = self.metadata.scada.col_map["id"]
             self.scada[time_col] = pd.DatetimeIndex(self.scada[time_col])
-            self.scada = self.scada.set_index([time_col, id_col], drop=False)
+            self.scada = self.scada.set_index([time_col, id_col])
             self.scada.index.names = ["time", "id"]
 
         if self.meter is not None:
             time_col = self.metadata.meter.col_map["time"]
             self.meter[time_col] = pd.DatetimeIndex(self.meter[time_col])
-            self.meter = self.meter.set_index([time_col], drop=False)
+            self.meter = self.meter.set_index([time_col])
             self.meter.index.name = "time"
 
         if self.status is not None:
             time_col = self.metadata.status.col_map["time"]
             id_col = self.metadata.status.col_map["id"]
             self.status[time_col] = pd.DatetimeIndex(self.status[time_col])
-            self.status = self.status.set_index([time_col, id_col], drop=False)
+            self.status = self.status.set_index([time_col, id_col])
             self.status.index.names = ["time", "id"]
 
         if self.tower is not None:
             time_col = self.metadata.tower.col_map["time"]
             id_col = self.metadata.tower.col_map["id"]
             self.tower[time_col] = pd.DatetimeIndex(self.tower[time_col])
-            self.tower = self.tower.set_index([time_col, id_col], drop=False)
+            self.tower = self.tower.set_index([time_col, id_col])
             self.tower.index.names = ["time", "id"]
 
         if self.curtail is not None:
             time_col = self.metadata.curtail.col_map["time"]
             self.curtail[time_col] = pd.DatetimeIndex(self.curtail[time_col])
-            self.curtail = self.curtail.set_index([time_col], drop=False)
+            self.curtail = self.curtail.set_index([time_col])
             self.curtail.index.name = "time"
 
         if self.asset is not None:
             id_col = self.metadata.asset.col_map["id"]
-            self.asset = self.asset.set_index([id_col], drop=False)
+            self.asset = self.asset.set_index([id_col])
             self.asset.index.name = "id"
 
         if self.reanalysis is not None:
             for name in self.reanalysis:
                 time_col = self.metadata.reanalysis[name].col_map["time"]
                 self.reanalysis[name][time_col] = pd.DatetimeIndex(self.reanalysis[name][time_col])
-                self.reanalysis[name] = self.reanalysis[name].set_index([time_col], drop=False)
+                self.reanalysis[name] = self.reanalysis[name].set_index([time_col])
                 self.reanalysis[name].index.name = "time"
 
     @property
