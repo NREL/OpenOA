@@ -1,27 +1,20 @@
 from __future__ import annotations
 
-import io
-import os
 import json
 import itertools
+from copy import deepcopy
 from typing import Callable, Optional, Sequence
 from pathlib import Path
-from dataclasses import dataclass
 
 import attr
 import yaml
 import numpy as np
 import pandas as pd
 import pyspark as spark
-from attr import define, fields, fields_dict
-from dateutil.parser import parse
+from attr import define
 
 import openoa.utils.met_data_processing as met
-from openoa.utils.reanalysis_downloading import download_reanalysis_data_planetos
 
-
-
-# PlantData V2 with Attrs Dataclass
 
 # Datetime frequency checks
 _at_least_monthly = ("M", "MS", "W", "D", "H", "T", "min", "S", "L", "ms", "U", "us", "N")
@@ -94,15 +87,15 @@ def analysis_type_validator(
 
 
 def frequency_validator(
-    actual_freq: str, desired_freq: Optional[str | set[str]], exact: bool
+    actual_freq: str, desired_freq: Optional[str | None | set[str]], exact: bool
 ) -> bool:
     """Helper function to check if the actual datetime stamp frequency is valid compared
     to what is required.
 
     Args:
         actual_freq (str): The frequency of the datetime stamp, or `df.index.freq`.
-        desired_freq (Optional[str  |  set[str]]): Either the exact frequency required,
-            or a set of options that are also valid, in which case any numeric
+        desired_freq (Optional[str  |  None  |  set[str]]): Either the exact frequency,
+            required or a set of options that are also valid, in which case any numeric
             information encoded in `actual_freq` will be dropped.
         exact (bool): If the provided frequency codes should be exact matches (`True`),
             or, if `False`, the check should be for a combination of matches.
@@ -110,11 +103,17 @@ def frequency_validator(
     Returns:
         bool: If the actual datetime frequency is sufficient, per the match requirements.
     """
-    if exact:
-        return actual_freq != desired_freq
-
     if desired_freq is None:
         return True
+
+    if actual_freq is None:
+        return False
+
+    if isinstance(desired_freq, str):
+        desired_freq = set([desired_freq])
+
+    if exact:
+        return actual_freq in desired_freq
 
     actual_freq = "".join(filter(str.isalpha, actual_freq))
     return actual_freq in desired_freq
@@ -244,6 +243,9 @@ class MeterMetaData(FromDictMixin):
     power: str = attr.ib(default="power")
     energy: str = attr.ib(default="energy")
 
+    # Data about the columns
+    frequency: str = attr.ib(default="10T")
+
     # Parameterizations that should not be changed
     # Prescribed mappings, datatypes, and units for in-code reference.
     name: str = attr.ib(default="meter", init=False)
@@ -260,7 +262,7 @@ class MeterMetaData(FromDictMixin):
         default=dict(
             time="datetim64[ns]",
             power="kW",
-            energy="kW",
+            energy="kWh",
         ),
         init=False,  # don't allow for user input
     )
@@ -278,6 +280,9 @@ class TowerMetaData(FromDictMixin):
     # DataFrame columns
     time: str = attr.ib(default="time")
     id: str = attr.ib(default="id")
+
+    # Data about the columns
+    frequency: str = attr.ib(default="10T")
 
     # Parameterizations that should not be changed
     # Prescribed mappings, datatypes, and units for in-code reference.
@@ -444,9 +449,9 @@ class AssetMetaData(FromDictMixin):
             latitude=self.latitude,
             longitude=self.longitude,
             rated_power=self.rated_power,
-            hub_height=self.rated_power,
-            rotor_diameter=self.rated_power,
-            elevation=self.rated_power,
+            hub_height=self.hub_height,
+            rotor_diameter=self.rotor_diameter,
+            elevation=self.elevation,
             type=self.type,
         )
 
@@ -605,15 +610,23 @@ class PlantMetaData(FromDictMixin):
         raise ValueError("PlantMetaData can only be loaded from str, Path, or dict objects.")
 
     def frequency_requirements(self, analysis_types: list[str | None]) -> dict[str, set[str]]:
-        """Creates the frequency requirements
+        """Creates a frequency requirements dictionary for each data type with the name
+        as the key and a set of valid frequency fields as the values.
 
         Args:
-            analysis_types (list[str  |  None]): _description_
+            analysis_types (list[str  |  None]): The analyses the data is intended to be
+                used for, which will determine what data need to be checked.
 
         Returns:
-            dict[str, set[str]]: _description_
+            dict[str, set[str]]: The dictionary of data type name and valid frequencies
+                for the datetime stamps.
         """
-        requirements = {key: ANALYSIS_REQUIREMENTS[key] for key in analysis_types}
+        if "all" in analysis_types:
+            requirements = deepcopy(ANALYSIS_REQUIREMENTS)
+        else:
+            requirements = {
+                key: ANALYSIS_REQUIREMENTS[key] for key in analysis_types if key is not None
+            }
         frequency_requirements = {
             key: {name: value["freq"] for name, value in values.items()}
             for key, values in requirements.items()
@@ -659,7 +672,7 @@ def convert_to_list(
         The new list of elements.
     """
 
-    if isinstance(value, (str, int, float, None)):
+    if isinstance(value, (str, int, float)) or value is None:
         value = [value]
     if manipulation is not None:
         return [manipulation(el) for el in value]
@@ -688,7 +701,7 @@ def column_validator(df: pd.DataFrame, column_names={}) -> None | list[str]:
     return []
 
 
-def dtype_converter(df: pd.DataFrame, column_types={}) -> None | list[str]:
+def dtype_converter(df: pd.DataFrame, column_types={}) -> list[str]:
     """Converts the columns provided in `column_types` of `df` to the appropriate data
     type.
 
@@ -705,7 +718,7 @@ def dtype_converter(df: pd.DataFrame, column_types={}) -> None | list[str]:
     for column, new_type in column_types.items():
         if new_type in (np.datetime64, pd.DatetimeIndex):
             try:
-                df[column] = pd.to_datetime(df[column], utc=True)
+                df[column] = pd.DatetimeIndex(df[column])
             except Exception as e:  # noqa: disable=E722
                 errors.append(column)
             continue
@@ -714,14 +727,15 @@ def dtype_converter(df: pd.DataFrame, column_types={}) -> None | list[str]:
         except:  # noqa: disable=E722
             errors.append(column)
 
-    if errors:
-        return errors
-    return []
+    return errors
 
 
 def analysis_filter(error_dict: dict, analysis_types: list[str] = ["all"]) -> dict:
     if "all" in analysis_types:
         return error_dict
+
+    if None in analysis_types:
+        return {}
 
     categories = ("scada", "meter", "tower", "curtail", "reanalysis", "asset")
     requirements = {key: ANALYSIS_REQUIREMENTS[key] for key in analysis_types}
@@ -769,6 +783,9 @@ def compose_error_message(error_dict: dict, analysis_types: list[str] = ["all"])
     if "all" not in analysis_types:
         error_dict = analysis_filter(error_dict, analysis_types)
 
+    if None in analysis_types:
+        return ""
+
     messages = [
         f"`{name}` data is missing the following columns: {cols}"
         for name, cols in error_dict["missing"].items()
@@ -781,7 +798,12 @@ def compose_error_message(error_dict: dict, analysis_types: list[str] = ["all"])
             if len(cols) > 0
         ]
     )
-    messages.extend([f"`{name}` data is of the wrong frequecy" for name in error_dict["frequency"]])
+    messages.extend(
+        [
+            f"`{name}` data is of the wrong frequency: {freq}"
+            for name, freq in error_dict["frequency"].items()
+        ]
+    )
     return "\n".join(messages)
 
 
@@ -809,6 +831,16 @@ def load_to_pandas(data: str | Path | pd.DataFrame | spark.sql.DataFrame) -> pd.
         raise ValueError("Input data could not be converted to pandas")
 
 
+def load_to_pandas_dict(
+    data: dict[str | Path | pd.DataFrame | spark.sql.DataFrame],
+) -> dict[str, pd.DataFrame] | None:
+    if data is None:
+        return data
+    for key, val in data.items():
+        data[key] = load_to_pandas(val)
+    return data
+
+
 def rename_columns(df: pd.DataFrame, col_map: dict, reverse: bool = True) -> pd.DataFrame:
     """Renames the pandas DataFrame columns using col_map. Intended to be used in
     conjunction with the a data objects meta data column mapping (reverse=True).
@@ -818,12 +850,12 @@ def rename_columns(df: pd.DataFrame, col_map: dict, reverse: bool = True) -> pd.
             col_map (dict): Dictionary of existing column names and new column names.
             reverse (bool, optional): True, if the new column names are the keys (using the
                 xxMetaData.col_map as input), or False, if the current column names are the
-                values. Defaults to True.
+                values (original column names). Defaults to True.
 
         Returns:
             pd.DataFrame: Input DataFrame with remapped column names.
     """
-    if reverse:
+    if not reverse:
         col_map = {v: k for k, v in col_map.items()}
     return df.rename(columns=col_map)
 
@@ -878,16 +910,21 @@ class PlantData:
     status: pd.DataFrame | None = attr.ib(default=None, converter=load_to_pandas)
     curtail: pd.DataFrame | None = attr.ib(default=None, converter=load_to_pandas)
     asset: pd.DataFrame | None = attr.ib(default=None, converter=load_to_pandas)
-    reanalysis: dict[str, pd.DataFrame] | None = attr.ib(default=None)
+    reanalysis: dict[str, pd.DataFrame] | None = attr.ib(
+        default=None, converter=load_to_pandas_dict
+    )
     preprocess: Callable | None = attr.ib(default=None)
 
     # Error catching in validation
     _errors: dict[str, list[str]] = attr.ib(
-        default={"missing": {}, "dtype": {}, "frequency": []}, init=False
+        default={"missing": {}, "dtype": {}, "frequency": {}}, init=False
     )  # No user initialization required
 
     def __attrs_post_init__(self):
-        self.reanalysis_validation()
+        self._calculate_reanalysis_columns()
+        self._set_index_columns()
+        self._validate_frequency()
+
         # Check the errors againts the analysis requirements
         error_message = compose_error_message(self._errors, analysis_types=self.analysis_type)
         if error_message != "":
@@ -902,86 +939,85 @@ class PlantData:
 
     @scada.validator
     @meter.validator
-    # @tower.validator
+    @tower.validator
     @status.validator
     @curtail.validator
     @asset.validator
+    @reanalysis.validator
     def data_validator(self, instance: attr.Attribute, value: pd.DataFrame | None) -> None:
         """Validator function for each of the data buckets in `PlantData`.
 
         Args:
             instance (attr.Attribute): The `attr` attribute details
-            value (pd.DataFrame | None): The attributes user-provided value.
+            value (pd.DataFrame | None): The attribute's user-provided value.
         """
         if None in self.analysis_type:
             return
         name = instance.name
         if value is None:
             self._errors["missing"].update(
-                {name: list(getattr(self.metadata, instance.name).col_map.values())}
+                {name: list(getattr(self.metadata, name).col_map.values())}
             )
-            self._errors["dtype"].update(
-                {name: list(getattr(self.metadata, instance.name).dtypes.keys())}
-            )
+            self._errors["dtype"].update({name: list(getattr(self.metadata, name).dtypes.keys())})
 
         else:
             self._errors["missing"].update(self._validate_column_names(category=name))
-            self._errors["dtype"].update(self._validate_types(category=name))
+            self._errors["dtype"].update(self._validate_dtypes(category=name))
 
-    def reanalysis_validation(self) -> None:
-        """Provides the reanalysis data initialization and validation routine.
+    def _set_index_columns(self) -> None:
+        """Sets the index value for each of the `PlantData` objects that are not `None`."""
+        if self.scada is not None:
+            time_col = self.metadata.scada.col_map["time"]
+            id_col = self.metadata.scada.col_map["id"]
+            self.scada[time_col] = pd.DatetimeIndex(self.scada[time_col])
+            self.scada = self.scada.set_index([time_col, id_col], drop=False)
+            self.scada.index.names = ["time", "id"]
 
-        Control Flow:
-         - If `None` is provided, then run the `data_validator` method to collect
-           missing columns and bad data types
-         - If the dictionary values are a dictionary, then the reanalysis data will
-           be downloaded using the dictionary as kwargs passed to the PlanetOS API
-           in `openoa.toolkits.reanslysis_downloading`, with the product name and site
-           coordinates being provided automatically. NOTE: This also calculates the
-           derived variables such as wind direction upon downloading.
-        - If a non-dictionary input is provided for a reanalysis product type, then the
-          `load_to_pandas` method will be called on the input data.
+        if self.meter is not None:
+            time_col = self.metadata.meter.col_map["time"]
+            self.meter[time_col] = pd.DatetimeIndex(self.meter[time_col])
+            self.meter = self.meter.set_index([time_col], drop=False)
+            self.meter.index.name = "time"
 
-        Raises:
-            ValueError: Raised if reanalysis input is not a dictionary.
-        """
-        if None in self.analysis_type:
-            return
-        if self.reanalysis is None:
-            self.data_validator(PlantData.reanalysis, self.reanalysis)
-            return
+        if self.status is not None:
+            time_col = self.metadata.status.col_map["time"]
+            id_col = self.metadata.status.col_map["id"]
+            self.status[time_col] = pd.DatetimeIndex(self.status[time_col])
+            self.status = self.status.set_index([time_col, id_col], drop=False)
+            self.status.index.names = ["time", "id"]
 
-        if not isinstance(self.reanalysis, dict):
-            raise ValueError(
-                "Reanalysis data should be provided as a dictionary of product name (keys) and api kwargs or data"
-            )
+        if self.tower is not None:
+            time_col = self.metadata.tower.col_map["time"]
+            id_col = self.metadata.tower.col_map["id"]
+            self.tower[time_col] = pd.DatetimeIndex(self.tower[time_col])
+            self.tower = self.tower.set_index([time_col, id_col], drop=False)
+            self.tower.index.names = ["time", "id"]
 
-        reanalysis = {}
-        for name, value in self.reanalysis.items():
-            if isinstance(value, dict):
-                value.update(
-                    dict(
-                        dataset=name,
-                        lat=self.metadata.latitude,
-                        lon=self.metadata.longitude,
-                        calc_derived_vars=True,
-                    )
-                )
-                reanalysis[name] = download_reanalysis_data_planetos(**value)
-            else:
-                reanalysis[name] = load_to_pandas(value)
+        if self.curtail is not None:
+            time_col = self.metadata.curtail.col_map["time"]
+            self.curtail[time_col] = pd.DatetimeIndex(self.curtail[time_col])
+            self.curtail = self.curtail.set_index([time_col], drop=False)
+            self.curtail.index.name = "time"
 
-        self.reanalysis = reanalysis
-        self._calculate_reanalysis_columns()
+        if self.asset is not None:
+            id_col = self.metadata.asset.col_map["id"]
+            self.asset = self.asset.set_index([id_col], drop=False)
+            self.asset.index.name = "id"
 
-        self._errors["missing"].update(self._validate_column_names(category="reanalysis"))
-        self._errors["dtype"].update(self._validate_types(category="reanalysis"))
-        # self._errors["frequency"].extend(self._validate_frequency(category="reanalysis"))
+        if self.reanalysis is not None:
+            for name in self.reanalysis:
+                time_col = self.metadata.reanalysis[name].col_map["time"]
+                self.reanalysis[name][time_col] = pd.DatetimeIndex(self.reanalysis[name][time_col])
+                self.reanalysis[name] = self.reanalysis[name].set_index([time_col], drop=False)
+                self.reanalysis[name].index.name = "time"
 
     @property
-    def analysis_values(self):
-        # if self.analysis_type == "x":
-        #     return self.scada, self, self.meter, self.asset
+    def analysis_values(self) -> dict[str, pd.DataFrame]:
+        """Property that returns a dictionary of the data contained in the `PlantData` object.
+
+        Returns:
+            dict[str, pd.DataFrame]: A mapping of the data type's name and the `DataFrame`.
+        """
         values = dict(
             scada=self.scada,
             meter=self.meter,
@@ -994,37 +1030,44 @@ class PlantData:
         return values
 
     def _validate_column_names(self, category: str = "all") -> dict[str, list[str]]:
+        """Validates that the column names in each of the data types matches the mapping
+        provided in the `metadata` object.
+
+        Args:
+            category (str, optional): _description_. Defaults to "all".
+
+        Returns:
+            dict[str, list[str]]: _description_
+        """
         column_map = self.metadata.column_map
 
-        if category == "reanalysis":
-            missing_cols = {
-                f"{category}-{name}": column_validator(df, column_names=column_map[category][name])
-                for name, df in self.analysis_values[category].items()
-            }
-            return missing_cols if isinstance(missing_cols, dict) else {}
+        missing_cols = {}
+        for name, df in self.analysis_values.items():
+            if category != "all" and category != "name":
+                # Skip any irrelevant columns if not processing all data types
+                continue
 
-        if category != "all":
-            df = self.analysis_values[category]
-            missing_cols = {category: column_validator(df, column_names=column_map[category])}
-            return missing_cols if isinstance(missing_cols, dict) else {}
+            if name == "reanalysis":
+                for sub_name, df in df.items():
+                    missing_cols[f"{name}-{sub_name}"] = column_validator(
+                        df, column_names=column_map[name][sub_name]
+                    )
+                continue
 
-        missing_cols = {
-            name: column_validator(df, column_names=column_map[name])
-            for name, df in self.analysis_values.items()
-            if name != "reanalysis"
-        }
-        missing_cols.update(
-            {
-                f"reanalysis-{name}": column_validator(
-                    df, column_names=column_map["reanalysis"][name]
-                )
-                for name, df, in self.analysis_values["reanalysis"].items()
-            }
-        )
-        return missing_cols if isinstance(missing_cols, dict) else {}
+            missing_cols[name] = column_validator(df, column_names=column_map[name])
+        return missing_cols
 
-    def _validate_types(self, category: str = "all") -> dict[str, list[str]]:
+    def _validate_dtypes(self, category: str = "all") -> dict[str, list[str]]:
+        """Validates the dtype for each column for the specified `category`.
 
+        Args:
+            category (str, optional): The name of the data that should be checked, or "all" to
+                validate all of the data types. Defaults to "all".
+
+        Returns:
+            dict[str, list[str]]: A dictionary of each data type and any columns that  don't
+                match the required dtype and can't be converted to it successfully.
+        """
         # Create a new mapping of the data's column names to the expected dtype
         # TODO: Consider if this should be a encoded in the metadata/plantdata object elsewhere
         column_name_map = self.metadata.column_map
@@ -1045,78 +1088,77 @@ class PlantData:
                     zip(column_name_map[name].values(), column_type_map[name].values())
                 )
 
-        if category == "reanalysis":
-            error_cols = {
-                f"{category}-{name}": dtype_converter(df, column_types=column_map[category][name])
-                for name, df in self.analysis_values[category].items()
-            }
-            return error_cols if isinstance(error_cols, dict) else {}
+        error_cols = {}
+        for name, df in self.analysis_values.items():
+            if category != "all" and category != name:
+                # Skip irrelevant data types if not checking all data types
+                continue
 
-        if category != "all":
-            df = self.analysis_values[category]
-            error_cols = {category: dtype_converter(df, column_types=column_map[category])}
-            return error_cols if isinstance(error_cols, dict) else {}
+            if name == "reanalysis":
+                for sub_name, df in df.items():
+                    error_cols[f"{name}-{sub_name}"] = dtype_converter(
+                        df, column_types=column_map[name][sub_name]
+                    )
+                continue
 
-        error_cols = {
-            name: dtype_converter(df, column_types=column_map[name])
-            for name, df in self.analysis_values.items()
-        }
-        return error_cols if isinstance(error_cols, dict) else {}
+            error_cols[name] = dtype_converter(df, column_types=column_map[name])
+        return error_cols
 
     def _validate_frequency(self, category: str = "all") -> list[str]:
+        """Internal method to check the actual datetime frequencies against the required
+        frequencies for the specified analysis types, and produces a list of data types
+        that do not meet the frequency criteria.
+
+        Args:
+            category (str, optional): The data type category. Defaults to "all".
+
+        Returns:
+            list[str]: The list of data types that don't meet the required datetime frequency.
+        """
         frequency_requirements = self.metadata.frequency_requirements(self.analysis_type)
 
-        for name, df in self.analysis_values.items():
+        # Collect all the frequencies for each of the data types
+        data_dict = self.analysis_values
+        actual_frequencies = {}
+        for name, df in data_dict.items():
             if df is None:
-                raise Exception(f"Dataframe is None for {name}")
-        
-        actual_frequencies = {
-            name: df.index.freq for name, df in self.analysis_values.items() if name != "reanalysis"
-        }
-        actual_frequencies["reanalysis"] = {
-            name: df.index.freq for name, df in self.analysis_values["reanalysis"]
-        }
-        # TODO: ACTUALLY MATCH AGAINST REAL, AND CHECK IF THAT MATTERS, AND IF SO
-        # CHECK AGAINST THE REQUIREMENTS
-        if category == "reanalysis":
-            # Check if this category requires a check
-            if category not in frequency_requirements:
-                return {}
-            invalid_freq = [
-                f"{category}-{name}"
-                for name, df in self.analysis_values[category].items()
-                if frequency_validator(
-                    df.index.freq, getattr(self.metadata, category)[name].frequency, True
-                )
-                or frequency_validator(df.index.freq, frequency_requirements.get(category), False)
-            ]
-            return invalid_freq
+                continue
 
-        if category != "all":
-            freq = self.analysis_values[category].index.freq
-            if frequency_validator(
-                freq, getattr(self.metadata, category).frequency, True
-            ) or frequency_validator(freq, frequency_requirements.get(category), False):
-                return [category]
-            else:
-                return []
+            if name in ("scada", "status", "tower"):
+                freq = df.index.get_level_values("time").freq
+                if freq is None:
+                    freq = pd.infer_freq(df.index.get_level_values("time"))
+                actual_frequencies[name] = freq
+            elif name in ("meter", "curtail"):
+                freq = df.index.freq
+                if freq is None:
+                    freq = pd.infer_freq(df.index)
+                actual_frequencies[name] = freq
+            elif name == "reanalysis":
+                actual_frequencies["reanalysis"] = {}
+                for sub_name, df in data_dict[name].items():
+                    freq = df.index.freq
+                    if freq is None:
+                        freq = pd.infer_freq(df.index)
+                    actual_frequencies["reanalysis"][sub_name] = freq
 
-        invalid_freq = [
-            name
-            for name, df in self.analysis_values.items()
-            if frequency_validator(df.index.freq, getattr(self.metadata, name).frequency, True)
-            or frequency_validator(df.index.freq, frequency_requirements.get(name), False)
-        ]
-        invalid_freq.extend(
-            [
-                f"reanalysis-{name}"
-                for name, df, in self.analysis_values["reanalysis"].items()
-                if frequency_validator(
-                    df.index.freq, getattr(self.metadata, category)[name].frequency, True
-                )
-                or frequency_validator(df.index.freq, frequency_requirements.get(category), False)
-            ]
-        )
+        invalid_freq = {}
+        for name, freq in actual_frequencies.items():
+            if category != "all" and category != name:
+                # If only checking one data type, then skip all others
+                continue
+            if name == "reanalysis":
+                for sub_name, freq in freq.items():
+                    is_valid = frequency_validator(freq, frequency_requirements.get(name), True)
+                    is_valid |= frequency_validator(freq, frequency_requirements.get(name), False)
+                    if not is_valid:
+                        invalid_freq.update({f"{name}-{sub_name}": freq})
+                continue
+            is_valid = frequency_validator(freq, frequency_requirements.get(name), True)
+            is_valid |= frequency_validator(freq, frequency_requirements.get(name), False)
+            if not is_valid:
+                invalid_freq.update({name: freq})
+
         return invalid_freq
 
     def validate(self, metadata: Optional[dict | str | Path | PlantMetaData] = None) -> None:
@@ -1125,20 +1167,24 @@ class PlantData:
 
         Args:
             metadata (Optional[dict]): Updated metadata object, dictionary, or file to
-            create the updated metadata for data validation.
+                create the updated metadata for data validation, which should align with
+                the mapped column names during initialization.
 
         Raises:
             ValueError: Raised at the end if errors are caught in the validation steps.
         """
-        if metadata is not None:
+        # Initialization will have converted the column naming convention, but an updated
+        # metadata should account for the renaming of the columns
+        if metadata is None:
+            self.update_column_names(to_original=True)
+        else:
             self.metadata = metadata
 
         self._errors = {
             "missing": self._validate_column_names(),
-            "dtype": self._validate_types(),
-            "frequency": {}, #self._validate_frequency(),
+            "dtype": self._validate_dtypes(),
+            "frequency": self._validate_frequency(),
         }
-        self.reanalysis_validation()
 
         # TODO: Check for extra columns?
         # TODO: Define other checks?
@@ -1183,25 +1229,32 @@ class PlantData:
         self.reanalysis = reanalysis
 
     def update_column_names(self, to_original: bool = False) -> None:
+        """Renames the columns of each dataframe to the be the keys from the
+        `metadata.xx.col_map` that was passed during initialization.
+
+        Args:
+            to_original (bool, optional): An indicator to map the column names back to
+                the originally passed values. Defaults to False.
+        """
         meta = self.metadata
-        reverse = not to_original
+
         if self.scada is not None:
-            self.scada = rename_columns(self.scada, meta.scada.col_map, reverse=reverse)
+            self.scada = rename_columns(self.scada, meta.scada.col_map, reverse=to_original)
         if self.meter is not None:
-            self.meter = rename_columns(self.meter, meta.meter.col_map, reverse=reverse)
+            self.meter = rename_columns(self.meter, meta.meter.col_map, reverse=to_original)
         if self.tower is not None:
-            self.tower = rename_columns(self.tower, meta.tower.col_map, reverse=reverse)
+            self.tower = rename_columns(self.tower, meta.tower.col_map, reverse=to_original)
         if self.status is not None:
-            self.status = rename_columns(self.status, meta.status.col_map, reverse=reverse)
+            self.status = rename_columns(self.status, meta.status.col_map, reverse=to_original)
         if self.curtail is not None:
-            self.curtail = rename_columns(self.curtail, meta.curtail.col_map, reverse=reverse)
+            self.curtail = rename_columns(self.curtail, meta.curtail.col_map, reverse=to_original)
         if self.asset is not None:
-            self.asset = rename_columns(self.asset, meta.asset.col_map)
+            self.asset = rename_columns(self.asset, meta.asset.col_map, reverse=to_original)
         if self.reanalysis is not None:
             reanalysis = {}
             for name, df in self.reanalysis.items():
                 reanalysis[name] = rename_columns(
-                    df, meta.reanalysis[name].col_map, reverse=reverse
+                    df, meta.reanalysis[name].col_map, reverse=to_original
                 )
             self.reanalysis = reanalysis
 

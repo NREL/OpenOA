@@ -1,7 +1,7 @@
 asset:
   elevation: elevation_m
   hub_height: Hub_height_m
-  id: id
+  id: Wind_turbine_name
   latitude: Latitude
   longitude: Longitude
   rated_power: Rated_power
@@ -11,12 +11,12 @@ curtail:
   curtailment: curtailment_kwh
   frequency: 10T
   net_energy: net_energy_kwh
-  time: time_utc
+  time: time
 latitude: 48.4497
 longitude: 5.5896
 meter:
   energy: net_energy_kwh
-  time: time_utc
+  time: time
 reanalysis:
   era5:
     frequency: H
@@ -38,6 +38,6 @@ scada:
   pitch: Ba_avg
   power: P_avg
   temperature: Ot_avg
-  time: Date_time
+  time: time
   wind_direction: Wa_avg
   windspeed: Ws_avg
