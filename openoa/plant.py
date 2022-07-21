@@ -1068,6 +1068,7 @@ class PlantData:
             value (pd.DataFrame | dict[pd.DataFrame] | None): The attribute's
                 user-provided value. A dictionary of dataframes is expected for
                 reanalysis data only.
+
         """
         if None in self.analysis_type:
             return
