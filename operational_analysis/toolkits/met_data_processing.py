@@ -147,18 +147,30 @@ def compute_turbulence_intensity(mean_col, std_col):
     return std_col / mean_col
 
 
-def compute_shear(data: pd.DataFrame, ws_heights: dict) -> np.array:
+def compute_shear(
+    data: pd.DataFrame, ws_heights: dict, return_reference_values: bool = False
+) -> np.array:
     """
     Computes shear coefficient between wind speed measurements using the power law.
     The shear coefficient is obtained by evaluating the expression for an OLS regression coefficient.
 
     Args:
         data(:obj:`pandas.DataFrame`): dataframe with wind speed columns
-        ws_heights(:obj:`dict`): keys are strings of columns in <df> containing wind speed data, values are
-            associated sensor heights (m)
+        ws_heights(:obj:`dict`): keys are strings of columns in <data> containing wind speed data, values are
+                                 associated sensor heights (m)
+        return_reference_values(:obj: `bool`): If True, this function returns a three element tuple where the
+                                               first element is the array of shear exponents, the second element
+                                               is the reference height (float), and the third element is the
+                                               reference wind speed (array). These reference values can be used
+                                               for extrapolating wind speed.
 
     Returns:
+        If return_reference_values is False (default):
         :obj:`numpy.array`: shear coefficient (unitless)
+
+        If return_reference_values is True:
+        :obj:`tuple`: (shear coefficient (unitless), reference height (m), reference wind speed)
+
     """
 
     # create "u" 2-D array; where element [i,j] is the wind speed measurement at the ith timestep and jth sensor height
@@ -192,7 +204,20 @@ def compute_shear(data: pd.DataFrame, ws_heights: dict) -> np.array:
     # compute shear based on simple linear regression
     alpha = (z * u).sum(axis=1) / (z * z).sum(axis=1)
 
-    return alpha
+    if not return_reference_values:
+        return alpha
+
+    else:
+        # compute reference height
+        z_ref: float = np.exp(np.mean(np.log(np.array(list(ws_heights.values())))))
+
+        # replace zeros in u (if any) with NaN
+        u[u == 0] = np.nan
+
+        # compute reference wind speed
+        u_ref = np.exp(np.nanmean(u, axis=1))
+
+        return alpha, z_ref, u_ref
 
 
 def extrapolate_windspeed(v1, z1: float, z2: float, shear):

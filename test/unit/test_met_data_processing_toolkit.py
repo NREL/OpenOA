@@ -91,7 +91,6 @@ class SimpleMetProcessing(unittest.TestCase):
         expected_alpha = np.array([-0.1, 0.1, 0.2, 0.4])
         height_low = 30.0
         height_mid = 60.0
-        # height_high = 80.0
 
         df = pd.DataFrame(
             data={
@@ -117,6 +116,17 @@ class SimpleMetProcessing(unittest.TestCase):
         nptest.assert_allclose(
             computed_alpha, expected_alpha, err_msg="Shear multi-sensor optimization failing."
         )
+
+        # test reference height and reference wind speed
+        _, computed_z_ref, computed_u_ref = mt.compute_shear(
+            df, windspeed_heights, return_reference_values=True
+        )
+
+        nptest.assert_allclose(computed_z_ref, 52.41482788)
+
+        expected_u_ref = np.array([4.054429004, 7.892603366, 5.839986365, 3.789493416])
+
+        nptest.assert_allclose(computed_u_ref, expected_u_ref)
 
     def test_extrapolate_windspeed(self):
         alpha = np.array([0.26, 0.31, 0.21])
