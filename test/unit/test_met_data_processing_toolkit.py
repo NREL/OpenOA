@@ -118,10 +118,12 @@ class SimpleMetProcessing(unittest.TestCase):
         )
 
         # test reference height and reference wind speed
-        _, computed_z_ref, computed_u_ref = mt.compute_shear(
+        computed_alpha, computed_z_ref, computed_u_ref = mt.compute_shear(
             df, windspeed_heights, return_reference_values=True
         )
-
+        nptest.assert_allclose(
+            computed_alpha, expected_alpha, err_msg="Shear multi-sensor optimization failing."
+        )
         nptest.assert_allclose(computed_z_ref, 52.41482788)
 
         expected_u_ref = np.array([4.054429004, 7.892603366, 5.839986365, 3.789493416])
