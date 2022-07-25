@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import warnings
 import itertools
 from copy import deepcopy
 from typing import Callable, Optional, Sequence
@@ -76,7 +77,7 @@ def analysis_type_validator(
         value (list[str]): The input value from `analysis_type`.
     """
     if None in value:
-        UserWarning("`None` was provided to `analysis_type`, so no validation will occur.")
+        warnings.warn("`None` was provided to `analysis_type`, so no validation will occur.")
 
     valid_types = [*ANALYSIS_REQUIREMENTS] + ["all", None]
     incorrect_types = set(value).difference(set(valid_types))
@@ -87,14 +88,14 @@ def analysis_type_validator(
 
 
 def frequency_validator(
-    actual_freq: str, desired_freq: Optional[str | None | set[str]], exact: bool
+    actual_freq: str | None, desired_freq: str | None | set[str], exact: bool
 ) -> bool:
     """Helper function to check if the actual datetime stamp frequency is valid compared
     to what is required.
 
     Args:
         actual_freq (str): The frequency of the datetime stamp, or `df.index.freq`.
-        desired_freq (Optional[str  |  None  |  set[str]]): Either the exact frequency,
+        desired_freq (str  |  None  |  set[str]): Either the exact frequency,
             required or a set of options that are also valid, in which case any numeric
             information encoded in `actual_freq` will be dropped.
         exact (bool): If the provided frequency codes should be exact matches (`True`),
@@ -732,11 +733,18 @@ def convert_to_list(
     list
         The new list of elements.
     """
+    if not isinstance(manipulation, Callable) and manipulation is not None:
+        raise ValueError("`manipulation` must either be: `None` or of type: `Callable`.")
 
     if isinstance(value, (str, int, float)) or value is None:
         value = [value]
     if manipulation is not None:
-        return [manipulation(el) for el in value]
+        try:
+            return [manipulation(el) for el in value]
+        except (TypeError, ValueError):
+            raise ValueError(
+                "At least one of the elements of `value` could not be converted using the provided `manipulation` input."
+            )
     return list(value)
 
 
@@ -935,7 +943,7 @@ def rename_columns(df: pd.DataFrame, col_map: dict, reverse: bool = True) -> pd.
         Returns:
             pd.DataFrame: Input DataFrame with remapped column names.
     """
-    if not reverse:
+    if reverse:
         col_map = {v: k for k, v in col_map.items()}
     return df.rename(columns=col_map)
 
