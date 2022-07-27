@@ -162,7 +162,7 @@ def compute_shear(
                                                first element is the array of shear exponents, the second element
                                                is the reference height (float), and the third element is the
                                                reference wind speed (array). These reference values can be used
-                                               for extrapolating wind speed.
+                                               for extrapolating wind speed. Defaults to False.
 
     Returns:
         If return_reference_values is False (default):
