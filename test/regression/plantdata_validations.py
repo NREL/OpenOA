@@ -1,8 +1,14 @@
 import unittest
+import tempfile
+from pathlib import Path
+
+from pandas.testing import assert_frame_equal
 
 from examples import project_ENGIE
 from openoa import PlantData
-from test import example_data_path_str
+
+example_data_path = Path(__file__).parents[2].resolve() / "examples" / "data" / "la_haute_borne"
+example_data_path_str = str(example_data_path)
 
 
 class TestPlantData(unittest.TestCase):
@@ -47,3 +53,27 @@ class TestPlantData(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.plant.analysis_type = "all"
             self.plant.validate()
+
+    def test_toCSV(self):
+        """
+        Save this plant to a temporary directory, load it in, and make sure the data matches.
+        """
+        ## Save
+        data_path = tempfile.mkdtemp()
+        self.plant.to_csv(save_path=data_path, with_openoa_col_names=True)
+
+        ## Load
+        plant_loaded = PlantData(
+            metadata=f"{data_path}/metadata.yml",
+            scada=f"{data_path}/scada.csv",
+            meter=f"{data_path}/meter.csv",
+            curtail=f"{data_path}/curtail.csv",
+            status=f"{data_path}/scada.csv",
+            asset=f"{data_path}/asset.csv",
+            reanalysis={"era5": f"{data_path}/reanalysis_era5.csv", "merra2": f"{data_path}/reanalysis_merra2.csv"},
+        )
+
+        assert_frame_equal(self.plant.scada, plant_loaded.scada, "Scada dataframe did not survive CSV save/loading process")
+        ## TODO, add more comprehensive checking.
+        ## - Check metadata
+        ## - Check all DFs equal
