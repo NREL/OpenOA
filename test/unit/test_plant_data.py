@@ -318,16 +318,237 @@ def test_SCADAMetaData():
     valid_map.update(dict(id="id", power="power"))
     valid_map.pop("frequency")
 
-    scada_meta = SCADAMetaData.from_dict(meta_dict)
-    assert scada_meta.col_map == valid_map
+    meta = SCADAMetaData.from_dict(meta_dict)
+    assert meta.col_map == valid_map
+    assert meta.frequency == meta_dict["frequency"]
 
     # Ensure the defaults are the defaults
-    assert scada_meta.units == attr.fields(SCADAMetaData).units.default
-    assert scada_meta.dtypes == attr.fields(SCADAMetaData).dtypes.default
+    assert meta.units == attr.fields(SCADAMetaData).units.default
+    assert meta.dtypes == attr.fields(SCADAMetaData).dtypes.default
 
     # Test that non-init elements can't be set
     with pytest.raises(TypeError):
-        scada_meta = SCADAMetaData(units={})
+        SCADAMetaData(units={})
 
     with pytest.raises(TypeError):
-        scada_meta = SCADAMetaData(dtypes={})
+        SCADAMetaData(dtypes={})
+
+
+def test_MeterMetaData():
+    # Tests the MeterMetaData for defaults and user-provided values
+
+    # Leaving time and energy as the default values
+    meta_dict = dict(
+        power="power_production",
+        frequency="D",
+    )
+    valid_map = deepcopy(meta_dict)
+    valid_map.update(dict(time="time", energy="energy"))
+    valid_map.pop("frequency")
+
+    meta = MeterMetaData.from_dict(meta_dict)
+    assert meta.col_map == valid_map
+    assert meta.frequency == meta_dict["frequency"]
+
+    # Ensure the defaults are the defaults
+    assert meta.units == attr.fields(MeterMetaData).units.default
+    assert meta.dtypes == attr.fields(MeterMetaData).dtypes.default
+
+    # Test that non-init elements can't be set
+    with pytest.raises(TypeError):
+        MeterMetaData(units={})
+
+    with pytest.raises(TypeError):
+        MeterMetaData(dtypes={})
+
+
+def test_TowerMetaData():
+    # Tests the TowerMetaData for defaults and user-provided values
+
+    # Leaving time as the default value
+    meta_dict = dict(
+        id="the_IDs",
+        frequency="D",
+    )
+    valid_map = deepcopy(meta_dict)
+    valid_map.update(dict(time="time"))
+    valid_map.pop("frequency")
+
+    meta = TowerMetaData.from_dict(meta_dict)
+    assert meta.col_map == valid_map
+    assert meta.frequency == meta_dict["frequency"]
+
+    # Ensure the defaults are the defaults
+    assert meta.units == attr.fields(TowerMetaData).units.default
+    assert meta.dtypes == attr.fields(TowerMetaData).dtypes.default
+
+    # Test that non-init elements can't be set
+    with pytest.raises(TypeError):
+        TowerMetaData(units={})
+
+    with pytest.raises(TypeError):
+        TowerMetaData(dtypes={})
+
+
+def test_StatusMetaData():
+    # Tests the StatusMetaData for defaults and user-provided values
+
+    # Leaving time and status_text as the default values
+    meta_dict = dict(
+        id="the_IDs",
+        status_id="status_ids",
+        status_code="code",
+        frequency="H",
+    )
+    valid_map = deepcopy(meta_dict)
+    valid_map.update(dict(time="time", status_text="status_text"))
+    valid_map.pop("frequency")
+
+    meta = StatusMetaData.from_dict(meta_dict)
+    assert meta.col_map == valid_map
+    assert meta.frequency == meta_dict["frequency"]
+
+    # Ensure the defaults are the defaults
+    assert meta.units == attr.fields(StatusMetaData).units.default
+    assert meta.dtypes == attr.fields(StatusMetaData).dtypes.default
+
+    # Test that non-init elements can't be set
+    with pytest.raises(TypeError):
+        StatusMetaData(units={})
+
+    with pytest.raises(TypeError):
+        StatusMetaData(dtypes={})
+
+
+def test_CurtailMetaData():
+    # Tests the CurtailMetaData for defaults and user-provided values
+
+    # Leaving time and net_energy as the default values
+    meta_dict = dict(
+        curtailment="curtail",
+        availability="avail",
+        frequency="H",
+    )
+    valid_map = deepcopy(meta_dict)
+    valid_map.update(dict(time="time", net_energy="net_energy"))
+    valid_map.pop("frequency")
+
+    meta = CurtailMetaData.from_dict(meta_dict)
+    assert meta.col_map == valid_map
+    assert meta.frequency == meta_dict["frequency"]
+
+    # Ensure the defaults are the defaults
+    assert meta.units == attr.fields(CurtailMetaData).units.default
+    assert meta.dtypes == attr.fields(CurtailMetaData).dtypes.default
+
+    # Test that non-init elements can't be set
+    with pytest.raises(TypeError):
+        CurtailMetaData(units={})
+
+    with pytest.raises(TypeError):
+        CurtailMetaData(dtypes={})
+
+
+def test_AssetMetaData():
+    # Tests the AssetMetaData for defaults and user-provided values
+
+    # Leaving elevation and type as the default values
+    meta_dict = dict(
+        id="asset_name",
+        latitude="lat",
+        longitude="lon",
+        rated_power="P",
+        hub_height="HH",
+        rotor_diameter="RD",
+    )
+    valid_map = deepcopy(meta_dict)
+    valid_map.update(dict(elevation="elevation", type="type"))
+
+    meta = AssetMetaData.from_dict(meta_dict)
+    assert meta.col_map == valid_map
+
+    # Ensure the defaults are the defaults
+    assert meta.units == attr.fields(AssetMetaData).units.default
+    assert meta.dtypes == attr.fields(AssetMetaData).dtypes.default
+
+    # Test that non-init elements can't be set
+    with pytest.raises(TypeError):
+        AssetMetaData(units={})
+
+    with pytest.raises(TypeError):
+        AssetMetaData(dtypes={})
+
+
+def test_ReanalysisMetaData():
+    # Tests the ReanalysisMetaData for defaults and user-provided values
+
+    # Leaving temperature, density, and frequency as the default values
+    meta_dict = dict(
+        time="curtail",
+        windspeed="WS",
+        windspeed_u="ws_U",
+        windspeed_v="ws_V",
+        wind_direction="wdir",
+        surface_pressure="pressure",
+    )
+    valid_map = deepcopy(meta_dict)
+    valid_map.update(dict(temperature="temperature", density="density"))
+
+    meta = ReanalysisMetaData.from_dict(meta_dict)
+    assert meta.col_map == valid_map
+
+    # Ensure the defaults are the defaults
+    assert meta.units == attr.fields(ReanalysisMetaData).units.default
+    assert meta.dtypes == attr.fields(ReanalysisMetaData).dtypes.default
+    assert meta.frequency == attr.fields(ReanalysisMetaData).frequency.default
+
+    # Test that non-init elements can't be set
+    with pytest.raises(TypeError):
+        ReanalysisMetaData(units={})
+
+    with pytest.raises(TypeError):
+        ReanalysisMetaData(dtypes={})
+
+
+def test_convert_reanalysis_value():
+    # Test the ReanalysisMetaData dictionary converter method
+
+    # Leaving the merra2 key as all defaults
+    era5_meta_dict = dict(
+        time="curtail",
+        windspeed="WS",
+        windspeed_u="ws_U",
+        windspeed_v="ws_V",
+        wind_direction="wdir",
+        temperature="temps",
+        density="dens",
+        surface_pressure="pressure",
+        frequency="5T",
+    )
+    valid_era5_map = deepcopy(era5_meta_dict)
+    valid_era5_map.pop("frequency")
+
+    # Copy of the defaults
+    valid_merra2_map = dict(
+        time="time",
+        windspeed="windspeed",
+        windspeed_u="windspeed_u",
+        windspeed_v="windspeed_v",
+        wind_direction="wind_direction",
+        temperature="temperature",
+        density="density",
+        surface_pressure="surface_pressure",
+    )
+
+    meta = convert_reanalysis(value=dict(era5=era5_meta_dict, merra2=dict()))
+    assert meta["era5"].col_map == valid_era5_map
+    assert meta["era5"].frequency == era5_meta_dict["frequency"]
+
+    # Ensure the defaults are the defaults
+    assert meta["era5"].units == attr.fields(ReanalysisMetaData).units.default
+    assert meta["era5"].dtypes == attr.fields(ReanalysisMetaData).dtypes.default
+
+    assert meta["merra2"].col_map == valid_merra2_map
+    assert meta["merra2"].frequency == attr.fields(ReanalysisMetaData).frequency.default
+    assert meta["merra2"].units == attr.fields(ReanalysisMetaData).units.default
+    assert meta["merra2"].dtypes == attr.fields(ReanalysisMetaData).dtypes.default
