@@ -228,7 +228,7 @@ def prepare(path="data/la_haute_borne", return_value="plantdata"):
         # Build and return PlantData
         engie_plantdata = PlantData(
             analysis_type="MonteCarloAEP",  # Choosing a random type that doesn't fail validation
-            metadata="data/plant_meta.yml",
+            metadata=f"{path}/../plant_meta.yml",
             scada=scada_df,
             meter=meter_df,
             curtail=curtail_df,

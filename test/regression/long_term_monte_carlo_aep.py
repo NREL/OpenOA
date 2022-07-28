@@ -1,13 +1,12 @@
 import random
 import unittest
-from test import example_data_path_str
 
 import numpy as np
 import pandas as pd
 import pytest
 from numpy import testing as nptest
 from openoa.analysis import plant_analysis
-from examples.project_ENGIE import Project_Engie
+from examples import project_ENGIE, example_data_path_str
 
 
 def reset_prng():
@@ -15,30 +14,30 @@ def reset_prng():
     random.seed(42)
 
 
-class TestPandasPrufPlantAnalysis(unittest.TestCase):
+class TestLongTermMonteCarloAEP(unittest.TestCase):
+
     def setUp(self):
+        """
+        Python Unittest setUp method.
+        Load data from disk into PlantData objects and prepare the data for testing the AEP method.
+        """
         reset_prng()
+
         # Set up data to use for testing (ENGIE example plant)
-        self.project = Project_Engie(example_data_path_str)
-        self.project.prepare()
+        self.project = project_ENGIE.prepare(example_data_path_str)
 
         # Set up a new project with modified reanalysis start and end dates
-        self.project_rean = Project_Engie(example_data_path_str)
-        self.project_rean.prepare()
-        self.project_rean._reanalysis._product[
-            "merra2"
-        ].df = self.project_rean._reanalysis._product["merra2"].df.loc[
-            self.project_rean._reanalysis._product["merra2"].df.index <= "2019-04-15 12:30"
-        ]
-        self.project_rean._reanalysis._product["era5"].df = self.project_rean._reanalysis._product[
-            "era5"
-        ].df.loc[self.project_rean._reanalysis._product["era5"].df.index >= "1999-01-15 12:00"]
+        self.project_rean = project_ENGIE.prepare(example_data_path_str)
 
-    # Test inputs to the regression model, at monthly time resolution
+        self.project_rean.reanalysis["merra2"] = self.project_rean.reanalysis["merra2"].loc[:'2019-04-15 12:30']
+        self.project_rean.reanalysis["era5"] = self.project_rean.reanalysis["era5"].loc[:'1999-01-15 12:00']
+
     def test_monthly_inputs(self):
+        """
+        Test inputs to the regression model, at monthly time resolution
+        """
         reset_prng()
-        # ____________________________________________________________________
-        # Test inputs to the regression model, at monthly time resolution
+
         self.analysis = plant_analysis.MonteCarloAEP(
             self.project,
             reanal_products=["merra2", "era5"],
@@ -54,8 +53,10 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         self.check_process_loss_estimates_monthly(df)
         self.check_process_reanalysis_data_monthly(df, df_rean)
 
-    # Test reanalysis start and end dates depending on time resolution and end date argument
     def test_reanalysis_aggregate_monthly(self):
+        """
+        Test reanalysis start and end dates depending on time resolution and end date argument
+        """
         reset_prng()
         # ____________________________________________________________________
         # Test default aggregate reanalysis values and date range, at monthly time resolution
