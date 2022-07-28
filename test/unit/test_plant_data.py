@@ -1,19 +1,46 @@
 from __future__ import annotations
 
+from copy import deepcopy
+
 import attr
 import numpy as np
 import pandas as pd
 import pytest
 from attrs import field, define
 
-from openoa import plant
+from openoa.plant import (
+    ANALYSIS_REQUIREMENTS,
+    PlantData,
+    AssetMetaData,
+    FromDictMixin,
+    MeterMetaData,
+    PlantMetaData,
+    SCADAMetaData,
+    TowerMetaData,
+    StatusMetaData,
+    CurtailMetaData,
+    ReanalysisMetaData,
+    iter_validator,
+    load_to_pandas,
+    rename_columns,
+    analysis_filter,
+    convert_to_list,
+    dtype_converter,
+    _at_least_hourly,
+    column_validator,
+    convert_reanalysis,
+    frequency_validator,
+    load_to_pandas_dict,
+    compose_error_message,
+    analysis_type_validator,
+)
 
 
 # Test the FromDictMixin mixin class and class-dependent methods
 
 
 @define
-class AttrsDemoClass(plant.FromDictMixin):
+class AttrsDemoClass(FromDictMixin):
     w: int
     x: int = field(converter=int)
     y: float = field(converter=float, default=2.1)
@@ -21,7 +48,7 @@ class AttrsDemoClass(plant.FromDictMixin):
 
     liststr: list[str] = field(
         default=["qwerty", "asdf"],
-        validator=plant.iter_validator(list, str),
+        validator=iter_validator(list, str),
     )
 
 
@@ -61,7 +88,7 @@ def test_FromDictMixin_custom():
 
 
 def test_iter_validator():
-    # Test that the plant.iter_validator ensures the inputs are a list of strings
+    # Test that the iter_validator ensures the inputs are a list of strings
     # Check the correct values work
     _ = AttrsDemoClass(w=0, x=1, liststr=["a", "b"])
 
@@ -88,29 +115,29 @@ def test_analysis_type_validator() -> None:
     format.
     """
 
-    instance = plant.PlantData
-    attribute = attr.fields(plant.PlantData).analysis_type
+    instance = PlantData
+    attribute = attr.fields(PlantData).analysis_type
 
     # Test the acceptance of the valid inputs, except None
-    valid = [*plant.ANALYSIS_REQUIREMENTS] + ["all"]
-    assert plant.analysis_type_validator(instance, attribute, valid) is None
+    valid = [*ANALYSIS_REQUIREMENTS] + ["all"]
+    assert analysis_type_validator(instance, attribute, valid) is None
 
     # Test that None is valid, but raises a warning
     with pytest.warns(UserWarning):
-        plant.analysis_type_validator(instance, attribute, [None])
+        analysis_type_validator(instance, attribute, [None])
 
     # Test that all valid cases work
     valid.append(None)
-    assert plant.analysis_type_validator(instance, attribute, valid) is None
+    assert analysis_type_validator(instance, attribute, valid) is None
 
     # Test a couple of edge cases to show that only valid inputs are allowed
     # Add a mispelling
     with pytest.raises(ValueError):
-        plant.analysis_type_validator(instance, attribute, valid + ["Montecarloaep"])
+        analysis_type_validator(instance, attribute, valid + ["Montecarloaep"])
 
     # Add a completely wrong value
     with pytest.raises(ValueError):
-        plant.analysis_type_validator(instance, attribute, valid + ["this is wrong"])
+        analysis_type_validator(instance, attribute, valid + ["this is wrong"])
 
 
 def test_frequency_validator() -> None:
@@ -119,30 +146,30 @@ def test_frequency_validator() -> None:
     """
 
     # Test None as desired frequency returns True always
-    assert plant.frequency_validator("anything", None, exact=True)
-    assert plant.frequency_validator("anything", None, exact=False)
-    assert plant.frequency_validator(None, None, exact=True)
-    assert plant.frequency_validator(None, None, exact=False)
+    assert frequency_validator("anything", None, exact=True)
+    assert frequency_validator("anything", None, exact=False)
+    assert frequency_validator(None, None, exact=True)
+    assert frequency_validator(None, None, exact=False)
 
     # Test None as actual frequency returns False as long as desired isn't also True (checked above)
-    assert not plant.frequency_validator(None, "anything", exact=True)
-    assert not plant.frequency_validator(None, "whatever", exact=False)
+    assert not frequency_validator(None, "anything", exact=True)
+    assert not frequency_validator(None, "whatever", exact=False)
 
     # Test for exact matches
     actual = "10T"
     desired_valid_1 = "10T"  # single input case
     desired_valid_2 = ("10T", "H", "N")  # set of options case
-    desired_invalid = plant._at_least_hourly  # set of non exact matches
+    desired_invalid = _at_least_hourly  # set of non exact matches
 
-    assert plant.frequency_validator(actual, desired_valid_1, True)
-    assert plant.frequency_validator(actual, desired_valid_2, True)
-    assert not plant.frequency_validator(actual, desired_invalid, True)
+    assert frequency_validator(actual, desired_valid_1, True)
+    assert frequency_validator(actual, desired_valid_2, True)
+    assert not frequency_validator(actual, desired_invalid, True)
 
     # Test for non-exact matches
     actual_1 = "10T"
     actual_2 = "1min"
     actual_3 = "20S"
-    desired_valid = plant._at_least_hourly  # set of generic hourly or higher resolution frequencies
+    desired_valid = _at_least_hourly  # set of generic hourly or higher resolution frequencies
     desired_invalid = (
         "M",
         "MS",
@@ -151,12 +178,12 @@ def test_frequency_validator() -> None:
         "H",
     )  # set of greater than or equal to hourly frequency resolutions
 
-    assert plant.frequency_validator(actual_1, desired_valid, False)
-    assert plant.frequency_validator(actual_2, desired_valid, False)
-    assert plant.frequency_validator(actual_3, desired_valid, False)
-    assert not plant.frequency_validator(actual_1, desired_invalid, False)
-    assert not plant.frequency_validator(actual_2, desired_invalid, False)
-    assert not plant.frequency_validator(actual_3, desired_invalid, False)
+    assert frequency_validator(actual_1, desired_valid, False)
+    assert frequency_validator(actual_2, desired_valid, False)
+    assert frequency_validator(actual_3, desired_valid, False)
+    assert not frequency_validator(actual_1, desired_invalid, False)
+    assert not frequency_validator(actual_2, desired_invalid, False)
+    assert not frequency_validator(actual_3, desired_invalid, False)
 
 
 def test_convert_to_list():
@@ -165,55 +192,55 @@ def test_convert_to_list():
     """
 
     # Test that a list of the value is returned
-    assert plant.convert_to_list(1) == [1]
-    assert plant.convert_to_list(None) == [None]
-    assert plant.convert_to_list("input") == ["input"]
-    assert plant.convert_to_list(42.8) == [42.8]
+    assert convert_to_list(1) == [1]
+    assert convert_to_list(None) == [None]
+    assert convert_to_list("input") == ["input"]
+    assert convert_to_list(42.8) == [42.8]
 
     # Test that the same list is returned
-    assert plant.convert_to_list(range(3)) == [0, 1, 2]
-    assert plant.convert_to_list([44, "six", 1.2]) == [44, "six", 1.2]
-    assert plant.convert_to_list((44, "six", 1.2)) == [44, "six", 1.2]
+    assert convert_to_list(range(3)) == [0, 1, 2]
+    assert convert_to_list([44, "six", 1.2]) == [44, "six", 1.2]
+    assert convert_to_list((44, "six", 1.2)) == [44, "six", 1.2]
 
     # Test that an invalid type is passed to the manipulation argument
     with pytest.raises(ValueError):
-        assert plant.convert_to_list(range(3), 1)
+        assert convert_to_list(range(3), 1)
 
     # Test that lists of mixed inputs error out with a type-specific converter function
     with pytest.raises(ValueError):
-        assert plant.convert_to_list(range(3), str.upper)
+        assert convert_to_list(range(3), str.upper)
 
     with pytest.raises(ValueError):
-        assert plant.convert_to_list(["?", "one", "string", 2], float)
+        assert convert_to_list(["?", "one", "string", 2], float)
 
     # Test that valid manipulations work
-    assert plant.convert_to_list(range(3), float) == [0.0, 1.0, 2.0]
-    assert plant.convert_to_list([1.1, 2.2, 3.9], int) == [1, 2, 3]
-    assert plant.convert_to_list(["loud", "noises"], str.upper) == ["LOUD", "NOISES"]
-    assert plant.convert_to_list(["quiet", "VOICes"], str.lower) == ["quiet", "voices"]
+    assert convert_to_list(range(3), float) == [0.0, 1.0, 2.0]
+    assert convert_to_list([1.1, 2.2, 3.9], int) == [1, 2, 3]
+    assert convert_to_list(["loud", "noises"], str.upper) == ["LOUD", "NOISES"]
+    assert convert_to_list(["quiet", "VOICes"], str.lower) == ["quiet", "voices"]
 
 
-def column_validator():
-    """Tests the `plant.column_validator` method to ensure dataframes contain all of the
+def test_column_validator():
+    """Tests the `column_validator` method to ensure dataframes contain all of the
     required columns.
     """
     df = pd.DataFrame([range(4)], columns=[f"col{i}" for i in range(1, 5)])
 
     # Test for a complete match
     col_map = {f"new_col_{i}": f"col{i}" for i in range(1, 5)}
-    assert plant.column_validator(df, column_names=col_map) == []
+    assert column_validator(df, column_names=col_map) == []
 
     # Test for a partial match with extra columns causing no issue at all
     col_map = {f"new_col_{i}": f"col{i}" for i in range(1, 3)}
-    assert plant.column_validator(df, column_names=col_map) == []
+    assert column_validator(df, column_names=col_map) == []
 
     # Test for an incomplete match
     col_map = {f"new_col_{i}": f"col{i}" for i in range(1, 6)}
-    assert plant.column_validator(df, column_names=col_map) == ["col5"]
+    assert column_validator(df, column_names=col_map) == ["col5"]
 
 
 def test_dtype_converter():
-    """Tests the `plant.dtype_converter` method to ensure that columns get converted
+    """Tests the `dtype_converter` method to ensure that columns get converted
     correctly or return a list of error columns. This assumes that datetime columns
     have already been converted to pandas datetime objects in the reading methods.
     """
@@ -231,9 +258,9 @@ def test_dtype_converter():
     )
     column_types_valid = dict(time=np.datetime64, float_col=float, string_col=str, problem_col=str)
 
-    assert plant.dtype_converter(df, column_types_invalid_1) == ["problem_col"]
-    assert plant.dtype_converter(df, column_types_invalid_2) == ["problem_col"]
-    assert plant.dtype_converter(df, column_types_valid) == []
+    assert dtype_converter(df, column_types_invalid_1) == ["problem_col"]
+    assert dtype_converter(df, column_types_invalid_2) == ["problem_col"]
+    assert dtype_converter(df, column_types_valid) == []
 
 
 def test_analysis_filter():
@@ -257,15 +284,50 @@ def test_load_to_pandas_dict():
 
 
 def test_rename_columns():
-    """Tests the `plant.rename_columns` method for renaming dataframes."""
+    """Tests the `rename_columns` method for renaming dataframes."""
     df = pd.DataFrame([range(4)], columns=[f"col{i}" for i in range(1, 5)])
 
     # Test for a standard mapping
     col_map = {f"col{i}": f"new_col_{i}" for i in range(1, 5)}
-    new_df = plant.rename_columns(df, col_map, reverse=False)
+    new_df = rename_columns(df, col_map, reverse=False)
     assert new_df.columns.to_list() == list(col_map.values())
 
     # Test for the reverse case
     col_map = {f"new_col_{i}": f"col{i}" for i in range(1, 5)}
-    new_df = plant.rename_columns(df, col_map, reverse=True)
+    new_df = rename_columns(df, col_map, reverse=True)
     assert new_df.columns.to_list() == list(col_map.keys())
+
+
+# Test the Metadata objects
+
+
+def test_SCADAMetaData():
+    # Tests the SCADAMetaData for defaults and user-provided values
+
+    # Leaving id and power as the default values
+    meta_dict = dict(
+        time="datetime",
+        windspeed="ws_100",
+        wind_direction="wd_100",
+        status="turb_stat",
+        pitch="rotor_angle",
+        temperature="temp",
+        frequency="H",
+    )
+    valid_map = deepcopy(meta_dict)
+    valid_map.update(dict(id="id", power="power"))
+    valid_map.pop("frequency")
+
+    scada_meta = SCADAMetaData.from_dict(meta_dict)
+    assert scada_meta.col_map == valid_map
+
+    # Ensure the defaults are the defaults
+    assert scada_meta.units == attr.fields(SCADAMetaData).units.default
+    assert scada_meta.dtypes == attr.fields(SCADAMetaData).dtypes.default
+
+    # Test that non-init elements can't be set
+    with pytest.raises(TypeError):
+        scada_meta = SCADAMetaData(units={})
+
+    with pytest.raises(TypeError):
+        scada_meta = SCADAMetaData(dtypes={})
