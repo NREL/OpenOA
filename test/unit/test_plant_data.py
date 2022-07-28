@@ -552,3 +552,61 @@ def test_convert_reanalysis_value():
     assert meta["merra2"].frequency == attr.fields(ReanalysisMetaData).frequency.default
     assert meta["merra2"].units == attr.fields(ReanalysisMetaData).units.default
     assert meta["merra2"].dtypes == attr.fields(ReanalysisMetaData).dtypes.default
+
+
+def test_PlantMetaData_defaults():
+    # Test the PlantMetaData object
+
+    # Test the default values only for meta data because all the subcomponents have been checked
+    meta = PlantMetaData()
+    assert meta.latitude == 0.0
+    assert meta.longitude == 0.0
+    assert meta.scada == SCADAMetaData()
+    assert meta.meter == MeterMetaData()
+    assert meta.tower == TowerMetaData()
+    assert meta.status == StatusMetaData()
+    assert meta.curtail == CurtailMetaData()
+    assert meta.asset == AssetMetaData()
+    assert meta.reanalysis == {}
+
+    # Test the coordinates property
+    assert meta.coordinates == (0.0, 0.0)
+
+    # Test the column_map property
+    vals = meta.column_map
+    assert vals["scada"] == SCADAMetaData().col_map
+    assert vals["meter"] == MeterMetaData().col_map
+    assert vals["tower"] == TowerMetaData().col_map
+    assert vals["status"] == StatusMetaData().col_map
+    assert vals["curtail"] == CurtailMetaData().col_map
+    assert vals["asset"] == AssetMetaData().col_map
+    assert vals["reanalysis"] == {}
+
+
+def test_PlantMetaData_from_yaml():
+    # Test the PlantMetaData object using the from_yaml classmethod
+
+    # Test the default values only for meta data because all the subcomponents have been checked
+    meta = PlantMetaData()
+    assert meta.latitude == 0.0
+    assert meta.longitude == 0.0
+    assert meta.scada == SCADAMetaData()
+    assert meta.meter == MeterMetaData()
+    assert meta.tower == TowerMetaData()
+    assert meta.status == StatusMetaData()
+    assert meta.curtail == CurtailMetaData()
+    assert meta.asset == AssetMetaData()
+    assert meta.reanalysis == {}
+
+    # Test the coordinates property
+    assert meta.coordinates == (0.0, 0.0)
+
+    # Test the column_map property
+    vals = meta.column_map
+    assert vals["scada"] == SCADAMetaData().col_map
+    assert vals["meter"] == MeterMetaData().col_map
+    assert vals["tower"] == TowerMetaData().col_map
+    assert vals["status"] == StatusMetaData().col_map
+    assert vals["curtail"] == CurtailMetaData().col_map
+    assert vals["asset"] == AssetMetaData().col_map
+    assert vals["reanalysis"] == {}

@@ -592,8 +592,10 @@ class PlantMetaData(FromDictMixin):
             status=self.status.col_map,
             asset=self.asset.col_map,
             curtail=self.curtail.col_map,
-            reanalysis={k: v.col_map for k, v in self.reanalysis.items()},
+            reanalysis={},
         )
+        if self.reanalysis != {}:
+            values["reanalysis"] = {k: v.col_map for k, v in self.reanalysis.items()}
         return values
 
     @property
@@ -608,8 +610,10 @@ class PlantMetaData(FromDictMixin):
             status=self.status.dtypes,
             asset=self.asset.dtypes,
             curtail=self.curtail.dtypes,
-            reanalysis={k: v.dtypes for k, v in self.reanalysis.items()},
+            reanalysis={},
         )
+        if self.reanalysis != {}:
+            types["reanalysis"] = {k: v.dtypes for k, v in self.reanalysis.items()}
         return types
 
     @property
