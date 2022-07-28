@@ -4,11 +4,12 @@ import json
 import warnings
 import itertools
 from copy import deepcopy
-from typing import Callable, Optional, Sequence
+from typing import Any, Callable, Optional, Sequence
 from pathlib import Path
 
 import attr
 import yaml
+import attrs
 import numpy as np
 import pandas as pd
 import pyspark as spark
@@ -62,6 +63,29 @@ ANALYSIS_REQUIREMENTS = {
         },
     },
 }
+
+
+def iter_validator(iter_type, item_types: Any | tuple[Any]) -> Callable:
+    """Helper function to generate iterable validators that will reduce the amount of
+    boilerplate code.
+
+    Parameters
+    ----------
+    iter_type : any iterable
+        The type of iterable object that should be validated.
+    item_types : Union[Any, Tuple[Any]]
+        The type or types of acceptable item types.
+
+    Returns
+    -------
+    Callable
+        The attr.validators.deep_iterable iterable and instance validator.
+    """
+    validator = attrs.validators.deep_iterable(
+        member_validator=attrs.validators.instance_of(item_types),
+        iterable_validator=attrs.validators.instance_of(iter_type),
+    )
+    return validator
 
 
 def analysis_type_validator(
@@ -1021,7 +1045,7 @@ class PlantData:
     analysis_type: list[str] | None = attr.ib(
         default=None,
         converter=convert_to_list,
-        validator=analysis_type_validator,
+        validator=[iter_validator(list, (str, None)), analysis_type_validator],
         on_setattr=[attr.setters.convert, attr.setters.validate],
     )
     scada: pd.DataFrame | None = attr.ib(default=None, converter=load_to_pandas)

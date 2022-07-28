@@ -1,9 +1,81 @@
+from __future__ import annotations
+
 import attr
 import numpy as np
 import pandas as pd
 import pytest
+from attrs import field, define
 
 from openoa import plant
+
+
+# Test the FromDictMixin mixin class and class-dependent methods
+
+
+@define
+class AttrsDemoClass(plant.FromDictMixin):
+    w: int
+    x: int = field(converter=int)
+    y: float = field(converter=float, default=2.1)
+    z: str = field(converter=str, default="z")
+
+    liststr: list[str] = field(
+        default=["qwerty", "asdf"],
+        validator=plant.iter_validator(list, str),
+    )
+
+
+def test_FromDictMixin_defaults():
+    # Test that the defaults set in the class definition are actually used
+    inputs = {"w": 0, "x": 1}
+    cls = AttrsDemoClass.from_dict(inputs)
+    defaults = {a.name: a.default for a in AttrsDemoClass.__attrs_attrs__ if a.default}
+    assert cls.y == defaults["y"]
+    assert cls.z == defaults["z"]
+    np.testing.assert_array_equal(cls.liststr, defaults["liststr"])
+
+    # Test that defaults can be overwritten
+    inputs = {"w": 0, "x": 1, "y": 4.5}
+    cls = AttrsDemoClass.from_dict(inputs)
+    defaults = {a.name: a.default for a in AttrsDemoClass.__attrs_attrs__ if a.default}
+    assert cls.y != defaults["y"]
+
+
+def test_FromDictMixin_custom():
+    # Test the FromDictMixin class with non-default values
+    inputs = {
+        "w": 0,
+        "x": 1,
+        "y": 2.3,
+        "z": "asdf",
+        "liststr": ["a", "b"],
+    }
+
+    # Check that custom inputs are accepted
+    AttrsDemoClass.from_dict(inputs)
+
+    # Test that missing required inputs raises an error
+    inputs = {}
+    with pytest.raises(AttributeError):
+        AttrsDemoClass.from_dict(inputs)
+
+
+def test_iter_validator():
+    # Test that the plant.iter_validator ensures the inputs are a list of strings
+    # Check the correct values work
+    _ = AttrsDemoClass(w=0, x=1, liststr=["a", "b"])
+
+    # Check wrong member type
+    with pytest.raises(TypeError):
+        AttrsDemoClass(w=0, x=1, liststr=[4.3, 1])
+
+    # Check mixed member types
+    with pytest.raises(TypeError):
+        AttrsDemoClass(w=0, x=1, liststr=[4.3, "1"])
+
+    # Check wrong iterable type
+    with pytest.raises(TypeError):
+        AttrsDemoClass(w=0, x=1, liststr=("a", "b"))
 
 
 # Test all the standalone utility/helper methods
@@ -197,7 +269,3 @@ def test_rename_columns():
     col_map = {f"new_col_{i}": f"col{i}" for i in range(1, 5)}
     new_df = plant.rename_columns(df, col_map, reverse=True)
     assert new_df.columns.to_list() == list(col_map.keys())
-
-
-def test_FromDictMixin():
-    pass

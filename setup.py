@@ -23,9 +23,9 @@ REQUIRED = [
     "tqdm>=4.28.1",
     "matplotlib>=2.1.0",
     "bokeh==2.3.*",
+    "attrs>=22",
     "pytz",
     "pyspark",  # TODO: confirm if options required [sql] or [pandas_on_spark]
-    "attrs",
     "pyyaml",
 ]
 
