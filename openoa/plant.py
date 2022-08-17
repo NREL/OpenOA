@@ -199,8 +199,24 @@ class SCADAMetaData(FromDictMixin):
 
     Args:
         time (str): The datetime stamp for the SCADA data, by default "time". This data should be of
-            type: `np.datetime64[ns]`. Additional columns describing the datetime stamps
-            are: `frequency`
+            type: `np.datetime64[ns]`, or able to be converted to a pandas DatetimeIndex. Additional
+            columns describing the datetime stamps are: `frequency`
+        id (str): The turbine identifier column in the SCADA data, by default "id". This data should be of
+            type: `np.datetime64[ns]`.
+        power (str): The power produced, in kW, column in the SCADA data, by default "power".
+            This data should be of type: `float`.
+        windspeed (str): The measured windspeed, in m/s, column in the SCADA data, by default "windspeed".
+            This data should be of type: `float`.
+        wind_direction (str): The measured wind direction, in degrees, column in the SCADA data, by default
+            "wind_direction". This data should be of type: `float`.
+        status (str): The status code column in the SCADA data, by default "status". This data
+            should be of type: `str`.
+        pitch (str): The pitch, in degrees, column in the SCADA data, by default "pitch". This data
+            should be of type: `float`.
+        temperature (str): The temperature column in the SCADA data, by default "temperature". This
+            data should be of type: `float`.
+        frequency (str): The frequency of `time` in the SCADA data, by default "10T". The input
+            should align with the pandas frequency offset aliases: https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases
     """
 
     # DataFrame columns
