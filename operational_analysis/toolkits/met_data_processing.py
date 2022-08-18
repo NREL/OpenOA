@@ -146,13 +146,15 @@ def compute_turbulence_intensity(mean_col, std_col):
     """
     return std_col / mean_col
 
-
-def compute_shear(
+def compute_shear_v3(
     data: pd.DataFrame, ws_heights: dict, return_reference_values: bool = False
 ) -> np.array:
     """
     Computes shear coefficient between wind speed measurements using the power law.
     The shear coefficient is obtained by evaluating the expression for an OLS regression coefficient.
+
+    Updated version targeting OpenOA V3 due to the following api breaking change:
+        - Removal of ref_col, instead, returning the reference column used 
 
     Args:
         data(:obj:`pandas.DataFrame`): dataframe with wind speed columns
@@ -219,6 +221,80 @@ def compute_shear(
 
         return alpha, z_ref, u_ref
 
+def compute_shear(df, windspeed_heights, ref_col="empty"):
+    """
+    Compute shear coefficient between wind speed measurements
+
+    Args:
+        df(:obj:`pandas.DataFrame`): dataframe with wind speed columns
+        windspeed_heights(:obj:`dict`): keys are strings of columns in <df> containing wind speed data, values are
+            associated sensor heights (m)
+        ref_col(:obj:`str`): data column name for the data to use as the normalization value; only pertinent if
+            optimizing over multiple measurements
+
+    Returns:
+        :obj:`pandas.Series`: shear coefficient (unitless)
+    """
+
+    # Convert wind speed heights to float
+    windspeed_heights = dict(
+        list(
+            zip(
+                list(windspeed_heights.keys()),
+                [float(value) for value in list(windspeed_heights.values())],
+            )
+        )
+    )
+
+    keys = list(windspeed_heights.keys())
+    if len(keys) <= 1:
+        raise Exception("More than one wind speed measurement required to compute shear.")
+    elif len(keys) == 2:
+        # If there are only two measurements, no optimization possible
+        wind_a = keys[0]
+        wind_b = keys[1]
+        height_a = windspeed_heights[wind_a]
+        height_b = windspeed_heights[wind_b]
+        return (np.log(df[wind_b]) - np.log(df[wind_a])) / (np.log(height_b) - np.log(height_a))
+    else:
+        from scipy.optimize import curve_fit
+
+        def power_law(x, alpha):
+            return (x) ** alpha
+
+        # Normalize wind speeds and heights to reference values
+        df_norm = df[keys].div(df[ref_col], axis=0)
+        h0 = windspeed_heights[ref_col]
+        windspeed_heights = {k: v / h0 for k, v in windspeed_heights.items()}
+
+        # Rename columns to be windspeed measurement heights
+        df_norm = df_norm.rename(columns=windspeed_heights)
+
+        alpha = pd.DataFrame(
+            np.ones((len(df_norm), 1)) * np.nan, index=df_norm.index, columns=["alpha"]
+        )
+
+        # For each row
+        for time in df_norm.index:
+
+            t = (
+                df_norm.loc[time]  # Take the row as a series, the index will be the column names,
+                .reset_index()  # Resetting the index yields the heights as a column
+                .to_numpy()
+            )  # Numpy array: each row a sensor, column 0 the heights, column 1 the measurment
+            t = t[~np.isnan(t).any(axis=1)]  # Drop rows (sensors) for which the measurement was nan
+            h = t[:, 0]  # The measurement heights
+            u = t[:, 1]  # The measurements
+            if (
+                np.shape(u)[0] <= 1
+            ):  # If less than two measurements were available, leave value as nan
+                continue
+            else:
+                alpha.loc[time, "alpha"] = curve_fit(power_law, h, u)[0][
+                    0
+                ]  # perform least square optimization
+
+        return alpha["alpha"]
 
 def extrapolate_windspeed(v1, z1: float, z2: float, shear):
     """

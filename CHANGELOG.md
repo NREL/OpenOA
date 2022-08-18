@@ -2,7 +2,7 @@
 All notable changes to this project will be documented in this file. If you make a notable change to the project, please add a line describing the change to the "unreleased" section. The maintainers will make an effort to keep the [Github Releases](https://github.com/NREL/OpenOA/releases) page up to date with this changelog. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [UNRELEASED]
-- Improved efficiency of `compute_shear` function in `met_data_processing` toolkit, removed requirement to provide reference height, and added option to return reference height and wind speed corresponding to best-fit shear exponent
+- Added `compute_shear_v3` to `met_data_processing` toolkit, improving efficiency, removed requirement to provide reference height, and added option to return reference height and wind speed corresponding to best-fit shear exponent. Decided to bifurcate function into `compute_shear` and `compute_shear_v3` in order to maintain backwards compatibility with the OpenOA 2.x line.
 
 ## [2.3 - 2022-01-18]
 - Replaced hard-coded reanalysis dates in plant analysis with automatic valid date selection and added optional user-defined end date argument. Fixed bug in normalization to 30-day months.
