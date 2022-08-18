@@ -584,7 +584,7 @@ class MonteCarloAEP(object):
 
         # Create the monthly/daily data frame by summing meter energy
         self._aggregate = (
-            df.resample(self._resample_freq)["energy_kwh"].sum() / 1e6
+            df.resample(self._resample_freq)["wgen_w"].sum() / 1e6
         ).to_frame()  # Get monthly energy values in GWh
         self._aggregate.rename(
             columns={"energy_kwh": "energy_gwh"}, inplace=True
