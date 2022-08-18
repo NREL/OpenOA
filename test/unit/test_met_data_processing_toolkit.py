@@ -66,7 +66,6 @@ class SimpleMetProcessing(unittest.TestCase):
         nptest.assert_array_almost_equal(adjusted_ws, adjusted_ws_ans, decimal=5)
 
     def test_compute_turbulence_intensity(self):
-
         mean = np.linspace(2.0, 25.0, 10)
         std = np.linspace(0.1, 2.0, 10)
         computed_TI = mt.compute_turbulence_intensity(mean, std)
@@ -87,6 +86,49 @@ class SimpleMetProcessing(unittest.TestCase):
         nptest.assert_allclose(
             computed_TI, expected_TI, err_msg="Turbulence intensity not properly computed."
         )
+
+    def test_compute_shear_v3(self):
+        expected_alpha = np.array([-0.1, 0.1, 0.2, 0.4])
+        height_low = 30.0
+        height_mid = 60.0
+
+        df = pd.DataFrame(
+            data={
+                "wind_low": np.array(
+                    [4.2870938501451725, 7.464263932294459, 5.223303379776745, 3.031433133020796]
+                ),
+                "wind_mid": np.array([4.0, 8.0, 6.0, 4.0]),
+                "wind_high": np.array(
+                    [3.886566631452294, 8.233488071718085, 6.355343046292873, 4.487820581784798]
+                ),
+            }
+        )
+        # Two sensor test
+        windspeed_heights = {"wind_low": height_low, "wind_mid": height_mid}
+        computed_alpha = mt.compute_shear_v3(df, windspeed_heights)
+        nptest.assert_allclose(
+            computed_alpha, expected_alpha, err_msg="Shear two-sensor computation failing."
+        )
+
+        # Multiple sensor test
+        windspeed_heights = {"wind_low": 30.0, "wind_mid": 60.0, "wind_high": 80.0}
+        computed_alpha = mt.compute_shear_v3(df, windspeed_heights)
+        nptest.assert_allclose(
+            computed_alpha, expected_alpha, err_msg="Shear multi-sensor optimization failing."
+        )
+
+        # test reference height and reference wind speed
+        computed_alpha, computed_z_ref, computed_u_ref = mt.compute_shear_v3(
+            df, windspeed_heights, return_reference_values=True
+        )
+        nptest.assert_allclose(
+            computed_alpha, expected_alpha, err_msg="Shear multi-sensor optimization failing."
+        )
+        nptest.assert_allclose(computed_z_ref, 52.41482788)
+
+        expected_u_ref = np.array([4.054429004, 7.892603366, 5.839986365, 3.789493416])
+
+        nptest.assert_allclose(computed_u_ref, expected_u_ref)
 
     def test_compute_shear(self):
         expected_alpha = np.array([-0.1, 0.1, 0.2, 0.4])
@@ -118,6 +160,17 @@ class SimpleMetProcessing(unittest.TestCase):
         nptest.assert_allclose(
             computed_alpha, expected_alpha, err_msg="Shear multi-sensor optimization failing."
         )
+
+    def test_extrapolate_windspeed(self):
+        alpha = np.array([0.26, 0.31, 0.21])
+        v1 = np.array([5.632, 6.893, 6.023])
+        z1 = 80
+        z2 = 100
+
+        expected_v2 = np.array([5.968418, 7.386698, 6.311956])
+        computed_v2 = mt.extrapolate_windspeed(v1, z1, z2, alpha)
+
+        nptest.assert_allclose(computed_v2, expected_v2)
 
     def test_compute_veer(self):
         wind_low = np.linspace(2.0, 10.0, 10)

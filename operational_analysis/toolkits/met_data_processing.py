@@ -2,6 +2,8 @@
 This module provides methods for processing meteorological data.
 """
 
+import warnings
+
 import numpy as np
 import pandas as pd
 import scipy.constants as const
@@ -144,6 +146,80 @@ def compute_turbulence_intensity(mean_col, std_col):
     """
     return std_col / mean_col
 
+def compute_shear_v3(
+    data: pd.DataFrame, ws_heights: dict, return_reference_values: bool = False
+) -> np.array:
+    """
+    Computes shear coefficient between wind speed measurements using the power law.
+    The shear coefficient is obtained by evaluating the expression for an OLS regression coefficient.
+
+    Updated version targeting OpenOA V3 due to the following api breaking change:
+        - Removal of ref_col, instead, returning the reference column used 
+
+    Args:
+        data(:obj:`pandas.DataFrame`): dataframe with wind speed columns
+        ws_heights(:obj:`dict`): keys are strings of columns in <data> containing wind speed data, values are
+                                 associated sensor heights (m)
+        return_reference_values(:obj: `bool`): If True, this function returns a three element tuple where the
+                                               first element is the array of shear exponents, the second element
+                                               is the reference height (float), and the third element is the
+                                               reference wind speed (array). These reference values can be used
+                                               for extrapolating wind speed. Defaults to False.
+
+    Returns:
+        If return_reference_values is False (default):
+        :obj:`numpy.array`: shear coefficient (unitless)
+
+        If return_reference_values is True:
+        :obj:`tuple`: (shear coefficient (unitless), reference height (m), reference wind speed)
+
+    """
+
+    # create "u" 2-D array; where element [i,j] is the wind speed measurement at the ith timestep and jth sensor height
+    u: np.ndarray = data[ws_heights.keys()].to_numpy()
+
+    # create "z" 2_D array; columns are filled with the sensor height
+    n: int = len(data)
+    heights: list = [np.full(n, height) for height in ws_heights.values()]
+    z: np.ndarray = np.column_stack(tuple(heights))
+
+    # take log of z & u
+    with warnings.catch_warnings():  # suppress log division by zero warning.
+        warnings.filterwarnings("ignore", r"divide by zero encountered in log")
+        u = np.log(u)
+        z = np.log(z)
+
+    # correct -inf or NaN if any.
+    nan_or_ninf = np.logical_or(np.isneginf(u), np.isnan(u))
+    if np.any(nan_or_ninf):
+        # replace -inf or NaN with zero or NaN in u and corresponding location in z such that these
+        # elements are excluded from the regression.
+        u[nan_or_ninf] = 0
+        z[nan_or_ninf] = np.nan
+
+    # shift rows of z by the mean of z to simplify shear calculation
+    z = z - (np.nanmean(z, axis=1))[:, None]
+
+    # finally, replace NaN's in z by zero so those points are effectively excluded from the regression
+    z[np.isnan(z)] = 0
+
+    # compute shear based on simple linear regression
+    alpha = (z * u).sum(axis=1) / (z * z).sum(axis=1)
+
+    if not return_reference_values:
+        return alpha
+
+    else:
+        # compute reference height
+        z_ref: float = np.exp(np.mean(np.log(np.array(list(ws_heights.values())))))
+
+        # replace zeros in u (if any) with NaN
+        u[u == 0] = np.nan
+
+        # compute reference wind speed
+        u_ref = np.exp(np.nanmean(u, axis=1))
+
+        return alpha, z_ref, u_ref
 
 def compute_shear(df, windspeed_heights, ref_col="empty"):
     """
@@ -219,6 +295,24 @@ def compute_shear(df, windspeed_heights, ref_col="empty"):
                 ]  # perform least square optimization
 
         return alpha["alpha"]
+
+def extrapolate_windspeed(v1, z1: float, z2: float, shear):
+    """
+    Extrapolates wind speed vertically using the Power Law.
+
+    Args:
+        v1(:obj: `pandas.Series` | `numpy.array` | `float`): Wind speed measurements at the reference height.
+        z1(:obj:`float`): Height of reference wind speed measurements; units in meters
+        z2(:obj:`float`): Target extrapolation height; units in meters
+        shear(:obj: `pandas.Series` | `numpy.array` | `float`): Shear value(s)
+
+    Returns:
+        :obj: (`pandas.Series` | `numpy.array` | `float`): Wind speed extrapolated to target height.
+    """
+
+    target_ws = v1 * (z2 / z1) ** shear
+
+    return target_ws
 
 
 def compute_veer(wind_a, height_a, wind_b, height_b):
