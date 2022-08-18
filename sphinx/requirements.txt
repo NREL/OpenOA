@@ -1,7 +1,7 @@
 # Requirement for docs
 # In addition to main requirements
 
-ipython==7.30.*
+ipython==7.*
 m2r2==0.3.*
 Sphinx==4.3.*
 sphinxcontrib-napoleon==0.7
