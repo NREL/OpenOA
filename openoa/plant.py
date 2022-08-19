@@ -1198,6 +1198,15 @@ class PlantData:
         error_message = compose_error_message(self._errors, analysis_types=self.analysis_type)
         if error_message != "":
             raise ValueError(error_message)
+
+        # Post-validation data manipulations
+        # TODO: Need to have a class level input for the user-preferred projection system
+        # TODO: Why does the non-WGS84 projection matter?
+        self.parse_asset_geometry()
+        # TODO: self.calculate_nearest()
+        # TODO: distance_matrix(), asset_ids, turbine_ids, tower_ids, nearest_neighbors(), nearest_tower(), nearest_turbine()
+
+        # Change the column names to the -25 convention for easier use in the rest of the code base
         self.update_column_names()
 
         if self.preprocess is not None:
@@ -1646,6 +1655,24 @@ class PlantData:
                     df, meta.reanalysis[name].col_map, reverse=to_original
                 )
             self.reanalysis = reanalysis
+
+    @property
+    def turbine_id(self) -> np.ndarray:
+        """The 1D array of turbine IDs. This is created from the asset data, or unique IDs from the
+        SCADA data, if `asset` is undefined.
+        """
+        if self.asset is None:
+            return self.scada["id"].unique()
+        return self.asset.loc[self.asset["type"] == "turbine", "id"].values
+
+    @property
+    def tower_id(self) -> np.ndarray:
+        """The 1D array of met tower IDs. This is created from the asset data, or unique IDs from the
+        tower data, if `asset` is undefined.
+        """
+        if self.asset is None:
+            return self.tower["id"].unique()
+        return self.asset.loc[self.asset["type"] == "tower", "id"].values
 
     # Not necessary, but could provide an additional way in
     @classmethod
