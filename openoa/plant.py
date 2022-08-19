@@ -6,6 +6,7 @@ import itertools
 from copy import deepcopy
 from typing import Any, Callable, Optional, Sequence
 from pathlib import Path
+from functools import cached_property
 
 import attr
 import yaml
@@ -1662,8 +1663,8 @@ class PlantData:
         SCADA data, if `asset` is undefined.
         """
         if self.asset is None:
-            return self.scada["id"].unique()
-        return self.asset.loc[self.asset["type"] == "turbine", "id"].values
+            return self.scada.index.get_level_values("id").unique()
+        return self.asset.loc[self.asset["type"] == "turbine"].index.values
 
     @property
     def tower_id(self) -> np.ndarray:
@@ -1671,8 +1672,38 @@ class PlantData:
         tower data, if `asset` is undefined.
         """
         if self.asset is None:
-            return self.tower["id"].unique()
-        return self.asset.loc[self.asset["type"] == "tower", "id"].values
+            return self.tower.index.get_level_values("id").unique()
+        return self.asset.loc[self.asset["type"] == "tower"].index.values
+
+    @cached_property
+    def asset_distance_matrix(self) -> pd.DataFrame:
+        """Calculates the distance between all assets on the site and caches the result after the
+        first computation.
+        """
+        ix = self.asset.index.values
+        distance = (
+            pd.DataFrame(
+                [i, j, self.asset.loc[i, "geometry"].distance(self.asset.loc[j, "geometry"])]
+                for i, j in itertools.combinations(ix, 2)
+            )
+            .pivot(index=0, columns=1, values=2)
+            .reset_index()
+            .fillna(0)
+        )
+
+        # Pivot excludes the first column and last row because the self-self combinations
+        # are not produced in the above
+        distance.loc[:, ix[0]] = 0
+        distance.loc[ix[-1]] = 0
+
+        # Unset the index and columns property names
+        distance.index.name = None
+        distance.columns.name = None
+
+        # Maintain v2 compatibility of np.inf for the diagonal
+        distance = distance + distance.values.T - np.diag(np.diag(distance.values))
+        np.fill_diagonal(distance.values, np.inf)
+        return distance
 
     # Not necessary, but could provide an additional way in
     @classmethod
