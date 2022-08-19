@@ -1677,8 +1677,8 @@ class PlantData:
 
     @cached_property
     def asset_distance_matrix(self) -> pd.DataFrame:
-        """Calculates the distance between all assets on the site and caches the result after the
-        first computation.
+        """Calculates the distance between all assets on the site with `np.inf` for the distance
+        between an asset and itself.
         """
         ix = self.asset.index.values
         distance = (
@@ -1691,8 +1691,7 @@ class PlantData:
             .fillna(0)
         )
 
-        # Pivot excludes the first column and last row because the self-self combinations
-        # are not produced in the above
+        # Insert the first column and last row because the self-self combinations are not produced in the above
         distance.loc[:, ix[0]] = 0
         distance.loc[ix[-1]] = 0
 
