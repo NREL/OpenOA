@@ -14,6 +14,8 @@ import numpy as np
 import pandas as pd
 import pyspark as spark
 from attr import define
+from pyproj import Transformer
+from shapely.geometry import Point
 
 import openoa.utils.met_data_processing as met
 
@@ -1571,6 +1573,49 @@ class PlantData:
 
             reanalysis[name] = df
         self.reanalysis = reanalysis
+
+    def parse_asset_geometry(
+        self,
+        reference_system: str = "epsg:4326",
+        utm_zone: int = None,
+        reference_longitude: Optional[float] = None,
+    ) -> None:
+        """Calculate UTM coordinates from latitude/longitude.
+
+        The UTM system divides the Earth into 60 zones, each 6deg of longitude in width. Zone 1
+        covers longitude 180deg to 174deg W; zone numbering increases eastward to zone 60, which
+        covers longitude 174deg E to 180deg. The polar regions south of 80deg S and north of 84deg N
+        are excluded.
+
+        Ref: http://geopandas.org/projections.html
+
+        Args:
+            reference_system (:obj:`str`, optional): Used to define the coordinate reference system (CRS).
+                Defaults to the European Petroleum Survey Group (EPSG) code 4326 to be used with
+                the World Geodetic System reference system, WGS 84.
+            utm_zone (:obj:`int`, optional): UTM zone. If set to None (default), then calculated from
+                the longitude.
+            reference_longitude (:obj:`float`, optional): Reference longitude for calculating the UTM zone. If
+                None (default), then taken as the average longitude of all assets.
+
+        Returns: None
+            Sets the asset "geometry" column.
+        """
+        if utm_zone is None:
+            # calculate zone
+            if reference_longitude is None:
+                longitude = self.asset[self.metadata.asset.longitude].mean()
+            utm_zone = int(np.floor((180 + longitude) / 6.0)) + 1
+
+        to_crs = f"+proj=utm +zone={utm_zone} +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+        transformer = Transformer.from_crs(reference_system.upper(), to_crs)
+        lats, lons = transformer.transform(
+            self._asset[self.metadata.asset.latitude].values,
+            self._asset[self.metadata.asset.longitude].values,
+        )
+
+        # TODO: Should this get a new name that's in line with the -25 convention?
+        self._asset["geometry"] = [Point(lat, lon) for lat, lon in zip(lats, lons)]
 
     def update_column_names(self, to_original: bool = False) -> None:
         """Renames the columns of each dataframe to the be the keys from the
