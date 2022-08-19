@@ -202,7 +202,7 @@ class SCADAMetaData(FromDictMixin):
             type: `np.datetime64[ns]`, or able to be converted to a pandas DatetimeIndex. Additional
             columns describing the datetime stamps are: `frequency`
         id (str): The turbine identifier column in the SCADA data, by default "id". This data should be of
-            type: `np.datetime64[ns]`.
+            type: `str`.
         power (str): The power produced, in kW, column in the SCADA data, by default "power".
             This data should be of type: `float`.
         windspeed (str): The measured windspeed, in m/s, column in the SCADA data, by default "windspeed".
@@ -216,7 +216,10 @@ class SCADAMetaData(FromDictMixin):
         temperature (str): The temperature column in the SCADA data, by default "temperature". This
             data should be of type: `float`.
         frequency (str): The frequency of `time` in the SCADA data, by default "10T". The input
-            should align with the pandas frequency offset aliases: https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases
+            should align with the `Pandas frequency offset aliases`_.
+
+    .. _Pandas frequency offset aliases:
+    https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases
     """
 
     # DataFrame columns
@@ -278,6 +281,24 @@ class SCADAMetaData(FromDictMixin):
 
 @define(auto_attribs=True)
 class MeterMetaData(FromDictMixin):
+    """A metadata schematic to create the necessary column mappings and other validation
+    components, or other data about energy meter data, that will contribute to a larger
+    plant metadata schema/routine.
+
+    Args:
+        time (str): The datetime stamp for the meter data, by default "time". This data should
+            be of type: `np.datetime64[ns]`, or able to be converted to a pandas DatetimeIndex.
+            Additional columns describing the datetime stamps are: `frequency`
+        power (str): The power produced, in kW, column in the meter data, by default "power".
+            This data should be of type: `float`.
+        energy (str): The energy produced, in kWh, column in the meter data, by default
+            "temperature". This data should be of type: `float`.
+        frequency (str): The frequency of `time` in the meter data, by default "10T". The input
+            should align with the `Pandas frequency offset aliases`_.
+
+    .. _Pandas frequency offset aliases:
+    https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases
+    """
 
     # DataFrame columns
     time: str = attr.ib(default="time")
@@ -318,6 +339,23 @@ class MeterMetaData(FromDictMixin):
 
 @define(auto_attribs=True)
 class TowerMetaData(FromDictMixin):
+    """A metadata schematic to create the necessary column mappings and other validation
+    components, or other data about meteorological tower (met tower) data, that will contribute to a
+    larger plant metadata schema/routine.
+
+    Args:
+        time (str): The datetime stamp for the met tower data, by default "time". This data should
+            be of type: `np.datetime64[ns]`, or able to be converted to a pandas DatetimeIndex.
+            Additional columns describing the datetime stamps are: `frequency`
+        id (str): The met tower identifier column in the met tower data, by default "id". This data
+            should be of type: `str`.
+        frequency (str): The frequency of `time` in the met tower data, by default "10T". The input
+            should align with the `Pandas frequency offset aliases`_.
+
+    .. _Pandas frequency offset aliases:
+    https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases
+    """
+
     # DataFrame columns
     time: str = attr.ib(default="time")
     id: str = attr.ib(default="id")
@@ -353,6 +391,29 @@ class TowerMetaData(FromDictMixin):
 
 @define(auto_attribs=True)
 class StatusMetaData(FromDictMixin):
+    """A metadata schematic to create the necessary column mappings and other validation
+    components, or other data about the turbine status log data, that will contribute to a
+    larger plant metadata schema/routine.
+
+    Args:
+        time (str): The datetime stamp for the status data, by default "time". This data should
+            be of type: `np.datetime64[ns]`, or able to be converted to a pandas DatetimeIndex.
+            Additional columns describing the datetime stamps are: `frequency`
+        id (str): The turbine identifier column in the status data, by default "id". This data
+            should be of type: `str`.
+        status_id (str): The status code identifier column in the status data, by default "id". This data
+            should be of type: `str`.
+        status_code (str): The status code column in the status data, by default "id". This data
+            should be of type: `str`.
+        status_text (str): The status text description column in the status data, by default "id".
+            This data should be of type: `str`.
+        frequency (str): The frequency of `time` in the met tower data, by default "10T". The input
+            should align with the `Pandas frequency offset aliases`_.
+
+    .. _Pandas frequency offset aliases:
+    https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases
+    """
+
     # DataFrame columns
     time: str = attr.ib(default="time")
     id: str = attr.ib(default="id")
@@ -400,6 +461,27 @@ class StatusMetaData(FromDictMixin):
 
 @define(auto_attribs=True)
 class CurtailMetaData(FromDictMixin):
+    """A metadata schematic to create the necessary column mappings and other validation
+    components, or other data about the plant curtailment data, that will contribute to a
+    larger plant metadata schema/routine.
+
+    Args:
+        time (str): The datetime stamp for the curtailment data, by default "time". This data should
+            be of type: `np.datetime64[ns]`, or able to be converted to a pandas DatetimeIndex.
+            Additional columns describing the datetime stamps are: `frequency`
+        curtailment (str): The curtailment percentage column in the curtailment data, by default
+            "curtailment". This data should be of type: `float`.
+        availability (str): The availability percentage column in the curtailment data, by default
+            "availability". This data should be of type: `float`.
+        net_energy (str): The net energy produced, in kW, column in the curtailment data, by default
+            "net_energy". This data should be of type: `float`.
+        frequency (str): The frequency of `time` in the met tower data, by default "10T". The input
+            should align with the `Pandas frequency offset aliases`_.
+
+    .. _Pandas frequency offset aliases:
+    https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases
+    """
+
     # DataFrame columns
     time: str = attr.ib(default="time")
     curtailment: str = attr.ib(default="curtailment")
@@ -443,6 +525,27 @@ class CurtailMetaData(FromDictMixin):
 
 @define(auto_attribs=True)
 class AssetMetaData(FromDictMixin):
+    """A metadata schematic to create the necessary column mappings and other validation
+    components, or other data about the site's asset metadata, that will contribute to a
+    larger plant metadata schema/routine.
+
+    Args:
+        id (str): The asset identifier column in the asset metadata, by default "id". This data
+            should be of type: `str`.
+        latitude (str): The asset's latitudinal position, in WGS84, column in the asset metadata, by
+            default "latitude". This data should be of type: `float`.
+        longitude (str): The asset's longitudinal position, in WGS84, column in the asset metadata,
+            by default "longitude". This data should be of type: `float`.
+        rated_power (str): The asset's rated power, in kW, column in the asset metadata, by default
+            "rated_power". This data should be of type: `float`.
+        hub_height (str): The asset's hub height, in m, column in the asset metadata, by default
+            "hub_height". This data should be of type: `float`.
+        elevation (str): The asset's elevation above sea level, in m, column in the asset metadata,
+            by default "elevation". This data should be of type: `float`.
+        type (str): The type of asset column in the asset metadata, by default "type". This data
+            should be of type: `str`.
+    """
+
     # DataFrame columns
     id: str = attr.ib(default="id")
     latitude: str = attr.ib(default="latitude")
