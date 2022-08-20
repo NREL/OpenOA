@@ -1204,8 +1204,6 @@ class PlantData:
         # TODO: Need to have a class level input for the user-preferred projection system
         # TODO: Why does the non-WGS84 projection matter?
         self.parse_asset_geometry()
-        # TODO: self.calculate_nearest()
-        # TODO: distance_matrix(), asset_ids, turbine_ids, tower_ids, nearest_neighbors(), nearest_tower(), nearest_turbine()
 
         # Change the column names to the -25 convention for easier use in the rest of the code base
         self.update_column_names()
@@ -1659,7 +1657,7 @@ class PlantData:
 
     @property
     def turbine_id(self) -> np.ndarray:
-        """The 1D array of turbine IDs. This is created from the asset data, or unique IDs from the
+        """The 1D array of turbine IDs. This is created from the `asset` data, or unique IDs from the
         SCADA data, if `asset` is undefined.
         """
         if self.asset is None:
@@ -1668,12 +1666,23 @@ class PlantData:
 
     @property
     def tower_id(self) -> np.ndarray:
-        """The 1D array of met tower IDs. This is created from the asset data, or unique IDs from the
+        """The 1D array of met tower IDs. This is created from the `asset` data, or unique IDs from the
         tower data, if `asset` is undefined.
         """
         if self.asset is None:
             return self.tower.index.get_level_values("id").unique()
         return self.asset.loc[self.asset["type"] == "tower"].index.values
+
+    @property
+    def asset_id(self) -> np.ndarray:
+        """The ID array of turbine and met tower IDs. This is created from the `asset` data, or unique
+        IDs from both the SCADA data and tower data, if `asset` is undefined.
+        """
+        if self.asset is None:
+            return np.concatenate([self.turbine_id, self.tower_id])
+        return self.asset.index.values
+
+    # NOTE: v2 AssetData methods
 
     @cached_property
     def asset_distance_matrix(self) -> pd.DataFrame:
