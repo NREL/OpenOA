@@ -1740,6 +1740,28 @@ class PlantData:
         self.asset.loc[ix, "nearest_turbine_id"] = nearest_turbine.values
         self.asset.loc[ix, "nearest_tower_id"] = nearest_tower.values
 
+    def nearest_turbine(self, id: str) -> str:
+        """Finds the nearest turbine to the provided `id`.
+
+        Args:
+            id (str): A valid `asset` `id`.
+
+        Returns:
+            str: The turbine `id` closest to the provided `id`.
+        """
+        return self.asset.loc[id, "nearest_turbine_id"].values[0]
+
+    def nearest_tower(self, id: str) -> str:
+        """Finds the nearest tower to the provided `id`.
+
+        Args:
+            id (str): A valid `asset` `id`.
+
+        Returns:
+            str: The tower `id` closest to the provided `id`.
+        """
+        return self.asset.loc[id, "nearest_tower_id"].values[0]
+
     # Not necessary, but could provide an additional way in
     @classmethod
     def from_entr(
