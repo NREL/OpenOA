@@ -1689,10 +1689,11 @@ class PlantData:
             .pivot(index=0, columns=1, values=2)
             .reset_index()
             .fillna(0)
+            .loc[ix[:-1], ix[1:]]
         )
 
         # Insert the first column and last row because the self-self combinations are not produced in the above
-        distance.loc[:, ix[0]] = 0
+        distance.insert(0, ix[0], 0.0)
         distance.loc[ix[-1]] = 0
 
         # Unset the index and columns property names
@@ -1703,6 +1704,41 @@ class PlantData:
         distance = distance + distance.values.T - np.diag(np.diag(distance.values))
         np.fill_diagonal(distance.values, np.inf)
         return distance
+
+    def calculate_nearest_neighbor(
+        self, turbine_ids: list | np.ndarray = None, tower_ids: list | np.ndarray = None
+    ) -> None:
+        """Finds nearest turbine neighbors for turbines and nearest tower neighbors for met towers.
+
+        Args:
+            turbine_ids (list | np.ndarray, optional): A list of turbine IDs, if not using all
+                turbines in the data. Defaults to None.
+            tower_ids (list | np.ndarray, optional): A list of met tower IDs, if not using all
+                met towers in the data. Defaults to None.
+
+        Returns: None
+            Creates the "nearest_turbine_id" and "nearest_tower_id" column in `asset`.
+        """
+
+        # Get the valid IDs for both the turbines and towers
+        ix_turb = self.turbine_id if turbine_ids is None else np.array(turbine_ids)
+        ix_tower = self.tower_id if tower_ids is None else np.array(tower_ids)
+        ix = np.concatenate([ix_turb, ix_tower])
+
+        distance = self.asset_distance_matrix.loc[ix, ix]
+
+        nearest_turbine = distance[ix_turb].values.argsort(axis=1)
+        nearest_turbine = pd.DataFrame(
+            distance.columns.values[nearest_turbine], index=distance.index
+        ).loc[ix, 0]
+
+        nearest_tower = distance[ix_tower].values.argsort(axis=1)
+        nearest_tower = pd.DataFrame(
+            distance.columns.values[nearest_tower], index=distance.index
+        ).loc[ix, 0]
+
+        self.asset.loc[ix, "nearest_turbine_id"] = nearest_turbine.values
+        self.asset.loc[ix, "nearest_tower_id"] = nearest_tower.values
 
     # Not necessary, but could provide an additional way in
     @classmethod
