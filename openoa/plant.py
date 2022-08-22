@@ -1664,6 +1664,19 @@ class PlantData:
             return self.scada.index.get_level_values("id").unique()
         return self.asset.loc[self.asset["type"] == "turbine"].index.values
 
+    def turbine_df(self, turbine_id: str) -> pd.DataFrame:
+        """Filters `scada` on a single `turbine_id` and returns the filtered data frame.
+
+        Args:
+            turbine_id (str): The ID of the turbine to retrieve its data.
+
+        Returns:
+            pd.DataFrame: The turbine-specific SCADA data frame.
+        """
+        if self.scada is None:
+            raise AttributeError("This method can't be used unless `scada` data is provided.")
+        return self.scada.xs(turbine_id, level=1)
+
     @property
     def tower_id(self) -> np.ndarray:
         """The 1D array of met tower IDs. This is created from the `asset` data, or unique IDs from the
@@ -1672,6 +1685,19 @@ class PlantData:
         if self.asset is None:
             return self.tower.index.get_level_values("id").unique()
         return self.asset.loc[self.asset["type"] == "tower"].index.values
+
+    def tower_df(self, tower_id: str) -> pd.DataFrame:
+        """Filters `tower` on a single `tower_id` and returns the filtered data frame.
+
+        Args:
+            tower_id (str): The ID of the met tower to retrieve its data.
+
+        Returns:
+            pd.DataFrame: The met tower-specific data frame.
+        """
+        if self.tower is None:
+            raise AttributeError("This method can't be used unless `tower` data is provided.")
+        return self.tower.xs(tower_id, level=1)
 
     @property
     def asset_id(self) -> np.ndarray:
