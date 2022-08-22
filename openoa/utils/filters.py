@@ -9,19 +9,41 @@ import pandas as pd
 from sklearn.cluster import KMeans
 
 
-def range_flag(data_col: pd.Series, below: float = -np.inf, above: float = np.inf) -> pd.Series:
+def range_flag(data_col: pd.Series, below: float, above: float) -> pd.Series:
     """Flag data for which the specified data is outside a specified range
 
     Args:
         data_col (:obj:`pandas.Series`): data to be flagged
-        below (:obj:`float`): upper threshold (inclusive) for data; default -np.inf
-        above (:obj:`float`): lower threshold (inclusive) for data; default np.inf
+        below (:obj:`float`): upper threshold (inclusive) for data.
+        above (:obj:`float`): lower threshold (inclusive) for data.
 
     Returns:
         :obj:`pandas.Series(bool)`: Array-like object with boolean entries.
     """
 
     return ~((data_col <= above) & (data_col >= below))
+
+
+def range_flag_df(
+    data: pd.DataFrame, col: list[str], below: list[float], above: list[float]
+) -> pd.Series:
+    """Flag data for which the specified data is outside a specified range
+
+    Args:
+        data (:obj:`pandas.DataFrame`): data frame containing the column to be flagged.
+        col (:obj:`list[str]`): column(s) in `data` to be flagged
+        below (:obj:`float`): upper threshold (inclusive) for each element of `col`
+        above (:obj:`float`): lower threshold (inclusive) for each element of `col`
+
+    Returns:
+        :obj:`pandas.DataFrame(bool)`: Data frame with boolean entries.
+    """
+    if len(col) != len(below) != len(above):
+        raise ValueError("The inputs to `col`, `above`, and `below` must be the same length.")
+
+    subset = data.loc[:, col].copy()
+    df = pd.DataFrame(~(subset <= above & subset >= below), columns=col, index=subset.index)
+    return df
 
 
 def unresponsive_flag(data_col: pd.Series, threshold: int = 3) -> pd.Series:
@@ -37,16 +59,37 @@ def unresponsive_flag(data_col: pd.Series, threshold: int = 3) -> pd.Series:
 
     # Get boolean value of the difference in successive time steps is not equal to zero, and take the
     # rolling sum of the boolean diff column in period lengths defined by threshold
-    roll_sum = data_col.diff().ne(0).rolling(threshold - 1).sum()
+    flag_ind = data_col.diff().ne(0).rolling(threshold - 1).sum()
 
     # Create boolean series that is True if rolling sum is zero
-    flag_ind = roll_sum == 0
+    flag_ind = flag_ind == 0
 
     # Need to flag preceding `threshold` -1 values as well
     for _ in np.arange(threshold - 1):
         flag_ind = flag_ind | flag_ind.shift(-1)
 
     return flag_ind  # Return boolean series of data flags
+
+
+def unresponsive_flag_df(data: pd.DataFrame, col: list[str], threshold: list[int]) -> pd.Series:
+    """Flag time stamps for which the reported data does not change for `threshold` repeated intervals.
+
+    Args:
+        data(:obj:`pandas.DataFrame`): data frame with column(s) to be flagged
+        col(:obj:`list[str]`): data column(s) to be flagged
+        threshold(:obj:`list[int]`): number of intervals over which measurment does not change.
+
+    Returns:
+        :obj:`pandas.Series(bool)`: Array-like object with boolean entries.
+    """
+    if len(col) != len(threshold):
+        raise ValueError("Inputs provide to `col` and `threshold` must be the same length.")
+    subset = data.loc[:, col].copy()
+    flag = subset.diff(axis=0).ne(0).rolling(threshold - 1).sum()
+    flag = flag == 0
+
+    for _ in range(threshold - 1):
+        flag = flag | flag.shift(-1, axis=0)
 
 
 def std_range_flag(data_col: pd.Series, threshold: float = 2.0) -> pd.Series:
@@ -66,6 +109,30 @@ def std_range_flag(data_col: pd.Series, threshold: float = 2.0) -> pd.Series:
     data_mean = data_col.mean()  # Get mean of data
     data_std = data_col.std() * threshold  # Get std of data
     flag = (data_col <= data_mean - data_std) | (data_col >= data_mean + data_std)
+    return flag
+
+
+def std_range_flag_df(data: pd.DataFrame, col: list[str], threshold: float = 2.0) -> pd.Series:
+    """Flag time stamps for which the measurement is outside of the threshold number of standard deviations
+     from the mean across the data.
+
+    ... note:: This method does not distinguish between asset IDs.
+
+    Args:
+        data(:obj:`pandas.DataFrame`): data frame with column(s) to be flagged
+        col(:obj:`list[str]`): data column(s) to be flagged
+        threshold(:obj:`[float]`): multiplicative factor on standard deviation to use in flagging.
+
+    Returns:
+        :obj:`pandas.Series(bool)`: Array-like object with boolean entries.
+    """
+    if len(col) != len(threshold):
+        raise ValueError("Inputs provided to `col` and `threshold` must be the same length.")
+
+    subset = data.loc[col].copy()
+    data_mean = subset.mean(axis=0)  # Get mean of data
+    data_std = subset.std(axis=0) * np.array(threshold)  # Get std of data
+    flag = (subset <= data_mean - data_std) | (subset >= data_mean + data_std)
     return flag
 
 
