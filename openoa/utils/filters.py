@@ -146,7 +146,7 @@ def bin_filter(
     bin_edges = np.arange(bin_min, bin_max, bin_width)
 
     # Ensure the last bin edge value is bin_max
-    bin_edges = np.unique(np.clip(np.append(bin_edges, bin_max), bin_max))
+    bin_edges = np.unique(np.clip(np.append(bin_edges, bin_max), bin_min, bin_max))
 
     # Define empty flag of 'False' values with indices matching value_col
     flag = pd.Series(index=value_col.index, data=False)
