@@ -21,8 +21,7 @@ def range_flag(data_col: pd.Series, below: float = -np.inf, above: float = np.in
         :obj:`pandas.Series(bool)`: Array-like object with boolean entries.
     """
 
-    flag = ~((data_col <= above) & (data_col >= below))  # Apply the range flag
-    return flag
+    return ~((data_col <= above) & (data_col >= below))
 
 
 def unresponsive_flag(data_col: pd.Series, threshold: int = 3) -> pd.Series:
@@ -67,7 +66,6 @@ def std_range_flag(data_col: pd.Series, threshold: float = 2.0) -> pd.Series:
     data_mean = data_col.mean()  # Get mean of data
     data_std = data_col.std() * threshold  # Get std of data
     flag = (data_col <= data_mean - data_std) | (data_col >= data_mean + data_std)
-
     return flag
 
 
@@ -150,29 +148,28 @@ def bin_filter(
     # Ensure the last bin edge value is bin_max
     bin_edges = np.unique(np.clip(np.append(bin_edges, bin_max), bin_max))
 
-    nbins = len(bin_edges) - 1  # Get number of bins
-
     # Define empty flag of 'False' values with indices matching value_col
     flag = pd.Series(index=value_col.index, data=False)
 
     # Loop through bins and applying flagging
-    for n in np.arange(nbins):
+    nbins = len(bin_edges)
+    for i in range(nbins - 1):
         # Get data that fall wihtin bin
-        y_bin = value_col.loc[(bin_col <= bin_edges[n + 1]) & (bin_col > bin_edges[n])]
+        y_bin = value_col.loc[(bin_col <= bin_edges[i + 1]) & (bin_col > bin_edges[i])]
 
         # Get center of binned data
         center = y_bin.mean() if center_type == "mean" else y_bin.median()
 
         # Define threshold of data flag
-        ran = y_bin.std() * threshold if threshold_type == "std" else threshold
+        deviation = y_bin.std() * threshold if threshold_type == "std" else threshold
 
         # Perform flagging depending on specfied direction
         if direction == "above":
-            flag_bin = y_bin > (center + ran)
+            flag_bin = y_bin > (center + deviation)
         elif direction == "below":
-            flag_bin = y_bin < (center - ran)
+            flag_bin = y_bin < (center - deviation)
         else:
-            flag_bin = (y_bin > (center + ran)) | (y_bin < (center - ran))
+            flag_bin = (y_bin > (center + deviation)) | (y_bin < (center - deviation))
 
         # Record flags in final flag column
         flag.loc[flag_bin.index] = flag_bin
@@ -184,7 +181,7 @@ def cluster_mahalanobis_2d(
     data_col1: pd.Series, data_col2: pd.Series, n_clusters: int = 13, dist_thresh: float = 3.0
 ) -> pd.Series:
     """K-means clustering of  data into `n_cluster` clusters; Mahalanobis distance evaluated for each cluster and
-    points with distances outside of `dist_thresh` are flagged; distinguishes between asset ids
+    points with distances outside of `dist_thresh` are flagged; distinguishes between asset IDs.
 
     Args:
         data_col1(:obj:`pandas.Series`): first data column in 2D cluster analysis
@@ -205,13 +202,13 @@ def cluster_mahalanobis_2d(
     flag = pd.Series(index=data_col1.index, data=False)
 
     # Loop through clusters and flag data that fall outside a threshold distance from cluster center
-    for ic in range(n_clusters):
+    for i in range(n_clusters):
         # Extract data for cluster
-        clust_sub = kmeans.labels_ == ic
+        clust_sub = kmeans.labels_ == i
         cluster = df.loc[clust_sub]
 
         # Cluster centroid
-        centroid = kmeans.cluster_centers_[ic]
+        centroid = kmeans.cluster_centers_[i]
 
         # Cluster covariance and inverse covariance
         covmx = cluster.cov()
