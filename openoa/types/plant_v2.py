@@ -21,7 +21,7 @@ from openoa.types import timeseries_table
 from openoa.toolkits.reanalysis_downloading import download_reanalysis_data_planetos
 
 from .asset import AssetData
-from .reanalysis import ReanalysisData
+from ..utils.reanalysis import ReanalysisData
 
 
 # PlantData V2 with Attrs Dataclass

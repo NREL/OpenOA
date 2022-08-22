@@ -10,7 +10,7 @@ from dateutil.parser import parse
 from openoa.types import timeseries_table
 
 from .asset import AssetData
-from .reanalysis import ReanalysisData
+from ..utils.reanalysis import ReanalysisData
 
 
 # @dataclass
