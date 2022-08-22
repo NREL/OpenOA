@@ -6,128 +6,137 @@ intended for application in wind plant operational energy analysis, particularly
 import numpy as np
 import scipy as sp
 import pandas as pd
+from sklearn.cluster import KMeans
 
 
-def range_flag(data_col, below=-1.0 * np.inf, above=np.inf):
+def range_flag(data_col: pd.Series, below: float = -np.inf, above: float = np.inf) -> pd.Series:
     """Flag data for which the specified data is outside a specified range
 
     Args:
         data_col (:obj:`pandas.Series`): data to be flagged
-        below (:obj:`float`): upper threshold (inclusive) for data; default np.inf
-        above (:obj:`float`): lower threshold (inclusive) for data; default -np.inf
+        below (:obj:`float`): upper threshold (inclusive) for data; default -np.inf
+        above (:obj:`float`): lower threshold (inclusive) for data; default np.inf
 
     Returns:
         :obj:`pandas.Series(bool)`: Array-like object with boolean entries.
     """
 
     flag = ~((data_col <= above) & (data_col >= below))  # Apply the range flag
-    return flag  # Return boolean series of data flags
+    return flag
 
 
-def unresponsive_flag(data_col, threshold=3):
-    """Flag time stamps for which the reported data does not change for <threshold> repeated intervals.
-    Function includes the option to group by a column in the data frame (e.g. turbine ID)
+def unresponsive_flag(data_col: pd.Series, threshold: int = 3) -> pd.Series:
+    """Flag time stamps for which the reported data does not change for `threshold` repeated intervals.
 
     Args:
         data_col(:obj:`pandas.Series`): data to be flagged
-        threshold(:obj:`int`): number of intervals over which measurment does not change
+        threshold(:obj:`int`): number of intervals over which measurment does not change, by default 3.
 
     Returns:
         :obj:`pandas.Series(bool)`: Array-like object with boolean entries.
     """
 
-    # Get True/False value depending if the difference in successive time steps is not equal to zero
-    value_diff = data_col.diff().ne(0)
-
-    # take the rolling sum of the boolean diff column in period lengths defined by threshold
-    roll_sum = value_diff.rolling(threshold - 1).sum()
+    # Get boolean value of the difference in successive time steps is not equal to zero, and take the
+    # rolling sum of the boolean diff column in period lengths defined by threshold
+    roll_sum = data_col.diff().ne(0).rolling(threshold - 1).sum()
 
     # Create boolean series that is True if rolling sum is zero
     flag_ind = roll_sum == 0
 
-    # Need to flag preceding <threshold> -1 values as well
-    for n in np.arange(threshold - 1):
+    # Need to flag preceding `threshold` -1 values as well
+    for _ in np.arange(threshold - 1):
         flag_ind = flag_ind | flag_ind.shift(-1)
 
     return flag_ind  # Return boolean series of data flags
 
 
-def std_range_flag(data_col, threshold=2.0):
-    """Flag time stamps for which the measurement is outside of the threshold number of standard deviations from the
-    mean across all passed columns; does not distinguish between asset ids
+def std_range_flag(data_col: pd.Series, threshold: float = 2.0) -> pd.Series:
+    """Flag time stamps for which the measurement is outside of the threshold number of standard deviations
+     from the mean across the data.
+
+    ... note:: This method does not distinguish between asset IDs.
 
     Args:
-        data_col(:obj:`pandas.Series`): data to be flagged
-        threshold(:obj:`float`): multiplicative factor on standard deviation to use in flagging
+        data_col(:obj:`pandas.Series`): data to be flagged.
+        threshold(:obj:`float`): multiplicative factor on standard deviation to use in flagging.
 
     Returns:
         :obj:`pandas.Series(bool)`: Array-like object with boolean entries.
     """
 
     data_mean = data_col.mean()  # Get mean of data
-    data_std = data_col.std()  # Get std of data
-    flag = (data_col <= data_mean - threshold * data_std) | (
-        data_col >= data_mean + threshold * data_std
-    )  # Apply the range flag
+    data_std = data_col.std() * threshold  # Get std of data
+    flag = (data_col <= data_mean - data_std) | (data_col >= data_mean + data_std)
 
     return flag
 
 
-def window_range_flag(window_col, window_start, window_end, value_col, value_min, value_max):
-    """Flag time stamps for which measurement in column <window> within range [window_start, window_end] and measurement
-    in column <value> outside of range [value_min, value_max]
+def window_range_flag(
+    window_col: pd.Series,
+    window_start: float,
+    window_end: float,
+    value_col: pd.Series,
+    value_min: float = -np.inf,
+    value_max: float = np.inf,
+) -> pd.Series:
+    """Flag time stamps for which measurement in `window_col` are within the range: [`window_start`, `window_end`], and
+    the measurements in `value_col` are outside of the range [`value_min`, `value_max`].
 
     Args:
         window_col(:obj:`pandas.Series`): data used to define the window
-        window_start(:obj:`float`): minimum value for window
-        window_end(:obj:`float`): maximum value for window
+        window_start(:obj:`float`): minimum value for the inclusive window
+        window_end(:obj:`float`): maximum value for the inclusive window
         value_col(:obj:`pandas.Series`): data to be flagged
-        value_max(:obj:`float`): upper threshold for data; default np.inf
-        value_min(:obj:`float`): lower threshold for data; default -np.inf
+        value_max(:obj:`float`): upper threshold for the inclusive data range; default np.inf
+        value_min(:obj:`float`): lower threshold for the inclusive data range; default -np.inf
 
     Returns:
         :obj:`pandas.Series(bool)`: Array-like object with boolean entries.
     """
 
-    flag = (
-        (window_col >= window_start)
-        & (window_col <= window_end)
-        & ((value_col < value_min) | (value_col > value_max))
-    )
-
+    flag = (window_col >= window_start) & (window_col <= window_end)
+    flag &= (value_col < value_min) | (value_col > value_max)
     return flag
 
 
 def bin_filter(
-    bin_col,
-    value_col,
-    bin_width,
-    threshold=2,
-    center_type="mean",
-    bin_min=None,
-    bin_max=None,
-    threshold_type="std",
-    direction="all",
+    bin_col: pd.Series,
+    value_col: pd.Series,
+    bin_width: float,
+    threshold: float = 2,
+    center_type: str = "mean",
+    bin_min: float = None,
+    bin_max: float = None,
+    threshold_type: str = "std",
+    direction: str = "all",
 ):
-    """Flag time stamps for which data in <value_col> when binned by data in <bin_col> into bins of <width>
-    is outside <threhsold> bin. The <center_type> of each bin can be either the median or mean, and flagging
-    can be applied directionally (i.e. above or below the center, or both)
+    """Flag time stamps for which data in `value_col` when binned by data in `bin_col` into bins of
+    width `bin_width` are outside the `threhsold` bin. The `center_type` of each bin can be either the
+    median or mean, and flagging can be applied directionally (i.e. above or below the center, or both)
 
     Args:
         bin_col(:obj:`pandas.Series`): data to be used for binning
         value_col(:obj:`pandas.Series`): data to be flagged
-        bin_width(:obj:`float`): width of bin in units of bin_col
-        threshold(:obj:`float`): outlier threshold (multiplicative factor of std of <value_col> in bin)
+        bin_width(:obj:`float`): width of bin in units of `bin_col`
+        threshold(:obj:`float`): outlier threshold (multiplicative factor of std of `value_col` in bin)
         bin_min(:obj:`float`): minimum bin value below which flag should not be applied
         bin_max(:obj:`float`): maximum bin value above which flag should not be applied
         threshold_type(:obj:`str`): option to apply a 'std' or 'scalar' based threshold
         center_type(:obj:`str`): option to use a 'mean' or 'median' center for each bin
-        direction(:obj:`str`): option to apply flag only to data 'above' or 'below' the mean, otherwise the default is
-        'all'
+        direction(:obj:`str`): option to apply flag only to data 'above' or 'below' the mean, by default 'all'
 
     Returns:
         :obj:`pandas.Series(bool)`: Array-like object with boolean entries.
     """
+
+    if center_type not in ("mean", "median"):
+        raise ValueError("Incorrect `center_type` specified; must be one of 'mean' or 'median'.")
+    if threshold_type not in ("std", "scalar"):
+        raise ValueError("Incorrect `threshold_type` specified; must be one of 'std' or 'scalar'.")
+    if direction not in ("all", "above", "below"):
+        raise ValueError(
+            "Incorrect `direction` specified; must be one of 'all', 'above', or 'below'."
+        )
 
     # Set bin min and max values if not passed to function
     if bin_min is None:
@@ -139,10 +148,7 @@ def bin_filter(
     bin_edges = np.arange(bin_min, bin_max, bin_width)
 
     # Ensure the last bin edge value is bin_max
-    if bin_edges[-1] < bin_max:
-        bin_edges = np.append(bin_edges, bin_max)
-    elif bin_edges[-1] > bin_max:
-        bin_edges[-1] = bin_max
+    bin_edges = np.unique(np.clip(np.append(bin_edges, bin_max), bin_max))
 
     nbins = len(bin_edges) - 1  # Get number of bins
 
@@ -155,26 +161,18 @@ def bin_filter(
         y_bin = value_col.loc[(bin_col <= bin_edges[n + 1]) & (bin_col > bin_edges[n])]
 
         # Get center of binned data
-        if center_type == "mean":
-            cent = y_bin.mean()
-        elif center_type == "median":
-            cent = y_bin.median()
-        else:
-            print("incorrect center type specified")
+        center = y_bin.mean() if center_type == "mean" else y_bin.median()
 
         # Define threshold of data flag
-        if threshold_type == "std":
-            ran = y_bin.std() * threshold
-        elif threshold_type == "scalar":
-            ran = threshold
+        ran = y_bin.std() * threshold if threshold_type == "std" else threshold
 
         # Perform flagging depending on specfied direction
-        if direction == "all":
-            flag_bin = (y_bin > (cent + ran)) | (y_bin < (cent - ran))
-        elif direction == "above":
-            flag_bin = y_bin > (cent + ran)
+        if direction == "above":
+            flag_bin = y_bin > (center + ran)
         elif direction == "below":
-            flag_bin = y_bin < (cent - ran)
+            flag_bin = y_bin < (center - ran)
+        else:
+            flag_bin = (y_bin > (center + ran)) | (y_bin < (center - ran))
 
         # Record flags in final flag column
         flag.loc[flag_bin.index] = flag_bin
@@ -182,9 +180,11 @@ def bin_filter(
     return flag
 
 
-def cluster_mahalanobis_2d(data_col1, data_col2, n_clusters=13, dist_thresh=3.0):
-    """K-means clustering of  data into <n_cluster> clusters; Mahalanobis distance evaluated for each cluster and
-    points with distances outside of <dist_thresh> are flagged; distinguishes between asset ids
+def cluster_mahalanobis_2d(
+    data_col1: pd.Series, data_col2: pd.Series, n_clusters: int = 13, dist_thresh: float = 3.0
+) -> pd.Series:
+    """K-means clustering of  data into `n_cluster` clusters; Mahalanobis distance evaluated for each cluster and
+    points with distances outside of `dist_thresh` are flagged; distinguishes between asset ids
 
     Args:
         data_col1(:obj:`pandas.Series`): first data column in 2D cluster analysis
@@ -198,9 +198,6 @@ def cluster_mahalanobis_2d(data_col1, data_col2, n_clusters=13, dist_thresh=3.0)
 
     # Create 2D data frame for input into cluster algorithm
     df = pd.DataFrame({"d1": data_col1, "d2": data_col2})
-
-    # Run cluster algorithm
-    from sklearn.cluster import KMeans
 
     kmeans = KMeans(n_clusters=n_clusters).fit(df)
 
