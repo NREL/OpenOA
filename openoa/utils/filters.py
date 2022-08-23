@@ -59,16 +59,14 @@ def unresponsive_flag(data_col: pd.Series, threshold: int = 3) -> pd.Series:
 
     # Get boolean value of the difference in successive time steps is not equal to zero, and take the
     # rolling sum of the boolean diff column in period lengths defined by threshold
-    flag_ind = data_col.diff().ne(0).rolling(threshold - 1).sum()
+    flag = data_col.diff().ne(0).rolling(threshold - 1).sum()
 
     # Create boolean series that is True if rolling sum is zero
-    flag_ind = flag_ind == 0
+    flag = flag == 0
 
-    # Need to flag preceding `threshold` -1 values as well
-    for _ in np.arange(threshold - 1):
-        flag_ind = flag_ind | flag_ind.shift(-1)
-
-    return flag_ind  # Return boolean series of data flags
+    # Need to flag preceding `threshold` values as well
+    flag = flag | np.any([flag.shift(-1 - i) for i in range(threshold - 1)], axis=0)
+    return flag
 
 
 def unresponsive_flag_df(data: pd.DataFrame, col: list[str], threshold: list[int]) -> pd.Series:
@@ -87,9 +85,8 @@ def unresponsive_flag_df(data: pd.DataFrame, col: list[str], threshold: list[int
     subset = data.loc[:, col].copy()
     flag = subset.diff(axis=0).ne(0).rolling(threshold - 1).sum()
     flag = flag == 0
-
-    for _ in range(threshold - 1):
-        flag = flag | flag.shift(-1, axis=0)
+    flag = flag | np.any([flag.shift(-1 - i, axis=0) for i in range(threshold - 1)], axis=0)
+    return flag
 
 
 def std_range_flag(data_col: pd.Series, threshold: float = 2.0) -> pd.Series:
