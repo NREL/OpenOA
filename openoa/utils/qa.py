@@ -161,7 +161,8 @@ def convert_datetime_column(
 
     # Create the UTC-converted time-stamp
     try:
-        df[t_utc] = pd.to_datetime([el.astimezone(tz.tzutc()) for el in dt_col]).tz_convert("UTC")
+        utc = tz.tzutc()
+        df[t_utc] = pd.to_datetime([el.astimezone(utc) for el in df.index]).tz_convert("UTC")
     except AttributeError:  # catches numpy datetime error for astimezone() not existing
         df = df.tz_convert("UTC")
         df[t_utc] = df.index
