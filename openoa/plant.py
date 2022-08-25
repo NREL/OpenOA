@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import json
+import warnings
 import itertools
 from copy import deepcopy
-from typing import Callable, Optional, Sequence
+from typing import Any, Callable, Optional, Sequence
 from pathlib import Path
 
 import attr
 import yaml
+import attrs
 import numpy as np
 import pandas as pd
 import pyspark as spark
@@ -63,6 +65,29 @@ ANALYSIS_REQUIREMENTS = {
 }
 
 
+def iter_validator(iter_type, item_types: Any | tuple[Any]) -> Callable:
+    """Helper function to generate iterable validators that will reduce the amount of
+    boilerplate code.
+
+    Parameters
+    ----------
+    iter_type : any iterable
+        The type of iterable object that should be validated.
+    item_types : Union[Any, Tuple[Any]]
+        The type or types of acceptable item types.
+
+    Returns
+    -------
+    Callable
+        The attr.validators.deep_iterable iterable and instance validator.
+    """
+    validator = attrs.validators.deep_iterable(
+        member_validator=attrs.validators.instance_of(item_types),
+        iterable_validator=attrs.validators.instance_of(iter_type),
+    )
+    return validator
+
+
 def analysis_type_validator(
     instance: PlantData, attribute: attr.Attribute, value: list[str]
 ) -> None:
@@ -76,7 +101,7 @@ def analysis_type_validator(
         value (list[str]): The input value from `analysis_type`.
     """
     if None in value:
-        UserWarning("`None` was provided to `analysis_type`, so no validation will occur.")
+        warnings.warn("`None` was provided to `analysis_type`, so no validation will occur.")
 
     valid_types = [*ANALYSIS_REQUIREMENTS] + ["all", None]
     incorrect_types = set(value).difference(set(valid_types))
@@ -87,14 +112,14 @@ def analysis_type_validator(
 
 
 def frequency_validator(
-    actual_freq: str, desired_freq: Optional[str | None | set[str]], exact: bool
+    actual_freq: str | None, desired_freq: str | None | set[str], exact: bool
 ) -> bool:
     """Helper function to check if the actual datetime stamp frequency is valid compared
     to what is required.
 
     Args:
         actual_freq (str): The frequency of the datetime stamp, or `df.index.freq`.
-        desired_freq (Optional[str  |  None  |  set[str]]): Either the exact frequency,
+        desired_freq (str  |  None  |  set[str]): Either the exact frequency,
             required or a set of options that are also valid, in which case any numeric
             information encoded in `actual_freq` will be dropped.
         exact (bool): If the provided frequency codes should be exact matches (`True`),
@@ -174,8 +199,27 @@ class SCADAMetaData(FromDictMixin):
 
     Args:
         time (str): The datetime stamp for the SCADA data, by default "time". This data should be of
-            type: `np.datetime64[ns]`. Additional columns describing the datetime stamps
-            are: `frequency`
+            type: `np.datetime64[ns]`, or able to be converted to a pandas DatetimeIndex. Additional
+            columns describing the datetime stamps are: `frequency`
+        id (str): The turbine identifier column in the SCADA data, by default "id". This data should be of
+            type: `str`.
+        power (str): The power produced, in kW, column in the SCADA data, by default "power".
+            This data should be of type: `float`.
+        windspeed (str): The measured windspeed, in m/s, column in the SCADA data, by default "windspeed".
+            This data should be of type: `float`.
+        wind_direction (str): The measured wind direction, in degrees, column in the SCADA data, by default
+            "wind_direction". This data should be of type: `float`.
+        status (str): The status code column in the SCADA data, by default "status". This data
+            should be of type: `str`.
+        pitch (str): The pitch, in degrees, column in the SCADA data, by default "pitch". This data
+            should be of type: `float`.
+        temperature (str): The temperature column in the SCADA data, by default "temperature". This
+            data should be of type: `float`.
+        frequency (str): The frequency of `time` in the SCADA data, by default "10T". The input
+            should align with the `Pandas frequency offset aliases`_.
+
+    .. _Pandas frequency offset aliases:
+    https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases
     """
 
     # DataFrame columns
@@ -237,6 +281,24 @@ class SCADAMetaData(FromDictMixin):
 
 @define(auto_attribs=True)
 class MeterMetaData(FromDictMixin):
+    """A metadata schematic to create the necessary column mappings and other validation
+    components, or other data about energy meter data, that will contribute to a larger
+    plant metadata schema/routine.
+
+    Args:
+        time (str): The datetime stamp for the meter data, by default "time". This data should
+            be of type: `np.datetime64[ns]`, or able to be converted to a pandas DatetimeIndex.
+            Additional columns describing the datetime stamps are: `frequency`
+        power (str): The power produced, in kW, column in the meter data, by default "power".
+            This data should be of type: `float`.
+        energy (str): The energy produced, in kWh, column in the meter data, by default
+            "temperature". This data should be of type: `float`.
+        frequency (str): The frequency of `time` in the meter data, by default "10T". The input
+            should align with the `Pandas frequency offset aliases`_.
+
+    .. _Pandas frequency offset aliases:
+    https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases
+    """
 
     # DataFrame columns
     time: str = attr.ib(default="time")
@@ -277,6 +339,23 @@ class MeterMetaData(FromDictMixin):
 
 @define(auto_attribs=True)
 class TowerMetaData(FromDictMixin):
+    """A metadata schematic to create the necessary column mappings and other validation
+    components, or other data about meteorological tower (met tower) data, that will contribute to a
+    larger plant metadata schema/routine.
+
+    Args:
+        time (str): The datetime stamp for the met tower data, by default "time". This data should
+            be of type: `np.datetime64[ns]`, or able to be converted to a pandas DatetimeIndex.
+            Additional columns describing the datetime stamps are: `frequency`
+        id (str): The met tower identifier column in the met tower data, by default "id". This data
+            should be of type: `str`.
+        frequency (str): The frequency of `time` in the met tower data, by default "10T". The input
+            should align with the `Pandas frequency offset aliases`_.
+
+    .. _Pandas frequency offset aliases:
+    https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases
+    """
+
     # DataFrame columns
     time: str = attr.ib(default="time")
     id: str = attr.ib(default="id")
@@ -312,6 +391,29 @@ class TowerMetaData(FromDictMixin):
 
 @define(auto_attribs=True)
 class StatusMetaData(FromDictMixin):
+    """A metadata schematic to create the necessary column mappings and other validation
+    components, or other data about the turbine status log data, that will contribute to a
+    larger plant metadata schema/routine.
+
+    Args:
+        time (str): The datetime stamp for the status data, by default "time". This data should
+            be of type: `np.datetime64[ns]`, or able to be converted to a pandas DatetimeIndex.
+            Additional columns describing the datetime stamps are: `frequency`
+        id (str): The turbine identifier column in the status data, by default "id". This data
+            should be of type: `str`.
+        status_id (str): The status code identifier column in the status data, by default "id". This data
+            should be of type: `str`.
+        status_code (str): The status code column in the status data, by default "id". This data
+            should be of type: `str`.
+        status_text (str): The status text description column in the status data, by default "id".
+            This data should be of type: `str`.
+        frequency (str): The frequency of `time` in the met tower data, by default "10T". The input
+            should align with the `Pandas frequency offset aliases`_.
+
+    .. _Pandas frequency offset aliases:
+    https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases
+    """
+
     # DataFrame columns
     time: str = attr.ib(default="time")
     id: str = attr.ib(default="id")
@@ -359,6 +461,27 @@ class StatusMetaData(FromDictMixin):
 
 @define(auto_attribs=True)
 class CurtailMetaData(FromDictMixin):
+    """A metadata schematic to create the necessary column mappings and other validation
+    components, or other data about the plant curtailment data, that will contribute to a
+    larger plant metadata schema/routine.
+
+    Args:
+        time (str): The datetime stamp for the curtailment data, by default "time". This data should
+            be of type: `np.datetime64[ns]`, or able to be converted to a pandas DatetimeIndex.
+            Additional columns describing the datetime stamps are: `frequency`
+        curtailment (str): The curtailment percentage column in the curtailment data, by default
+            "curtailment". This data should be of type: `float`.
+        availability (str): The availability percentage column in the curtailment data, by default
+            "availability". This data should be of type: `float`.
+        net_energy (str): The net energy produced, in kW, column in the curtailment data, by default
+            "net_energy". This data should be of type: `float`.
+        frequency (str): The frequency of `time` in the met tower data, by default "10T". The input
+            should align with the `Pandas frequency offset aliases`_.
+
+    .. _Pandas frequency offset aliases:
+    https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases
+    """
+
     # DataFrame columns
     time: str = attr.ib(default="time")
     curtailment: str = attr.ib(default="curtailment")
@@ -402,6 +525,27 @@ class CurtailMetaData(FromDictMixin):
 
 @define(auto_attribs=True)
 class AssetMetaData(FromDictMixin):
+    """A metadata schematic to create the necessary column mappings and other validation
+    components, or other data about the site's asset metadata, that will contribute to a
+    larger plant metadata schema/routine.
+
+    Args:
+        id (str): The asset identifier column in the asset metadata, by default "id". This data
+            should be of type: `str`.
+        latitude (str): The asset's latitudinal position, in WGS84, column in the asset metadata, by
+            default "latitude". This data should be of type: `float`.
+        longitude (str): The asset's longitudinal position, in WGS84, column in the asset metadata,
+            by default "longitude". This data should be of type: `float`.
+        rated_power (str): The asset's rated power, in kW, column in the asset metadata, by default
+            "rated_power". This data should be of type: `float`.
+        hub_height (str): The asset's hub height, in m, column in the asset metadata, by default
+            "hub_height". This data should be of type: `float`.
+        elevation (str): The asset's elevation above sea level, in m, column in the asset metadata,
+            by default "elevation". This data should be of type: `float`.
+        type (str): The type of asset column in the asset metadata, by default "type". This data
+            should be of type: `str`.
+    """
+
     # DataFrame columns
     id: str = attr.ib(default="id")
     latitude: str = attr.ib(default="latitude")
@@ -567,8 +711,10 @@ class PlantMetaData(FromDictMixin):
             status=self.status.col_map,
             asset=self.asset.col_map,
             curtail=self.curtail.col_map,
-            reanalysis={k: v.col_map for k, v in self.reanalysis.items()},
+            reanalysis={},
         )
+        if self.reanalysis != {}:
+            values["reanalysis"] = {k: v.col_map for k, v in self.reanalysis.items()}
         return values
 
     @property
@@ -583,8 +729,10 @@ class PlantMetaData(FromDictMixin):
             status=self.status.dtypes,
             asset=self.asset.dtypes,
             curtail=self.curtail.dtypes,
-            reanalysis={k: v.dtypes for k, v in self.reanalysis.items()},
+            reanalysis={},
         )
+        if self.reanalysis != {}:
+            types["reanalysis"] = {k: v.dtypes for k, v in self.reanalysis.items()}
         return types
 
     @property
@@ -732,11 +880,18 @@ def convert_to_list(
     list
         The new list of elements.
     """
+    if not isinstance(manipulation, Callable) and manipulation is not None:
+        raise ValueError("`manipulation` must either be: `None` or of type: `Callable`.")
 
     if isinstance(value, (str, int, float)) or value is None:
         value = [value]
     if manipulation is not None:
-        return [manipulation(el) for el in value]
+        try:
+            return [manipulation(el) for el in value]
+        except (TypeError, ValueError):
+            raise ValueError(
+                "At least one of the elements of `value` could not be converted using the provided `manipulation` input."
+            )
     return list(value)
 
 
@@ -935,7 +1090,7 @@ def rename_columns(df: pd.DataFrame, col_map: dict, reverse: bool = True) -> pd.
         Returns:
             pd.DataFrame: Input DataFrame with remapped column names.
     """
-    if not reverse:
+    if reverse:
         col_map = {v: k for k, v in col_map.items()}
     return df.rename(columns=col_map)
 
@@ -1013,7 +1168,7 @@ class PlantData:
     analysis_type: list[str] | None = attr.ib(
         default=None,
         converter=convert_to_list,
-        validator=analysis_type_validator,
+        validator=[iter_validator(list, (str, None)), analysis_type_validator],
         on_setattr=[attr.setters.convert, attr.setters.validate],
     )
     scada: pd.DataFrame | None = attr.ib(default=None, converter=load_to_pandas)
