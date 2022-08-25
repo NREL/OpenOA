@@ -410,7 +410,7 @@ def dalyight_savings_plot(
         plt.title(f"{year}, Spring")
         plt.ylabel("Power")
         plt.xlabel("Date")
-        plt.legend(loc="lower left")
+        plt.legend(loc="lower left", fontsize=10)
         plt.xticks(rotation=30)
         plt.grid(True)
 
@@ -462,7 +462,7 @@ def dalyight_savings_plot(
         plt.title(f"{year}, Fall")
         plt.ylabel("Power")
         plt.xlabel("Date")
-        plt.legend(loc="lower left")
+        plt.legend(loc="lower left", fontsize=10)
         plt.xticks(rotation=30)
         plt.grid(True)
 
