@@ -1743,7 +1743,8 @@ class PlantData:
     def calculate_nearest_neighbor(
         self, turbine_ids: list | np.ndarray = None, tower_ids: list | np.ndarray = None
     ) -> None:
-        """Finds nearest turbine neighbors for turbines and nearest tower neighbors for met towers.
+        """Finds nearest turbine and met tower neighbors all of the available turbines and towers
+        in `asset` or as defined in `turbine_ids` and `tower_ids`.
 
         Args:
             turbine_ids (list | np.ndarray, optional): A list of turbine IDs, if not using all
@@ -1784,6 +1785,8 @@ class PlantData:
         Returns:
             str: The turbine `id` closest to the provided `id`.
         """
+        if "nearest_turbine_id" not in self.asset.columns:
+            self.calculate_nearest_neighbor()
         return self.asset.loc[id, "nearest_turbine_id"].values[0]
 
     def nearest_tower(self, id: str) -> str:
@@ -1795,6 +1798,8 @@ class PlantData:
         Returns:
             str: The tower `id` closest to the provided `id`.
         """
+        if "nearest_tower_id" not in self.asset.columns:
+            self.calculate_nearest_neighbor()
         return self.asset.loc[id, "nearest_tower_id"].values[0]
 
     # Not necessary, but could provide an additional way in
