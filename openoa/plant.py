@@ -6,6 +6,7 @@ import itertools
 from copy import deepcopy
 from typing import Any, Callable, Optional, Sequence
 from pathlib import Path
+from functools import cached_property
 
 import attr
 import yaml
@@ -14,6 +15,8 @@ import numpy as np
 import pandas as pd
 import pyspark as spark
 from attr import define
+from pyproj import Transformer
+from shapely.geometry import Point
 
 import openoa.utils.met_data_processing as met
 from openoa.utils.plant_data import (
@@ -954,6 +957,13 @@ class PlantData:
         error_message = _compose_error_message(self._errors, analysis_types=self.analysis_type)
         if error_message != "":
             raise ValueError(error_message)
+
+        # Post-validation data manipulations
+        # TODO: Need to have a class level input for the user-preferred projection system
+        # TODO: Why does the non-WGS84 projection matter?
+        self.parse_asset_geometry()
+
+        # Change the column names to the -25 convention for easier use in the rest of the code base
         self.update_column_names()
 
         if self.preprocess is not None:
@@ -1330,6 +1340,49 @@ class PlantData:
             reanalysis[name] = df
         self.reanalysis = reanalysis
 
+    def parse_asset_geometry(
+        self,
+        reference_system: str = "epsg:4326",
+        utm_zone: int = None,
+        reference_longitude: Optional[float] = None,
+    ) -> None:
+        """Calculate UTM coordinates from latitude/longitude.
+
+        The UTM system divides the Earth into 60 zones, each 6deg of longitude in width. Zone 1
+        covers longitude 180deg to 174deg W; zone numbering increases eastward to zone 60, which
+        covers longitude 174deg E to 180deg. The polar regions south of 80deg S and north of 84deg N
+        are excluded.
+
+        Ref: http://geopandas.org/projections.html
+
+        Args:
+            reference_system (:obj:`str`, optional): Used to define the coordinate reference system (CRS).
+                Defaults to the European Petroleum Survey Group (EPSG) code 4326 to be used with
+                the World Geodetic System reference system, WGS 84.
+            utm_zone (:obj:`int`, optional): UTM zone. If set to None (default), then calculated from
+                the longitude.
+            reference_longitude (:obj:`float`, optional): Reference longitude for calculating the UTM zone. If
+                None (default), then taken as the average longitude of all assets.
+
+        Returns: None
+            Sets the asset "geometry" column.
+        """
+        if utm_zone is None:
+            # calculate zone
+            if reference_longitude is None:
+                longitude = self.asset[self.metadata.asset.longitude].mean()
+            utm_zone = int(np.floor((180 + longitude) / 6.0)) + 1
+
+        to_crs = f"+proj=utm +zone={utm_zone} +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+        transformer = Transformer.from_crs(reference_system.upper(), to_crs)
+        lats, lons = transformer.transform(
+            self._asset[self.metadata.asset.latitude].values,
+            self._asset[self.metadata.asset.longitude].values,
+        )
+
+        # TODO: Should this get a new name that's in line with the -25 convention?
+        self._asset["geometry"] = [Point(lat, lon) for lat, lon in zip(lats, lons)]
+
     def update_column_names(self, to_original: bool = False) -> None:
         """Renames the columns of each dataframe to the be the keys from the
         `metadata.xx.col_map` that was passed during initialization.
@@ -1359,6 +1412,153 @@ class PlantData:
                     df, meta.reanalysis[name].col_map, reverse=to_original
                 )
             self.reanalysis = reanalysis
+
+    @property
+    def turbine_id(self) -> np.ndarray:
+        """The 1D array of turbine IDs. This is created from the `asset` data, or unique IDs from the
+        SCADA data, if `asset` is undefined.
+        """
+        if self.asset is None:
+            return self.scada.index.get_level_values("id").unique()
+        return self.asset.loc[self.asset["type"] == "turbine"].index.values
+
+    def turbine_df(self, turbine_id: str) -> pd.DataFrame:
+        """Filters `scada` on a single `turbine_id` and returns the filtered data frame.
+
+        Args:
+            turbine_id (str): The ID of the turbine to retrieve its data.
+
+        Returns:
+            pd.DataFrame: The turbine-specific SCADA data frame.
+        """
+        if self.scada is None:
+            raise AttributeError("This method can't be used unless `scada` data is provided.")
+        return self.scada.xs(turbine_id, level=1)
+
+    @property
+    def tower_id(self) -> np.ndarray:
+        """The 1D array of met tower IDs. This is created from the `asset` data, or unique IDs from the
+        tower data, if `asset` is undefined.
+        """
+        if self.asset is None:
+            return self.tower.index.get_level_values("id").unique()
+        return self.asset.loc[self.asset["type"] == "tower"].index.values
+
+    def tower_df(self, tower_id: str) -> pd.DataFrame:
+        """Filters `tower` on a single `tower_id` and returns the filtered data frame.
+
+        Args:
+            tower_id (str): The ID of the met tower to retrieve its data.
+
+        Returns:
+            pd.DataFrame: The met tower-specific data frame.
+        """
+        if self.tower is None:
+            raise AttributeError("This method can't be used unless `tower` data is provided.")
+        return self.tower.xs(tower_id, level=1)
+
+    @property
+    def asset_id(self) -> np.ndarray:
+        """The ID array of turbine and met tower IDs. This is created from the `asset` data, or unique
+        IDs from both the SCADA data and tower data, if `asset` is undefined.
+        """
+        if self.asset is None:
+            return np.concatenate([self.turbine_id, self.tower_id])
+        return self.asset.index.values
+
+    # NOTE: v2 AssetData methods
+
+    @cached_property
+    def asset_distance_matrix(self) -> pd.DataFrame:
+        """Calculates the distance between all assets on the site with `np.inf` for the distance
+        between an asset and itself.
+        """
+        ix = self.asset.index.values
+        distance = (
+            pd.DataFrame(
+                [i, j, self.asset.loc[i, "geometry"].distance(self.asset.loc[j, "geometry"])]
+                for i, j in itertools.combinations(ix, 2)
+            )
+            .pivot(index=0, columns=1, values=2)
+            .reset_index()
+            .fillna(0)
+            .loc[ix[:-1], ix[1:]]
+        )
+
+        # Insert the first column and last row because the self-self combinations are not produced in the above
+        distance.insert(0, ix[0], 0.0)
+        distance.loc[ix[-1]] = 0
+
+        # Unset the index and columns property names
+        distance.index.name = None
+        distance.columns.name = None
+
+        # Maintain v2 compatibility of np.inf for the diagonal
+        distance = distance + distance.values.T - np.diag(np.diag(distance.values))
+        np.fill_diagonal(distance.values, np.inf)
+        return distance
+
+    def calculate_nearest_neighbor(
+        self, turbine_ids: list | np.ndarray = None, tower_ids: list | np.ndarray = None
+    ) -> None:
+        """Finds nearest turbine and met tower neighbors all of the available turbines and towers
+        in `asset` or as defined in `turbine_ids` and `tower_ids`.
+
+        Args:
+            turbine_ids (list | np.ndarray, optional): A list of turbine IDs, if not using all
+                turbines in the data. Defaults to None.
+            tower_ids (list | np.ndarray, optional): A list of met tower IDs, if not using all
+                met towers in the data. Defaults to None.
+
+        Returns: None
+            Creates the "nearest_turbine_id" and "nearest_tower_id" column in `asset`.
+        """
+
+        # Get the valid IDs for both the turbines and towers
+        ix_turb = self.turbine_id if turbine_ids is None else np.array(turbine_ids)
+        ix_tower = self.tower_id if tower_ids is None else np.array(tower_ids)
+        ix = np.concatenate([ix_turb, ix_tower])
+
+        distance = self.asset_distance_matrix.loc[ix, ix]
+
+        nearest_turbine = distance[ix_turb].values.argsort(axis=1)
+        nearest_turbine = pd.DataFrame(
+            distance.columns.values[nearest_turbine], index=distance.index
+        ).loc[ix, 0]
+
+        nearest_tower = distance[ix_tower].values.argsort(axis=1)
+        nearest_tower = pd.DataFrame(
+            distance.columns.values[nearest_tower], index=distance.index
+        ).loc[ix, 0]
+
+        self.asset.loc[ix, "nearest_turbine_id"] = nearest_turbine.values
+        self.asset.loc[ix, "nearest_tower_id"] = nearest_tower.values
+
+    def nearest_turbine(self, id: str) -> str:
+        """Finds the nearest turbine to the provided `id`.
+
+        Args:
+            id (str): A valid `asset` `id`.
+
+        Returns:
+            str: The turbine `id` closest to the provided `id`.
+        """
+        if "nearest_turbine_id" not in self.asset.columns:
+            self.calculate_nearest_neighbor()
+        return self.asset.loc[id, "nearest_turbine_id"].values[0]
+
+    def nearest_tower(self, id: str) -> str:
+        """Finds the nearest tower to the provided `id`.
+
+        Args:
+            id (str): A valid `asset` `id`.
+
+        Returns:
+            str: The tower `id` closest to the provided `id`.
+        """
+        if "nearest_tower_id" not in self.asset.columns:
+            self.calculate_nearest_neighbor()
+        return self.asset.loc[id, "nearest_tower_id"].values[0]
 
     # Not necessary, but could provide an additional way in
     @classmethod
