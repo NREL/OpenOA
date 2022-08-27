@@ -3,6 +3,7 @@ import unittest
 import numpy as np
 import pandas as pd
 from numpy import testing as nptest
+
 from openoa.utils import filters
 
 
@@ -10,10 +11,46 @@ class SimpleFilters(unittest.TestCase):
     def setUp(self):
         pass
 
-    def test_range_flag(self):
+    def test_range_flag_series(self):
         x = pd.Series(np.array([-1, 0, 1]))
-        y = filters.range_flag(x, -0.5, 0.5)
-        self.assertTrue(y.equals(pd.Series([True, False, True])))
+        y = pd.Series([True, False, True])
+        y_test = filters.range_flag(x, -0.5, 0.5)
+        self.assertTrue(isinstance(y_test, pd.Series))
+        self.assertTrue(y.equals(y_test))
+
+    def test_range_flag_dataframe(self):
+        x = pd.DataFrame(np.arange(10).reshape(-1, 2), columns=["a", "b"])
+        y_test = filters.range_flag(x, [2, 1], [8, 7])
+        y = pd.DataFrame(
+            [[True, False], [False, False], [False, False], [False, False], [False, True]],
+            columns=["a", "b"],
+        )
+        self.assertTrue(isinstance(y_test, pd.DataFrame))
+        self.assertTrue(y.equals(y_test))
+
+    def test_range_flag_dataframe_filtered(self):
+        x = pd.DataFrame(np.arange(10).reshape(-1, 2), columns=["a", "b"])
+        y_test = filters.range_flag(x, [2], [6], ["a"])
+        y = pd.DataFrame([[True], [False], [False], [False], [True]], columns=["a"])
+        self.assertTrue(isinstance(y_test, pd.DataFrame))
+        self.assertTrue(y.equals(y_test))
+
+    def test_range_flag_errors(self):
+        x = pd.DataFrame(np.arange(10).reshape(-1, 2), columns=["a", "b"])
+        with self.assertRaises(ValueError):
+            filters.range_flag(x, [2, 1], [6, 5], ["a"])
+
+        with self.assertRaises(ValueError):
+            filters.range_flag(x, [2], [6, 5], ["a"])
+
+        with self.assertRaises(ValueError):
+            filters.range_flag(x, [2], [6], ["a", "b"])
+
+        with self.assertRaises(ValueError):
+            filters.range_flag(x, 2, [6], ["a", "b"])
+
+        with self.assertRaises(ValueError):
+            filters.range_flag(x, [2], 6, ["a", "b"])
 
     def test_unresponsive_flag(self):
         x = pd.Series(np.array([-1, -1, -1, 2, 2, 2, 3, 4, 5, 1, 1, 1, 1, 3, 3]))

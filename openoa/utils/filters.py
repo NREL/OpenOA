@@ -3,47 +3,58 @@ This module provides functions for flagging pandas data series based on a range 
 intended for application in wind plant operational energy analysis, particularly wind speed vs. power curves.
 """
 
+from __future__ import annotations
+
 import numpy as np
 import scipy as sp
 import pandas as pd
 from sklearn.cluster import KMeans
 
 
-def range_flag(data_col: pd.Series, below: float, above: float) -> pd.Series:
-    """Flag data for which the specified data is outside a specified range
-
-    Args:
-        data_col (:obj:`pandas.Series`): data to be flagged
-        below (:obj:`float`): upper threshold (inclusive) for data.
-        above (:obj:`float`): lower threshold (inclusive) for data.
-
-    Returns:
-        :obj:`pandas.Series(bool)`: Array-like object with boolean entries.
-    """
-
-    return ~((data_col <= above) & (data_col >= below))
-
-
-def range_flag_df(
-    data: pd.DataFrame, col: list[str], below: list[float], above: list[float]
-) -> pd.Series:
-    """Flag data for which the specified data is outside a specified range
+def range_flag(
+    data: pd.DataFrame | pd.Series,
+    lower: float | list[float],
+    upper: float | list[float],
+    col: list[str] | None = None,
+) -> pd.Series | pd.DataFrame:
+    """Flag data for which the specified data is outside the provided range of [lower, upper].
 
     Args:
         data (:obj:`pandas.DataFrame`): data frame containing the column to be flagged.
         col (:obj:`list[str]`): column(s) in `data` to be flagged
-        below (:obj:`float`): upper threshold (inclusive) for each element of `col`
-        above (:obj:`float`): lower threshold (inclusive) for each element of `col`
+        lower (:obj:`float` | `list[float]`): lower threshold (inclusive) for each element of `data`,
+            if it's a `pd.Series`, or the list of lower thresholds for each column in `col`.
+        upper (:obj:`float` | `list[float]`): upper threshold (inclusive) for each element of `data`,
+            if it's a `pd.Series`, or the list of upper thresholds for each column in `col`.
 
     Returns:
         :obj:`pandas.DataFrame(bool)`: Data frame with boolean entries.
     """
-    if len(col) != len(below) != len(above):
+    # If data is `pd.Series`, convert the arguments appropriately
+    if to_series := isinstance(data, pd.Series):
+        data = data.to_frame()
+        upper = [upper]
+        lower = [lower]
+
+    if col is None:
+        col = data.columns.tolist()
+
+    # Check for invalid inputs to col, upper, and lower
+    if not isinstance(lower, list):
+        raise ValueError("The input to `lower` must be a list of numbers.")
+
+    if not isinstance(upper, list):
+        raise ValueError("The input to `upper` must be a list of numbers.")
+
+    if len(col) != len(lower) != len(upper):
         raise ValueError("The inputs to `col`, `above`, and `below` must be the same length.")
 
+    # Only flag the desired columns
     subset = data.loc[:, col].copy()
-    df = pd.DataFrame(~(subset <= above & subset >= below), columns=col, index=subset.index)
-    return df
+    flag = ~(subset.ge(lower) & subset.le(upper))
+
+    # Return back a pd.Series if one was provided, else a pd.DataFrame
+    return flag[col[0]] if to_series else flag
 
 
 def unresponsive_flag(data_col: pd.Series, threshold: int = 3) -> pd.Series:
