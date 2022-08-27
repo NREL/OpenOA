@@ -20,12 +20,18 @@ def range_flag(
     """Flag data for which the specified data is outside the provided range of [lower, upper].
 
     Args:
-        data (:obj:`pandas.DataFrame`): data frame containing the column to be flagged.
-        col (:obj:`list[str]`): column(s) in `data` to be flagged
+        data (:obj:`pandas.Series` | `pandas.DataFrame`): data frame containing the column to be flagged;
+            can either be a `pandas.Series` or `pandas.DataFrame`. If a `pandas.DataFrame`, a list of
+            threshold values and columns (if checking a subset of the columns) must be provided.
+        col (:obj:`list[str]`): column(s) in `data` to be flagged, by default None. Only required when
+            the `data` is a `pandas.DataFrame` and a subset of the columns will be checked. Must be
+            the same length as `lower` and `upper`.
         lower (:obj:`float` | `list[float]`): lower threshold (inclusive) for each element of `data`,
-            if it's a `pd.Series`, or the list of lower thresholds for each column in `col`.
+            if it's a `pd.Series`, or the list of lower thresholds for each column in `col`. Must be
+            the same length as `col` and `upper`.
         upper (:obj:`float` | `list[float]`): upper threshold (inclusive) for each element of `data`,
-            if it's a `pd.Series`, or the list of upper thresholds for each column in `col`.
+            if it's a `pd.Series`, or the list of upper thresholds for each column in `col`. Must be
+            the same length as `lower` and `col`.
 
     Returns:
         :obj:`pandas.DataFrame(bool)`: Data frame with boolean entries.
