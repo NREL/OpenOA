@@ -5,10 +5,54 @@ intended for application in wind plant operational energy analysis, particularly
 
 from __future__ import annotations
 
+from typing import Any
+
 import numpy as np
 import scipy as sp
 import pandas as pd
 from sklearn.cluster import KMeans
+
+
+def _convert_to_df(data: pd.DataFrame | pd.Series, *args) -> tuple[bool, pd.DataFrame, list[Any]]:
+    """Converts the passed `data` to a `pandas.DataFrame`, if needed, and converts the
+    additional method arguments to a list of the inputs if the passed value is a `pandas.Series`.
+
+    Args:
+        data (:obj:`pd.DataFrame` | `pd.Series`): The data to be filtered.
+
+    Raises:
+        TypeError: Raised if `data` is not a pandas `Series` or `DataFrame`.
+
+    Returns:
+        tuple[bool, pd.DataFrame, list[Any]]:
+            to_series (:obj:`bool`) is an indicator for if `data` will need to be converted
+                back to a `pandas.Series` object
+            data (:obj:`pandas.DataFrame`): `data` converted to a DataFrame, as needed.
+            args (:obj:`list[Any]`): A list of the original arguments passed, but now
+                encapsulated in individual lists, if the data passed was a `pandas.Series`,
+                otherwise, the original arguments.
+            `
+    """
+    if not isinstance(data, (pd.Series, pd.DataFrame)):
+        raise TypeError("Inputs to `data` must be a pandas Series or DataFrame object.")
+
+    if to_series := isinstance(data, pd.Series):
+        data = data.to_frame()
+        args = [[a] for a in args]
+
+    return to_series, data, args
+
+
+def _convert_single_input_to_list(length: int, *args) -> list[list]:
+    """Convert method arguments to a list of length `length` for each argument passed.
+
+    Args:
+        length (int): The length of the argument list.
+
+    Returns:
+        list[list]: A list of each argument passed.
+    """
+    return [a if isinstance(a, list) else [a] * length for a in args]
 
 
 def range_flag(
@@ -27,23 +71,23 @@ def range_flag(
             the `data` is a `pandas.DataFrame` and a subset of the columns will be checked. Must be
             the same length as `lower` and `upper`.
         lower (:obj:`float` | `list[float]`): lower threshold (inclusive) for each element of `data`,
-            if it's a `pd.Series`, or the list of lower thresholds for each column in `col`. Must be
+            if it's a `pd.Series`, or the list of lower thresholds for each column in `col`. If the same
+            threshold is applied to each column, then pass the single value, otherwise, it must be
             the same length as `col` and `upper`.
         upper (:obj:`float` | `list[float]`): upper threshold (inclusive) for each element of `data`,
-            if it's a `pd.Series`, or the list of upper thresholds for each column in `col`. Must be
+            if it's a `pd.Series`, or the list of upper thresholds for each column in `col`. If the same
+            threshold is applied to each column, then pass the single value, otherwise, it must be
             the same length as `lower` and `col`.
 
     Returns:
         :obj:`pandas.DataFrame(bool)`: Data frame with boolean entries.
     """
-    # If data is `pd.Series`, convert the arguments appropriately
-    if to_series := isinstance(data, pd.Series):
-        data = data.to_frame()
-        upper = [upper]
-        lower = [lower]
+    to_series, data, (upper, lower) = _convert_to_df(data, upper, lower)
 
     if col is None:
         col = data.columns.tolist()
+
+    upper, lower = _convert_single_input_to_list(len(col), upper, lower)
 
     # Check for invalid inputs to col, upper, and lower
     if not isinstance(lower, list):
@@ -63,7 +107,11 @@ def range_flag(
     return flag[col[0]] if to_series else flag
 
 
-def unresponsive_flag(data_col: pd.Series, threshold: int = 3) -> pd.Series:
+def unresponsive_flag(
+    data: pd.DataFrame | pd.Series,
+    threshold: float | list[float] = 3,
+    col: list[str] | None = None,
+) -> pd.Series:
     """Flag time stamps for which the reported data does not change for `threshold` repeated intervals.
 
     Args:
