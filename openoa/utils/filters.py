@@ -38,9 +38,15 @@ def _convert_to_df(data: pd.DataFrame | pd.Series, *args) -> tuple[bool, pd.Data
 
     if to_series := isinstance(data, pd.Series):
         data = data.to_frame()
-        args = [[a] for a in args]
 
-    return to_series, data, args
+        # Only convert the args if they're passed
+        if args:
+            args = [[a] for a in args]
+
+    # Only return args values if they're passed
+    if args:
+        return to_series, data, args
+    return to_series, data
 
 
 def _convert_single_input_to_list(length: int, *args) -> list[list]:
@@ -82,20 +88,12 @@ def range_flag(
     Returns:
         :obj:`pandas.DataFrame(bool)`: Data frame with boolean entries.
     """
+    # Prepare the inputs to be standardized for use with DataFrames
     to_series, data, (upper, lower) = _convert_to_df(data, upper, lower)
-
     if col is None:
         col = data.columns.tolist()
 
     upper, lower = _convert_single_input_to_list(len(col), upper, lower)
-
-    # Check for invalid inputs to col, upper, and lower
-    if not isinstance(lower, list):
-        raise ValueError("The input to `lower` must be a list of numbers.")
-
-    if not isinstance(upper, list):
-        raise ValueError("The input to `upper` must be a list of numbers.")
-
     if len(col) != len(lower) != len(upper):
         raise ValueError("The inputs to `col`, `above`, and `below` must be the same length.")
 
@@ -109,49 +107,44 @@ def range_flag(
 
 def unresponsive_flag(
     data: pd.DataFrame | pd.Series,
-    threshold: float | list[float] = 3,
+    threshold: int = 3,
     col: list[str] | None = None,
 ) -> pd.Series:
     """Flag time stamps for which the reported data does not change for `threshold` repeated intervals.
 
     Args:
-        data_col(:obj:`pandas.Series`): data to be flagged
-        threshold(:obj:`int`): number of intervals over which measurment does not change, by default 3.
+        data (:obj:`pandas.Series` | `pandas.DataFrame`): data frame containing the column to be flagged;
+            can either be a `pandas.Series` or `pandas.DataFrame`. If a `pandas.DataFrame`, a list of
+            threshold values and columns (if checking a subset of the columns) must be provided.
+        col (:obj:`list[str]`): column(s) in `data` to be flagged, by default None. Only required when
+            the `data` is a `pandas.DataFrame` and a subset of the columns will be checked. Must be
+            the same length as `lower` and `upper`.
+        threshold (:obj:`int`): number of intervals over which measurment does not change for each
+            element of `data`, regardless if it's a `pd.Series` or `pd.DataFrame`, by default 3.
 
     Returns:
         :obj:`pandas.Series(bool)`: Array-like object with boolean entries.
     """
+    # Prepare the inputs to be standardized for use with DataFrames
+    to_series, data = _convert_to_df(data)
+    if col is None:
+        col = data.columns.tolist()
+    if not isinstance(threshold, int):
+        raise TypeError("The input to `threshold` must be an integer.")
 
     # Get boolean value of the difference in successive time steps is not equal to zero, and take the
     # rolling sum of the boolean diff column in period lengths defined by threshold
-    flag = data_col.diff().ne(0).rolling(threshold - 1).sum()
+    subset = data.loc[:, col].copy()
+    flag = subset.diff(axis=0).ne(0).rolling(threshold - 1).sum()
 
     # Create boolean series that is True if rolling sum is zero
     flag = flag == 0
 
     # Need to flag preceding `threshold` values as well
-    flag = flag | np.any([flag.shift(-1 - i) for i in range(threshold - 1)], axis=0)
-    return flag
-
-
-def unresponsive_flag_df(data: pd.DataFrame, col: list[str], threshold: list[int]) -> pd.Series:
-    """Flag time stamps for which the reported data does not change for `threshold` repeated intervals.
-
-    Args:
-        data(:obj:`pandas.DataFrame`): data frame with column(s) to be flagged
-        col(:obj:`list[str]`): data column(s) to be flagged
-        threshold(:obj:`list[int]`): number of intervals over which measurment does not change.
-
-    Returns:
-        :obj:`pandas.Series(bool)`: Array-like object with boolean entries.
-    """
-    if len(col) != len(threshold):
-        raise ValueError("Inputs provide to `col` and `threshold` must be the same length.")
-    subset = data.loc[:, col].copy()
-    flag = subset.diff(axis=0).ne(0).rolling(threshold - 1).sum()
-    flag = flag == 0
     flag = flag | np.any([flag.shift(-1 - i, axis=0) for i in range(threshold - 1)], axis=0)
-    return flag
+
+    # Return back a pd.Series if one was provided, else a pd.DataFrame
+    return flag[col[0]] if to_series else flag
 
 
 def std_range_flag(data_col: pd.Series, threshold: float = 2.0) -> pd.Series:
