@@ -109,7 +109,7 @@ def unresponsive_flag(
     data: pd.DataFrame | pd.Series,
     threshold: int = 3,
     col: list[str] | None = None,
-) -> pd.Series:
+) -> pd.Series | pd.DataFrame:
     """Flag time stamps for which the reported data does not change for `threshold` repeated intervals.
 
     Args:

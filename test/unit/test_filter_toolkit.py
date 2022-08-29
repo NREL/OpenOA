@@ -76,6 +76,11 @@ class SimpleFilters(unittest.TestCase):
         y_test = filters.unresponsive_flag(x, threshold=3)
         self.assertTrue(y.equals(y_test))
 
+    def test_unresonsive_flag_errors(self):
+        x = pd.Series(np.array([-1, -1, -1, 2, 2, 2, 3, 4, 5, 1, 1, 1, 1, 3, 3]))
+        with self.assertRaises(TypeError):
+            filters.unresponsive_flag(x, threshold=3.5)
+
     def test_unresponsive_flag_df(self):
         x = pd.DataFrame(
             [
