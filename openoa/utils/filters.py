@@ -182,30 +182,6 @@ def std_range_flag(
     return flag[col[0]] if to_series else flag
 
 
-def std_range_flag_df(data: pd.DataFrame, col: list[str], threshold: float = 2.0) -> pd.Series:
-    """Flag time stamps for which the measurement is outside of the threshold number of standard deviations
-     from the mean across the data.
-
-    ... note:: This method does not distinguish between asset IDs.
-
-    Args:
-        data(:obj:`pandas.DataFrame`): data frame with column(s) to be flagged
-        col(:obj:`list[str]`): data column(s) to be flagged
-        threshold(:obj:`[float]`): multiplicative factor on standard deviation to use in flagging.
-
-    Returns:
-        :obj:`pandas.Series(bool)`: Array-like object with boolean entries.
-    """
-    if len(col) != len(threshold):
-        raise ValueError("Inputs provided to `col` and `threshold` must be the same length.")
-
-    subset = data.loc[col].copy()
-    data_mean = subset.mean(axis=0)  # Get mean of data
-    data_std = subset.std(axis=0) * np.array(threshold)  # Get std of data
-    flag = (subset <= data_mean - data_std) | (subset >= data_mean + data_std)
-    return flag
-
-
 def window_range_flag(
     window_col: pd.Series,
     window_start: float,
