@@ -76,6 +76,50 @@ class SimpleFilters(unittest.TestCase):
         y_test = filters.unresponsive_flag(x, threshold=3)
         self.assertTrue(y.equals(y_test))
 
+    def test_unresponsive_flag_df(self):
+        x = pd.DataFrame(
+            [
+                [-1, -1],
+                [-1, -2],
+                [-1, -3],
+                [2, 2],
+                [2, 2],
+                [2, 2],
+                [3, 2],
+                [4, 3],
+                [5, 4],
+                [1, 6],
+                [1, 8],
+                [1, 1],
+                [1, 1],
+                [3, 1],
+                [3, 1],
+            ],
+            columns=["a", "b"],
+        )
+        y = pd.DataFrame(
+            [
+                [True, False],
+                [True, False],
+                [True, False],
+                [True, True],
+                [True, True],
+                [True, True],
+                [False, True],
+                [False, False],
+                [False, False],
+                [True, False],
+                [True, False],
+                [True, True],
+                [True, True],
+                [True, True],
+                [True, True],
+            ],
+            columns=["a", "b"],
+        )
+        y_test = filters.unresponsive_flag(x, threshold=2)
+        self.assertTrue(y.equals(y_test))
+
     def test_window_range_flag(self):
         x = pd.Series(np.array([-1, -1, -1, 1, 1, 1, -1]))
         window = pd.Series(np.array([1, 2, 3, 4, 5, 6, 7]))
