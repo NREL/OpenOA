@@ -147,7 +147,11 @@ def unresponsive_flag(
     return flag[col[0]] if to_series else flag
 
 
-def std_range_flag(data_col: pd.Series, threshold: float = 2.0) -> pd.Series:
+def std_range_flag(
+    data: pd.DataFrame | pd.Series,
+    threshold: float = 2.0,
+    col: list[str] | None = None,
+) -> pd.Series | pd.DataFrame:
     """Flag time stamps for which the measurement is outside of the threshold number of standard deviations
      from the mean across the data.
 
@@ -160,11 +164,22 @@ def std_range_flag(data_col: pd.Series, threshold: float = 2.0) -> pd.Series:
     Returns:
         :obj:`pandas.Series(bool)`: Array-like object with boolean entries.
     """
+    # Prepare the inputs to be standardized for use with DataFrames
+    to_series, data = _convert_to_df(data)
+    if col is None:
+        col = data.columns.tolist()
 
-    data_mean = data_col.mean()  # Get mean of data
-    data_std = data_col.std() * threshold  # Get std of data
-    flag = (data_col <= data_mean - data_std) | (data_col >= data_mean + data_std)
-    return flag
+    threshold, *_ = _convert_single_input_to_list(len(col), threshold)
+    if len(col) != len(threshold):
+        raise ValueError("The inputs to `col` and `threshold` must be the same length.")
+
+    subset = data.loc[:, col].copy()
+    data_mean = subset.mean(axis=0)
+    data_std = subset.std(axis=0) * np.array(threshold)
+    flag = subset.le(data_mean - data_std) | subset.ge(data_mean + data_std)
+
+    # Return back a pd.Series if one was provided, else a pd.DataFrame
+    return flag[col[0]] if to_series else flag
 
 
 def std_range_flag_df(data: pd.DataFrame, col: list[str], threshold: float = 2.0) -> pd.Series:

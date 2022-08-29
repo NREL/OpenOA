@@ -134,9 +134,53 @@ class SimpleFilters(unittest.TestCase):
 
     def test_std_range_flag(self):
         x = pd.Series(np.array([-1, -1, -1, 1, -1, -1, -1]))
-        flag = filters.std_range_flag(x, 2)
-        expected = pd.Series([False, False, False, True, False, False, False])
-        nptest.assert_array_equal(flag, expected)
+        y_test = filters.std_range_flag(x, 2)
+        y = pd.Series([False, False, False, True, False, False, False])
+        nptest.assert_array_equal(y_test, y)
+
+    def test_std_range_flag_df(self):
+        x = pd.DataFrame(
+            [
+                [-1, -1, -1],
+                [-1, -1, -1],
+                [-1, 1, -1],
+                [1, -1, -1],
+                [-1, -1, 1],
+                [-1, -1, 1],
+                [-1, -1, -1],
+            ],
+            columns=["a", "b", "c"],
+        )
+        y_test = filters.std_range_flag(x, 2, col=["b", "c"])
+        y = pd.DataFrame(
+            [
+                [False, False],
+                [False, False],
+                [True, False],
+                [False, False],
+                [False, False],
+                [False, False],
+                [False, False],
+            ],
+            columns=["b", "c"],
+        )
+        self.assertTrue(y.equals(y_test))
+
+    def test_std_range_flag_errors(self):
+        x = pd.DataFrame(
+            [
+                [-1, -1, -1],
+                [-1, -1, -1],
+                [-1, 1, -1],
+                [1, -1, -1],
+                [-1, -1, 1],
+                [-1, -1, 1],
+                [-1, -1, -1],
+            ],
+            columns=["a", "b", "c"],
+        )
+        with self.assertRaises(ValueError):
+            filters.std_range_flag(x, [2], col=["b", "c"])
 
     # TODO: Test more code paths in bin_filter
     def test_bin_filter(self):
