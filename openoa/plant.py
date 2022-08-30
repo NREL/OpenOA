@@ -68,62 +68,6 @@ ANALYSIS_REQUIREMENTS = {
 }
 
 
-def iter_validator(iter_type, item_types: Any | tuple[Any]) -> Callable:
-    """Helper function to generate iterable validators that will reduce the amount of
-    boilerplate code.
-
-    Parameters
-    ----------
-    iter_type : any iterable
-        The type of iterable object that should be validated.
-    item_types : Union[Any, Tuple[Any]]
-        The type or types of acceptable item types.
-
-    Returns
-    -------
-    Callable
-        The attr.validators.deep_iterable iterable and instance validator.
-    """
-    # If None is in the item_types, then convert it to a valid isinstance() argument
-    if item_types is None:
-        item_types = type(None)
-    elif isinstance(item_types, tuple):
-        if None in item_types:
-            ix = item_types.index(None)
-            item_types = list(item_types)
-            item_types[ix] = type(None)
-            item_types = tuple(item_types)
-
-    validator = attrs.validators.deep_iterable(
-        member_validator=attrs.validators.instance_of(item_types),
-        iterable_validator=attrs.validators.instance_of(iter_type),
-    )
-    return validator
-
-
-def analysis_type_validator(
-    instance: PlantData, attribute: attr.Attribute, value: list[str]
-) -> None:
-    """Validates the input from `PlantData` against the analysis requirements in
-    `ANALYSIS_REQUIREMENTS`. If there is an error, then it gets added to the
-    `PlantData._errors` dictionary to be raised in the post initialization hook.
-
-    Args:
-        instance (PlantData): The PlantData object.
-        attribute (attr.Attribute): The converted `analysis_type` attribute object.
-        value (list[str]): The input value from `analysis_type`.
-    """
-    if None in value:
-        warnings.warn("`None` was provided to `analysis_type`, so no validation will occur.")
-
-    valid_types = [*ANALYSIS_REQUIREMENTS] + ["all", None]
-    incorrect_types = set(value).difference(set(valid_types))
-    if incorrect_types:
-        raise ValueError(
-            f"{attribute.name} input: {incorrect_types} is invalid, must be one of 'all' or a combination of: {[*valid_types]}"
-        )
-
-
 def frequency_validator(
     actual_freq: str | None, desired_freq: str | None | set[str], exact: bool
 ) -> bool:
@@ -1181,7 +1125,10 @@ class PlantData:
     analysis_type: list[str] | None = attr.ib(
         default=None,
         converter=convert_to_list,
-        validator=[iter_validator(list, (str, type(None))), analysis_type_validator],
+        validator=attrs.validators.deep_iterable(
+            iterable_validator=attrs.validators.instance_of(list),
+            member_validator=attrs.validators.in_([*ANALYSIS_REQUIREMENTS] + ["all", None]),
+        ),
         on_setattr=[attr.setters.convert, attr.setters.validate],
     )
     scada: pd.DataFrame | None = attr.ib(default=None, converter=load_to_pandas)
