@@ -355,7 +355,7 @@ class MonteCarloAEP(object):
             else:  # Daily/hourly case: apply bin filter for outliers detection
                 x = valid_aggregate[col_name]
                 y = valid_aggregate["gross_energy_gwh"]
-                plant_capac = self._plant._plant_capacity / 1000.0 * self._hours_in_res
+                plant_capac = self._plant.rated_power / 1000.0 * self._hours_in_res
 
                 # Apply bin filter
                 flag = filters.bin_filter(
@@ -574,15 +574,15 @@ class MonteCarloAEP(object):
 
         # Create the monthly/daily data frame by summing meter energy
         self._aggregate = (
-            df.resample(self._resample_freq)["wgen_w"].sum() / 1e6
+            df.resample(self._resample_freq)["energy"].sum() / 1e6
         ).to_frame()  # Get monthly energy values in GWh
         self._aggregate.rename(
-            columns={"energy_kwh": "energy_gwh"}, inplace=True
+            columns={"energy": "energy_gwh"}, inplace=True
         )  # Rename kWh to MWh
 
         # Determine how much 10-min data was missing for each year-month/daily energy value. Flag accordigly if any is missing
         self._aggregate["energy_nan_perc"] = df.resample(self._resample_freq)[
-            "energy_kwh"
+            "energy"
         ].apply(
             tm.percent_nan
         )  # Get percentage of meter data that were NaN when summing to monthly/daily
@@ -599,7 +599,7 @@ class MonteCarloAEP(object):
             if (self._plant._meter_freq == "1MS") | (self._plant._meter_freq == "1M"):
                 self._aggregate["num_days_actual"] = self._aggregate["num_days_expected"]
             else:
-                self._aggregate["num_days_actual"] = df.resample("MS")["energy_kwh"].apply(
+                self._aggregate["num_days_actual"] = df.resample("MS")["energy"].apply(
                     tm.num_days
                 )
 
@@ -617,11 +617,11 @@ class MonteCarloAEP(object):
         df = self._plant.curtail
 
         curt_aggregate = np.divide(
-            df.resample(self._resample_freq)[["availability_kwh", "curtailment_kwh"]].sum(), 1e6
+            df.resample(self._resample_freq)[["availability", "curtailment"]].sum(), 1e6
         )  # Get sum of avail and curt losses in GWh
 
         curt_aggregate.rename(
-            columns={"availability_kwh": "availability_gwh", "curtailment_kwh": "curtailment_gwh"},
+            columns={"availability": "availability_gwh", "curtailment": "curtailment_gwh"},
             inplace=True,
         )
         # Merge with revenue meter monthly/daily data
@@ -645,12 +645,12 @@ class MonteCarloAEP(object):
         )
 
         self._aggregate["avail_nan_perc"] = df.resample(self._resample_freq)[
-            "availability_kwh"
+            "availability"
         ].apply(
             tm.percent_nan
         )  # Get percentage of 10-min meter data that were NaN when summing to monthly/daily
         self._aggregate["curt_nan_perc"] = df.resample(self._resample_freq)[
-            "curtailment_kwh"
+            "curtailment"
         ].apply(
             tm.percent_nan
         )  # Get percentage of 10-min meter data that were NaN when summing to monthly/daily
@@ -734,7 +734,7 @@ class MonteCarloAEP(object):
 
         # Define empty data frame that spans our period of interest
         self._reanalysis_aggregate = pd.DataFrame(
-            index=pd.date_range(start=start_date, end=end_date, freq=self._resample_freq),
+            index=pd.date_range(start=start_date, end=end_date, freq=self._resample_freq, tz="UTC"),
             dtype=float,
         )
 
@@ -758,7 +758,7 @@ class MonteCarloAEP(object):
         for key in self._reanal_products:
             rean_df = self._plant.reanalysis[key]
             rean_df["ws_dens_corr"] = mt.air_density_adjusted_wind_speed(
-                rean_df["windspeed_ms"], rean_df["rho_kgm-3"]
+                rean_df["windspeed"], rean_df["density"]
             )  # Density correct wind speeds
             self._reanalysis_aggregate[key] = rean_df.resample(self._resample_freq)[
                 "ws_dens_corr"
@@ -780,7 +780,9 @@ class MonteCarloAEP(object):
                         )
                     )
                 )  # Calculate wind direction
-
+        
+        ## TODO JP: Had to localize the timezone after V3 update. Is there a better way to do this?
+        self._aggregate.index = self._aggregate.index.tz_localize("UTC")
         self._aggregate = self._aggregate.join(
             self._reanalysis_aggregate
         )  # Merge monthly reanalysis data to monthly energy data frame
@@ -910,7 +912,7 @@ class MonteCarloAEP(object):
         ]
 
         # Set maximum range for using bin-filter, convert from MW to GWh
-        plant_capac = self._plant._plant_capacity / 1000.0 * self._hours_in_res
+        plant_capac = self._plant.rated_power / 1000.0 * self._hours_in_res
 
         # Apply range filter to wind speed
         df_sub = df_sub.assign(flag_range=filters.range_flag(df_sub[reanal], below=0, above=40))
