@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file. If you make
 
 ## [UNRELEASED]
 - The package name is changed from `operational_analysis` to `openoa` to be more consistent with how we expect to import OpenOA!
+- Renamed plant_analysis to long_term_monte_carlo_aep and updated it for the V3 API.
 
 ## [2.3 - 2022-01-18]
 - Replaced hard-coded reanalysis dates in plant analysis with automatic valid date selection and added optional user-defined end date argument. Fixed bug in normalization to 30-day months.

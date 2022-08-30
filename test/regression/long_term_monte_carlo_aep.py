@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import pytest
 from numpy import testing as nptest
-from openoa.analysis import plant_analysis
+from openoa.analysis import aep
 from examples import project_ENGIE, example_data_path_str
 
 
@@ -38,7 +38,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         """
         reset_prng()
 
-        self.analysis = plant_analysis.MonteCarloAEP(
+        self.analysis = aep.MonteCarloAEP(
             self.project,
             reanal_products=["merra2", "era5"],
             time_resolution="M",
@@ -60,7 +60,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         reset_prng()
         # ____________________________________________________________________
         # Test default aggregate reanalysis values and date range, at monthly time resolution
-        self.analysis = plant_analysis.MonteCarloAEP(
+        self.analysis = aep.MonteCarloAEP(
             self.project_rean, reanal_products=["merra2", "era5"], time_resolution="M"
         )
         df_rean = self.analysis._reanalysis_aggregate
@@ -85,7 +85,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         # Check for invalid user-defined end dates
         # Date range doesn't include full 20 years
         with pytest.raises(ValueError):
-            self.analysis = plant_analysis.MonteCarloAEP(
+            self.analysis = aep.MonteCarloAEP(
                 self.project_rean,
                 reanal_products=["merra2", "era5"],
                 time_resolution="M",
@@ -94,7 +94,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
 
         # End date out of bounds, monthly
         with pytest.raises(ValueError):
-            self.analysis = plant_analysis.MonteCarloAEP(
+            self.analysis = aep.MonteCarloAEP(
                 self.project_rean,
                 reanal_products=["merra2", "era5"],
                 time_resolution="M",
@@ -103,7 +103,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
 
         # ____________________________________________________________________
         # Test aggregate reanalysis values and date range with user-defined end date, at monthly time resolution
-        self.analysis = plant_analysis.MonteCarloAEP(
+        self.analysis = aep.MonteCarloAEP(
             self.project_rean,
             reanal_products=["merra2", "era5"],
             time_resolution="M",
@@ -131,7 +131,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         reset_prng()
         # ____________________________________________________________________
         # Test default aggregate reanalysis values and date range, at daily time resolution
-        self.analysis = plant_analysis.MonteCarloAEP(
+        self.analysis = aep.MonteCarloAEP(
             self.project_rean, reanal_products=["merra2", "era5"], time_resolution="D"
         )
         df_rean = self.analysis._reanalysis_aggregate
@@ -156,7 +156,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         # Check for invalid user-defined end dates
         # Date range doesn't include full 20 years
         with pytest.raises(ValueError):
-            self.analysis = plant_analysis.MonteCarloAEP(
+            self.analysis = aep.MonteCarloAEP(
                 self.project_rean,
                 reanal_products=["merra2", "era5"],
                 time_resolution="D",
@@ -165,7 +165,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
 
         # End date out of bounds, daily
         with pytest.raises(ValueError):
-            self.analysis = plant_analysis.MonteCarloAEP(
+            self.analysis = aep.MonteCarloAEP(
                 self.project_rean,
                 reanal_products=["merra2", "era5"],
                 time_resolution="D",
@@ -174,7 +174,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
 
         # ____________________________________________________________________
         # Test aggregate reanalysis values and date range with user-defined end date, at daily time resolution
-        self.analysis = plant_analysis.MonteCarloAEP(
+        self.analysis = aep.MonteCarloAEP(
             self.project_rean,
             reanal_products=["merra2", "era5"],
             time_resolution="D",
@@ -202,7 +202,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         reset_prng()
         # ____________________________________________________________________
         # Test default aggregate reanalysis values and date range, at hourly time resolution
-        self.analysis = plant_analysis.MonteCarloAEP(
+        self.analysis = aep.MonteCarloAEP(
             self.project_rean, reanal_products=["merra2", "era5"], time_resolution="H"
         )
         df_rean = self.analysis._reanalysis_aggregate
@@ -227,7 +227,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         # Check for invalid user-defined end dates
         # Date range doesn't include full 20 years
         with pytest.raises(ValueError):
-            self.analysis = plant_analysis.MonteCarloAEP(
+            self.analysis = aep.MonteCarloAEP(
                 self.project_rean,
                 reanal_products=["merra2", "era5"],
                 time_resolution="H",
@@ -236,7 +236,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
 
         # End date out of bounds, hourly
         with pytest.raises(ValueError):
-            self.analysis = plant_analysis.MonteCarloAEP(
+            self.analysis = aep.MonteCarloAEP(
                 self.project_rean,
                 reanal_products=["merra2", "era5"],
                 time_resolution="H",
@@ -245,7 +245,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
 
         # ____________________________________________________________________
         # Test aggregate reanalysis values and date range with user-defined end date, at hourly time resolution
-        self.analysis = plant_analysis.MonteCarloAEP(
+        self.analysis = aep.MonteCarloAEP(
             self.project_rean,
             reanal_products=["merra2", "era5"],
             time_resolution="H",
@@ -273,7 +273,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         reset_prng()
         # ____________________________________________________________________
         # Test linear regression model, at monthly time resolution
-        self.analysis = plant_analysis.MonteCarloAEP(
+        self.analysis = aep.MonteCarloAEP(
             self.project,
             reanal_products=["merra2", "era5"],
             time_resolution="M",
@@ -291,7 +291,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         reset_prng()
         # ____________________________________________________________________
         # Test inputs to the regression model, at monthly time resolution
-        self.analysis = plant_analysis.MonteCarloAEP(
+        self.analysis = aep.MonteCarloAEP(
             self.project,
             reanal_products=["merra2", "era5"],
             time_resolution="D",
@@ -309,7 +309,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         reset_prng()
         # ____________________________________________________________________
         # Test GAM regression model (can be used at daily time resolution only)
-        self.analysis = plant_analysis.MonteCarloAEP(
+        self.analysis = aep.MonteCarloAEP(
             self.project,
             reanal_products=["merra2", "era5"],
             time_resolution="D",
@@ -326,7 +326,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         reset_prng()
         # ____________________________________________________________________
         # Test GBM regression model (can be used at daily time resolution only)
-        self.analysis = plant_analysis.MonteCarloAEP(
+        self.analysis = aep.MonteCarloAEP(
             self.project,
             reanal_products=["era5"],
             time_resolution="D",
@@ -343,7 +343,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         reset_prng()
         # ____________________________________________________________________
         # Test ETR regression model (can be used at daily time resolution only)
-        self.analysis = plant_analysis.MonteCarloAEP(
+        self.analysis = aep.MonteCarloAEP(
             self.project,
             reanal_products=["merra2"],
             time_resolution="D",
@@ -360,7 +360,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         reset_prng()
         # ____________________________________________________________________
         # Test GAM regression model (can be used at daily time resolution only)
-        self.analysis = plant_analysis.MonteCarloAEP(
+        self.analysis = aep.MonteCarloAEP(
             self.project,
             reanal_products=["merra2", "era5"],
             time_resolution="D",
