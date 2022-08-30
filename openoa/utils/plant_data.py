@@ -226,6 +226,6 @@ def rename_columns(df: pd.DataFrame, col_map: dict, reverse: bool = True) -> pd.
         Returns:
             pd.DataFrame: Input DataFrame with remapped column names.
     """
-    if not reverse:
+    if reverse:
         col_map = {v: k for k, v in col_map.items()}
     return df.rename(columns=col_map)
