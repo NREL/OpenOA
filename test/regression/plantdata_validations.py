@@ -5,7 +5,8 @@ from pathlib import Path
 from examples import project_ENGIE
 from pandas.testing import assert_frame_equal
 
-from openoa import ANALYSIS_REQUIREMENTS, PlantData
+from openoa import PlantData
+from openoa.plant import ANALYSIS_REQUIREMENTS
 
 
 example_data_path = Path(__file__).parents[2].resolve() / "examples" / "data" / "la_haute_borne"
@@ -67,14 +68,6 @@ class TestPlantData(unittest.TestCase):
         """
         self.plant.analysis_type = "MonteCarloAEP"
         self.plant.validate()
-
-    def test_warnsForNone(self):
-        """
-        Test that None is valid, but raises a warning.
-        """
-        with self.assertWarns(UserWarning):
-            self.plant.analysis_type = None
-            self.plant.validate()
 
     def test_doesNotValidateForAll(self):
         """
