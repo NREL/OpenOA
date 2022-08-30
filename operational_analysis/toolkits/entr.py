@@ -395,4 +395,15 @@ def load_reanalysis_prepare(plant, product):
         plant._reanalysis._product['era5'].df['time'] = pd.to_datetime(plant._reanalysis._product['era5'].df['time']).dt.tz_localize(None)
         plant._reanalysis._product['era5'].df.set_index('time',inplace=True,drop=False)
 
+### UDFs
+
+from pyspark.sql.functions import udf
+from pyspark.sql.types import BooleanType
+from pyspark.sql import SQLContext
+from operational_analysis.toolkits.filters import range_flag
+
+openoa_range_flag_filter = udf(range_flag, BooleanType())
+
+def register_all(context: SQLContext):
+    context.udf.register("openoa_range_flag_filter", openoa_range_flag_filter)
 
