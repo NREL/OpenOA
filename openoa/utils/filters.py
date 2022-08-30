@@ -221,8 +221,26 @@ def window_range_flag(
         :obj:`pandas.Series`: Series with boolean entries.
     """
     if data is not None:
+        if not isinstance(window_col, str):
+            raise TypeError(
+                "The input to `window_col` must be a string if `data` is a pandas DataFrame."
+            )
+        if not isinstance(value_col, str):
+            raise TypeError(
+                "The input to `value_col` must be a string if `data` is a pandas DataFrame."
+            )
+
         window_col = data[:, window_col].copy()
         value_col = data[:, value_col].copy()
+
+    if not isinstance(window_col, pd.Series):
+        raise TypeError(
+            "The input to `window_col` must be a pandas Series if `data` is not provided."
+        )
+    if not isinstance(value_col, pd.Series):
+        raise TypeError(
+            "The input to `value_col` must be a pandas Series if `data` is not provided."
+        )
 
     flag = window_col.between(window_start, window_end) & ~value_col.between(value_min, value_max)
     return flag
