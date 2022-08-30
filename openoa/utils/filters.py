@@ -155,19 +155,18 @@ def std_range_flag(
     col: list[str] | None = None,
 ) -> pd.Series | pd.DataFrame:
     """Flag time stamps for which the measurement is outside of the threshold number of standard deviations
-     from the mean across the data.
+        from the mean across the data.
 
     ... note:: This method does not distinguish between asset IDs.
 
     Args:
-        threshold(:obj:`float`): multiplicative factor on standard deviation to use in flagging.
         data (:obj:`pandas.Series` | `pandas.DataFrame`): data frame containing the column to be flagged;
             can either be a `pandas.Series` or `pandas.DataFrame`. If a `pandas.DataFrame`, a list of
             threshold values and columns (if checking a subset of the columns) must be provided.
         col (:obj:`list[str]`): column(s) in `data` to be flagged, by default None. Only required when
             the `data` is a `pandas.DataFrame` and a subset of the columns will be checked. Must be
             the same length as `lower` and `upper`.
-        lower (:obj:`float` | `list[float]`): multiplicative factor on the standard deviation of `data`,
+        threshold (:obj:`float` | `list[float]`): multiplicative factor on the standard deviation of `data`,
             if it's a `pd.Series`, or the list of multiplicative factors on the standard deviation for
             each column in `col`. If the same factor is applied to each column, then pass the single
             value, otherwise, it must be the same length as `col` and `upper`.
@@ -195,30 +194,37 @@ def std_range_flag(
 
 
 def window_range_flag(
-    window_col: pd.Series,
-    window_start: float,
-    window_end: float,
-    value_col: pd.Series,
+    window_col: str | pd.Series = None,
+    window_start: float = -np.inf,
+    window_end: float = np.inf,
+    value_col: str | pd.Series = None,
     value_min: float = -np.inf,
     value_max: float = np.inf,
+    data: pd.DataFrame = None,
 ) -> pd.Series:
     """Flag time stamps for which measurement in `window_col` are within the range: [`window_start`, `window_end`], and
     the measurements in `value_col` are outside of the range [`value_min`, `value_max`].
 
     Args:
-        window_col(:obj:`pandas.Series`): data used to define the window
-        window_start(:obj:`float`): minimum value for the inclusive window
-        window_end(:obj:`float`): maximum value for the inclusive window
-        value_col(:obj:`pandas.Series`): data to be flagged
+        data (:obj:`pandas.DataFrame`): data frame containing the columns `window_col` and
+            `value_col`, by default None.
+        window_col (:obj:`str` | `pandas.Series`): Name of the column or  used to define the window
+            range or the data as a pandas Series, by default None.
+        window_start(:obj:`float`): minimum value for the inclusive window, by default -np.inf.
+        window_end(:obj:`float`): maximum value for the inclusive window, by default np.inf.
+        value_col (:obj:`str` | `pandas.Series`): Name of the column used to define the value range
+            or the data as a pandas Series, by default None.
         value_max(:obj:`float`): upper threshold for the inclusive data range; default np.inf
         value_min(:obj:`float`): lower threshold for the inclusive data range; default -np.inf
 
     Returns:
-        :obj:`pandas.Series(bool)`: Array-like object with boolean entries.
+        :obj:`pandas.Series`: Series with boolean entries.
     """
+    if data is not None:
+        window_col = data[:, window_col].copy()
+        value_col = data[:, value_col].copy()
 
-    flag = (window_col >= window_start) & (window_col <= window_end)
-    flag &= (value_col < value_min) | (value_col > value_max)
+    flag = window_col.between(window_start, window_end) & ~value_col.between(value_min, value_max)
     return flag
 
 
