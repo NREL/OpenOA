@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 
 from examples import project_ENGIE
+from numpy.testing import assert_array_equal
 from pandas.testing import assert_frame_equal
 
 from openoa import PlantData
@@ -76,6 +77,32 @@ class TestPlantData(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.plant.analysis_type = "all"
             self.plant.validate()
+
+    def test_update_columns(self):
+        """
+        Tests that the column names are successfully mapped to the standardized names.
+        """
+        # Put the plant analysis type back in working order
+        self.plant.analysis_type = "MonteCarloAEP"
+        self.plant.validate()
+
+        assert_array_equal(
+            self.plant.scada.columns.values, self.plant.metadata.scada.col_map.keys()
+        )
+        assert_array_equal(
+            self.plant.meter.columns.values, self.plant.metadata.meter.col_map.keys()
+        )
+        assert_array_equal(
+            self.plant.asset.columns.values, self.plant.metadata.asset.col_map.keys()
+        )
+        assert_array_equal(
+            self.plant.curtail.columns.values, self.plant.metadata.curtail.col_map.keys()
+        )
+        for name in self.plant.reanalysis:
+            assert_array_equal(
+                self.plant.reanalysis[name].columns.values,
+                self.plant.metadata.reanalysis[name].col_map.keys(),
+            )
 
     def test_toCSV(self):
         """

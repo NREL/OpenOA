@@ -1371,24 +1371,25 @@ class PlantData:
                 the originally passed values. Defaults to False.
         """
         meta = self.metadata
+        reverse = not to_original  # flip the boolean to correctly map between the col_map entries
 
         if self.scada is not None:
-            self.scada = rename_columns(self.scada, meta.scada.col_map, reverse=to_original)
+            self.scada = rename_columns(self.scada, meta.scada.col_map, reverse=reverse)
         if self.meter is not None:
-            self.meter = rename_columns(self.meter, meta.meter.col_map, reverse=to_original)
+            self.meter = rename_columns(self.meter, meta.meter.col_map, reverse=reverse)
         if self.tower is not None:
-            self.tower = rename_columns(self.tower, meta.tower.col_map, reverse=to_original)
+            self.tower = rename_columns(self.tower, meta.tower.col_map, reverse=reverse)
         if self.status is not None:
-            self.status = rename_columns(self.status, meta.status.col_map, reverse=to_original)
+            self.status = rename_columns(self.status, meta.status.col_map, reverse=reverse)
         if self.curtail is not None:
-            self.curtail = rename_columns(self.curtail, meta.curtail.col_map, reverse=to_original)
+            self.curtail = rename_columns(self.curtail, meta.curtail.col_map, reverse=reverse)
         if self.asset is not None:
-            self.asset = rename_columns(self.asset, meta.asset.col_map, reverse=to_original)
+            self.asset = rename_columns(self.asset, meta.asset.col_map, reverse=reverse)
         if self.reanalysis is not None:
             reanalysis = {}
             for name, df in self.reanalysis.items():
                 reanalysis[name] = rename_columns(
-                    df, meta.reanalysis[name].col_map, reverse=to_original
+                    df, meta.reanalysis[name].col_map, reverse=reverse
                 )
             self.reanalysis = reanalysis
 
