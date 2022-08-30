@@ -21,7 +21,6 @@ from shapely.geometry import Point
 import openoa.utils.met_data_processing as met
 from openoa.utils.plant_data import (
     FromDictMixin,
-    iter_validator,
     load_to_pandas,
     rename_columns,
     convert_to_list,
@@ -77,29 +76,6 @@ ANALYSIS_REQUIREMENTS = {
         },
     },
 }
-
-
-def analysis_type_validator(
-    instance: PlantData, attribute: attr.Attribute, value: list[str]
-) -> None:
-    """Validates the input from `PlantData` against the analysis requirements in
-    `ANALYSIS_REQUIREMENTS`. If there is an error, then it gets added to the
-    `PlantData._errors` dictionary to be raised in the post initialization hook.
-
-    Args:
-        instance (PlantData): The PlantData object.
-        attribute (attr.Attribute): The converted `analysis_type` attribute object.
-        value (list[str]): The input value from `analysis_type`.
-    """
-    if None in value:
-        warnings.warn("`None` was provided to `analysis_type`, so no validation will occur.")
-
-    valid_types = [*ANALYSIS_REQUIREMENTS] + ["all", None]
-    incorrect_types = set(value).difference(set(valid_types))
-    if incorrect_types:
-        raise ValueError(
-            f"{attribute.name} input: {incorrect_types} is invalid, must be one of 'all' or a combination of: {[*valid_types]}"
-        )
 
 
 def _analysis_filter(error_dict: dict, analysis_types: list[str] = ["all"]) -> dict:
@@ -929,7 +905,10 @@ class PlantData:
     analysis_type: list[str] | None = attr.ib(
         default=None,
         converter=convert_to_list,
-        validator=[iter_validator(list, (str, None)), analysis_type_validator],
+        validator=attrs.validators.deep_iterable(
+            iterable_validator=attrs.validators.instance_of(list),
+            member_validator=attrs.validators.in_([*ANALYSIS_REQUIREMENTS] + ["all", None]),
+        ),
         on_setattr=[attr.setters.convert, attr.setters.validate],
     )
     scada: pd.DataFrame | None = attr.ib(default=None, converter=load_to_pandas)
@@ -945,7 +924,7 @@ class PlantData:
 
     # Error catching in validation
     _errors: dict[str, list[str]] = attr.ib(
-        default={"missing": {}, "dtype": {}, "frequency": {}}, init=False
+        default={"missing": {}, "dtype": {}, "frequency": {}, "attributes": []}, init=False
     )  # No user initialization required
 
     def __attrs_post_init__(self):
@@ -1376,12 +1355,12 @@ class PlantData:
         to_crs = f"+proj=utm +zone={utm_zone} +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
         transformer = Transformer.from_crs(reference_system.upper(), to_crs)
         lats, lons = transformer.transform(
-            self._asset[self.metadata.asset.latitude].values,
-            self._asset[self.metadata.asset.longitude].values,
+            self.asset[self.metadata.asset.latitude].values,
+            self.asset[self.metadata.asset.longitude].values,
         )
 
         # TODO: Should this get a new name that's in line with the -25 convention?
-        self._asset["geometry"] = [Point(lat, lon) for lat, lon in zip(lats, lons)]
+        self.asset["geometry"] = [Point(lat, lon) for lat, lon in zip(lats, lons)]
 
     def update_column_names(self, to_original: bool = False) -> None:
         """Renames the columns of each dataframe to the be the keys from the

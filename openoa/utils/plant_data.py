@@ -139,29 +139,6 @@ def column_validator(df: pd.DataFrame, column_names={}) -> None | list[str]:
     return []
 
 
-def iter_validator(iter_type, item_types: Any | tuple[Any]) -> Callable:
-    """Helper function to generate iterable validators that will reduce the amount of
-    boilerplate code.
-
-    Parameters
-    ----------
-    iter_type : any iterable
-        The type of iterable object that should be validated.
-    item_types : Union[Any, Tuple[Any]]
-        The type or types of acceptable item types.
-
-    Returns
-    -------
-    Callable
-        The attr.validators.deep_iterable iterable and instance validator.
-    """
-    validator = attrs.validators.deep_iterable(
-        member_validator=attrs.validators.instance_of(item_types),
-        iterable_validator=attrs.validators.instance_of(iter_type),
-    )
-    return validator
-
-
 def dtype_converter(df: pd.DataFrame, column_types={}) -> list[str]:
     """Converts the columns provided in `column_types` of `df` to the appropriate data
     type.
