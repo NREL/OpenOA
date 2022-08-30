@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file. If you make
 ## [UNRELEASED]
 - The package name is changed from `operational_analysis` to `openoa` to be more consistent with how we expect to import OpenOA!
 - Renamed plant_analysis to long_term_monte_carlo_aep and updated it for the V3 API.
+- Renamed `compute_shear_v3` to `compute_shear` and deleted old version of `compute_shear`.
+
+## [UNRELEASED - 2.x]
+- Added `compute_shear_v3` to `met_data_processing` toolkit, improving efficiency, removed requirement to provide reference height, and added option to return reference height and wind speed corresponding to best-fit shear exponent. Decided to bifurcate function into `compute_shear` and `compute_shear_v3` in order to maintain backwards compatibility with the OpenOA 2.x line.
 
 ## [2.3 - 2022-01-18]
 - Replaced hard-coded reanalysis dates in plant analysis with automatic valid date selection and added optional user-defined end date argument. Fixed bug in normalization to 30-day months.

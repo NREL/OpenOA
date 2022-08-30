@@ -1,17 +1,22 @@
 from __future__ import annotations
 
 import json
+import warnings
 import itertools
 from copy import deepcopy
-from typing import Callable, Optional, Sequence
+from typing import Any, Callable, Optional, Sequence
 from pathlib import Path
+from functools import cached_property
 
 import attr
 import yaml
+import attrs
 import numpy as np
 import pandas as pd
 import pyspark as spark
 from attr import define
+from pyproj import Transformer
+from shapely.geometry import Point
 
 import openoa.utils.met_data_processing as met
 
@@ -63,6 +68,29 @@ ANALYSIS_REQUIREMENTS = {
 }
 
 
+def iter_validator(iter_type, item_types: Any | tuple[Any]) -> Callable:
+    """Helper function to generate iterable validators that will reduce the amount of
+    boilerplate code.
+
+    Parameters
+    ----------
+    iter_type : any iterable
+        The type of iterable object that should be validated.
+    item_types : Union[Any, Tuple[Any]]
+        The type or types of acceptable item types.
+
+    Returns
+    -------
+    Callable
+        The attr.validators.deep_iterable iterable and instance validator.
+    """
+    validator = attrs.validators.deep_iterable(
+        member_validator=attrs.validators.instance_of(item_types),
+        iterable_validator=attrs.validators.instance_of(iter_type),
+    )
+    return validator
+
+
 def analysis_type_validator(
     instance: PlantData, attribute: attr.Attribute, value: list[str]
 ) -> None:
@@ -76,7 +104,7 @@ def analysis_type_validator(
         value (list[str]): The input value from `analysis_type`.
     """
     if None in value:
-        UserWarning("`None` was provided to `analysis_type`, so no validation will occur.")
+        warnings.warn("`None` was provided to `analysis_type`, so no validation will occur.")
 
     valid_types = [*ANALYSIS_REQUIREMENTS] + ["all", None]
     incorrect_types = set(value).difference(set(valid_types))
@@ -87,14 +115,14 @@ def analysis_type_validator(
 
 
 def frequency_validator(
-    actual_freq: str, desired_freq: Optional[str | None | set[str]], exact: bool
+    actual_freq: str | None, desired_freq: str | None | set[str], exact: bool
 ) -> bool:
     """Helper function to check if the actual datetime stamp frequency is valid compared
     to what is required.
 
     Args:
         actual_freq (str): The frequency of the datetime stamp, or `df.index.freq`.
-        desired_freq (Optional[str  |  None  |  set[str]]): Either the exact frequency,
+        desired_freq (str  |  None  |  set[str]): Either the exact frequency,
             required or a set of options that are also valid, in which case any numeric
             information encoded in `actual_freq` will be dropped.
         exact (bool): If the provided frequency codes should be exact matches (`True`),
@@ -174,8 +202,27 @@ class SCADAMetaData(FromDictMixin):
 
     Args:
         time (str): The datetime stamp for the SCADA data, by default "time". This data should be of
-            type: `np.datetime64[ns]`. Additional columns describing the datetime stamps
-            are: `frequency`
+            type: `np.datetime64[ns]`, or able to be converted to a pandas DatetimeIndex. Additional
+            columns describing the datetime stamps are: `frequency`
+        id (str): The turbine identifier column in the SCADA data, by default "id". This data should be of
+            type: `str`.
+        power (str): The power produced, in kW, column in the SCADA data, by default "power".
+            This data should be of type: `float`.
+        windspeed (str): The measured windspeed, in m/s, column in the SCADA data, by default "windspeed".
+            This data should be of type: `float`.
+        wind_direction (str): The measured wind direction, in degrees, column in the SCADA data, by default
+            "wind_direction". This data should be of type: `float`.
+        status (str): The status code column in the SCADA data, by default "status". This data
+            should be of type: `str`.
+        pitch (str): The pitch, in degrees, column in the SCADA data, by default "pitch". This data
+            should be of type: `float`.
+        temperature (str): The temperature column in the SCADA data, by default "temperature". This
+            data should be of type: `float`.
+        frequency (str): The frequency of `time` in the SCADA data, by default "10T". The input
+            should align with the `Pandas frequency offset aliases`_.
+
+    .. _Pandas frequency offset aliases:
+    https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases
     """
 
     # DataFrame columns
@@ -237,6 +284,24 @@ class SCADAMetaData(FromDictMixin):
 
 @define(auto_attribs=True)
 class MeterMetaData(FromDictMixin):
+    """A metadata schematic to create the necessary column mappings and other validation
+    components, or other data about energy meter data, that will contribute to a larger
+    plant metadata schema/routine.
+
+    Args:
+        time (str): The datetime stamp for the meter data, by default "time". This data should
+            be of type: `np.datetime64[ns]`, or able to be converted to a pandas DatetimeIndex.
+            Additional columns describing the datetime stamps are: `frequency`
+        power (str): The power produced, in kW, column in the meter data, by default "power".
+            This data should be of type: `float`.
+        energy (str): The energy produced, in kWh, column in the meter data, by default
+            "temperature". This data should be of type: `float`.
+        frequency (str): The frequency of `time` in the meter data, by default "10T". The input
+            should align with the `Pandas frequency offset aliases`_.
+
+    .. _Pandas frequency offset aliases:
+    https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases
+    """
 
     # DataFrame columns
     time: str = attr.ib(default="time")
@@ -277,6 +342,23 @@ class MeterMetaData(FromDictMixin):
 
 @define(auto_attribs=True)
 class TowerMetaData(FromDictMixin):
+    """A metadata schematic to create the necessary column mappings and other validation
+    components, or other data about meteorological tower (met tower) data, that will contribute to a
+    larger plant metadata schema/routine.
+
+    Args:
+        time (str): The datetime stamp for the met tower data, by default "time". This data should
+            be of type: `np.datetime64[ns]`, or able to be converted to a pandas DatetimeIndex.
+            Additional columns describing the datetime stamps are: `frequency`
+        id (str): The met tower identifier column in the met tower data, by default "id". This data
+            should be of type: `str`.
+        frequency (str): The frequency of `time` in the met tower data, by default "10T". The input
+            should align with the `Pandas frequency offset aliases`_.
+
+    .. _Pandas frequency offset aliases:
+    https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases
+    """
+
     # DataFrame columns
     time: str = attr.ib(default="time")
     id: str = attr.ib(default="id")
@@ -312,6 +394,29 @@ class TowerMetaData(FromDictMixin):
 
 @define(auto_attribs=True)
 class StatusMetaData(FromDictMixin):
+    """A metadata schematic to create the necessary column mappings and other validation
+    components, or other data about the turbine status log data, that will contribute to a
+    larger plant metadata schema/routine.
+
+    Args:
+        time (str): The datetime stamp for the status data, by default "time". This data should
+            be of type: `np.datetime64[ns]`, or able to be converted to a pandas DatetimeIndex.
+            Additional columns describing the datetime stamps are: `frequency`
+        id (str): The turbine identifier column in the status data, by default "id". This data
+            should be of type: `str`.
+        status_id (str): The status code identifier column in the status data, by default "id". This data
+            should be of type: `str`.
+        status_code (str): The status code column in the status data, by default "id". This data
+            should be of type: `str`.
+        status_text (str): The status text description column in the status data, by default "id".
+            This data should be of type: `str`.
+        frequency (str): The frequency of `time` in the met tower data, by default "10T". The input
+            should align with the `Pandas frequency offset aliases`_.
+
+    .. _Pandas frequency offset aliases:
+    https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases
+    """
+
     # DataFrame columns
     time: str = attr.ib(default="time")
     id: str = attr.ib(default="id")
@@ -359,6 +464,27 @@ class StatusMetaData(FromDictMixin):
 
 @define(auto_attribs=True)
 class CurtailMetaData(FromDictMixin):
+    """A metadata schematic to create the necessary column mappings and other validation
+    components, or other data about the plant curtailment data, that will contribute to a
+    larger plant metadata schema/routine.
+
+    Args:
+        time (str): The datetime stamp for the curtailment data, by default "time". This data should
+            be of type: `np.datetime64[ns]`, or able to be converted to a pandas DatetimeIndex.
+            Additional columns describing the datetime stamps are: `frequency`
+        curtailment (str): The curtailment percentage column in the curtailment data, by default
+            "curtailment". This data should be of type: `float`.
+        availability (str): The availability percentage column in the curtailment data, by default
+            "availability". This data should be of type: `float`.
+        net_energy (str): The net energy produced, in kW, column in the curtailment data, by default
+            "net_energy". This data should be of type: `float`.
+        frequency (str): The frequency of `time` in the met tower data, by default "10T". The input
+            should align with the `Pandas frequency offset aliases`_.
+
+    .. _Pandas frequency offset aliases:
+    https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases
+    """
+
     # DataFrame columns
     time: str = attr.ib(default="time")
     curtailment: str = attr.ib(default="curtailment")
@@ -402,6 +528,27 @@ class CurtailMetaData(FromDictMixin):
 
 @define(auto_attribs=True)
 class AssetMetaData(FromDictMixin):
+    """A metadata schematic to create the necessary column mappings and other validation
+    components, or other data about the site's asset metadata, that will contribute to a
+    larger plant metadata schema/routine.
+
+    Args:
+        id (str): The asset identifier column in the asset metadata, by default "id". This data
+            should be of type: `str`.
+        latitude (str): The asset's latitudinal position, in WGS84, column in the asset metadata, by
+            default "latitude". This data should be of type: `float`.
+        longitude (str): The asset's longitudinal position, in WGS84, column in the asset metadata,
+            by default "longitude". This data should be of type: `float`.
+        rated_power (str): The asset's rated power, in kW, column in the asset metadata, by default
+            "rated_power". This data should be of type: `float`.
+        hub_height (str): The asset's hub height, in m, column in the asset metadata, by default
+            "hub_height". This data should be of type: `float`.
+        elevation (str): The asset's elevation above sea level, in m, column in the asset metadata,
+            by default "elevation". This data should be of type: `float`.
+        type (str): The type of asset column in the asset metadata, by default "type". This data
+            should be of type: `str`.
+    """
+
     # DataFrame columns
     id: str = attr.ib(default="id")
     latitude: str = attr.ib(default="latitude")
@@ -567,8 +714,10 @@ class PlantMetaData(FromDictMixin):
             status=self.status.col_map,
             asset=self.asset.col_map,
             curtail=self.curtail.col_map,
-            reanalysis={k: v.col_map for k, v in self.reanalysis.items()},
+            reanalysis={},
         )
+        if self.reanalysis != {}:
+            values["reanalysis"] = {k: v.col_map for k, v in self.reanalysis.items()}
         return values
 
     @property
@@ -583,8 +732,10 @@ class PlantMetaData(FromDictMixin):
             status=self.status.dtypes,
             asset=self.asset.dtypes,
             curtail=self.curtail.dtypes,
-            reanalysis={k: v.dtypes for k, v in self.reanalysis.items()},
+            reanalysis={},
         )
+        if self.reanalysis != {}:
+            types["reanalysis"] = {k: v.dtypes for k, v in self.reanalysis.items()}
         return types
 
     @property
@@ -732,11 +883,18 @@ def convert_to_list(
     list
         The new list of elements.
     """
+    if not isinstance(manipulation, Callable) and manipulation is not None:
+        raise ValueError("`manipulation` must either be: `None` or of type: `Callable`.")
 
     if isinstance(value, (str, int, float)) or value is None:
         value = [value]
     if manipulation is not None:
-        return [manipulation(el) for el in value]
+        try:
+            return [manipulation(el) for el in value]
+        except (TypeError, ValueError):
+            raise ValueError(
+                "At least one of the elements of `value` could not be converted using the provided `manipulation` input."
+            )
     return list(value)
 
 
@@ -935,7 +1093,7 @@ def rename_columns(df: pd.DataFrame, col_map: dict, reverse: bool = True) -> pd.
         Returns:
             pd.DataFrame: Input DataFrame with remapped column names.
     """
-    if not reverse:
+    if reverse:
         col_map = {v: k for k, v in col_map.items()}
     return df.rename(columns=col_map)
 
@@ -1013,7 +1171,7 @@ class PlantData:
     analysis_type: list[str] | None = attr.ib(
         default=None,
         converter=convert_to_list,
-        validator=analysis_type_validator,
+        validator=[iter_validator(list, (str, None)), analysis_type_validator],
         on_setattr=[attr.setters.convert, attr.setters.validate],
     )
     scada: pd.DataFrame | None = attr.ib(default=None, converter=load_to_pandas)
@@ -1041,6 +1199,13 @@ class PlantData:
         error_message = compose_error_message(self._errors, analysis_types=self.analysis_type)
         if error_message != "":
             raise ValueError(error_message)
+
+        # Post-validation data manipulations
+        # TODO: Need to have a class level input for the user-preferred projection system
+        # TODO: Why does the non-WGS84 projection matter?
+        self.parse_asset_geometry()
+
+        # Change the column names to the -25 convention for easier use in the rest of the code base
         self.update_column_names()
 
         if self.preprocess is not None:
@@ -1068,7 +1233,6 @@ class PlantData:
             value (pd.DataFrame | dict[pd.DataFrame] | None): The attribute's
                 user-provided value. A dictionary of dataframes is expected for
                 reanalysis data only.
-
         """
         if None in self.analysis_type:
             return
@@ -1147,6 +1311,78 @@ class PlantData:
             reanalysis=self.reanalysis,
         )
         return values
+
+    def to_csv(
+        self,
+        save_path: str | Path,
+        with_openoa_col_names: bool = True,
+        metadata: str = "metadata",
+        scada: str = "scada",
+        meter: str = "meter",
+        tower: str = "tower",
+        asset: str = "asset",
+        status: str = "status",
+        curtail: str = "curtail",
+        reanalysis: str = "reanalysis",
+    ) -> None:
+        """Saves all of the dataframe objects to a CSV file in the provided `save_path` directory.
+
+        Args:
+            save_path (str | Path): The folder where all the data should be saved.
+            with_openoa_col_names (bool, optional): Use the PlantData column names (True), or
+                convert the column names back to the originally provided values. Defaults to True.
+            metadata (str, optional): File name (without extension) to be used for the metadata. Defaults to "metadata".
+            scada (str, optional): File name (without extension) to be used for the SCADA data. Defaults to "scada".
+            meter (str, optional): File name (without extension) to be used for the meter data. Defaults to "meter".
+            tower (str, optional): File name (without extension) to be used for the tower data. Defaults to "tower".
+            asset (str, optional): File name (without extension) to be used for the asset data. Defaults to "scada".
+            status (str, optional): File name (without extension) to be used for the status data. Defaults to "status".
+            curtail (str, optional): File name (without extension) to be used for the curtailment data. Defaults to "curtail".
+            reanalysis (str, optional): Base file name (without extension) to be used for the reanalysis data, where
+                each dataset will use the name provided to form the following file name: {save_path}/{reanalysis}_{name}.
+                Defaults to "reanalysis".
+        """
+        save_path = Path(save_path).resolve()
+        if not save_path.exists():
+            save_path.mkdir()
+
+        meta = self.metadata.column_map
+
+        if not with_openoa_col_names:
+            self.update_column_names(to_original=True)
+        else:
+            for name, col_map in meta.items():
+                if name == "reanalysis":
+                    for re_name, re_col_map in col_map.items():
+                        re_col_map = {k: k for k in re_col_map}
+                        re_col_map["frequency"] = self.metadata.reanalysis[re_name].frequency
+                        meta[name][re_name] = re_col_map
+                    continue
+                col_map = {k: k for k in col_map}
+                meta_obj = getattr(self.metadata, name)
+                if hasattr(meta_obj, "frequency"):
+                    col_map["frequency"] = meta_obj.frequency
+                meta[name] = col_map
+
+        with open((save_path / metadata).with_suffix(".yml"), "w") as f:
+            yaml.safe_dump(meta, f, default_flow_style=False, sort_keys=False)
+        if self.scada is not None:
+            self.scada.to_csv((save_path / scada).with_suffix(".csv"), index_label=["time", "id"])
+        if self.status is not None:
+            self.status.to_csv((save_path / status).with_suffix(".csv"), index_label=["time", "id"])
+        if self.tower is not None:
+            self.tower.to_csv((save_path / tower).with_suffix(".csv"), index_label=["time", "id"])
+        if self.meter is not None:
+            self.meter.to_csv((save_path / meter).with_suffix(".csv"), index_label=["time"])
+        if self.curtail is not None:
+            self.curtail.to_csv((save_path / curtail).with_suffix(".csv"), index_label=["time"])
+        if self.asset is not None:
+            self.asset.to_csv((save_path / asset).with_suffix(".csv"), index_label=["id"])
+        if self.reanalysis is not None:
+            for name, df in self.reanalysis.items():
+                df.to_csv(
+                    (save_path / f"{reanalysis}_{name}").with_suffix(".csv"), index_label=["time"]
+                )
 
     def _validate_column_names(self, category: str = "all") -> dict[str, list[str]]:
         """Validates that the column names in each of the data types matches the mapping
@@ -1329,24 +1565,65 @@ class PlantData:
             has_u_v = (u in df) & (v in df)
 
             ws = col_map["windspeed"]
-            if ws not in df:
-                if has_u_v:
-                    df[ws] = np.sqrt(df[u].values ** 2 + df[v].values ** 2)
+            if ws not in df and has_u_v:
+                df[ws] = np.sqrt(df[u].values ** 2 + df[v].values ** 2)
 
             wd = col_map["wind_direction"]
-            if wd not in df:
-                if has_u_v:
-                    df[wd] = met.compute_wind_direction(df[u], df[v])
+            if wd not in df and has_u_v:
+                df[wd] = met.compute_wind_direction(df[u], df[v])
 
             dens = col_map["density"]
             sp = col_map["surface_pressure"]
             temp = col_map["temperature"]
-            if dens not in df:
-                if (sp in df) & (temp in df):
-                    df[dens] = met.compute_air_density(df[temp], df[sp])
+            has_sp_temp = (sp in df) & (temp in df)
+            if dens not in df and has_sp_temp:
+                df[dens] = met.compute_air_density(df[temp], df[sp])
 
             reanalysis[name] = df
         self.reanalysis = reanalysis
+
+    def parse_asset_geometry(
+        self,
+        reference_system: str = "epsg:4326",
+        utm_zone: int = None,
+        reference_longitude: Optional[float] = None,
+    ) -> None:
+        """Calculate UTM coordinates from latitude/longitude.
+
+        The UTM system divides the Earth into 60 zones, each 6deg of longitude in width. Zone 1
+        covers longitude 180deg to 174deg W; zone numbering increases eastward to zone 60, which
+        covers longitude 174deg E to 180deg. The polar regions south of 80deg S and north of 84deg N
+        are excluded.
+
+        Ref: http://geopandas.org/projections.html
+
+        Args:
+            reference_system (:obj:`str`, optional): Used to define the coordinate reference system (CRS).
+                Defaults to the European Petroleum Survey Group (EPSG) code 4326 to be used with
+                the World Geodetic System reference system, WGS 84.
+            utm_zone (:obj:`int`, optional): UTM zone. If set to None (default), then calculated from
+                the longitude.
+            reference_longitude (:obj:`float`, optional): Reference longitude for calculating the UTM zone. If
+                None (default), then taken as the average longitude of all assets.
+
+        Returns: None
+            Sets the asset "geometry" column.
+        """
+        if utm_zone is None:
+            # calculate zone
+            if reference_longitude is None:
+                longitude = self.asset[self.metadata.asset.longitude].mean()
+            utm_zone = int(np.floor((180 + longitude) / 6.0)) + 1
+
+        to_crs = f"+proj=utm +zone={utm_zone} +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+        transformer = Transformer.from_crs(reference_system.upper(), to_crs)
+        lats, lons = transformer.transform(
+            self._asset[self.metadata.asset.latitude].values,
+            self._asset[self.metadata.asset.longitude].values,
+        )
+
+        # TODO: Should this get a new name that's in line with the -25 convention?
+        self._asset["geometry"] = [Point(lat, lon) for lat, lon in zip(lats, lons)]
 
     def update_column_names(self, to_original: bool = False) -> None:
         """Renames the columns of each dataframe to the be the keys from the
@@ -1377,6 +1654,153 @@ class PlantData:
                     df, meta.reanalysis[name].col_map, reverse=to_original
                 )
             self.reanalysis = reanalysis
+
+    @property
+    def turbine_id(self) -> np.ndarray:
+        """The 1D array of turbine IDs. This is created from the `asset` data, or unique IDs from the
+        SCADA data, if `asset` is undefined.
+        """
+        if self.asset is None:
+            return self.scada.index.get_level_values("id").unique()
+        return self.asset.loc[self.asset["type"] == "turbine"].index.values
+
+    def turbine_df(self, turbine_id: str) -> pd.DataFrame:
+        """Filters `scada` on a single `turbine_id` and returns the filtered data frame.
+
+        Args:
+            turbine_id (str): The ID of the turbine to retrieve its data.
+
+        Returns:
+            pd.DataFrame: The turbine-specific SCADA data frame.
+        """
+        if self.scada is None:
+            raise AttributeError("This method can't be used unless `scada` data is provided.")
+        return self.scada.xs(turbine_id, level=1)
+
+    @property
+    def tower_id(self) -> np.ndarray:
+        """The 1D array of met tower IDs. This is created from the `asset` data, or unique IDs from the
+        tower data, if `asset` is undefined.
+        """
+        if self.asset is None:
+            return self.tower.index.get_level_values("id").unique()
+        return self.asset.loc[self.asset["type"] == "tower"].index.values
+
+    def tower_df(self, tower_id: str) -> pd.DataFrame:
+        """Filters `tower` on a single `tower_id` and returns the filtered data frame.
+
+        Args:
+            tower_id (str): The ID of the met tower to retrieve its data.
+
+        Returns:
+            pd.DataFrame: The met tower-specific data frame.
+        """
+        if self.tower is None:
+            raise AttributeError("This method can't be used unless `tower` data is provided.")
+        return self.tower.xs(tower_id, level=1)
+
+    @property
+    def asset_id(self) -> np.ndarray:
+        """The ID array of turbine and met tower IDs. This is created from the `asset` data, or unique
+        IDs from both the SCADA data and tower data, if `asset` is undefined.
+        """
+        if self.asset is None:
+            return np.concatenate([self.turbine_id, self.tower_id])
+        return self.asset.index.values
+
+    # NOTE: v2 AssetData methods
+
+    @cached_property
+    def asset_distance_matrix(self) -> pd.DataFrame:
+        """Calculates the distance between all assets on the site with `np.inf` for the distance
+        between an asset and itself.
+        """
+        ix = self.asset.index.values
+        distance = (
+            pd.DataFrame(
+                [i, j, self.asset.loc[i, "geometry"].distance(self.asset.loc[j, "geometry"])]
+                for i, j in itertools.combinations(ix, 2)
+            )
+            .pivot(index=0, columns=1, values=2)
+            .reset_index()
+            .fillna(0)
+            .loc[ix[:-1], ix[1:]]
+        )
+
+        # Insert the first column and last row because the self-self combinations are not produced in the above
+        distance.insert(0, ix[0], 0.0)
+        distance.loc[ix[-1]] = 0
+
+        # Unset the index and columns property names
+        distance.index.name = None
+        distance.columns.name = None
+
+        # Maintain v2 compatibility of np.inf for the diagonal
+        distance = distance + distance.values.T - np.diag(np.diag(distance.values))
+        np.fill_diagonal(distance.values, np.inf)
+        return distance
+
+    def calculate_nearest_neighbor(
+        self, turbine_ids: list | np.ndarray = None, tower_ids: list | np.ndarray = None
+    ) -> None:
+        """Finds nearest turbine and met tower neighbors all of the available turbines and towers
+        in `asset` or as defined in `turbine_ids` and `tower_ids`.
+
+        Args:
+            turbine_ids (list | np.ndarray, optional): A list of turbine IDs, if not using all
+                turbines in the data. Defaults to None.
+            tower_ids (list | np.ndarray, optional): A list of met tower IDs, if not using all
+                met towers in the data. Defaults to None.
+
+        Returns: None
+            Creates the "nearest_turbine_id" and "nearest_tower_id" column in `asset`.
+        """
+
+        # Get the valid IDs for both the turbines and towers
+        ix_turb = self.turbine_id if turbine_ids is None else np.array(turbine_ids)
+        ix_tower = self.tower_id if tower_ids is None else np.array(tower_ids)
+        ix = np.concatenate([ix_turb, ix_tower])
+
+        distance = self.asset_distance_matrix.loc[ix, ix]
+
+        nearest_turbine = distance[ix_turb].values.argsort(axis=1)
+        nearest_turbine = pd.DataFrame(
+            distance.columns.values[nearest_turbine], index=distance.index
+        ).loc[ix, 0]
+
+        nearest_tower = distance[ix_tower].values.argsort(axis=1)
+        nearest_tower = pd.DataFrame(
+            distance.columns.values[nearest_tower], index=distance.index
+        ).loc[ix, 0]
+
+        self.asset.loc[ix, "nearest_turbine_id"] = nearest_turbine.values
+        self.asset.loc[ix, "nearest_tower_id"] = nearest_tower.values
+
+    def nearest_turbine(self, id: str) -> str:
+        """Finds the nearest turbine to the provided `id`.
+
+        Args:
+            id (str): A valid `asset` `id`.
+
+        Returns:
+            str: The turbine `id` closest to the provided `id`.
+        """
+        if "nearest_turbine_id" not in self.asset.columns:
+            self.calculate_nearest_neighbor()
+        return self.asset.loc[id, "nearest_turbine_id"].values[0]
+
+    def nearest_tower(self, id: str) -> str:
+        """Finds the nearest tower to the provided `id`.
+
+        Args:
+            id (str): A valid `asset` `id`.
+
+        Returns:
+            str: The tower `id` closest to the provided `id`.
+        """
+        if "nearest_tower_id" not in self.asset.columns:
+            self.calculate_nearest_neighbor()
+        return self.asset.loc[id, "nearest_tower_id"].values[0]
 
     # Not necessary, but could provide an additional way in
     @classmethod
