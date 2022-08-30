@@ -86,7 +86,8 @@ def range_flag(
             the same length as `lower` and `col`.
 
     Returns:
-        :obj:`pandas.DataFrame(bool)`: Data frame with boolean entries.
+        :obj:`pandas.Series` | `pandas.DataFrame`: Series or DataFrame (depending on `data` type) with
+            boolean entries.
     """
     # Prepare the inputs to be standardized for use with DataFrames
     to_series, data, (upper, lower) = _convert_to_df(data, upper, lower)
@@ -123,7 +124,8 @@ def unresponsive_flag(
             element of `data`, regardless if it's a `pd.Series` or `pd.DataFrame`, by default 3.
 
     Returns:
-        :obj:`pandas.Series(bool)`: Array-like object with boolean entries.
+        :obj:`pandas.Series` | `pandas.DataFrame`: Series or DataFrame (depending on `data` type) with
+            boolean entries.
     """
     # Prepare the inputs to be standardized for use with DataFrames
     to_series, data = _convert_to_df(data)
@@ -158,11 +160,21 @@ def std_range_flag(
     ... note:: This method does not distinguish between asset IDs.
 
     Args:
-        data_col(:obj:`pandas.Series`): data to be flagged.
         threshold(:obj:`float`): multiplicative factor on standard deviation to use in flagging.
+        data (:obj:`pandas.Series` | `pandas.DataFrame`): data frame containing the column to be flagged;
+            can either be a `pandas.Series` or `pandas.DataFrame`. If a `pandas.DataFrame`, a list of
+            threshold values and columns (if checking a subset of the columns) must be provided.
+        col (:obj:`list[str]`): column(s) in `data` to be flagged, by default None. Only required when
+            the `data` is a `pandas.DataFrame` and a subset of the columns will be checked. Must be
+            the same length as `lower` and `upper`.
+        lower (:obj:`float` | `list[float]`): multiplicative factor on the standard deviation of `data`,
+            if it's a `pd.Series`, or the list of multiplicative factors on the standard deviation for
+            each column in `col`. If the same factor is applied to each column, then pass the single
+            value, otherwise, it must be the same length as `col` and `upper`.
 
     Returns:
-        :obj:`pandas.Series(bool)`: Array-like object with boolean entries.
+        :obj:`pandas.Series` | `pandas.DataFrame`: Series or DataFrame (depending on `data` type) with
+            boolean entries.
     """
     # Prepare the inputs to be standardized for use with DataFrames
     to_series, data = _convert_to_df(data)
