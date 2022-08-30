@@ -1575,12 +1575,12 @@ class PlantData:
         to_crs = f"+proj=utm +zone={utm_zone} +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
         transformer = Transformer.from_crs(reference_system.upper(), to_crs)
         lats, lons = transformer.transform(
-            self._asset[self.metadata.asset.latitude].values,
-            self._asset[self.metadata.asset.longitude].values,
+            self.asset[self.metadata.asset.latitude].values,
+            self.asset[self.metadata.asset.longitude].values,
         )
 
         # TODO: Should this get a new name that's in line with the -25 convention?
-        self._asset["geometry"] = [Point(lat, lon) for lat, lon in zip(lats, lons)]
+        self.asset["geometry"] = [Point(lat, lon) for lat, lon in zip(lats, lons)]
 
     def update_column_names(self, to_original: bool = False) -> None:
         """Renames the columns of each dataframe to the be the keys from the
