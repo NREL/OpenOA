@@ -84,6 +84,16 @@ def iter_validator(iter_type, item_types: Any | tuple[Any]) -> Callable:
     Callable
         The attr.validators.deep_iterable iterable and instance validator.
     """
+    # If None is in the item_types, then convert it to a valid isinstance() argument
+    if item_types is None:
+        item_types = type(None)
+    elif isinstance(item_types, tuple):
+        if None in item_types:
+            ix = item_types.index(None)
+            item_types = list(item_types)
+            item_types[ix] = type(None)
+            item_types = tuple(item_types)
+
     validator = attrs.validators.deep_iterable(
         member_validator=attrs.validators.instance_of(item_types),
         iterable_validator=attrs.validators.instance_of(iter_type),
@@ -1171,7 +1181,7 @@ class PlantData:
     analysis_type: list[str] | None = attr.ib(
         default=None,
         converter=convert_to_list,
-        validator=[iter_validator(list, (str, None)), analysis_type_validator],
+        validator=[iter_validator(list, (str, type(None))), analysis_type_validator],
         on_setattr=[attr.setters.convert, attr.setters.validate],
     )
     scada: pd.DataFrame | None = attr.ib(default=None, converter=load_to_pandas)
@@ -1187,7 +1197,7 @@ class PlantData:
 
     # Error catching in validation
     _errors: dict[str, list[str]] = attr.ib(
-        default={"missing": {}, "dtype": {}, "frequency": {}}, init=False
+        default={"missing": {}, "dtype": {}, "frequency": {}, "attributes": []}, init=False
     )  # No user initialization required
 
     def __attrs_post_init__(self):
