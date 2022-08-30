@@ -45,7 +45,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
             reg_temperature=True,
             reg_winddirection=True,
         )
-        df = self.analysis._aggregate.df
+        df = self.analysis._aggregate
         df_rean = self.analysis._reanalysis_aggregate
 
         # Check the pre-processing functions
@@ -298,7 +298,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
             reg_temperature=True,
             reg_winddirection=True,
         )
-        df = self.analysis._aggregate.df
+        df = self.analysis._aggregate
 
         # Check the pre-processing functions
         self.check_process_revenue_meter_energy_daily(df)
@@ -384,7 +384,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         # Check a few energy values
         expected_gwh = pd.Series([0.692400, 1.471730, 0.580035])
         actual_gwh = df.loc[
-            pd.to_datetime(["2014-06-01", "2014-12-01", "2015-10-01"]), "energy_gwh"
+            pd.to_datetime(["2014-06-01", "2014-12-01", "2015-10-01"],utc=True), "energy_gwh"
         ]
         nptest.assert_array_almost_equal(expected_gwh, actual_gwh)
 
@@ -400,7 +400,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         expected_avail_pct = pd.Series([0.040019, 0.014071, 0.000765])
         expected_curt_pct = pd.Series([0.018026, 0.000000, 0.000000])
 
-        date_ind = pd.to_datetime(["2014-06-01", "2014-12-01", "2015-10-01"])
+        date_ind = pd.to_datetime(["2014-06-01", "2014-12-01", "2015-10-01"], utc=True)
 
         nptest.assert_array_almost_equal(expected_avail_gwh, df.loc[date_ind, "availability_gwh"])
         nptest.assert_array_almost_equal(expected_curt_gwh, df.loc[date_ind, "curtailment_gwh"])
@@ -412,13 +412,13 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         expected = {
             "merra2": [5.42523278, 6.86883337, 5.02690892],
             "era5": [5.20508049, 6.71586744, 5.23824611],
-            "merra2_wd": [11.74700241, 250.90081133, 123.70142025],
-            "era5_wd": [23.4291153, 253.14150601, 121.25886916],
-            "merra2_temperature_K": [289.87128364, 275.26493716, 281.72562887],
-            "era5_temperature_K": [290.82110632, 276.62490053, 282.71629935],
+            "merra2_winddirection": [11.74700241, 250.90081133, 123.70142025],
+            "era5_winddirection": [23.4291153, 253.14150601, 121.25886916],
+            "merra2_temperature": [289.87128364, 275.26493716, 281.72562887],
+            "era5_temperature": [290.82110632, 276.62490053, 282.71629935],
         }
 
-        date_ind = pd.to_datetime(["2014-06-01", "2014-12-01", "2015-10-01"])
+        date_ind = pd.to_datetime(["2014-06-01", "2014-12-01", "2015-10-01"], utc=True)
         computed = {key: df.loc[date_ind, key].to_numpy() for key in expected.keys()}
 
         print(computed)
@@ -439,7 +439,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         # Check a few energy values
         expected_gwh = pd.Series([0.0848525, 0.0253657, 0.0668642])
         actual_gwh = df.loc[
-            pd.to_datetime(["2014-01-02", "2014-10-12", "2015-12-28"]), "energy_gwh"
+            pd.to_datetime(["2014-01-02", "2014-10-12", "2015-12-28"], utc=True), "energy_gwh"
         ]
         nptest.assert_array_almost_equal(expected_gwh, actual_gwh)
 
@@ -455,7 +455,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         expected_avail_pct = pd.Series([0.000569658, 0.000000, 0.000000])
         expected_curt_pct = pd.Series([0.000000, 0.00766034, 0.000000])
 
-        date_ind = pd.to_datetime(["2014-01-02", "2014-10-12", "2015-12-28"])
+        date_ind = pd.to_datetime(["2014-01-02", "2014-10-12", "2015-12-28"], utc=True)
 
         nptest.assert_array_almost_equal(expected_avail_gwh, df.loc[date_ind, "availability_gwh"])
         nptest.assert_array_almost_equal(expected_curt_gwh, df.loc[date_ind, "curtailment_gwh"])
@@ -467,13 +467,13 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         expected = {
             "merra2": np.array([11.02459231, 7.04306896, 8.41880152]),
             "era5": np.array([10.47942319, 7.71069617, 9.60864791]),
-            "merra2_wd": np.array([213.81683361, 129.08053181, 170.39815032]),
-            "era5_wd": np.array([212.23854097, 127.75317448, 170.33488958]),
-            "merra2_temperature_K": np.array([279.67922333, 285.69317833, 278.15574917]),
-            "era5_temperature_K": np.array([281.14880642, 285.81961816, 280.42017656]),
+            "merra2_winddirection": np.array([213.81683361, 129.08053181, 170.39815032]),
+            "era5_winddirection": np.array([212.23854097, 127.75317448, 170.33488958]),
+            "merra2_temperature": np.array([279.67922333, 285.69317833, 278.15574917]),
+            "era5_temperature": np.array([281.14880642, 285.81961816, 280.42017656]),
         }
 
-        date_ind = pd.to_datetime(["2014-01-02", "2014-10-12", "2015-12-28"])
+        date_ind = pd.to_datetime(["2014-01-02", "2014-10-12", "2015-12-28"], utc=True)
         computed = {key: df.loc[date_ind, key].to_numpy() for key in expected.keys()}
 
         print(computed)

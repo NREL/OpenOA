@@ -674,6 +674,7 @@ class PlantMetaData(FromDictMixin):
     Args:
         latitude (:obj: `float`): The wind power plant's center point latitude.
         longitude (:obj: `float`): The wind power plant's center point longitude.
+        capacity (:obj: `float`): The capacity of the plant in MW
         scada (:obj: `SCADAMetaData`): A dictionary containing the `SCADAMetaData`
             column mapping and frequency parameters. See `SCADAMetaData` for more details.
         meter (:obj: `MeterMetaData`): A dictionary containing the `MeterMetaData`
@@ -694,6 +695,7 @@ class PlantMetaData(FromDictMixin):
 
     latitude: float = attr.ib(default=0, converter=float)
     longitude: float = attr.ib(default=0, converter=float)
+    capacity: float = attr.ib(default=0, converter=float)
     scada: SCADAMetaData = attr.ib(default={}, converter=SCADAMetaData.from_dict)
     meter: MeterMetaData = attr.ib(default={}, converter=MeterMetaData.from_dict)
     tower: TowerMetaData = attr.ib(default={}, converter=TowerMetaData.from_dict)
@@ -931,7 +933,7 @@ def dtype_converter(df: pd.DataFrame, column_types={}) -> list[str]:
 
     Returns:
         None | list[str]: List of error messages that were encountered in the conversion
-            process that will be raised at another step of the data validation.
+            process that will be at another step of the data validation.
     """
     errors = []
     for column, new_type in column_types.items():
@@ -1093,7 +1095,7 @@ def rename_columns(df: pd.DataFrame, col_map: dict, reverse: bool = True) -> pd.
         Returns:
             pd.DataFrame: Input DataFrame with remapped column names.
     """
-    if reverse:
+    if not reverse:
         col_map = {v: k for k, v in col_map.items()}
     return df.rename(columns=col_map)
 
@@ -1618,12 +1620,12 @@ class PlantData:
         to_crs = f"+proj=utm +zone={utm_zone} +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
         transformer = Transformer.from_crs(reference_system.upper(), to_crs)
         lats, lons = transformer.transform(
-            self._asset[self.metadata.asset.latitude].values,
-            self._asset[self.metadata.asset.longitude].values,
+            self.asset[self.metadata.asset.latitude].values,
+            self.asset[self.metadata.asset.longitude].values,
         )
 
         # TODO: Should this get a new name that's in line with the -25 convention?
-        self._asset["geometry"] = [Point(lat, lon) for lat, lon in zip(lats, lons)]
+        self.asset["geometry"] = [Point(lat, lon) for lat, lon in zip(lats, lons)]
 
     def update_column_names(self, to_original: bool = False) -> None:
         """Renames the columns of each dataframe to the be the keys from the

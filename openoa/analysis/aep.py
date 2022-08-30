@@ -165,9 +165,9 @@ class MonteCarloAEP(object):
         # Build list of regression variables
         self._rean_vars = []
         if self.reg_temperature:
-            self._rean_vars += ["temperature_K"]
+            self._rean_vars += ["temperature"]
         if self.reg_winddirection:
-            self._rean_vars += ["u_ms", "v_ms"]
+            self._rean_vars += ["windspeed_u", "windspeed_v"]
 
         # Check that selected regression model is allowed
         if reg_model not in ["lin", "gbm", "etr", "gam"]:
@@ -596,7 +596,7 @@ class MonteCarloAEP(object):
             # Get actual number of days per month in the raw data
             # (used when trimming beginning and end of monthly data frame)
             # If meter data has higher resolution than monthly
-            if (self._plant._meter_freq == "1MS") | (self._plant._meter_freq == "1M"):
+            if (self._plant.metadata.meter.frequency == "1MS") | (self._plant.metadata.meter.frequency == "1M"):
                 self._aggregate["num_days_actual"] = self._aggregate["num_days_expected"]
             else:
                 self._aggregate["num_days_actual"] = df.resample("MS")["energy"].apply(
@@ -621,7 +621,10 @@ class MonteCarloAEP(object):
         )  # Get sum of avail and curt losses in GWh
 
         curt_aggregate.rename(
-            columns={"availability": "availability_gwh", "curtailment": "curtailment_gwh"},
+            columns={
+                    "availability": "availability_gwh",
+                    "curtailment": "curtailment_gwh"
+                },
             inplace=True,
         )
         # Merge with revenue meter monthly/daily data
@@ -757,6 +760,7 @@ class MonteCarloAEP(object):
         # Now loop through the different reanalysis products, density-correct wind speeds, and take monthly averages
         for key in self._reanal_products:
             rean_df = self._plant.reanalysis[key]
+            #rean_df = rean_df.rename(self._plant.metadata[key].col_map)
             rean_df["ws_dens_corr"] = mt.air_density_adjusted_wind_speed(
                 rean_df["windspeed"], rean_df["density"]
             )  # Density correct wind speeds
@@ -771,12 +775,12 @@ class MonteCarloAEP(object):
                 )
 
             if self.reg_winddirection:  # if wind direction is considered as regression variable
-                self._reanalysis_aggregate[key + "_wd"] = np.rad2deg(
+                self._reanalysis_aggregate[key + "_winddirection"] = np.rad2deg(
                     np.pi
                     - (
                         np.arctan2(
-                            -self._reanalysis_aggregate[key + "_u_ms"],
-                            self._reanalysis_aggregate[key + "_v_ms"],
+                            -self._reanalysis_aggregate[key + "_windspeed_u"],
+                            self._reanalysis_aggregate[key + "_windspeed_v"],
                         )
                     )
                 )  # Calculate wind direction
@@ -912,7 +916,7 @@ class MonteCarloAEP(object):
         ]
 
         # Set maximum range for using bin-filter, convert from MW to GWh
-        plant_capac = self._plant.rated_power / 1000.0 * self._hours_in_res
+        plant_capac = self._plant.metadata.capacity / 1000.0 * self._hours_in_res
 
         # Apply range filter to wind speed
         df_sub = df_sub.assign(flag_range=filters.range_flag(df_sub[reanal], below=0, above=40))
@@ -920,8 +924,8 @@ class MonteCarloAEP(object):
             # Apply range filter to temperatre
             df_sub = df_sub.assign(
                 flag_range_T=filters.range_flag(
-                    df_sub[reanal + "_temperature_K"], below=200, above=320
-                )
+                    df_sub[reanal + "_temperature"], below=200, above=320
+                ) # Temperature is in Kelvin
             )
         # Apply window range filter
         df_sub.loc[:, "flag_window"] = filters.window_range_flag(
@@ -986,13 +990,13 @@ class MonteCarloAEP(object):
         if self.reg_winddirection:
             valid_data_to_add = df_sub.loc[
                 ~df_sub.loc[:, "flag_final"],
-                [reanal + "_wd", reanal + "_u_ms", reanal + "_v_ms"],
+                [reanal + "_winddirection", reanal + "_windspeed_u", reanal + "_windspeed_v"],
             ]
             valid_data = pd.concat([valid_data, valid_data_to_add], axis=1)
 
         if self.reg_temperature:
             valid_data_to_add = df_sub.loc[
-                ~df_sub.loc[:, "flag_final"], [reanal + "_temperature_K"]
+                ~df_sub.loc[:, "flag_final"], [reanal + "_temperature"]
             ]
             valid_data = pd.concat([valid_data, valid_data_to_add], axis=1)
 
@@ -1058,13 +1062,13 @@ class MonteCarloAEP(object):
 
         if self.reg_temperature:  # if temperature is considered as regression variable
             mc_temperature = reg_data[
-                self._run.reanalysis_product + "_temperature_K"
+                self._run.reanalysis_product + "_temperature"
             ]  # Copy temperature data to Monte Carlo data frame
             reg_inputs = pd.concat([reg_inputs, mc_temperature], axis=1)
 
         if self.reg_winddirection:  # if wind direction is considered as regression variable
             mc_wind_direction = reg_data[
-                self._run.reanalysis_product + "_wd"
+                self._run.reanalysis_product + "_winddirection"
             ]  # Copy wind direction data to Monte Carlo data frame
             reg_inputs = pd.concat([reg_inputs, np.sin(np.deg2rad(mc_wind_direction))], axis=1)
             reg_inputs = pd.concat([reg_inputs, np.cos(np.deg2rad(mc_wind_direction))], axis=1)
@@ -1185,14 +1189,14 @@ class MonteCarloAEP(object):
             reg_inputs_por = [self._reanalysis_por[self._run.reanalysis_product]]
             if self.reg_temperature:
                 reg_inputs_por += [
-                    self._reanalysis_por[self._run.reanalysis_product + "_temperature_K"]
+                    self._reanalysis_por[self._run.reanalysis_product + "_temperature"]
                 ]
             if self.reg_winddirection:
                 reg_inputs_por += [
-                    np.sin(np.deg2rad(self._reanalysis_por[self._run.reanalysis_product + "_wd"]))
+                    np.sin(np.deg2rad(self._reanalysis_por[self._run.reanalysis_product + "_winddirection"]))
                 ]
                 reg_inputs_por += [
-                    np.cos(np.deg2rad(self._reanalysis_por[self._run.reanalysis_product + "_wd"]))
+                    np.cos(np.deg2rad(self._reanalysis_por[self._run.reanalysis_product + "_winddirection"]))
                 ]
             gross_por = fitted_model.predict(np.array(pd.concat(reg_inputs_por, axis=1)))
 
@@ -1298,7 +1302,7 @@ class MonteCarloAEP(object):
             long_term_reg_inputs = pd.concat(
                 [
                     long_term_reg_inputs,
-                    long_term_temp[self._run.reanalysis_product + "_temperature_K"],
+                    long_term_temp[self._run.reanalysis_product + "_temperature"],
                 ],
                 axis=1,
             )
@@ -1306,8 +1310,8 @@ class MonteCarloAEP(object):
             wd_aggregate = np.rad2deg(
                 np.pi
                 - np.arctan2(
-                    -long_term_temp[self._run.reanalysis_product + "_u_ms"],
-                    long_term_temp[self._run.reanalysis_product + "_v_ms"],
+                    -long_term_temp[self._run.reanalysis_product + "_windspeed_u"],
+                    long_term_temp[self._run.reanalysis_product + "_windspeed_v"],
                 )
             )  # Calculate wind direction
             long_term_reg_inputs = pd.concat(
