@@ -355,7 +355,7 @@ class MonteCarloAEP(object):
             else:  # Daily/hourly case: apply bin filter for outliers detection
                 x = valid_aggregate[col_name]
                 y = valid_aggregate["gross_energy_gwh"]
-                plant_capac = self._plant.rated_power / 1000.0 * self._hours_in_res
+                plant_capac = self._plant.metadata.capacity / 1000.0 * self._hours_in_res
 
                 # Apply bin filter
                 flag = filters.bin_filter(

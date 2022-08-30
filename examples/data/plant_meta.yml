@@ -14,6 +14,7 @@ curtail:
   time: time
 latitude: 48.4497
 longitude: 5.5896
+capacity: 8.2
 meter:
   energy: net_energy_kwh
   time: time
