@@ -86,23 +86,26 @@ class TestPlantData(unittest.TestCase):
         self.plant.analysis_type = "MonteCarloAEP"
         self.plant.validate()
 
-        assert_array_equal(
-            self.plant.scada.columns.values, self.plant.metadata.scada.col_map.keys()
+        # Get the OpenOA standardized column names where the default isn't used
+        scada_original = set((v for k, v in self.plant.metadata.scada.col_map.items() if k != v))
+        assert len(scada_original.intersection(self.plant.scada.columns)) == 0
+
+        meter_original = set((v for k, v in self.plant.metadata.meter.col_map.items() if k != v))
+        assert len(meter_original.intersection(self.plant.meter.columns)) == 0
+
+        asset_original = set((v for k, v in self.plant.metadata.asset.col_map.items() if k != v))
+        assert len(asset_original.intersection(self.plant.asset.columns)) == 0
+
+        curtail_original = set(
+            (v for k, v in self.plant.metadata.curtail.col_map.items() if k != v)
         )
-        assert_array_equal(
-            self.plant.meter.columns.values, self.plant.metadata.meter.col_map.keys()
-        )
-        assert_array_equal(
-            self.plant.asset.columns.values, self.plant.metadata.asset.col_map.keys()
-        )
-        assert_array_equal(
-            self.plant.curtail.columns.values, self.plant.metadata.curtail.col_map.keys()
-        )
+        assert len(curtail_original.intersection(self.plant.curtail.columns)) == 0
+
         for name in self.plant.reanalysis:
-            assert_array_equal(
-                self.plant.reanalysis[name].columns.values,
-                self.plant.metadata.reanalysis[name].col_map.keys(),
+            re_original = set(
+                (v for k, v in self.plant.metadata.reanalysis[name].col_map.items() if k != v)
             )
+            assert len(re_original.intersection(self.plant.reanalysis[name].columns)) == 0
 
     def test_toCSV(self):
         """
