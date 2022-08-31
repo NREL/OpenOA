@@ -20,7 +20,8 @@ def correlation_matrix_by_id_column(df: pd.DataFrame, value_col: str) -> pd.Data
     Returns:
         :obj:`pandas.DataFrame`: Correlation matrix with <id_col> as index and column names
     """
-    corr_df = df.loc[:, [value_col]].unstack().corr(min_periods=2).droplevel(0).droplevel(0, axis=1)
+    corr_df = df.loc[:, [value_col]].unstack().corr(min_periods=2)
+    corr_df = corr_df.droplevel(0).droplevel(0, axis=1)  # drop the added axes
     corr_df.index = corr_df.index.set_names(None)
     corr_df.columns = corr_df.index.set_names(None)
     np.fill_diagonal(corr_df.values, np.nan)
