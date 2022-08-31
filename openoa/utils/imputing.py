@@ -7,12 +7,12 @@ import pandas as pd
 from tqdm import tqdm
 
 
-def asset_correlation_matrix(df: pd.DataFrame, value_col: str) -> pd.DataFrame:
+def asset_correlation_matrix(data: pd.DataFrame, value_col: str) -> pd.DataFrame:
     """Create a correlation matrix on a MultiIndex `DataFrame` with time (or a different
     alignment value) and ID values as its indices, respectively.
 
     Args:
-        df(:obj:`pandas.DataFrame`): input data frame such as `Plant.scada` that uses a
+        data(:obj:`pandas.DataFrame`): input data frame such as `Plant.scada` that uses a
             MultiIndex with a timestamp and ID column for indices, in that order.
         value_col(:obj:`str`): the column containing the data values to be used when
             assessing correlation
@@ -20,7 +20,7 @@ def asset_correlation_matrix(df: pd.DataFrame, value_col: str) -> pd.DataFrame:
     Returns:
         :obj:`pandas.DataFrame`: Correlation matrix with <id_col> as index and column names
     """
-    corr_df = df.loc[:, [value_col]].unstack().corr(min_periods=2)
+    corr_df = data.loc[:, [value_col]].unstack().corr(min_periods=2)
     corr_df = corr_df.droplevel(0).droplevel(0, axis=1)  # drop the added axes
     corr_df.index = corr_df.index.set_names(None)
     corr_df.columns = corr_df.index.set_names(None)
