@@ -7,7 +7,7 @@ import pandas as pd
 from tqdm import tqdm
 
 
-def correlation_matrix_by_id_column(df: pd.DataFrame, value_col: str) -> pd.DataFrame:
+def asset_correlation_matrix(df: pd.DataFrame, value_col: str) -> pd.DataFrame:
     """Create a correlation matrix on a MultiIndex `DataFrame` with time (or a different
     alignment value) and ID values as its indices, respectively.
 
@@ -126,7 +126,7 @@ def impute_all_assets_by_correlation(
 
     """
     # Create correlation matrix between different assets
-    corr_df = correlation_matrix_by_id_column(data, align_col, id_col, input_col)
+    corr_df = asset_correlation_matrix(data, align_col, id_col, input_col)
 
     # For efficiency, sort <data> by <id_col> into different dictionary entries immediately
     assets = corr_df.columns

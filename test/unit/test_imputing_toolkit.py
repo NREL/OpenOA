@@ -218,15 +218,15 @@ class SimpleFilters(unittest.TestCase):
             index=np.arange(14),
         )
 
-    def test_correlation_matrix_by_id_column(self):
+    def test_asset_correlation_matrix(self):
         # Test 1, make sure a simple correlation of two assets works
-        y = imputing.correlation_matrix_by_id_column(self.test_df, "data")
+        y = imputing.asset_correlation_matrix(self.test_df, "data")
         nptest.assert_array_almost_equal(
             y, np.array([[np.nan, 0.970166], [0.970166, np.nan]]), decimal=4
         )
 
         # Test 2, if no overlapping data are present, make sure correlation matrix is all NaN
-        y2 = imputing.correlation_matrix_by_id_column(self.test9_df, "data")
+        y2 = imputing.asset_correlation_matrix(self.test9_df, "data")
         nptest.assert_array_equal(y2, np.array([[np.nan, np.nan], [np.nan, np.nan]]))
 
     def test_impute_data(self):
