@@ -7,43 +7,23 @@ import pandas as pd
 from tqdm import tqdm
 
 
-def correlation_matrix_by_id_column(df, align_col, id_col, value_col):
-    """Create a correlation matrix between different assets in a data frame
+def correlation_matrix_by_id_column(df: pd.DataFrame, value_col: str) -> pd.DataFrame:
+    """Create a correlation matrix on a MultiIndex `DataFrame` with time (or a different
+    alignment value) and ID values as its indices, respectively.
 
     Args:
-        df(:obj:`pandas.DataFrame`): input data frame
-        align_col(:obj:`str`): name of column in <df> on which different assets are to be aligned
-        id_col(:obj:`str`): the column distinguishing the different assets
-        value_col(:obj:`str`): the column containing the data values to be used when assessing correlation
+        df(:obj:`pandas.DataFrame`): input data frame such as `Plant.scada` that uses a
+            MultiIndex with a timestamp and ID column for indices, in that order.
+        value_col(:obj:`str`): the column containing the data values to be used when
+            assessing correlation
 
     Returns:
         :obj:`pandas.DataFrame`: Correlation matrix with <id_col> as index and column names
     """
-    assets = df[id_col].unique()  # List different assets in <id_col>
-    corr_df = pd.DataFrame(
-        index=assets, columns=assets, dtype=float, data=np.nan
-    )  # Define correlation matrix that is set to NaN by default
-
-    for t in assets:  # Loop through assets
-        assets = assets[assets != t]  # Remove the reference asset so we don't loop over it again
-        for s in assets:  # Loop through remaining assets
-            x_df = df.loc[df[id_col] == t, [align_col, value_col]]  # Asset 't'
-            y_df = df.loc[df[id_col] == s, [align_col, value_col]]  # Asset 's'
-
-            merged_df = x_df.merge(
-                y_df, on=align_col
-            ).dropna()  # Merge the two on <align_col>, drop any rows with NaN
-
-            # If merged data frame is empty or has only 1 entry, assign NaN correlation
-            if (merged_df.empty) | (merged_df.shape[0] < 2):
-                corr_df.loc[t, s] = np.nan
-            else:  # Now assign correlations
-                corr_df.loc[t, s] = np.corrcoef(
-                    merged_df[value_col + "_x"], merged_df[value_col + "_y"]
-                )[0, 1]
-
-            corr_df.loc[s, t] = corr_df.loc[t, s]  # entry (t,s) is the same as (s,t)
-
+    corr_df = df.loc[:, [value_col]].unstack().corr(min_periods=2).droplevel(0).droplevel(0, axis=1)
+    corr_df.index = corr_df.index.set_names(None)
+    corr_df.columns = corr_df.index.set_names(None)
+    np.fill_diagonal(corr_df.values, np.nan)
     return corr_df
 
 

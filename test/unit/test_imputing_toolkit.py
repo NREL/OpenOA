@@ -3,6 +3,7 @@ import unittest
 import numpy as np
 import pandas as pd
 from numpy import testing as nptest
+
 from openoa.utils import imputing
 
 
@@ -16,7 +17,7 @@ class SimpleFilters(unittest.TestCase):
                 "id": ["a", "a", "a", "a", "a", "b", "b", "b", "b", "b"],
             },
             index=np.arange(10),
-        )
+        ).set_index(["time", "id"])
 
         # Test dataframe #2: two assets, first asset as 2 NaN entries, 2nd asset as one NaN entry overlapping with
         # first asset
@@ -69,7 +70,7 @@ class SimpleFilters(unittest.TestCase):
                 "id": ["a", "a", "a", "a", "a", "b", "b", "b", "b", "b"],
             },
             index=["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"],
-        )
+        ).set_index(["time", "id"])
 
         # Data frame of 3 assets with overlapping NaN occurrences and highly correlated data
         # Asset 'b' in particular shouldn't be able to get imputed
@@ -219,13 +220,13 @@ class SimpleFilters(unittest.TestCase):
 
     def test_correlation_matrix_by_id_column(self):
         # Test 1, make sure a simple correlation of two assets works
-        y = imputing.correlation_matrix_by_id_column(self.test_df, "time", "id", "data")
+        y = imputing.correlation_matrix_by_id_column(self.test_df, "data")
         nptest.assert_array_almost_equal(
             y, np.array([[np.nan, 0.970166], [0.970166, np.nan]]), decimal=4
         )
 
         # Test 2, if no overlapping data are present, make sure correlation matrix is all NaN
-        y2 = imputing.correlation_matrix_by_id_column(self.test9_df, "time", "id", "data")
+        y2 = imputing.correlation_matrix_by_id_column(self.test9_df, "data")
         nptest.assert_array_equal(y2, np.array([[np.nan, np.nan], [np.nan, np.nan]]))
 
     def test_impute_data(self):
