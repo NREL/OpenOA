@@ -5,6 +5,7 @@ This module provides methods for filling in null data with interpolated (imputed
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+from numpy.polynomial import Polynomial
 
 
 def asset_correlation_matrix(data: pd.DataFrame, value_col: str) -> pd.DataFrame:
@@ -29,8 +30,15 @@ def asset_correlation_matrix(data: pd.DataFrame, value_col: str) -> pd.DataFrame
 
 
 def impute_data(
-    target_data, target_value_col, ref_data, ref_value_col, align_col, method="linear"
-):  # ADD LINEAR FUNCTIONALITY AS DEFAULT, expection otherwise
+    target_col: str,
+    reference_col: str,
+    data: pd.DataFrame = None,
+    target_data: pd.DataFrame = None,
+    ref_data: pd.DataFrame = None,
+    align_col: str = None,
+    method: str = "linear",
+    degree: int = 1,
+) -> pd.Series:  # ADD LINEAR FUNCTIONALITY AS DEFAULT, expection otherwise
     """Replaces NaN data in a target Pandas series with imputed data from a reference Panda series based on a linear
     regression relationship.
 
@@ -43,60 +51,72 @@ def impute_data(
 
     Args:
         target_data(:obj:`pandas.DataFrame`): the data frame containing NaN data to be imputed
-        target_value_col(:obj:`str`): the name of the column in <target_data> to be imputed
+        target_col(:obj:`str`): the name of the column in <target_data> to be imputed
         ref_data(:obj:`pandas.DataFrame`): the data frame containg data to be used in imputation
-        ref_value_col(:obj:`str`): the name of the column in <target_data> to be used in imputation
+        reference_col(:obj:`str`): the name of the column in <target_data> to be used in imputation
         align_col(:obj:`str`): the name of the column in <data> on which different assets are to be merged
 
     Returns:
         :obj:`pandas.Series`: Copy of target_data_col series with NaN occurrences imputed where possible.
     """
-    # Merge the input and reference data frames, keeping the input data indices
-    merge_df = pd.merge(
-        target_data[[target_value_col, align_col]],
-        ref_data[[ref_value_col, align_col]],
-        on=align_col,
-        how="left",
-    )
-    merge_df.index = target_data.index
+    if data is None:
+        if any((not isinstance(x, pd.DataFrame) for x in (target_data, ref_data))):
+            raise TypeError(
+                "If `data` is not provided, then `ref_data` and `target_data` must be provided as pandas DataFrames."
+            )
+        if target_col not in target_data:
+            raise ValueError("The input `target_col` is not a column of `target_data`.")
+        if reference_col not in target_data:
+            raise ValueError("The input `reference_col` is not a column of `ref_data`.")
+        if align_col not in target_data or align_col not in ref_data:
+            raise ValueError(
+                "The input `align_col` is not a column of one of `ref_data` or `target_data`."
+            )
+
+        # Unify the data, if the target and reference data are provided separately
+        data = pd.merge(
+            target_data[[target_col]], ref_data[[reference_col]], on=align_col, how="left"
+        )
+
+    if target_col not in data:
+        raise ValueError("The input `target_col` is not a column of `data`.")
+    if reference_col not in data:
+        raise ValueError("The input `reference_col` is not a column of `data`.")
 
     # If the input and reference series are names the same, adjust their names to match the
     # result from merging
-    if target_value_col == ref_value_col:  # same data field used for imputing
-        target_value_col = target_value_col + "_x"  # Match the merged column name
-        ref_value_col = ref_value_col + "_y"  # Match the merged column name
+    if target_col == reference_col:  # same data field used for imputing
+        target_col = target_col + "_x"  # Match the merged column name
+        reference_col = reference_col + "_y"  # Match the merged column name
 
-    # First establish a linear regression relationship for overlapping data
-    reg_df = merge_df.dropna()  # Drop NA values so regression works
+    data = data.loc[:, [reference_col, target_col]]
+    data_reg = data.dropna()
+    if data_reg.empty:
+        raise ValueError("Not enough data to create a curve fit.")
 
-    # Make sure there is data to perform regression
-    if reg_df.empty:
-        raise Exception("No valid data to build regression relationship")
-
+    # Ensure old method call will work here
     if method == "linear":
-        reg = np.polyfit(
-            reg_df[ref_value_col], reg_df[target_value_col], 1
-        )  # Linear regression relationship
-        slope = reg[0]  # Slope
-        intercept = reg[1]  # Intercept
+        method = "polynomial"
+        degree = 1
+    if method == "polynomial":
+        curve_fit = Polynomial.fit(data_reg[reference_col], data_reg[target_col], degree)
     else:
-        raise Exception("Only linear regression is currently supported.")
+        raise NotImplementedError(
+            "Only 'linear' (1-degree polynomial) and 'polynomial' fits are implemented at this time."
+        )
 
-    # Find timestamps for which input data is NaN and imputing data is real
-    impute_df = merge_df.loc[
-        (merge_df[target_value_col].isnull()) & np.isfinite(merge_df[ref_value_col])
+    imputed = data.loc[
+        (data[target_col].isnull() & np.isfinite(data[reference_col])), [reference_col]
     ]
-    imputed_data = slope * impute_df[ref_value_col] + intercept
-
-    # Apply imputation at those timestamps
-    merge_df.loc[impute_df.index, target_value_col] = imputed_data
-
-    # Return target data result after imputation
-    return merge_df[target_value_col]
+    return curve_fit(imputed[reference_col])
 
 
 def impute_all_assets_by_correlation(
-    data, input_col, ref_col, align_col, id_col, r2_threshold=0.7, method="linear"
+    data: pd.DataFrame,
+    impute_col: str,
+    ref_col: str,
+    r2_threshold: float = 0.7,
+    method: str = "linear",
 ):
     """Imputes NaN data in a Pandas data frame to the best extent possible by considering available data
     across different assets in the data frame. Highest correlated assets are prioritized in the imputation process.
@@ -113,20 +133,20 @@ def impute_all_assets_by_correlation(
         c. The neighboring asset does not meet the specified correlation threshold, <r2_threshold>
 
     Args:
-        data(:obj:`pandas.DataFrame`): the data frame subject to imputation
-        input_col(:obj:`str`): the name of the column in <data> to be imputed
-        ref_col(:obj:`str`): the name of the column in <data> to be used in imputation
-        align_col(:obj:`str`): the name of the column in <data> on which different assets are to be merged
-        id_col(:obj:`str`): the name of the column in <data> distinguishing different assets
+        data(:obj:`pandas.DataFrame`): input data frame such as `Plant.scada` that uses a
+            MultiIndex with a timestamp and ID column for indices, in that order.
+        impute_col(:obj:`str`): the name of the column in <data> to be imputed.
+        ref_col(:obj:`str`): the name of the column in <data> to be used in imputation.
         r2_threshold(:obj:`float`): the correlation threshold for a neighboring assets to be considered valid
-                                   for use in imputation
+            for use in imputation.
+        method(:obj:`str`): The imputation method.
 
     Returns:
         :obj:`pandas.Series`: The imputation results
 
     """
     # Create correlation matrix between different assets
-    corr_df = asset_correlation_matrix(data, align_col, id_col, input_col)
+    corr_df = asset_correlation_matrix(data, impute_col)
 
     # For efficiency, sort <data> by <id_col> into different dictionary entries immediately
     assets = corr_df.columns
@@ -134,9 +154,9 @@ def impute_all_assets_by_correlation(
     for a in assets:
         asset_dict[a] = data.loc[data[id_col] == a]
 
-        # Create imputation series in <data> to be filled, which by default is equal to the original data series
-    ret = data[[input_col]]
-    ret = ret.rename(columns={input_col: "imputed_" + input_col})
+    # Create imputation series in <data> to be filled, which by default is equal to the original data series
+    ret = data[[impute_col]]
+    ret = ret.rename(columns={impute_col: "imputed_" + impute_col})
 
     # Loop through assets and impute missing data where possible
     for target_id, target_data in tqdm(
@@ -147,7 +167,7 @@ def impute_all_assets_by_correlation(
         corr_list = corr_df[target_id].sort_values(ascending=False)
 
         # Define some parameters we'll need as we loop through different assets to be used in imputaiton
-        num_nan = target_data.loc[target_data[input_col].isnull()].shape[
+        num_nan = target_data.loc[target_data[impute_col].isnull()].shape[
             0
         ]  # Number of NaN data in target asset
         num_neighbors = (
@@ -164,18 +184,18 @@ def impute_all_assets_by_correlation(
             # Consider highest correlated neighbor remaining and impute target data using that neighbor
             neighbor_data = asset_dict[id_neighbor]
             imputed_data = impute_data(
-                target_data, input_col, neighbor_data, ref_col, align_col, method
+                target_data, impute_col, neighbor_data, ref_col, align_col, method
             )
 
             # Find indices that were imputed (i.e. NaN in <data>, finite in <imputed_data>)
             imputed_bool = ret.loc[
-                imputed_data.index, "imputed_" + input_col
+                imputed_data.index, "imputed_" + impute_col
             ].isnull() & np.isfinite(imputed_data)
             imputed_ind = imputed_bool[imputed_bool].index
 
             # Assign imputed values for those indices to the input data column
             if len(imputed_ind) > 0:  # There is imputed data to update
-                ret.loc[imputed_ind, "imputed_" + input_col] = imputed_data
+                ret.loc[imputed_ind, "imputed_" + impute_col] = imputed_data
 
             # Update conditional parameters
             num_neighbors = num_neighbors - 1  # One less neighbor
@@ -185,6 +205,6 @@ def impute_all_assets_by_correlation(
             id_neighbor = corr_list.index[
                 len(corr_list) - num_neighbors - 1
             ]  # Name of next highest correlated neighbor
-            num_nan = ret.loc[imputed_data.index, "imputed_" + input_col].isnull().shape[0]
+            num_nan = ret.loc[imputed_data.index, "imputed_" + impute_col].isnull().shape[0]
 
-    return ret["imputed_" + input_col]
+    return ret["imputed_" + impute_col]
