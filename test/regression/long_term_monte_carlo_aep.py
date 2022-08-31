@@ -30,7 +30,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         self.project_rean = project_ENGIE.prepare(example_data_path_str)
 
         self.project_rean.reanalysis["merra2"] = self.project_rean.reanalysis["merra2"].loc[:'2019-04-15 12:30']
-        self.project_rean.reanalysis["era5"] = self.project_rean.reanalysis["era5"].loc[:'1999-01-15 12:00']
+        self.project_rean.reanalysis["era5"] = self.project_rean.reanalysis["era5"].loc['1999-01-15 12:00':]
 
     def test_monthly_inputs(self):
         """
@@ -384,7 +384,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         # Check a few energy values
         expected_gwh = pd.Series([0.692400, 1.471730, 0.580035])
         actual_gwh = df.loc[
-            pd.to_datetime(["2014-06-01", "2014-12-01", "2015-10-01"],utc=True), "energy_gwh"
+            pd.to_datetime(["2014-06-01", "2014-12-01", "2015-10-01"]), "energy_gwh"
         ]
         nptest.assert_array_almost_equal(expected_gwh, actual_gwh)
 
@@ -400,7 +400,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         expected_avail_pct = pd.Series([0.040019, 0.014071, 0.000765])
         expected_curt_pct = pd.Series([0.018026, 0.000000, 0.000000])
 
-        date_ind = pd.to_datetime(["2014-06-01", "2014-12-01", "2015-10-01"], utc=True)
+        date_ind = pd.to_datetime(["2014-06-01", "2014-12-01", "2015-10-01"])
 
         nptest.assert_array_almost_equal(expected_avail_gwh, df.loc[date_ind, "availability_gwh"])
         nptest.assert_array_almost_equal(expected_curt_gwh, df.loc[date_ind, "curtailment_gwh"])
@@ -418,7 +418,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
             "era5_temperature": [290.82110632, 276.62490053, 282.71629935],
         }
 
-        date_ind = pd.to_datetime(["2014-06-01", "2014-12-01", "2015-10-01"], utc=True)
+        date_ind = pd.to_datetime(["2014-06-01", "2014-12-01", "2015-10-01"])
         computed = {key: df.loc[date_ind, key].to_numpy() for key in expected.keys()}
 
         print(computed)
@@ -439,7 +439,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         # Check a few energy values
         expected_gwh = pd.Series([0.0848525, 0.0253657, 0.0668642])
         actual_gwh = df.loc[
-            pd.to_datetime(["2014-01-02", "2014-10-12", "2015-12-28"], utc=True), "energy_gwh"
+            pd.to_datetime(["2014-01-02", "2014-10-12", "2015-12-28"]), "energy_gwh"
         ]
         nptest.assert_array_almost_equal(expected_gwh, actual_gwh)
 
@@ -455,7 +455,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         expected_avail_pct = pd.Series([0.000569658, 0.000000, 0.000000])
         expected_curt_pct = pd.Series([0.000000, 0.00766034, 0.000000])
 
-        date_ind = pd.to_datetime(["2014-01-02", "2014-10-12", "2015-12-28"], utc=True)
+        date_ind = pd.to_datetime(["2014-01-02", "2014-10-12", "2015-12-28"])
 
         nptest.assert_array_almost_equal(expected_avail_gwh, df.loc[date_ind, "availability_gwh"])
         nptest.assert_array_almost_equal(expected_curt_gwh, df.loc[date_ind, "curtailment_gwh"])
@@ -473,7 +473,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
             "era5_temperature": np.array([281.14880642, 285.81961816, 280.42017656]),
         }
 
-        date_ind = pd.to_datetime(["2014-01-02", "2014-10-12", "2015-12-28"], utc=True)
+        date_ind = pd.to_datetime(["2014-01-02", "2014-10-12", "2015-12-28"])
         computed = {key: df.loc[date_ind, key].to_numpy() for key in expected.keys()}
 
         print(computed)

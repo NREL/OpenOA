@@ -82,8 +82,8 @@ class MonteCarloAEP(object):
         reanal_products: list[str] = ["merra2", "ncep2", "erai", "era5"],
         uncertainty_meter: float = 0.005,
         uncertainty_losses: float = 0.05,
-        uncertainty_windiness: tuple[int] = (10, 20),
-        uncertainty_loss_max: tuple[int] = (10, 20),
+        uncertainty_windiness: tuple[int, int] = (10, 20),
+        uncertainty_loss_max: tuple[int, int] = (10, 20),
         outlier_detection: bool = False,
         uncertainty_outlier: tuple[float] = (1, 3),
         uncertainty_nan_energy: float = 0.01,
@@ -737,7 +737,7 @@ class MonteCarloAEP(object):
 
         # Define empty data frame that spans our period of interest
         self._reanalysis_aggregate = pd.DataFrame(
-            index=pd.date_range(start=start_date, end=end_date, freq=self._resample_freq, tz="UTC"),
+            index=pd.date_range(start=start_date, end=end_date, freq=self._resample_freq),# tz="UTC"),
             dtype=float,
         )
 
@@ -786,7 +786,7 @@ class MonteCarloAEP(object):
                 )  # Calculate wind direction
         
         ## TODO JP: Had to localize the timezone after V3 update. Is there a better way to do this?
-        self._aggregate.index = self._aggregate.index.tz_localize("UTC")
+        #self._aggregate.index = self._aggregate.index.tz_localize("UTC")
         self._aggregate = self._aggregate.join(
             self._reanalysis_aggregate
         )  # Merge monthly reanalysis data to monthly energy data frame

@@ -171,7 +171,7 @@ def prepare(path="data/la_haute_borne", return_value="plantdata"):
     reanalysis_merra2_df = pd.read_csv(f"{path}/merra2_la_haute_borne.csv")
 
     # Create datetime field with a UTC base
-    reanalysis_merra2_df["datetime"] = pd.to_datetime(reanalysis_merra2_df["datetime"], utc=True)
+    reanalysis_merra2_df["datetime"] = pd.to_datetime(reanalysis_merra2_df["datetime"], utc=True).dt.tz_localize(None)
 
     # calculate wind direction from u, v
     reanalysis_merra2_df["winddirection_deg"] = met.compute_wind_direction(
@@ -189,7 +189,7 @@ def prepare(path="data/la_haute_borne", return_value="plantdata"):
     reanalysis_era5_df = reanalysis_era5_df.loc[:, ~reanalysis_era5_df.columns.duplicated()].copy()
 
     # Create datetime field with a UTC base
-    reanalysis_era5_df["datetime"] = pd.to_datetime(reanalysis_era5_df["datetime"], utc=True)
+    reanalysis_era5_df["datetime"] = pd.to_datetime(reanalysis_era5_df["datetime"], utc=True).dt.tz_localize(None)
 
     # Fill the 2 missing time stamps with NaN values
     reanalysis_era5_df = reanalysis_era5_df.set_index(pd.DatetimeIndex(reanalysis_era5_df.datetime))
