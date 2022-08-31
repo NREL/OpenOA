@@ -2,6 +2,8 @@
 This module provides methods for filling in null data with interpolated (imputed) values.
 """
 
+from hashlib import algorithms_available
+
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
@@ -34,7 +36,7 @@ def impute_data(
     reference_col: str,
     data: pd.DataFrame = None,
     target_data: pd.DataFrame = None,
-    ref_data: pd.DataFrame = None,
+    reference_data: pd.DataFrame = None,
     align_col: str = None,
     method: str = "linear",
     degree: int = 1,
@@ -60,7 +62,7 @@ def impute_data(
         :obj:`pandas.Series`: Copy of target_data_col series with NaN occurrences imputed where possible.
     """
     if data is None:
-        if any((not isinstance(x, pd.DataFrame) for x in (target_data, ref_data))):
+        if any((not isinstance(x, pd.DataFrame) for x in (target_data, reference_data))):
             raise TypeError(
                 "If `data` is not provided, then `ref_data` and `target_data` must be provided as pandas DataFrames."
             )
@@ -68,26 +70,28 @@ def impute_data(
             raise ValueError("The input `target_col` is not a column of `target_data`.")
         if reference_col not in target_data:
             raise ValueError("The input `reference_col` is not a column of `ref_data`.")
-        if align_col not in target_data or align_col not in ref_data:
+        if align_col not in target_data and align_col not in target_data.index.names:
             raise ValueError(
-                "The input `align_col` is not a column of one of `ref_data` or `target_data`."
+                "The input `align_col` is not a column or index of one of `target_data`."
+            )
+        if align_col not in reference_data and align_col not in reference_data.index.names:
+            raise ValueError(
+                "The input `align_col` is not a column or index of one of `reference_data`."
             )
 
         # Unify the data, if the target and reference data are provided separately
-        data = pd.merge(
-            target_data[[target_col]], ref_data[[reference_col]], on=align_col, how="left"
-        )
+        data = target_data.merge(reference_data, on=align_col, how="left")
+
+        # If the input and reference series are names the same, adjust their names to match the
+        # result from merging
+        if target_col == reference_col:  # same data field used for imputing
+            target_col = target_col + "_x"  # Match the merged column name
+            reference_col = reference_col + "_y"  # Match the merged column name
 
     if target_col not in data:
         raise ValueError("The input `target_col` is not a column of `data`.")
     if reference_col not in data:
         raise ValueError("The input `reference_col` is not a column of `data`.")
-
-    # If the input and reference series are names the same, adjust their names to match the
-    # result from merging
-    if target_col == reference_col:  # same data field used for imputing
-        target_col = target_col + "_x"  # Match the merged column name
-        reference_col = reference_col + "_y"  # Match the merged column name
 
     data = data.loc[:, [reference_col, target_col]]
     data_reg = data.dropna()
