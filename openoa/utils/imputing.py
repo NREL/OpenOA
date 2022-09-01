@@ -2,8 +2,6 @@
 This module provides methods for filling in null data with interpolated (imputed) values.
 """
 
-from hashlib import algorithms_available
-
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
@@ -68,7 +66,7 @@ def impute_data(
             )
         if target_col not in target_data:
             raise ValueError("The input `target_col` is not a column of `target_data`.")
-        if reference_col not in target_data:
+        if reference_col not in reference_data:
             raise ValueError("The input `reference_col` is not a column of `ref_data`.")
         if align_col not in target_data and align_col not in target_data.index.names:
             raise ValueError(
