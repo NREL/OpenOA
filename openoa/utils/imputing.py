@@ -80,7 +80,8 @@ def impute_data(
             )
 
         # Unify the data, if the target and reference data are provided separately
-        data = target_data.merge(reference_data, on=align_col, how="left")
+        data = pd.merge(target_data, reference_data, on=align_col, how="left")
+        data.index = target_data.index
 
         # If the input and reference series are names the same, adjust their names to match the
         # result from merging
@@ -112,7 +113,8 @@ def impute_data(
     imputed = data.loc[
         (data[target_col].isnull() & np.isfinite(data[reference_col])), [reference_col]
     ]
-    return curve_fit(imputed[reference_col])
+    data.loc[imputed.index, reference_col] = curve_fit(imputed[reference_col])
+    return data.loc[:, reference_col]
 
 
 def impute_all_assets_by_correlation(

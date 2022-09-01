@@ -240,18 +240,16 @@ class SimpleFilters(unittest.TestCase):
             align_col="time",
             method="linear",
         )
-        nptest.assert_almost_equal(y_test.values[0], y, decimal=4)
+        nptest.assert_almost_equal(y_test.values[1], y, decimal=4)
 
         # Test 1b, make sure single NaN is imputed properly and that the index is correct
         data = self.test_df.unstack().droplevel(0, axis=1)
         y_test = imputing.impute_data(
             data=data, target_col="a", reference_col="b", method="polynomial", degree=1
         )
-        nptest.assert_almost_equal(y_test.values[0], y, decimal=4)
+        nptest.assert_almost_equal(y_test.values[1], y, decimal=4)
 
         # Test 2, make sure only the first NaN entry is imputed
-        # data = self.test2_df.unstack().droplevel(0, axis=1)
-        # print(data)
         y_test = imputing.impute_data(
             "data",
             "data",
@@ -259,11 +257,8 @@ class SimpleFilters(unittest.TestCase):
             self.test2_df.loc[self.test2_df.id == "b"],
             "time",
         )
-        # TODO: NEED TO FIX ISSUE WHERE THE INDEX GETS NIXED IN THE NEW VERSION
-        # y_test = imputing.impute_data(data=data, target_col="a", reference_col="b")
-        print(y_test)
         nptest.assert_almost_equal(np.float64(y_test.loc["c"]), np.float64(3.874429), decimal=4)
-        nptest.assert_equal(y2.loc["b"], np.nan)
+        nptest.assert_equal(y_test.loc["b"], np.nan)
 
         # # Test 3, make sure no data is imputed when no NaN are present
         # y3 = imputing.impute_data(self.test3_df, "data1", self.test4_df, "data2", "align")
