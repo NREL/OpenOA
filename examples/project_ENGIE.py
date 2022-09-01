@@ -112,7 +112,7 @@ def clean_scada(scada_file: str | Path) -> pd.DataFrame:
     return scada_df
 
 
-def prepare(path="data/la_haute_borne", return_value="plantdata"):
+def prepare(path : str | Path ="data/la_haute_borne", return_value="plantdata"):
     """
     Do all loading and preparation of the data for this plant.
     args:
@@ -120,6 +120,9 @@ def prepare(path="data/la_haute_borne", return_value="plantdata"):
     - scada_df (pandas.DataFrame): Override the scada dataframe with one provided by the user.
     - return_value (str): "plantdata" will return a fully constructed PlantData object. "dataframes" will return a list of dataframes instead.
     """
+
+    if type(path) == str:
+        path = Path(path)
 
     # Extract data if necessary
     extract_data(path)
@@ -136,13 +139,13 @@ def prepare(path="data/la_haute_borne", return_value="plantdata"):
     ###################
     # SCADA DATA #
     ###################
-    scada_df = clean_scada(f"{path}/la-haute-borne-data-2014-2015.csv")
+    scada_df = clean_scada(path / "la-haute-borne-data-2014-2015.csv")
 
     ##############
     # METER DATA #
     ##############
     logger.info("Reading in the meter data")
-    meter_df = pd.read_csv(f"{path}/plant_data.csv")
+    meter_df = pd.read_csv(path / "plant_data.csv")
 
     # Create datetime field
     meter_df["time"] = pd.to_datetime(meter_df.time_utc).dt.tz_localize(None)
@@ -154,7 +157,7 @@ def prepare(path="data/la_haute_borne", return_value="plantdata"):
     # Availability and Curtailment Data #
     #####################################
     logger.info("Reading in the curtailment data")
-    curtail_df = pd.read_csv(f"{path}/plant_data.csv")  # Load Availability and Curtail data
+    curtail_df = pd.read_csv(path / "plant_data.csv")  # Load Availability and Curtail data
 
     # Create datetime field with a UTC base
     curtail_df["time"] = pd.to_datetime(curtail_df.time_utc).dt.tz_localize(None)
@@ -168,7 +171,7 @@ def prepare(path="data/la_haute_borne", return_value="plantdata"):
     logger.info("Reading in the reanalysis data and calculating the extra fields")
 
     # MERRA2
-    reanalysis_merra2_df = pd.read_csv(f"{path}/merra2_la_haute_borne.csv")
+    reanalysis_merra2_df = pd.read_csv(path / "merra2_la_haute_borne.csv")
 
     # Create datetime field with a UTC base
     reanalysis_merra2_df["datetime"] = pd.to_datetime(reanalysis_merra2_df["datetime"], utc=True).dt.tz_localize(None)
@@ -183,7 +186,7 @@ def prepare(path="data/la_haute_borne", return_value="plantdata"):
     reanalysis_merra2_df.drop(["Unnamed: 0"], axis=1, inplace=True)
 
     # ERA5
-    reanalysis_era5_df = pd.read_csv(f"{path}/era5_wind_la_haute_borne.csv")
+    reanalysis_era5_df = pd.read_csv(path / "era5_wind_la_haute_borne.csv")
 
     # remove a duplicated datetime column
     reanalysis_era5_df = reanalysis_era5_df.loc[:, ~reanalysis_era5_df.columns.duplicated()].copy()
@@ -210,7 +213,7 @@ def prepare(path="data/la_haute_borne", return_value="plantdata"):
     ##############
 
     logger.info("Reading in the asset data")
-    asset_df = pd.read_csv(f"{path}/la-haute-borne_asset_table.csv")
+    asset_df = pd.read_csv(path / "la-haute-borne_asset_table.csv")
 
     # Assign type to turbine for all assets
     asset_df["type"] = "turbine"
@@ -228,7 +231,7 @@ def prepare(path="data/la_haute_borne", return_value="plantdata"):
         # Build and return PlantData
         engie_plantdata = PlantData(
             analysis_type="MonteCarloAEP",  # Choosing a random type that doesn't fail validation
-            metadata=f"{path}/../plant_meta.yml",
+            metadata=path.parent / "plant_meta.yml",
             scada=scada_df,
             meter=meter_df,
             curtail=curtail_df,
