@@ -1,4 +1,5 @@
 import unittest
+from multiprocessing.sharedctypes import Value
 
 import numpy as np
 import pandas as pd
@@ -270,15 +271,54 @@ class SimpleFilters(unittest.TestCase):
         # nptest.assert_array_almost_equal(y_test.to_numpy(), self.test3_df["data1"].to_numpy())
 
         # Test 4, make sure two NaNs are imputed when there 3 total but reference data only matches 2
-        y_test = imputing.impute_data(self.test5_df, "data1", self.test4_df, "data2", "align")
+        y_test = imputing.impute_data(
+            reference_col="data2",
+            target_col="data1",
+            reference_data=self.test4_df,
+            target_data=self.test5_df,
+            align_col="align",
+        )
         nptest.assert_array_almost_equal(y_test.loc[["c", "d"]], np.array([2.0, 4.0]), decimal=4)
 
-        # # Test 5, make sure exception is thrown if no valid data are available
-        # def func():  # Function to return exception
-        #     imputing.imputing.impute_data(self.test5_df, "data1", self.test7_df, "data2", "align")
+        # Test 5a: Invalid reference data column
+        with self.assertRaises(ValueError):
+            imputing.impute_data(
+                target_data=self.test5_df,
+                target_col="data1",
+                reference_data=self.test7_df,
+                reference_col="data2",
+                align_col="align",
+            )
 
-        # with self.assertRaises(Exception):
-        #     func()
+        # Test 5b: Invalid target data column
+        with self.assertRaises(ValueError):
+            imputing.impute_data(
+                target_data=self.test5_df,
+                target_col="data2",
+                reference_data=self.test7_df,
+                reference_col="data1",
+                align_col="align",
+            )
+
+        # Test 5c: Bad data inputs
+        with self.assertRaises(TypeError):
+            imputing.impute_data(
+                target_data=self.test5_df.to_numpy(),
+                target_col="data1",
+                reference_data=self.test7_df.to_numpy(),
+                reference_col="data2",
+                align_col="align",
+            )
+
+        # Test 5c: Invalid alignment column
+        with self.assertRaises(ValueError):
+            imputing.impute_data(
+                target_data=self.test5_df,
+                target_col="data1",
+                reference_data=self.test7_df,
+                reference_col="data2",
+                align_col="index",
+            )
 
     def test_impute_all_assets_by_correlation(self):
         # Test 1, pass data frame with three highly correlated assets, ensure all NaN data are imputed in
