@@ -29,7 +29,7 @@ reanalysis:
   merra2:
     frequency: H
     surface_pressure: surface_pressure
-    temperature: temp_10m
+    temperature: temp_2m
     time: datetime
     windspeed_u: u_50
     windspeed_v: v_50
