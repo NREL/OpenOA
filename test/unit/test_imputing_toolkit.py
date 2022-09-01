@@ -190,8 +190,7 @@ class SimpleFilters(unittest.TestCase):
                     "c",
                 ],
             },
-            index=np.arange(21),
-        )
+        ).set_index(["time", "id"])
 
         # Data frame of two assets that are poorly correlated
         # No data should be imputed
@@ -323,8 +322,9 @@ class SimpleFilters(unittest.TestCase):
     def test_impute_all_assets_by_correlation(self):
         # Test 1, pass data frame with three highly correlated assets, ensure all NaN data are imputed in
         # final output
+        print(self.test11_df)
         y = imputing.impute_all_assets_by_correlation(
-            self.test11_df, "data", "data", "time", "id", 0.7
+            self.test11_df, "data", "data", 0.7
         ).to_frame()
         ans = pd.Series([0.440789, 3.401316, 14.3677, 42.8312, 62.887218, 96.734818])
         nptest.assert_array_almost_equal(
