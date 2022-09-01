@@ -34,12 +34,12 @@ def asset_correlation_matrix(data: pd.DataFrame, value_col: str) -> pd.DataFrame
 def impute_data(
     target_col: str,
     reference_col: str,
-    data: pd.DataFrame = None,
     target_data: pd.DataFrame = None,
     reference_data: pd.DataFrame = None,
     align_col: str = None,
     method: str = "linear",
     degree: int = 1,
+    data: pd.DataFrame = None,
 ) -> pd.Series:  # ADD LINEAR FUNCTIONALITY AS DEFAULT, expection otherwise
     """Replaces NaN data in a target Pandas series with imputed data from a reference Panda series based on a linear
     regression relationship.
