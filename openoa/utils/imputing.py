@@ -174,7 +174,8 @@ def impute_all_assets_by_correlation(
 
         # If there are no NaN values, then skip the asset altogether, otherwise
         # keep track of the number we need to continue checking for
-        if (ix_nan := data.xs(target_id, level=1)[impute_col].isnull()).sum() == 0:
+        ix_target = impute_df.index.get_level_values(1) == target_id
+        if (ix_nan := data.loc[ix_target, impute_col].isnull()).sum() == 0:
             continue
 
         # Get the correlation-based neareast neighbor and data
@@ -187,7 +188,6 @@ def impute_all_assets_by_correlation(
             continue
 
         num_neighbors = corr_df.shape[0] - 1
-        ix_target = impute_df.index.get_level_values(1) == target_id
         while (ix_nan.sum() > 0) & (num_neighbors > 0) & (r2_neighbor > r2_threshold):
 
             # Get the imputed data based on the correlation-based next nearest neighbor
@@ -200,16 +200,11 @@ def impute_all_assets_by_correlation(
             )
 
             # Fill any NaN values with available imputed values
-            ix_nan = impute_df.xs(target_id, level=1)[impute_col].isnull()
-            try:
-                impute_df.loc[ix_target, [impute_col]] = impute_df.loc[
-                    ix_target, [impute_col]
-                ].where(~ix_nan, imputed_data)
-            except ValueError:  # Catch error where imputed_data is a series, not a dataframe
-                impute_df.loc[ix_target, [impute_col]] = impute_df.loc[
-                    ix_target, [impute_col]
-                ].where(~ix_nan, imputed_data.to_frame())
+            impute_df.loc[ix_target, [impute_col]] = impute_df.loc[ix_target, [impute_col]].where(
+                ~ix_nan, imputed_data.to_frame()
+            )
 
+            ix_nan = impute_df.loc[ix_target, impute_col].isnull()
             num_neighbors -= 1
             id_sort_neighbor += 1
             id_neighbor = sort_df.loc[target_id, id_sort_neighbor]
