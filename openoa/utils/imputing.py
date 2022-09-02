@@ -61,6 +61,7 @@ def impute_data(
     Returns:
         :obj:`pandas.Series`: Copy of target_data_col series with NaN occurrences imputed where possible.
     """
+    final_col_name = deepcopy(target_col)
     if data is None:
         if any((not isinstance(x, pd.DataFrame) for x in (target_data, reference_data))):
             raise TypeError(
@@ -93,7 +94,7 @@ def impute_data(
 
         # If the input and reference series are names the same, adjust their names to match the
         # result from merging
-        if target_col == reference_col:  # same data field used for imputing
+        if target_col == reference_col:
             final_col_name = deepcopy(target_col)
             target_col = target_col + "_x"  # Match the merged column name
             reference_col = reference_col + "_y"  # Match the merged column name
@@ -173,10 +174,8 @@ def impute_all_assets_by_correlation(
 
         # If there are no NaN values, then skip the asset altogether, otherwise
         # keep track of the number we need to continue checking for
-        print(target_id)
         if (ix_nan := data.xs(target_id, level=1)[impute_col].isnull()).sum() == 0:
             continue
-        num_nan = ix_nan.sum()
 
         # Get the correlation-based neareast neighbor and data
         id_sort_neighbor = 0
@@ -188,10 +187,10 @@ def impute_all_assets_by_correlation(
             continue
 
         num_neighbors = corr_df.shape[0] - 1
+        ix_target = impute_df.index.get_level_values(1) == target_id
+        while (ix_nan.sum() > 0) & (num_neighbors > 0) & (r2_neighbor > r2_threshold):
 
-        while (num_nan > 0) & (num_neighbors > 0) & (r2_neighbor > r2_threshold):
-
-            target_data = data.xs(target_id, level=1).loc[:, impute_col]
+            # Get the imputed data based on the correlation-based next nearest neighbor
             imputed_data = impute_data(
                 target_data=data.xs(target_id, level=1).loc[:, [impute_col]],
                 target_col=impute_col,
@@ -199,80 +198,23 @@ def impute_all_assets_by_correlation(
                 reference_col=impute_col,
                 method=method,
             )
-            print(target_id, id_neighbor)
-            print(imputed_data)
-            print()
-            print(ix_nan)
-            print(impute_df.loc[impute_df.index.get_level_values(1) == target_id, impute_col])
-            impute_df.loc[impute_df.index.get_level_values(1) == target_id, impute_col].loc[
-                impute_df.index.get_level_values(0).isin(ix_nan)
-            ] = imputed_data.loc[ix_nan]
 
-            num_nan = (ix_nan := impute_df.xs(target_id, level=1)[impute_col].isnull()).sum()
+            # Fill any NaN values with available imputed values
+            ix_nan = impute_df.xs(target_id, level=1)[impute_col].isnull()
+            try:
+                impute_df.loc[ix_target, [impute_col]] = impute_df.loc[
+                    ix_target, [impute_col]
+                ].where(~ix_nan, imputed_data)
+            except ValueError:  # Catch error where imputed_data is a series, not a dataframe
+                impute_df.loc[ix_target, [impute_col]] = impute_df.loc[
+                    ix_target, [impute_col]
+                ].where(~ix_nan, imputed_data.to_frame())
+
             num_neighbors -= 1
             id_sort_neighbor += 1
             id_neighbor = sort_df.loc[target_id, id_sort_neighbor]
             r2_neighbor = corr_df.loc[target_id, id_neighbor]
 
-    return impute_df.rename(columns={c: f"imputed_{c}" for c in impute_df.columns})
-
-    # # For efficiency, sort <data> by <id_col> into different dictionary entries immediately
-    # assets = corr_df.columns
-    # asset_dict = {}
-    # for a in assets:
-    #     asset_dict[a] = data.loc[data[id_col] == a]
-
-    # # Create imputation series in <data> to be filled, which by default is equal to the original data series
-    # ret = data[[impute_col]]
-    # ret = ret.rename(columns={impute_col: "imputed_" + impute_col})
-
-    # # Loop through assets and impute missing data where possible
-    # for target_id, target_data in tqdm(
-    #     iter(asset_dict.items())
-    # ):  # Target asset refers to data requiring imputation
-
-    #     # List neighboring assets by correlation strength
-    #     corr_list = corr_df[target_id].sort_values(ascending=False)
-
-    #     # Define some parameters we'll need as we loop through different assets to be used in imputaiton
-    #     num_nan = target_data.loc[target_data[impute_col].isnull()].shape[
-    #         0
-    #     ]  # Number of NaN data in target asset
-    #     num_neighbors = (
-    #         corr_df.shape[0] - 1
-    #     )  # Number of neighboring assets available for imputation
-    #     r2_neighbor = corr_list.values[0]  # R2 value of target and neighbor data
-    #     id_neighbor = corr_list.index[0]  # Name of neighbor
-
-    #     # For each target asset, loop through neighboring assets and impute where possible
-    #     # Continue until all NaN data are imputed, or we run out of neighbors, or the correlation threshold
-    #     # is no longer met
-    #     while (num_nan > 0) & (num_neighbors > 0) & (r2_neighbor > r2_threshold):
-
-    #         # Consider highest correlated neighbor remaining and impute target data using that neighbor
-    #         neighbor_data = asset_dict[id_neighbor]
-    #         imputed_data = impute_data(
-    #             target_data, impute_col, neighbor_data, ref_col, align_col, method
-    #         )
-
-    #         # Find indices that were imputed (i.e. NaN in <data>, finite in <imputed_data>)
-    #         imputed_bool = ret.loc[
-    #             imputed_data.index, "imputed_" + impute_col
-    #         ].isnull() & np.isfinite(imputed_data)
-    #         imputed_ind = imputed_bool[imputed_bool].index
-
-    #         # Assign imputed values for those indices to the input data column
-    #         if len(imputed_ind) > 0:  # There is imputed data to update
-    #             ret.loc[imputed_ind, "imputed_" + impute_col] = imputed_data
-
-    #         # Update conditional parameters
-    #         num_neighbors = num_neighbors - 1  # One less neighbor
-    #         r2_neighbor = corr_list.values[
-    #             len(corr_list) - num_neighbors - 1
-    #         ]  # Next highest correlation
-    #         id_neighbor = corr_list.index[
-    #             len(corr_list) - num_neighbors - 1
-    #         ]  # Name of next highest correlated neighbor
-    #         num_nan = ret.loc[imputed_data.index, "imputed_" + impute_col].isnull().shape[0]
-
-    # return ret["imputed_" + impute_col]
+    # Return the results with the impute_col renamed with a leading "imputed_" for clarity
+    # return impute_df.rename(columns={c: f"imputed_{c}" for c in impute_df.columns})
+    return impute_df[impute_col].rename(f"imputed_{impute_col}")
