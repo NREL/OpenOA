@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file. If you make
 ## [UNRELEASED]
 - The package name is changed from `operational_analysis` to `openoa` to be more consistent with how we expect to import OpenOA!
 - Renamed `compute_shear_v3` to `compute_shear` and deleted old version of `compute_shear`.
+- `openoa/utils/plant_data.py` has been added for any helper methods used in `openoa/plant.py` and to make it more legible to users.
+- The `filters` and `imputing` module has been cleaned up to take both pandas `DataFrame` and `Series` objects where appropriate, refactors pandas code to be much cleaner for performance and readability, has more user-friendly error messages, and has more consist outputs
 
 ## [UNRELEASED - 2.x]
 - Added `compute_shear_v3` to `met_data_processing` toolkit, improving efficiency, removed requirement to provide reference height, and added option to return reference height and wind speed corresponding to best-fit shear exponent. Decided to bifurcate function into `compute_shear` and `compute_shear_v3` in order to maintain backwards compatibility with the OpenOA 2.x line.
