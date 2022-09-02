@@ -114,7 +114,7 @@ class SimpleFilters(unittest.TestCase):
                 "id": ["a", "a", "a", "a", "a", "b", "b", "b", "b", "b", "c", "c", "c", "c", "c"],
             },
             index=np.arange(15),
-        )
+        ).set_index(["time", "id"])
 
         # Data farme of 3 assets with overlapping NaN occurrences and highly correlated data
         # All data should be imputed
@@ -216,7 +216,7 @@ class SimpleFilters(unittest.TestCase):
                 "id": ["a", "a", "a", "a", "a", "a", "a", "c", "c", "c", "c", "c", "c", "c"],
             },
             index=np.arange(14),
-        )
+        ).set_index(["time", "id"])
 
     def test_asset_correlation_matrix(self):
         # Test 1, make sure a simple correlation of two assets works
@@ -322,28 +322,29 @@ class SimpleFilters(unittest.TestCase):
     def test_impute_all_assets_by_correlation(self):
         # Test 1, pass data frame with three highly correlated assets, ensure all NaN data are imputed in
         # final output
-        print(self.test11_df)
-        y = imputing.impute_all_assets_by_correlation(
+        y_test = imputing.impute_all_assets_by_correlation(
             self.test11_df, "data", "data", 0.7
         ).to_frame()
-        ans = pd.Series([0.440789, 3.401316, 14.3677, 42.8312, 62.887218, 96.734818])
+        y = pd.Series([0.440789, 3.401316, 14.3677, 42.8312, 62.887218, 96.734818])
         nptest.assert_array_almost_equal(
-            (y.loc[self.test11_df["data"].isnull(), "imputed_data"]).values, ans.values, decimal=4
+            (y_test.loc[self.test11_df["data"].isnull(), "imputed_data"]).values,
+            y.values,
+            decimal=4,
         )
 
         # Test 2, 3 highly correlated assets with less data, such that asset 'b' has no data imputed
-        y2 = imputing.impute_all_assets_by_correlation(
-            self.test10_df, "data", "data", "time", "id", 0.7
+        y = pd.Series([1.589147, np.nan, np.nan, np.nan, np.nan, np.nan, 123.7000])
+        y_test = imputing.impute_all_assets_by_correlation(
+            self.test10_df, "data", "data", 0.7
         ).to_frame()
         nan_ind = self.test10_df.loc[self.test10_df["data"].isnull()].index
-        ans = pd.Series([1.589147, np.nan, np.nan, np.nan, np.nan, np.nan, 123.7000])
-        nptest.assert_array_almost_equal(y2.loc[nan_ind, "imputed_data"], ans, decimal=4)
+        nptest.assert_array_almost_equal(y_test.loc[nan_ind, "imputed_data"], y, decimal=4)
 
         # Test 3, 2 poorly correlated data sets, no data should be imputed
-        y3 = imputing.impute_all_assets_by_correlation(
-            self.test12_df, "data", "data", "time", "id", 0.7
+        y_test = imputing.impute_all_assets_by_correlation(
+            self.test12_df, "data", "data", 0.7
         ).to_frame()
-        nptest.assert_array_almost_equal(y3["imputed_data"], self.test12_df["data"], decimal=4)
+        nptest.assert_array_almost_equal(y_test["imputed_data"], self.test12_df["data"], decimal=4)
 
     def tearDown(self):
         pass
