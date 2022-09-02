@@ -52,11 +52,14 @@ def impute_data(
     4. Return the imputed results as well as the index matching the target data frame
 
     Args:
-        target_data(:obj:`pandas.DataFrame`): the data frame containing NaN data to be imputed
-        target_col(:obj:`str`): the name of the column in <target_data> to be imputed
-        ref_data(:obj:`pandas.DataFrame`): the data frame containg data to be used in imputation
-        reference_col(:obj:`str`): the name of the column in <target_data> to be used in imputation
-        align_col(:obj:`str`): the name of the column in <data> on which different assets are to be merged
+        target_col(:obj:`str`): the name of the column in either `data` or `target_data` to be imputed
+        reference_col(:obj:`str`): the name of the column in either `data` or `reference_data` to be
+            used for imputation
+        data(:obj:`pandas.DataFrame`): input data frame such as `Plant.scada` that uses a
+            MultiIndex with a timestamp and ID column for indices, in that order, by default None.
+        target_data(:obj:`pandas.DataFrame`): the `DataFrame` with  NaN data to be imputed
+        reference_data(:obj:`pandas.DataFrame`): the `SeDataFrameries` to be used in imputation
+        align_col(:obj:`str`): the name of the column that to join `target_data` and `reference_data`.
 
     Returns:
         :obj:`pandas.Series`: Copy of target_data_col series with NaN occurrences imputed where possible.
@@ -130,9 +133,10 @@ def impute_data(
 def impute_all_assets_by_correlation(
     data: pd.DataFrame,
     impute_col: str,
-    ref_col: str,
+    reference_col: str,
     r2_threshold: float = 0.7,
     method: str = "linear",
+    degree: int = 1,
 ):
     """Imputes NaN data in a Pandas data frame to the best extent possible by considering available data
     across different assets in the data frame. Highest correlated assets are prioritized in the imputation process.
@@ -151,11 +155,12 @@ def impute_all_assets_by_correlation(
     Args:
         data(:obj:`pandas.DataFrame`): input data frame such as `Plant.scada` that uses a
             MultiIndex with a timestamp and ID column for indices, in that order.
-        impute_col(:obj:`str`): the name of the column in <data> to be imputed.
-        ref_col(:obj:`str`): the name of the column in <data> to be used in imputation.
+        impute_col(:obj:`str`): the name of the column in `data` to be imputed.
+        reference_col(:obj:`str`): the name of the column in `data` to be used in imputation.
         r2_threshold(:obj:`float`): the correlation threshold for a neighboring assets to be considered valid
-            for use in imputation.
-        method(:obj:`str`): The imputation method.
+            for use in imputation, by default 0.7.
+        method(:obj:`str`): The imputation method, should be one of "linear" or "polynomial", by default "linear".
+        degree(:obj:`int`): The polynomial degree, i.e. linear is a 1 degree polynomial, by default 1
 
     Returns:
         :obj:`pandas.Series`: The imputation results
@@ -194,9 +199,10 @@ def impute_all_assets_by_correlation(
             imputed_data = impute_data(
                 target_data=data.xs(target_id, level=1).loc[:, [impute_col]],
                 target_col=impute_col,
-                reference_data=data.xs(id_neighbor, level=1).loc[:, [ref_col]],
+                reference_data=data.xs(id_neighbor, level=1).loc[:, [reference_col]],
                 reference_col=impute_col,
                 method=method,
+                degree=degree,
             )
 
             # Fill any NaN values with available imputed values
