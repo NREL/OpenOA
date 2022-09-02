@@ -194,7 +194,7 @@ def impute_all_assets_by_correlation(
             imputed_data = impute_data(
                 target_data=data.xs(target_id, level=1).loc[:, [impute_col]],
                 target_col=impute_col,
-                reference_data=data.xs(id_neighbor, level=1).loc[:, [impute_col]],
+                reference_data=data.xs(id_neighbor, level=1).loc[:, [ref_col]],
                 reference_col=impute_col,
                 method=method,
             )
