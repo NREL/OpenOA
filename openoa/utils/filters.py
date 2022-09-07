@@ -272,8 +272,8 @@ def bin_filter(
         threshold_type(:obj:`str`): Option to apply a 'std' or 'scalar' based threshold
         center_type(:obj:`str`): Option to use a 'mean' or 'median' center for each bin
         direction(:obj:`str`): Option to apply flag only to data 'above' or 'below' the mean, by default 'all'
-        data(:obj:`pd.DataFrame`): DataFrame containing both the `bin_col` and `value_col`, if data
-            are part of the same dataframe, by default None.
+        data(:obj:`pd.DataFrame`): DataFrame containing both `bin_col` and `value_col`, if data
+            are part of the same DataFrame, by default None.
 
     Returns:
         :obj:`pandas.Series(bool)`: Array-like object with boolean entries.
@@ -282,7 +282,7 @@ def bin_filter(
     if data is None:
         if not isinstance(bin_col, pd.Series) or not isinstance(value_col, pd.Series):
             raise TypeError(
-                "Both `bin_col` and `value_col` must be a pandas Series when data is not provided as a pandas DataFrame."
+                "Both `bin_col` and `value_col` must be a pandas Series when `data` is not provided as a pandas DataFrame."
             )
     elif isinstance(data, pd.DataFrame):
         if len(set([bin_col, value_col]).intersect(data.columns)) < 2:
@@ -344,8 +344,8 @@ def bin_filter(
 
 
 def cluster_mahalanobis_2d(
-    data_col1: pd.Series,
-    data_col2: pd.Series,
+    data_col1: pd.Series | str,
+    data_col2: pd.Series | str,
     n_clusters: int = 13,
     dist_thresh: float = 3.0,
     data: pd.DataFrame = None,
@@ -354,28 +354,45 @@ def cluster_mahalanobis_2d(
     points with distances outside of `dist_thresh` are flagged; distinguishes between asset IDs.
 
     Args:
-        data_col1(:obj:`pandas.Series`): first data column in 2D cluster analysis
-        data_col2(:obj:`pandas.Series`): second data column in 2D cluster analysis
+        data_col1(:obj:`pandas.Series` | `str`): Series or column `data` corresponding to the first
+            data column in a 2D cluster analysis
+        data_col2(:obj:`pandas.Series` | `str`): Series or column `data` corresponding to the second
+            data column in a 2D cluster analysis
         n_clusters(:obj:`int`):' number of clusters to use
         dist_thresh(:obj:`float`): maximum Mahalanobis distance within each cluster for data to be remain unflagged
+        data(:obj:`pd.DataFrame`): DataFrame containing both `data_col1` and `data_col2`, if data
+            are part of the same DataFrame, by default None.
 
     Returns:
         :obj:`pandas.Series(bool)`: Array-like object with boolean entries.
     """
+    if data is None:
+        if not isinstance(data_col1, pd.Series) or not isinstance(data_col2, pd.Series):
+            raise TypeError(
+                "Both `data_col1` and `data_col2` must be a pandas Series when `data` is not provided as a pandas DataFrame."
+            )
+        if data_col1.shape != data_col2.shape:
+            raise ValueError("Both `data_col1` and `data_col2` must be the same dimension")
 
-    # Create 2D data frame for input into cluster algorithm
-    df = pd.DataFrame({"d1": data_col1, "d2": data_col2})
+        # Create a 2D DataFrame object to work with
+        data = pd.DataFrame({"d1": data_col1, "d2": data_col2})
+    elif isinstance(data, pd.DataFrame):
+        if len(set([data_col1, data_col2]).intersect(data.columns)) < 2:
+            raise ValueError("Both `data_col1` and `data_col2` must be columns in `data`.")
 
-    kmeans = KMeans(n_clusters=n_clusters).fit(df)
+        # Only work with the focal columns
+        data = data.loc[:, [data_col1, data_col2]].copy()
+
+    kmeans = KMeans(n_clusters=n_clusters).fit(data)
 
     # Define empty flag of 'False' values with indices matching value_col
-    flag = pd.Series(index=data_col1.index, data=False)
+    flag = pd.Series(index=data.index, data=False)
 
     # Loop through clusters and flag data that fall outside a threshold distance from cluster center
     for i in range(n_clusters):
         # Extract data for cluster
         clust_sub = kmeans.labels_ == i
-        cluster = df.loc[clust_sub]
+        cluster = data.loc[clust_sub]
 
         # Cluster centroid
         centroid = kmeans.cluster_centers_[i]
