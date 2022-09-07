@@ -5,7 +5,7 @@ intended for application in wind plant operational energy analysis, particularly
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Type
 
 import numpy as np
 import scipy as sp
@@ -247,8 +247,8 @@ def window_range_flag(
 
 
 def bin_filter(
-    bin_col: pd.Series,
-    value_col: pd.Series,
+    bin_col: pd.Series | str,
+    value_col: pd.Series | str,
     bin_width: float,
     threshold: float = 2,
     center_type: str = "mean",
@@ -256,25 +256,42 @@ def bin_filter(
     bin_max: float = None,
     threshold_type: str = "std",
     direction: str = "all",
+    data: pd.DataFrame = None,
 ):
     """Flag time stamps for which data in `value_col` when binned by data in `bin_col` into bins of
     width `bin_width` are outside the `threhsold` bin. The `center_type` of each bin can be either the
     median or mean, and flagging can be applied directionally (i.e. above or below the center, or both)
 
     Args:
-        bin_col(:obj:`pandas.Series`): data to be used for binning
-        value_col(:obj:`pandas.Series`): data to be flagged
-        bin_width(:obj:`float`): width of bin in units of `bin_col`
-        threshold(:obj:`float`): outlier threshold (multiplicative factor of std of `value_col` in bin)
-        bin_min(:obj:`float`): minimum bin value below which flag should not be applied
-        bin_max(:obj:`float`): maximum bin value above which flag should not be applied
-        threshold_type(:obj:`str`): option to apply a 'std' or 'scalar' based threshold
-        center_type(:obj:`str`): option to use a 'mean' or 'median' center for each bin
-        direction(:obj:`str`): option to apply flag only to data 'above' or 'below' the mean, by default 'all'
+        bin_col(:obj:`pandas.Series` | `str`): The Series or column in `data` to be used for binning.
+        value_col(:obj:`pandas.Series`): The Series or column in `data` to be flagged.
+        bin_width(:obj:`float`): Width of bin in units of `bin_col`
+        threshold(:obj:`float`): Outlier threshold (multiplicative factor of std of `value_col` in bin)
+        bin_min(:obj:`float`): Minimum bin value below which flag should not be applied
+        bin_max(:obj:`float`): Maximum bin value above which flag should not be applied
+        threshold_type(:obj:`str`): Option to apply a 'std' or 'scalar' based threshold
+        center_type(:obj:`str`): Option to use a 'mean' or 'median' center for each bin
+        direction(:obj:`str`): Option to apply flag only to data 'above' or 'below' the mean, by default 'all'
+        data(:obj:`pd.DataFrame`): DataFrame containing both the `bin_col` and `value_col`, if data
+            are part of the same dataframe, by default None.
 
     Returns:
         :obj:`pandas.Series(bool)`: Array-like object with boolean entries.
     """
+
+    if data is None:
+        if not isinstance(bin_col, pd.Series) or not isinstance(value_col, pd.Series):
+            raise TypeError(
+                "Both `bin_col` and `value_col` must be a pandas Series when data is not provided as a pandas DataFrame."
+            )
+    elif isinstance(data, pd.DataFrame):
+        if len(set([bin_col, value_col]).intersect(data.columns)) < 2:
+            raise ValueError("Both `bin_col` and `value_col` must be columns in `data`.")
+
+        bin_col = data.loc[:, bin_col].copy()
+        value_col = data.loc[:, value_col].copy()
+    else:
+        raise TypeError("Either no input or a pandas DataFrame must be provided to `data`.")
 
     if center_type not in ("mean", "median"):
         raise ValueError("Incorrect `center_type` specified; must be one of 'mean' or 'median'.")
@@ -327,7 +344,11 @@ def bin_filter(
 
 
 def cluster_mahalanobis_2d(
-    data_col1: pd.Series, data_col2: pd.Series, n_clusters: int = 13, dist_thresh: float = 3.0
+    data_col1: pd.Series,
+    data_col2: pd.Series,
+    n_clusters: int = 13,
+    dist_thresh: float = 3.0,
+    data: pd.DataFrame = None,
 ) -> pd.Series:
     """K-means clustering of  data into `n_cluster` clusters; Mahalanobis distance evaluated for each cluster and
     points with distances outside of `dist_thresh` are flagged; distinguishes between asset IDs.
