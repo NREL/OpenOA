@@ -1762,33 +1762,6 @@ class PlantData:
             self.calculate_nearest_neighbor()
         return self.asset.loc[id, "nearest_tower_id"].values[0]
 
-    # Not necessary, but could provide an additional way in
-    @classmethod
-    def from_entr(
-        cls: PlantData,
-        thrift_server_host: str = "localhost",
-        thrift_server_port: int = 10000,
-        database: str = "entr_warehouse",
-        wind_plant: str = "",
-        aggregation: str = "",
-        date_range: list = None,
-    ):
-        """Load a PlantData object from data in an entr_warehouse.
-
-        Args:
-            thrift_server_url(str): URL of the Apache Thrift server
-            database(str): Name of the Hive database
-            wind_plant(str): Name of the wind plant you'd like to load
-            aggregation: Not yet implemented
-            date_range: Not yet implemented
-
-        Returns:
-            plant(PlantData): An OpenOA PlantData object.
-        """
-        return from_entr(
-            thrift_server_host, thrift_server_port, database, wind_plant, aggregation, date_range
-        )
-
     def turbine_ids(self) -> list[str]:
         """Convenience method for getting the unique turbine IDs from the scada data.
 
@@ -1796,6 +1769,11 @@ class PlantData:
             list[str]: List of unique turbine identifiers.
         """
         return self.scada[self.metadata.scada.id].unique()
+
+
+# **********************************************************
+# Define additional class methods for custom loading methods
+# **********************************************************
 
 
 def from_entr(
@@ -1846,3 +1824,6 @@ def from_entr(
     conn.close()
 
     return plant
+
+
+setattr(PlantData, "from_entr", classmethod(from_entr))
