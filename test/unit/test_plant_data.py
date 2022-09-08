@@ -20,7 +20,6 @@ from openoa.plant import (
     StatusMetaData,
     CurtailMetaData,
     ReanalysisMetaData,
-    iter_validator,
     load_to_pandas,
     rename_columns,
     analysis_filter,
@@ -32,7 +31,6 @@ from openoa.plant import (
     frequency_validator,
     load_to_pandas_dict,
     compose_error_message,
-    analysis_type_validator,
 )
 
 
@@ -46,11 +44,6 @@ class AttrsDemoClass(FromDictMixin):
     y: float = field(converter=float, default=2.1)
     z: str = field(converter=str, default="z")
 
-    liststr: list[str] = field(
-        default=["qwerty", "asdf"],
-        validator=iter_validator(list, str),
-    )
-
 
 def test_FromDictMixin_defaults():
     # Test that the defaults set in the class definition are actually used
@@ -59,7 +52,6 @@ def test_FromDictMixin_defaults():
     defaults = {a.name: a.default for a in AttrsDemoClass.__attrs_attrs__ if a.default}
     assert cls.y == defaults["y"]
     assert cls.z == defaults["z"]
-    np.testing.assert_array_equal(cls.liststr, defaults["liststr"])
 
     # Test that defaults can be overwritten
     inputs = {"w": 0, "x": 1, "y": 4.5}
@@ -87,57 +79,7 @@ def test_FromDictMixin_custom():
         AttrsDemoClass.from_dict(inputs)
 
 
-def test_iter_validator():
-    # Test that the iter_validator ensures the inputs are a list of strings
-    # Check the correct values work
-    _ = AttrsDemoClass(w=0, x=1, liststr=["a", "b"])
-
-    # Check wrong member type
-    with pytest.raises(TypeError):
-        AttrsDemoClass(w=0, x=1, liststr=[4.3, 1])
-
-    # Check mixed member types
-    with pytest.raises(TypeError):
-        AttrsDemoClass(w=0, x=1, liststr=[4.3, "1"])
-
-    # Check wrong iterable type
-    with pytest.raises(TypeError):
-        AttrsDemoClass(w=0, x=1, liststr=("a", "b"))
-
-
 # Test all the standalone utility/helper methods
-
-
-def test_analysis_type_validator() -> None:
-    """Tests the `PlantData.analysis_type` validator method: `analysis_type_validator`.
-    The expected input for this method is `list[str | None]`, and all values that feed
-    into are converted into this format, so no tests will exist for checking the input
-    format.
-    """
-
-    instance = PlantData
-    attribute = attr.fields(PlantData).analysis_type
-
-    # Test the acceptance of the valid inputs, except None
-    valid = [*ANALYSIS_REQUIREMENTS] + ["all"]
-    assert analysis_type_validator(instance, attribute, valid) is None
-
-    # Test that None is valid, but raises a warning
-    with pytest.warns(UserWarning):
-        analysis_type_validator(instance, attribute, [None])
-
-    # Test that all valid cases work
-    valid.append(None)
-    assert analysis_type_validator(instance, attribute, valid) is None
-
-    # Test a couple of edge cases to show that only valid inputs are allowed
-    # Add a mispelling
-    with pytest.raises(ValueError):
-        analysis_type_validator(instance, attribute, valid + ["Montecarloaep"])
-
-    # Add a completely wrong value
-    with pytest.raises(ValueError):
-        analysis_type_validator(instance, attribute, valid + ["this is wrong"])
 
 
 def test_frequency_validator() -> None:
