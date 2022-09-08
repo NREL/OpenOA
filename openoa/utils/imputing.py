@@ -126,8 +126,8 @@ def impute_data(
     imputed = data.loc[
         (data[target_col].isnull() & np.isfinite(data[reference_col])), [reference_col]
     ]
-    data.loc[imputed.index, reference_col] = curve_fit(imputed[reference_col])
-    return data.loc[:, reference_col].rename(final_col_name)
+    data.loc[imputed.index, target_col] = curve_fit(imputed[reference_col])
+    return data.loc[:, target_col].rename(final_col_name)
 
 
 def impute_all_assets_by_correlation(

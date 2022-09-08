@@ -263,11 +263,11 @@ class SimpleFilters(unittest.TestCase):
         # Test 3, make sure no data is imputed when no NaN are present
         # NOTE: This test shouldn't have ever worked, but for some reason does, but open to
         # other amendments that don't just get rid of a test case
-        # y_test = imputing.impute_data(
-        #     reference_col="data1", target_col="data2",
-        #     reference_data=self.test3_df, target_data=self.test4_df, align_col="align"
-        # )
-        # nptest.assert_array_almost_equal(y_test.to_numpy(), self.test3_df["data1"].to_numpy())
+        y_test = imputing.impute_data(
+            target_col="data1", reference_col="data2",
+            target_data=self.test3_df, reference_data=self.test4_df, align_col="align"
+        )
+        nptest.assert_array_almost_equal(y_test.to_numpy(), self.test3_df["data1"].to_numpy())
 
         # Test 4, make sure two NaNs are imputed when there 3 total but reference data only matches 2
         y_test = imputing.impute_data(
