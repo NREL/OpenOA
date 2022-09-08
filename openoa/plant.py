@@ -21,6 +21,13 @@ from shapely.geometry import Point
 import openoa.utils.met_data_processing as met
 
 
+# *************************************************************************
+# Define the analysis requirements for ease of findability and modification
+# NOTE: All other standalone method definitions and helper functionality is
+#       included after the definiton of `PlantData`, hence "# noqa: F821"
+# *************************************************************************
+
+
 # Datetime frequency checks
 _at_least_monthly = ("M", "MS", "W", "D", "H", "T", "min", "S", "L", "ms", "U", "us", "N")
 _at_least_daily = ("D", "H", "T", "min", "S", "L", "ms", "U", "us", "N")
