@@ -28,7 +28,7 @@ from openoa.plant import (
     convert_reanalysis,
     frequency_validator,
 )
-from openoa.utils.plant_data import load_to_pandas, load_to_pandas_dict  # , compose_error_message
+from openoa.utils._validators import load_to_pandas, load_to_pandas_dict  # , compose_error_message
 
 
 # Test the FromDictMixin mixin class and class-dependent methods
