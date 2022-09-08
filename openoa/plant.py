@@ -1139,7 +1139,10 @@ class PlantData:
     analysis_type: list[str] | None = attr.ib(
         default=None,
         converter=convert_to_list,
-        validator=[iter_validator(list, (str, type(None))), analysis_type_validator],
+        validator=attrs.validators.deep_iterable(
+            iterable_validator=attrs.validators.instance_of(list),
+            member_validator=attrs.validators.in_([*ANALYSIS_REQUIREMENTS] + ["all", type(None)]),
+        ),
         on_setattr=[attr.setters.convert, attr.setters.validate],
     )
     scada: pd.DataFrame | None = attr.ib(default=None, converter=load_to_pandas)
