@@ -1,26 +1,27 @@
-## TODO:
-## - Finish refactoring from Timeseries Table to PlantData (test and verify)
-## - Rename API to openoa.analysis.aep.long_term_monte_carlo_method
-## - Make AnalysisResult into an attrs dataclass, and Analysis object.
-## - Refactor the class to be more modular and performant. Add QMC method.
+# TODO:
+# - Finish refactoring from Timeseries Table to PlantData (test and verify)
+# - Rename API to openoa.analysis.aep.long_term_monte_carlo_method
+# - Make AnalysisResult into an attrs dataclass, and Analysis object.
+# - Refactor the class to be more modular and performant. Add QMC method.
 
 from __future__ import annotations
 
 import random
 
 import numpy as np
-import openoa
 import pandas as pd
 import statsmodels.api as sm
 from tqdm import tqdm
-from openoa import logging, logged_method_call, PlantData
+from sklearn.metrics import r2_score, mean_squared_error
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import KFold
+
+import openoa
+from openoa import PlantData, logging, logged_method_call
 from openoa.utils import filters
 from openoa.utils import timeseries as tm
 from openoa.utils import unit_conversion as un
 from openoa.utils import met_data_processing as mt
-from sklearn.metrics import r2_score, mean_squared_error
-from sklearn.linear_model import LinearRegression
-from sklearn.model_selection import KFold
 from openoa.utils.machine_learning_setup import MachineLearningSetup
 
 
@@ -48,11 +49,14 @@ def get_annual_values(data):
 
     return data.resample("12MS").sum().values
 
+
 class MonteCarloAEPResult(object):
     """
     Result object of a MonteCarlo AEP Analysis
     """
+
     pass
+
 
 # Long Term AEP
 class MonteCarloAEP(object):
@@ -190,8 +194,7 @@ class MonteCarloAEP(object):
 
         # Create a data frame to store monthly/daily reanalysis data over plant period of record
         self._reanalysis_por = self._aggregate.loc[
-            (self._aggregate.index >= self._start_por)
-            & (self._aggregate.index <= self._end_por)
+            (self._aggregate.index >= self._start_por) & (self._aggregate.index <= self._end_por)
         ]
 
     @logged_method_call
@@ -256,7 +259,7 @@ class MonteCarloAEP(object):
 
         plt.figure(figsize=(14, 6))
         for key in self._reanal_products:
-            rean_df = project.reanalysis[key] # Set reanalysis product
+            rean_df = project.reanalysis[key]  # Set reanalysis product
             ann_mo_ws = (
                 rean_df.resample("MS")["ws_dens_corr"].mean().to_frame()
             )  # Take monthly average wind speed
@@ -576,14 +579,10 @@ class MonteCarloAEP(object):
         self._aggregate = (
             df.resample(self._resample_freq)["energy"].sum() / 1e6
         ).to_frame()  # Get monthly energy values in GWh
-        self._aggregate.rename(
-            columns={"energy": "energy_gwh"}, inplace=True
-        )  # Rename kWh to MWh
+        self._aggregate.rename(columns={"energy": "energy_gwh"}, inplace=True)  # Rename kWh to MWh
 
         # Determine how much 10-min data was missing for each year-month/daily energy value. Flag accordigly if any is missing
-        self._aggregate["energy_nan_perc"] = df.resample(self._resample_freq)[
-            "energy"
-        ].apply(
+        self._aggregate["energy_nan_perc"] = df.resample(self._resample_freq)["energy"].apply(
             tm.percent_nan
         )  # Get percentage of meter data that were NaN when summing to monthly/daily
 
@@ -596,12 +595,12 @@ class MonteCarloAEP(object):
             # Get actual number of days per month in the raw data
             # (used when trimming beginning and end of monthly data frame)
             # If meter data has higher resolution than monthly
-            if (self._plant.metadata.meter.frequency == "1MS") | (self._plant.metadata.meter.frequency == "1M"):
+            if (self._plant.metadata.meter.frequency == "1MS") | (
+                self._plant.metadata.meter.frequency == "1M"
+            ):
                 self._aggregate["num_days_actual"] = self._aggregate["num_days_expected"]
             else:
-                self._aggregate["num_days_actual"] = df.resample("MS")["energy"].apply(
-                    tm.num_days
-                )
+                self._aggregate["num_days_actual"] = df.resample("MS")["energy"].apply(tm.num_days)
 
     @logged_method_call
     def process_loss_estimates(self):
@@ -621,10 +620,7 @@ class MonteCarloAEP(object):
         )  # Get sum of avail and curt losses in GWh
 
         curt_aggregate.rename(
-            columns={
-                    "availability": "availability_gwh",
-                    "curtailment": "curtailment_gwh"
-                },
+            columns={"availability": "availability_gwh", "curtailment": "curtailment_gwh"},
             inplace=True,
         )
         # Merge with revenue meter monthly/daily data
@@ -647,14 +643,10 @@ class MonteCarloAEP(object):
             self._aggregate["curtailment_gwh"], self._aggregate["gross_energy_gwh"]
         )
 
-        self._aggregate["avail_nan_perc"] = df.resample(self._resample_freq)[
-            "availability"
-        ].apply(
+        self._aggregate["avail_nan_perc"] = df.resample(self._resample_freq)["availability"].apply(
             tm.percent_nan
         )  # Get percentage of 10-min meter data that were NaN when summing to monthly/daily
-        self._aggregate["curt_nan_perc"] = df.resample(self._resample_freq)[
-            "curtailment"
-        ].apply(
+        self._aggregate["curt_nan_perc"] = df.resample(self._resample_freq)["curtailment"].apply(
             tm.percent_nan
         )  # Get percentage of 10-min meter data that were NaN when summing to monthly/daily
 
@@ -695,9 +687,7 @@ class MonteCarloAEP(object):
         start_date = max(
             [self._plant.reanalysis[key].index.min() for key in self._reanal_products]
         ).replace(minute=0)
-        end_date = min(
-            [self._plant.reanalysis[key].index.max() for key in self._reanal_products]
-        )
+        end_date = min([self._plant.reanalysis[key].index.max() for key in self._reanal_products])
 
         # Next, update the start date to make sure it corresponds to a full time period
         start_date_minus = start_date - pd.DateOffset(hours=1)
@@ -737,7 +727,9 @@ class MonteCarloAEP(object):
 
         # Define empty data frame that spans our period of interest
         self._reanalysis_aggregate = pd.DataFrame(
-            index=pd.date_range(start=start_date, end=end_date, freq=self._resample_freq),# tz="UTC"),
+            index=pd.date_range(
+                start=start_date, end=end_date, freq=self._resample_freq
+            ),  # tz="UTC"),
             dtype=float,
         )
 
@@ -760,7 +752,7 @@ class MonteCarloAEP(object):
         # Now loop through the different reanalysis products, density-correct wind speeds, and take monthly averages
         for key in self._reanal_products:
             rean_df = self._plant.reanalysis[key]
-            #rean_df = rean_df.rename(self._plant.metadata[key].col_map)
+            # rean_df = rean_df.rename(self._plant.metadata[key].col_map)
             rean_df["ws_dens_corr"] = mt.air_density_adjusted_wind_speed(
                 rean_df["windspeed"], rean_df["density"]
             )  # Density correct wind speeds
@@ -784,9 +776,9 @@ class MonteCarloAEP(object):
                         )
                     )
                 )  # Calculate wind direction
-        
-        ## TODO JP: Had to localize the timezone after V3 update. Is there a better way to do this?
-        #self._aggregate.index = self._aggregate.index.tz_localize("UTC")
+
+        # TODO JP: Had to localize the timezone after V3 update. Is there a better way to do this?
+        # self._aggregate.index = self._aggregate.index.tz_localize("UTC")
         self._aggregate = self._aggregate.join(
             self._reanalysis_aggregate
         )  # Merge monthly reanalysis data to monthly energy data frame
@@ -919,13 +911,13 @@ class MonteCarloAEP(object):
         plant_capac = self._plant.metadata.capacity / 1000.0 * self._hours_in_res
 
         # Apply range filter to wind speed
-        df_sub = df_sub.assign(flag_range=filters.range_flag(df_sub[reanal], below=0, above=40))
+        df_sub = df_sub.assign(flag_range=filters.range_flag(df_sub[reanal], lower=0, upper=40))
         if self.reg_temperature:
             # Apply range filter to temperatre
             df_sub = df_sub.assign(
                 flag_range_T=filters.range_flag(
-                    df_sub[reanal + "_temperature"], below=200, above=320
-                ) # Temperature is in Kelvin
+                    df_sub[reanal + "_temperature"], lower=200, upper=320
+                )  # Temperature is in Kelvin
             )
         # Apply window range filter
         df_sub.loc[:, "flag_window"] = filters.window_range_flag(
@@ -958,8 +950,9 @@ class MonteCarloAEP(object):
                 # Daily regressions (i.e., higher number of data points):
                 # Apply bin filter to catch outliers
                 df_sub.loc[:, "flag_outliers"] = filters.bin_filter(
-                    bin_col=df_sub["gross_energy_gwh"],
-                    value_col=df_sub[reanal],
+                    data=df_sub,
+                    bin_col="gross_energy_gwh",
+                    value_col=reanal,
                     bin_width=0.06 * plant_capac,
                     threshold=self._run.outlier_threshold,  # wind bin threshold (multiplicative factor of std of <value_col> in bin)
                     center_type="median",
@@ -995,9 +988,7 @@ class MonteCarloAEP(object):
             valid_data = pd.concat([valid_data, valid_data_to_add], axis=1)
 
         if self.reg_temperature:
-            valid_data_to_add = df_sub.loc[
-                ~df_sub.loc[:, "flag_final"], [reanal + "_temperature"]
-            ]
+            valid_data_to_add = df_sub.loc[~df_sub.loc[:, "flag_final"], [reanal + "_temperature"]]
             valid_data = pd.concat([valid_data, valid_data_to_add], axis=1)
 
         if self.time_resolution == "M":
@@ -1193,10 +1184,18 @@ class MonteCarloAEP(object):
                 ]
             if self.reg_winddirection:
                 reg_inputs_por += [
-                    np.sin(np.deg2rad(self._reanalysis_por[self._run.reanalysis_product + "_winddirection"]))
+                    np.sin(
+                        np.deg2rad(
+                            self._reanalysis_por[self._run.reanalysis_product + "_winddirection"]
+                        )
+                    )
                 ]
                 reg_inputs_por += [
-                    np.cos(np.deg2rad(self._reanalysis_por[self._run.reanalysis_product + "_winddirection"]))
+                    np.cos(
+                        np.deg2rad(
+                            self._reanalysis_por[self._run.reanalysis_product + "_winddirection"]
+                        )
+                    )
                 ]
             gross_por = fitted_model.predict(np.array(pd.concat(reg_inputs_por, axis=1)))
 
