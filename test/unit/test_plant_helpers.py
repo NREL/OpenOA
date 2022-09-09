@@ -8,7 +8,7 @@ import pandas as pd
 import pytest
 from attrs import field, define
 
-from openoa.plant import (
+from openoa.plant import (  # , compose_error_message
     ANALYSIS_REQUIREMENTS,
     PlantData,
     AssetMetaData,
@@ -20,6 +20,7 @@ from openoa.plant import (
     StatusMetaData,
     CurtailMetaData,
     ReanalysisMetaData,
+    load_to_pandas,
     rename_columns,
     convert_to_list,
     dtype_converter,
@@ -27,8 +28,8 @@ from openoa.plant import (
     column_validator,
     convert_reanalysis,
     frequency_validator,
+    load_to_pandas_dict,
 )
-from openoa.utils._validators import load_to_pandas, load_to_pandas_dict  # , compose_error_message
 
 
 # Test the FromDictMixin mixin class and class-dependent methods
