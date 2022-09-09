@@ -43,7 +43,7 @@ class SimpleFilters(unittest.TestCase):
         with self.assertRaises(ValueError):
             filters.range_flag(x, [2], [6, 5], ["a"])
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             filters.range_flag(x, [2], [6], ["a", "b"])
 
         with self.assertRaises(ValueError):
@@ -179,7 +179,7 @@ class SimpleFilters(unittest.TestCase):
             ],
             columns=["a", "b", "c"],
         )
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             filters.std_range_flag(x, [2], col=["b", "c"])
 
     # TODO: Test more code paths in bin_filter

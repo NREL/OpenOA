@@ -80,7 +80,8 @@ def range_flag(
             boolean entries.
     """
     # Prepare the inputs to be standardized for use with DataFrames
-    to_series, data, (upper, lower) = series_to_df(data, upper, lower)
+    if to_series := isinstance(data, pd.Series):
+        data = series_to_df(data)
     if col is None:
         col = data.columns.tolist()
 
