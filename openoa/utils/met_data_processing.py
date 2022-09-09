@@ -2,6 +2,8 @@
 This module provides methods for processing meteorological data.
 """
 
+from __future__ import annotations
+
 import warnings
 
 import numpy as np
@@ -9,12 +11,13 @@ import pandas as pd
 import scipy.constants as const
 
 
-def compute_wind_direction(u, v):
+def compute_wind_direction(u: pd.Series | str, v: pd.Series | str, data: pd.DataFrame = None):
     """Compute wind direction given u and v wind vector components
 
     Args:
-        u(:obj:`pandas.Series`): the zonal component of the wind; units of m/s
-        v(:obj:`pandas.Series`): the meridional component of the wind; units of m/s
+        u(:obj:`pandas.Series` | `str`): the zonal component of the wind; units of m/s
+        v(:obj:`pandas.Series` | `str`): the meridional component of the wind; units of m/s
+        data(:obj:`pandas.DataFrame`): The pandas DataFrame containg the columns `u` and `v`
 
     Returns:
         :obj:`pandas.Series`: wind direction; units of degrees
@@ -146,6 +149,7 @@ def compute_turbulence_intensity(mean_col, std_col):
     """
     return std_col / mean_col
 
+
 def compute_shear(
     data: pd.DataFrame, ws_heights: dict, return_reference_values: bool = False
 ) -> np.array:
@@ -154,7 +158,7 @@ def compute_shear(
     The shear coefficient is obtained by evaluating the expression for an OLS regression coefficient.
 
     Updated version targeting OpenOA V3 due to the following api breaking change:
-        - Removal of ref_col, instead, returning the reference column used 
+        - Removal of ref_col, instead, returning the reference column used
 
     Args:
         data(:obj:`pandas.DataFrame`): dataframe with wind speed columns
@@ -220,6 +224,7 @@ def compute_shear(
         u_ref = np.exp(np.nanmean(u, axis=1))
 
         return alpha, z_ref, u_ref
+
 
 def extrapolate_windspeed(v1, z1: float, z2: float, shear):
     """

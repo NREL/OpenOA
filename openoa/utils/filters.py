@@ -12,6 +12,8 @@ import scipy as sp
 import pandas as pd
 from sklearn.cluster import KMeans
 
+from openoa.utils._converters import series_to_df, convert_args_to_lists
+
 
 def _convert_to_df(data: pd.DataFrame | pd.Series, *args) -> tuple[bool, pd.DataFrame, list[Any]]:
     """Converts the passed `data` to a `pandas.DataFrame`, if needed, and converts the
@@ -49,18 +51,6 @@ def _convert_to_df(data: pd.DataFrame | pd.Series, *args) -> tuple[bool, pd.Data
     return to_series, data
 
 
-def _convert_single_input_to_list(length: int, *args) -> list[list]:
-    """Convert method arguments to a list of length `length` for each argument passed.
-
-    Args:
-        length (int): The length of the argument list.
-
-    Returns:
-        list[list]: A list of each argument passed.
-    """
-    return [a if isinstance(a, list) else [a] * length for a in args]
-
-
 def range_flag(
     data: pd.DataFrame | pd.Series,
     lower: float | list[float],
@@ -90,11 +80,11 @@ def range_flag(
             boolean entries.
     """
     # Prepare the inputs to be standardized for use with DataFrames
-    to_series, data, (upper, lower) = _convert_to_df(data, upper, lower)
+    to_series, data, (upper, lower) = series_to_df(data, upper, lower)
     if col is None:
         col = data.columns.tolist()
 
-    upper, lower = _convert_single_input_to_list(len(col), upper, lower)
+    upper, lower = convert_args_to_lists(len(col), upper, lower)
     if len(col) != len(lower) != len(upper):
         raise ValueError("The inputs to `col`, `above`, and `below` must be the same length.")
 
@@ -180,7 +170,7 @@ def std_range_flag(
     if col is None:
         col = data.columns.tolist()
 
-    threshold, *_ = _convert_single_input_to_list(len(col), threshold)
+    threshold, *_ = convert_args_to_lists(len(col), threshold)
     if len(col) != len(threshold):
         raise ValueError("The inputs to `col` and `threshold` must be the same length.")
 
