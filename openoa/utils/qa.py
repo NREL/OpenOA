@@ -262,7 +262,7 @@ def describe(df: pd.DataFrame, **kwargs) -> pd.DataFrame:
     return df.describe(**kwargs).T
 
 
-def dalyight_savings_plot(
+def daylight_savings_plot(
     df: pd.DataFrame,
     local_tz: str,
     id_col: str,

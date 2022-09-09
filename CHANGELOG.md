@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file. If you make
 ## [UNRELEASED]
 - The package name is changed from `operational_analysis` to `openoa` to be more consistent with how we expect to import OpenOA!
 - Renamed `compute_shear_v3` to `compute_shear` and deleted old version of `compute_shear`.
+- v2 `ReanalysisData` and `AssetData` methods have been absorbed by `PlantData` in favor of a unified data structure and means to operate on data.
+- v2 `TimeSeriesTable` is removed in favor of a pandas-based API and data usage
+- The `filters` and `imputing` module has been cleaned up to take both pandas `DataFrame` and `Series` objects where appropriate, refactors pandas code to be much cleaner for performance and readability, has more user-friendly error messages, and has more consist outputs
+- `openoa.utils.imputing.correlation_matrix_by_id_column` has been renamed to `openoa.utils.imputing.asset_correlation_matrix`
+- A new 00_x example notebook is replace the 1a/b QA examples to highlight how the `project_ENGIE.py` methods are created. This creates an example for users to work with and significantly more details on how to use the new `PlantData` and `PlantMetaData` methods.
 
 ## [UNRELEASED - 2.x]
 - Added `compute_shear_v3` to `met_data_processing` toolkit, improving efficiency, removed requirement to provide reference height, and added option to return reference height and wind speed corresponding to best-fit shear exponent. Decided to bifurcate function into `compute_shear` and `compute_shear_v3` in order to maintain backwards compatibility with the OpenOA 2.x line.

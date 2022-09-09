@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 
 from examples import project_ENGIE
+from numpy.testing import assert_array_equal
 from pandas.testing import assert_frame_equal
 
 from openoa import PlantData
@@ -76,6 +77,35 @@ class TestPlantData(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.plant.analysis_type = "all"
             self.plant.validate()
+
+    def test_update_columns(self):
+        """
+        Tests that the column names are successfully mapped to the standardized names.
+        """
+        # Put the plant analysis type back in working order
+        self.plant.analysis_type = "MonteCarloAEP"
+        self.plant.validate()
+
+        # Get the OpenOA standardized column names where the default isn't used
+        scada_original = set((v for k, v in self.plant.metadata.scada.col_map.items() if k != v))
+        assert len(scada_original.intersection(self.plant.scada.columns)) == 0
+
+        meter_original = set((v for k, v in self.plant.metadata.meter.col_map.items() if k != v))
+        assert len(meter_original.intersection(self.plant.meter.columns)) == 0
+
+        asset_original = set((v for k, v in self.plant.metadata.asset.col_map.items() if k != v))
+        assert len(asset_original.intersection(self.plant.asset.columns)) == 0
+
+        curtail_original = set(
+            (v for k, v in self.plant.metadata.curtail.col_map.items() if k != v)
+        )
+        assert len(curtail_original.intersection(self.plant.curtail.columns)) == 0
+
+        for name in self.plant.reanalysis:
+            re_original = set(
+                (v for k, v in self.plant.metadata.reanalysis[name].col_map.items() if k != v)
+            )
+            assert len(re_original.intersection(self.plant.reanalysis[name].columns)) == 0
 
     def test_toCSV(self):
         """

@@ -8,7 +8,7 @@ import pandas as pd
 import pytest
 from attrs import field, define
 
-from openoa.plant import (
+from openoa.plant import (  # , compose_error_message
     ANALYSIS_REQUIREMENTS,
     PlantData,
     AssetMetaData,
@@ -22,7 +22,6 @@ from openoa.plant import (
     ReanalysisMetaData,
     load_to_pandas,
     rename_columns,
-    analysis_filter,
     convert_to_list,
     dtype_converter,
     _at_least_hourly,
@@ -30,7 +29,6 @@ from openoa.plant import (
     convert_reanalysis,
     frequency_validator,
     load_to_pandas_dict,
-    compose_error_message,
 )
 
 
@@ -145,12 +143,10 @@ def test_convert_to_list():
     assert convert_to_list((44, "six", 1.2)) == [44, "six", 1.2]
 
     # Test that an invalid type is passed to the manipulation argument
-    with pytest.raises(ValueError):
-        assert convert_to_list(range(3), 1)
+    with pytest.raises(TypeError):
+        assert convert_to_list(range(3), str.upper)
 
     # Test that lists of mixed inputs error out with a type-specific converter function
-    with pytest.raises(ValueError):
-        assert convert_to_list(range(3), str.upper)
 
     with pytest.raises(ValueError):
         assert convert_to_list(["?", "one", "string", 2], float)
@@ -228,14 +224,13 @@ def test_load_to_pandas_dict():
 def test_rename_columns():
     """Tests the `rename_columns` method for renaming dataframes."""
     df = pd.DataFrame([range(4)], columns=[f"col{i}" for i in range(1, 5)])
+    col_map = {f"col{i}": f"new_col_{i}" for i in range(1, 5)}
 
     # Test for a standard mapping
-    col_map = {f"col{i}": f"new_col_{i}" for i in range(1, 5)}
     new_df = rename_columns(df, col_map, reverse=False)
     assert new_df.columns.to_list() == list(col_map.values())
 
     # Test for the reverse case
-    col_map = {f"new_col_{i}": f"col{i}" for i in range(1, 5)}
     new_df = rename_columns(df, col_map, reverse=True)
     assert new_df.columns.to_list() == list(col_map.keys())
 

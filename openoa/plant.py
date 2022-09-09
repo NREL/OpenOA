@@ -14,11 +14,16 @@ import attrs
 import numpy as np
 import pandas as pd
 import pyspark as spark
-from attr import define
+from attrs import define
 from pyproj import Transformer
 from shapely.geometry import Point
 
 import openoa.utils.met_data_processing as met
+
+
+# *************************************************************************
+# Define the analysis requirements for ease of findability and modification
+# *************************************************************************
 
 
 # Datetime frequency checks
@@ -68,37 +73,9 @@ ANALYSIS_REQUIREMENTS = {
 }
 
 
-def frequency_validator(
-    actual_freq: str | None, desired_freq: str | None | set[str], exact: bool
-) -> bool:
-    """Helper function to check if the actual datetime stamp frequency is valid compared
-    to what is required.
-
-    Args:
-        actual_freq (str): The frequency of the datetime stamp, or `df.index.freq`.
-        desired_freq (str  |  None  |  set[str]): Either the exact frequency,
-            required or a set of options that are also valid, in which case any numeric
-            information encoded in `actual_freq` will be dropped.
-        exact (bool): If the provided frequency codes should be exact matches (`True`),
-            or, if `False`, the check should be for a combination of matches.
-
-    Returns:
-        bool: If the actual datetime frequency is sufficient, per the match requirements.
-    """
-    if desired_freq is None:
-        return True
-
-    if actual_freq is None:
-        return False
-
-    if isinstance(desired_freq, str):
-        desired_freq = set([desired_freq])
-
-    if exact:
-        return actual_freq in desired_freq
-
-    actual_freq = "".join(filter(str.isalpha, actual_freq))
-    return actual_freq in desired_freq
+# ****************************************
+# Validators, Loading, and General methods
+# ****************************************
 
 
 @define(auto_attribs=True)
@@ -145,11 +122,277 @@ class FromDictMixin:
         return cls(**kwargs)  # type: ignore
 
 
-#########################################
+def _analysis_filter(error_dict: dict, analysis_types: list[str] = ["all"]) -> dict:
+    """Filters the errors found by the analysis requirements  provided by the `analysis_types`.
+
+    Args:
+        error_dict (:obj: `dict`): The dictionary of errors separated by the keys:
+            "missing", "dtype", and "frequency".
+        analysis_types (:obj: `list[str]`, optional): The list of analysis types to
+            consider for validation. If "all" is contained in the list, then all errors
+            are returned back, and if `None` is contained in the list, then no errors
+            are returned, otherwise the union of analysis requirements is returned back.
+            Defaults to ["all"].
+
+    Returns:
+        dict: The missing column, bad dtype, and incorrect timestamp frequency errors
+            corresponding to the user's analysis types.
+    """
+    if "all" in analysis_types:
+        return error_dict
+
+    if None in analysis_types:
+        return {}
+
+    categories = ("scada", "meter", "tower", "curtail", "reanalysis", "asset")
+    requirements = {key: ANALYSIS_REQUIREMENTS[key] for key in analysis_types}
+    column_requirements = {
+        cat: set(
+            itertools.chain(*[r.get(cat, {}).get("columns", []) for r in requirements.values()])
+        )
+        for cat in categories
+    }
+
+    # Filter the missing columns, so only analysis-specific columns are provided
+    error_dict["missing"] = {
+        key: values.intersection(error_dict["missing"].get(key, []))
+        for key, values in column_requirements.items()
+    }
+
+    # Filter the bad dtype columns, so only analysis-specific columns are provided
+    error_dict["dtype"] = {
+        key: values.intersection(error_dict["dtype"].get(key, []))
+        for key, values in column_requirements.items()
+    }
+
+    return error_dict
+
+
+def _compose_error_message(error_dict: dict, analysis_types: list[str] = ["all"]) -> str:
+    """Takes a dictionary of error messages from the `PlantData` validation routines,
+    filters out errors unrelated to the intended analysis types, and creates a
+    human-readable error message.
+
+    Args:
+        error_dict (dict): See `PlantData._errors` for more details.
+        analysis_types (list[str], optional): The user-input analysis types, which are
+            used to filter out unlreated errors. Defaults to ["all"].
+
+    Returns:
+        str: The human-readable error message breakdown.
+    """
+    if "all" not in analysis_types:
+        error_dict = _analysis_filter(error_dict, analysis_types)
+
+    if None in analysis_types:
+        return ""
+
+    messages = [
+        f"`{name}` data is missing the following columns: {cols}"
+        for name, cols in error_dict["missing"].items()
+        if len(cols) > 0
+    ]
+    messages.extend(
+        [
+            f"`{name}` data columns were of the wrong type: {cols}"
+            for name, cols in error_dict["dtype"].items()
+            if len(cols) > 0
+        ]
+    )
+    messages.extend(
+        [
+            f"`{name}` data is of the wrong frequency: {freq}"
+            for name, freq in error_dict["frequency"].items()
+        ]
+    )
+    return "\n".join(messages)
+
+
+def frequency_validator(
+    actual_freq: str, desired_freq: Optional[str | None | set[str]], exact: bool
+) -> bool:
+    """Helper function to check if the actual datetime stamp frequency is valid compared
+    to what is required.
+
+    Args:
+        actual_freq (str): The frequency of the datetime stamp, or `df.index.freq`.
+        desired_freq (Optional[str  |  None  |  set[str]]): Either the exact frequency,
+            required or a set of options that are also valid, in which case any numeric
+            information encoded in `actual_freq` will be dropped.
+        exact (bool): If the provided frequency codes should be exact matches (`True`),
+            or, if `False`, the check should be for a combination of matches.
+
+    Returns:
+        bool: If the actual datetime frequency is sufficient, per the match requirements.
+    """
+    if desired_freq is None:
+        return True
+
+    if actual_freq is None:
+        return False
+
+    if isinstance(desired_freq, str):
+        desired_freq = set([desired_freq])
+
+    if exact:
+        return actual_freq in desired_freq
+
+    actual_freq = "".join(filter(str.isalpha, actual_freq))
+    return actual_freq in desired_freq
+
+
+def convert_to_list(
+    value: Sequence | str | int | float | None,
+    manipulation: Callable | None = None,
+) -> list:
+    """Converts an unknown element that could be a list or single, non-sequence element
+    to a list of elements.
+
+    Parameters
+    ----------
+    value : Sequence | str | int | float
+        The unknown element to be converted to a list of element(s).
+    manipulation: Callable | None
+        A function to be performed upon the individual elements, by default None.
+
+    Returns
+    -------
+    list
+        The new list of elements.
+    """
+
+    if isinstance(value, (str, int, float)) or value is None:
+        value = [value]
+    if manipulation is not None:
+        return [manipulation(el) for el in value]
+    return list(value)
+
+
+def column_validator(df: pd.DataFrame, column_names={}) -> None | list[str]:
+    """Validates that the column names exist as provided for each expected column.
+
+    Args:
+        df (pd.DataFrame): The DataFrame for column naming validation
+        column_names (dict, optional): Dictionary of column type (key) to real column
+            value (value) pairs. Defaults to {}.
+
+    Returns:
+        None | list[str]: A list of error messages that can be raised at a later step
+            in the validation process.
+    """
+    try:
+        missing = set(column_names.values()).difference(df.columns)
+    except AttributeError:
+        # Catches 'NoneType' object has no attribute 'columns' for no data
+        missing = column_names.values()
+    if missing:
+        return list(missing)
+    return []
+
+
+def dtype_converter(df: pd.DataFrame, column_types={}) -> list[str]:
+    """Converts the columns provided in `column_types` of `df` to the appropriate data
+    type.
+
+    Args:
+        df (pd.DataFrame): The DataFrame for type validation/conversion
+        column_types (dict, optional): Dictionary of column name (key) and data type
+            (value) pairs. Defaults to {}.
+
+    Returns:
+        None | list[str]: List of error messages that were encountered in the conversion
+            process that will be raised at another step of the data validation.
+    """
+    errors = []
+    for column, new_type in column_types.items():
+        if new_type in (np.datetime64, pd.DatetimeIndex):
+            try:
+                df[column] = pd.DatetimeIndex(df[column])
+            except Exception as e:  # noqa: disable=E722
+                errors.append(column)
+            continue
+        try:
+            df[column] = df[column].astype(new_type)
+        except:  # noqa: disable=E722
+            errors.append(column)
+
+    return errors
+
+
+def load_to_pandas(data: str | Path | pd.DataFrame | spark.sql.DataFrame) -> pd.DataFrame | None:
+    """Loads the input data or filepath to apandas DataFrame.
+
+    Args:
+        data (str | Path | pd.DataFrame | spark.DataFrame): The input data.
+
+    Raises:
+        ValueError: Raised if an invalid data type was passed.
+
+    Returns:
+        pd.DataFrame | None: The passed `None` or the converted pandas DataFrame object.
+    """
+    if data is None:
+        return data
+    elif isinstance(data, (str, Path)):
+        return pd.read_csv(data)
+    elif isinstance(data, pd.DataFrame):
+        return data
+    elif isinstance(data, spark.sql.DataFrame):
+        return data.toPandas()
+    else:
+        raise ValueError("Input data could not be converted to pandas")
+
+
+def load_to_pandas_dict(
+    data: dict[str | Path | pd.DataFrame | spark.sql.DataFrame],
+) -> dict[str, pd.DataFrame] | None:
+    """Converts a dictionary of data or data locations to a dictionary of `pd.DataFrame`s
+    by iterating over the dictionary and passing each value to `load_to_pandas`.
+
+    Args:
+        data (dict[str  |  Path  |  pd.DataFrame  |  spark.sql.DataFrame]): The input data.
+
+    Returns:
+        dict[str, pd.DataFrame] | None: The passed `None` or the converted `pd.DataFrame`
+            object.
+    """
+    if data is None:
+        return data
+    for key, val in data.items():
+        data[key] = load_to_pandas(val)
+    return data
+
+
+def convert_reanalysis(value: dict[str, dict]):
+    return {k: ReanalysisMetaData.from_dict(v) for k, v in value.items()}
+
+
+def rename_columns(df: pd.DataFrame, col_map: dict, reverse: bool = True) -> pd.DataFrame:
+    """Renames the pandas DataFrame columns using col_map. Intended to be used in
+    conjunction with the a data objects meta data column mapping (reverse=True).
+
+        Args:
+            df (pd.DataFrame): The DataFrame to have its columns remapped.
+            col_map (dict): Dictionary of existing column names and new column names.
+            reverse (bool, optional): True, if the new column names are the keys (using the
+                xxMetaData.col_map as input), or False, if the current column names are the
+                values (original column names). Defaults to True.
+
+        Returns:
+            pd.DataFrame: Input DataFrame with remapped column names.
+    """
+    if reverse:
+        col_map = {v: k for k, v in col_map.items()}
+    return df.rename(columns=col_map)
+
+
+# ***************************************
 # Define the meta data validation classes
-#########################################
+# ***************************************
+
+
 @define(auto_attribs=True)
-class SCADAMetaData(FromDictMixin):
+class SCADAMetaData(FromDictMixin):  # noqa: F821
     """A metadata schematic to create the necessary column mappings and other validation
     components, or other data about the SCADA data, that will contribute to a larger
     plant metadata schema/routine.
@@ -237,7 +480,7 @@ class SCADAMetaData(FromDictMixin):
 
 
 @define(auto_attribs=True)
-class MeterMetaData(FromDictMixin):
+class MeterMetaData(FromDictMixin):  # noqa: F821
     """A metadata schematic to create the necessary column mappings and other validation
     components, or other data about energy meter data, that will contribute to a larger
     plant metadata schema/routine.
@@ -295,7 +538,7 @@ class MeterMetaData(FromDictMixin):
 
 
 @define(auto_attribs=True)
-class TowerMetaData(FromDictMixin):
+class TowerMetaData(FromDictMixin):  # noqa: F821
     """A metadata schematic to create the necessary column mappings and other validation
     components, or other data about meteorological tower (met tower) data, that will contribute to a
     larger plant metadata schema/routine.
@@ -347,7 +590,7 @@ class TowerMetaData(FromDictMixin):
 
 
 @define(auto_attribs=True)
-class StatusMetaData(FromDictMixin):
+class StatusMetaData(FromDictMixin):  # noqa: F821
     """A metadata schematic to create the necessary column mappings and other validation
     components, or other data about the turbine status log data, that will contribute to a
     larger plant metadata schema/routine.
@@ -417,7 +660,7 @@ class StatusMetaData(FromDictMixin):
 
 
 @define(auto_attribs=True)
-class CurtailMetaData(FromDictMixin):
+class CurtailMetaData(FromDictMixin):  # noqa: F821
     """A metadata schematic to create the necessary column mappings and other validation
     components, or other data about the plant curtailment data, that will contribute to a
     larger plant metadata schema/routine.
@@ -481,7 +724,7 @@ class CurtailMetaData(FromDictMixin):
 
 
 @define(auto_attribs=True)
-class AssetMetaData(FromDictMixin):
+class AssetMetaData(FromDictMixin):  # noqa: F821
     """A metadata schematic to create the necessary column mappings and other validation
     components, or other data about the site's asset metadata, that will contribute to a
     larger plant metadata schema/routine.
@@ -558,7 +801,7 @@ class AssetMetaData(FromDictMixin):
 
 
 @define(auto_attribs=True)
-class ReanalysisMetaData(FromDictMixin):
+class ReanalysisMetaData(FromDictMixin):  # noqa: F821
     # DataFrame columns
     time: str = attr.ib(default="time")
     windspeed: str = attr.ib(default="windspeed")
@@ -616,12 +859,8 @@ class ReanalysisMetaData(FromDictMixin):
         )
 
 
-def convert_reanalysis(value: dict[str, dict]):
-    return {k: ReanalysisMetaData.from_dict(v) for k, v in value.items()}
-
-
 @define(auto_attribs=True)
-class PlantMetaData(FromDictMixin):
+class PlantMetaData(FromDictMixin):  # noqa: F821
     """Composese the metadata/validation requirements from each of the individual data
     types that can compose a `PlantData` object.
 
@@ -654,7 +893,9 @@ class PlantMetaData(FromDictMixin):
     status: StatusMetaData = attr.ib(default={}, converter=StatusMetaData.from_dict)
     curtail: CurtailMetaData = attr.ib(default={}, converter=CurtailMetaData.from_dict)
     asset: AssetMetaData = attr.ib(default={}, converter=AssetMetaData.from_dict)
-    reanalysis: dict[str, ReanalysisMetaData] = attr.ib(default={}, converter=convert_reanalysis)
+    reanalysis: dict[str, ReanalysisMetaData] = attr.ib(
+        default={}, converter=convert_reanalysis  # noqa: F821
+    )  # noqa: F821
 
     @property
     def column_map(self) -> dict[str, dict]:
@@ -813,259 +1054,6 @@ class PlantMetaData(FromDictMixin):
         return frequency
 
 
-####################################################
-# Define the data validator and conversion functions
-####################################################
-
-
-def convert_to_list(
-    value: Sequence | str | int | float | None,
-    manipulation: Callable | None = None,
-) -> list:
-    """Converts an unknown element that could be a list or single, non-sequence element
-    to a list of elements.
-
-    Parameters
-    ----------
-    value : Sequence | str | int | float
-        The unknown element to be converted to a list of element(s).
-    manipulation: Callable | None
-        A function to be performed upon the individual elements, by default None.
-
-    Returns
-    -------
-    list
-        The new list of elements.
-    """
-    if not isinstance(manipulation, Callable) and manipulation is not None:
-        raise ValueError("`manipulation` must either be: `None` or of type: `Callable`.")
-
-    if isinstance(value, (str, int, float)) or value is None:
-        value = [value]
-    if manipulation is not None:
-        try:
-            return [manipulation(el) for el in value]
-        except (TypeError, ValueError):
-            raise ValueError(
-                "At least one of the elements of `value` could not be converted using the provided `manipulation` input."
-            )
-    return list(value)
-
-
-def column_validator(df: pd.DataFrame, column_names={}) -> None | list[str]:
-    """Validates that the column names exist as provided for each expected column.
-
-    Args:
-        df (pd.DataFrame): The DataFrame for column naming validation
-        column_names (dict, optional): Dictionary of column type (key) to real column
-            value (value) pairs. Defaults to {}.
-
-    Returns:
-        None | list[str]: A list of error messages that can be raised at a later step
-            in the validation process.
-    """
-    try:
-        missing = set(column_names.values()).difference(df.columns.tolist() + df.index.names)
-    except AttributeError:
-        # Catches 'NoneType' object has no attribute 'columns' for no data
-        missing = column_names.values()
-    if missing:
-        return list(missing)
-    return []
-
-
-def dtype_converter(df: pd.DataFrame, column_types={}) -> list[str]:
-    """Converts the columns provided in `column_types` of `df` to the appropriate data
-    type.
-
-    Args:
-        df (pd.DataFrame): The DataFrame for type validation/conversion
-        column_types (dict, optional): Dictionary of column name (key) and data type
-            (value) pairs. Defaults to {}.
-
-    Returns:
-        None | list[str]: List of error messages that were encountered in the conversion
-            process that will be raised at another step of the data validation.
-    """
-    errors = []
-    for column, new_type in column_types.items():
-        if new_type in (np.datetime64, pd.DatetimeIndex):
-            try:
-                df[column] = pd.DatetimeIndex(df[column])
-            except KeyError:
-                try:
-                    if isinstance(df.index, pd.MultiIndex):
-                        df = df.index.set_levels(
-                            pd.DatetimeIndex(df.index.get_level_values(column)), level=column
-                        )
-                    df = df.reindex(pd.DatetimeIndex(df.index))
-                except Exception as e:  # noqa: disable=E722
-                    errors.append(column)
-            except Exception as e:  # noqa: disable=E722
-                errors.append(column)
-            continue
-        try:
-            df[column] = df[column].astype(new_type)
-        except:  # noqa: disable=E722
-            errors.append(column)
-
-    return errors
-
-
-def analysis_filter(error_dict: dict, analysis_types: list[str] = ["all"]) -> dict:
-    """Filters the errors found by the analysis requirements  provided by the `analysis_types`.
-
-    Args:
-        error_dict (:obj: `dict`): The dictionary of errors separated by the keys:
-            "missing", "dtype", and "frequency".
-        analysis_types (:obj: `list[str]`, optional): The list of analysis types to
-            consider for validation. If "all" is contained in the list, then all errors
-            are returned back, and if `None` is contained in the list, then no errors
-            are returned, otherwise the union of analysis requirements is returned back.
-            Defaults to ["all"].
-
-    Returns:
-        dict: The missing column, bad dtype, and incorrect timestamp frequency errors
-            corresponding to the user's analysis types.
-    """
-    if "all" in analysis_types:
-        return error_dict
-
-    if None in analysis_types:
-        return {}
-
-    categories = ("scada", "meter", "tower", "curtail", "reanalysis", "asset")
-    requirements = {key: ANALYSIS_REQUIREMENTS[key] for key in analysis_types}
-    column_requirements = {
-        cat: set(
-            itertools.chain(*[r.get(cat, {}).get("columns", []) for r in requirements.values()])
-        )
-        for cat in categories
-    }
-
-    # Filter the missing columns, so only analysis-specific columns are provided
-    error_dict["missing"] = {
-        key: values.intersection(error_dict["missing"].get(key, []))
-        for key, values in column_requirements.items()
-    }
-
-    # Filter the bad dtype columns, so only analysis-specific columns are provided
-    error_dict["dtype"] = {
-        key: values.intersection(error_dict["dtype"].get(key, []))
-        for key, values in column_requirements.items()
-    }
-
-    return error_dict
-
-
-def compose_error_message(error_dict: dict, analysis_types: list[str] = ["all"]) -> str:
-    """Takes a dictionary of error messages from the `PlantData` validation routines,
-    filters out errors unrelated to the intended analysis types, and creates a
-    human-readable error message.
-
-    Args:
-        error_dict (dict): See `PlantData._errors` for more details.
-        analysis_types (list[str], optional): The user-input analysis types, which are
-            used to filter out unlreated errors. Defaults to ["all"].
-
-    Returns:
-        str: The human-readable error message breakdown.
-    """
-    if "all" not in analysis_types:
-        error_dict = analysis_filter(error_dict, analysis_types)
-
-    if None in analysis_types:
-        return ""
-
-    messages = [
-        f"`{name}` data is missing the following columns: {cols}"
-        for name, cols in error_dict["missing"].items()
-        if len(cols) > 0
-    ]
-    messages.extend(
-        [
-            f"`{name}` data columns were of the wrong type: {cols}"
-            for name, cols in error_dict["dtype"].items()
-            if len(cols) > 0
-        ]
-    )
-    messages.extend(
-        [
-            f"`{name}` data is of the wrong frequency: {freq}"
-            for name, freq in error_dict["frequency"].items()
-        ]
-    )
-    return "\n".join(messages)
-
-
-def load_to_pandas(data: str | Path | pd.DataFrame | spark.sql.DataFrame) -> pd.DataFrame | None:
-    """Loads the input data or filepath to apandas DataFrame.
-
-    Args:
-        data (str | Path | pd.DataFrame | spark.DataFrame): The input data.
-
-    Raises:
-        ValueError: Raised if an invalid data type was passed.
-
-    Returns:
-        pd.DataFrame | None: The passed `None` or the converted pandas DataFrame object.
-    """
-    if data is None:
-        return data
-    elif isinstance(data, (str, Path)):
-        return pd.read_csv(data)
-    elif isinstance(data, pd.DataFrame):
-        return data
-    elif isinstance(data, spark.sql.DataFrame):
-        return data.toPandas()
-    else:
-        raise ValueError("Input data could not be converted to pandas")
-
-
-def load_to_pandas_dict(
-    data: dict[str | Path | pd.DataFrame | spark.sql.DataFrame],
-) -> dict[str, pd.DataFrame] | None:
-    """Converts a dictionary of data or data locations to a dictionary of `pd.DataFrame`s
-    by iterating over the dictionary and passing each value to `load_to_pandas`.
-
-    Args:
-        data (dict[str  |  Path  |  pd.DataFrame  |  spark.sql.DataFrame]): The input data.
-
-    Returns:
-        dict[str, pd.DataFrame] | None: The passed `None` or the converted `pd.DataFrame`
-            object.
-    """
-    if data is None:
-        return data
-    for key, val in data.items():
-        data[key] = load_to_pandas(val)
-    return data
-
-
-def rename_columns(df: pd.DataFrame, col_map: dict, reverse: bool = True) -> pd.DataFrame:
-    """Renames the pandas DataFrame columns using col_map. Intended to be used in
-    conjunction with the a data objects meta data column mapping (reverse=True).
-
-        Args:
-            df (pd.DataFrame): The DataFrame to have its columns remapped.
-            col_map (dict): Dictionary of existing column names and new column names.
-            reverse (bool, optional): True, if the new column names are the keys (using the
-                xxMetaData.col_map as input), or False, if the current column names are the
-                values (original column names). Defaults to True.
-
-        Returns:
-            pd.DataFrame: Input DataFrame with remapped column names.
-    """
-    if reverse:
-        col_map = {v: k for k, v in col_map.items()}
-    df = df.rename(columns=col_map)
-    if isinstance(df.index, pd.MultiIndex):
-        df.index = df.index.rename([col_map.get(name, name) for name in df.index.names])
-    else:
-        df.index = df.index.rename(col_map.get(df.index.name, df.index.name))
-    return df
-
-
 ############################
 # Define the PlantData class
 ############################
@@ -1138,21 +1126,21 @@ class PlantData:
     )
     analysis_type: list[str] | None = attr.ib(
         default=None,
-        converter=convert_to_list,
+        converter=convert_to_list,  # noqa: F821
         validator=attrs.validators.deep_iterable(
             iterable_validator=attrs.validators.instance_of(list),
-            member_validator=attrs.validators.in_([*ANALYSIS_REQUIREMENTS] + ["all", type(None)]),
+            member_validator=attrs.validators.in_([*ANALYSIS_REQUIREMENTS] + ["all", None]),
         ),
         on_setattr=[attr.setters.convert, attr.setters.validate],
     )
-    scada: pd.DataFrame | None = attr.ib(default=None, converter=load_to_pandas)
-    meter: pd.DataFrame | None = attr.ib(default=None, converter=load_to_pandas)
-    tower: pd.DataFrame | None = attr.ib(default=None, converter=load_to_pandas)
-    status: pd.DataFrame | None = attr.ib(default=None, converter=load_to_pandas)
-    curtail: pd.DataFrame | None = attr.ib(default=None, converter=load_to_pandas)
-    asset: pd.DataFrame | None = attr.ib(default=None, converter=load_to_pandas)
+    scada: pd.DataFrame | None = attr.ib(default=None, converter=load_to_pandas)  # noqa: F821
+    meter: pd.DataFrame | None = attr.ib(default=None, converter=load_to_pandas)  # noqa: F821
+    tower: pd.DataFrame | None = attr.ib(default=None, converter=load_to_pandas)  # noqa: F821
+    status: pd.DataFrame | None = attr.ib(default=None, converter=load_to_pandas)  # noqa: F821
+    curtail: pd.DataFrame | None = attr.ib(default=None, converter=load_to_pandas)  # noqa: F821
+    asset: pd.DataFrame | None = attr.ib(default=None, converter=load_to_pandas)  # noqa: F821
     reanalysis: dict[str, pd.DataFrame] | None = attr.ib(
-        default=None, converter=load_to_pandas_dict
+        default=None, converter=load_to_pandas_dict  # noqa: F821
     )
     preprocess: Callable | None = attr.ib(default=None)
 
@@ -1167,7 +1155,7 @@ class PlantData:
         self._validate_frequency()
 
         # Check the errors againts the analysis requirements
-        error_message = compose_error_message(self._errors, analysis_types=self.analysis_type)
+        error_message = _compose_error_message(self._errors, analysis_types=self.analysis_type)
         if error_message != "":
             raise ValueError(error_message)
 
@@ -1516,7 +1504,7 @@ class PlantData:
         # TODO: Check for extra columns?
         # TODO: Define other checks?
 
-        error_message = compose_error_message(self._errors, self.analysis_type)
+        error_message = _compose_error_message(self._errors, self.analysis_type)
         if error_message:
             raise ValueError(error_message)
 
@@ -1605,24 +1593,25 @@ class PlantData:
                 the originally passed values. Defaults to False.
         """
         meta = self.metadata
+        reverse = not to_original  # flip the boolean to correctly map between the col_map entries
 
         if self.scada is not None:
-            self.scada = rename_columns(self.scada, meta.scada.col_map, reverse=to_original)
+            self.scada = rename_columns(self.scada, meta.scada.col_map, reverse=reverse)
         if self.meter is not None:
-            self.meter = rename_columns(self.meter, meta.meter.col_map, reverse=to_original)
+            self.meter = rename_columns(self.meter, meta.meter.col_map, reverse=reverse)
         if self.tower is not None:
-            self.tower = rename_columns(self.tower, meta.tower.col_map, reverse=to_original)
+            self.tower = rename_columns(self.tower, meta.tower.col_map, reverse=reverse)
         if self.status is not None:
-            self.status = rename_columns(self.status, meta.status.col_map, reverse=to_original)
+            self.status = rename_columns(self.status, meta.status.col_map, reverse=reverse)
         if self.curtail is not None:
-            self.curtail = rename_columns(self.curtail, meta.curtail.col_map, reverse=to_original)
+            self.curtail = rename_columns(self.curtail, meta.curtail.col_map, reverse=reverse)
         if self.asset is not None:
-            self.asset = rename_columns(self.asset, meta.asset.col_map, reverse=to_original)
+            self.asset = rename_columns(self.asset, meta.asset.col_map, reverse=reverse)
         if self.reanalysis is not None:
             reanalysis = {}
             for name, df in self.reanalysis.items():
                 reanalysis[name] = rename_columns(
-                    df, meta.reanalysis[name].col_map, reverse=to_original
+                    df, meta.reanalysis[name].col_map, reverse=reverse
                 )
             self.reanalysis = reanalysis
 
@@ -1773,33 +1762,6 @@ class PlantData:
             self.calculate_nearest_neighbor()
         return self.asset.loc[id, "nearest_tower_id"].values[0]
 
-    # Not necessary, but could provide an additional way in
-    @classmethod
-    def from_entr(
-        cls: PlantData,
-        thrift_server_host: str = "localhost",
-        thrift_server_port: int = 10000,
-        database: str = "entr_warehouse",
-        wind_plant: str = "",
-        aggregation: str = "",
-        date_range: list = None,
-    ):
-        """Load a PlantData object from data in an entr_warehouse.
-
-        Args:
-            thrift_server_url(str): URL of the Apache Thrift server
-            database(str): Name of the Hive database
-            wind_plant(str): Name of the wind plant you'd like to load
-            aggregation: Not yet implemented
-            date_range: Not yet implemented
-
-        Returns:
-            plant(PlantData): An OpenOA PlantData object.
-        """
-        return from_entr(
-            thrift_server_host, thrift_server_port, database, wind_plant, aggregation, date_range
-        )
-
     def turbine_ids(self) -> list[str]:
         """Convenience method for getting the unique turbine IDs from the scada data.
 
@@ -1807,6 +1769,11 @@ class PlantData:
             list[str]: List of unique turbine identifiers.
         """
         return self.scada[self.metadata.scada.id].unique()
+
+
+# **********************************************************
+# Define additional class methods for custom loading methods
+# **********************************************************
 
 
 def from_entr(
@@ -1857,3 +1824,6 @@ def from_entr(
     conn.close()
 
     return plant
+
+
+setattr(PlantData, "from_entr", classmethod(from_entr))
