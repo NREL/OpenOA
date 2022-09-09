@@ -867,6 +867,7 @@ class PlantMetaData(FromDictMixin):  # noqa: F821
     Args:
         latitude (:obj: `float`): The wind power plant's center point latitude.
         longitude (:obj: `float`): The wind power plant's center point longitude.
+        capacity (:obj: `float`): The capacity of the plant in MW
         scada (:obj: `SCADAMetaData`): A dictionary containing the `SCADAMetaData`
             column mapping and frequency parameters. See `SCADAMetaData` for more details.
         meter (:obj: `MeterMetaData`): A dictionary containing the `MeterMetaData`
@@ -887,6 +888,7 @@ class PlantMetaData(FromDictMixin):  # noqa: F821
 
     latitude: float = attr.ib(default=0, converter=float)
     longitude: float = attr.ib(default=0, converter=float)
+    capacity: float = attr.ib(default=0, converter=float)
     scada: SCADAMetaData = attr.ib(default={}, converter=SCADAMetaData.from_dict)
     meter: MeterMetaData = attr.ib(default={}, converter=MeterMetaData.from_dict)
     tower: TowerMetaData = attr.ib(default={}, converter=TowerMetaData.from_dict)

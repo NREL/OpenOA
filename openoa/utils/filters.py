@@ -285,7 +285,7 @@ def bin_filter(
                 "Both `bin_col` and `value_col` must be a pandas Series when `data` is not provided as a pandas DataFrame."
             )
     elif isinstance(data, pd.DataFrame):
-        if len(set([bin_col, value_col]).intersect(data.columns)) < 2:
+        if len(set([bin_col, value_col]).intersection(data.columns)) < 2:
             raise ValueError("Both `bin_col` and `value_col` must be columns in `data`.")
 
         bin_col = data.loc[:, bin_col].copy()

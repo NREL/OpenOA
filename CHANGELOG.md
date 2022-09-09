@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file. If you make
 
 ## [UNRELEASED]
 - The package name is changed from `operational_analysis` to `openoa` to be more consistent with how we expect to import OpenOA!
+- Renamed plant_analysis to long_term_monte_carlo_aep and updated it for the V3 API.
 - Renamed `compute_shear_v3` to `compute_shear` and deleted old version of `compute_shear`.
 - v2 `ReanalysisData` and `AssetData` methods have been absorbed by `PlantData` in favor of a unified data structure and means to operate on data.
 - v2 `TimeSeriesTable` is removed in favor of a pandas-based API and data usage

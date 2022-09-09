@@ -1,13 +1,12 @@
 import random
 import unittest
-from test import example_data_path_str
 
 import numpy as np
 import pandas as pd
 import pytest
 from numpy import testing as nptest
-from openoa.analysis import plant_analysis
-from examples.project_ENGIE import Project_Engie
+from openoa.analysis import aep
+from examples import project_ENGIE, example_data_path_str
 
 
 def reset_prng():
@@ -15,38 +14,38 @@ def reset_prng():
     random.seed(42)
 
 
-class TestPandasPrufPlantAnalysis(unittest.TestCase):
+class TestLongTermMonteCarloAEP(unittest.TestCase):
+
     def setUp(self):
+        """
+        Python Unittest setUp method.
+        Load data from disk into PlantData objects and prepare the data for testing the AEP method.
+        """
         reset_prng()
+
         # Set up data to use for testing (ENGIE example plant)
-        self.project = Project_Engie(example_data_path_str)
-        self.project.prepare()
+        self.project = project_ENGIE.prepare(example_data_path_str)
 
         # Set up a new project with modified reanalysis start and end dates
-        self.project_rean = Project_Engie(example_data_path_str)
-        self.project_rean.prepare()
-        self.project_rean._reanalysis._product[
-            "merra2"
-        ].df = self.project_rean._reanalysis._product["merra2"].df.loc[
-            self.project_rean._reanalysis._product["merra2"].df.index <= "2019-04-15 12:30"
-        ]
-        self.project_rean._reanalysis._product["era5"].df = self.project_rean._reanalysis._product[
-            "era5"
-        ].df.loc[self.project_rean._reanalysis._product["era5"].df.index >= "1999-01-15 12:00"]
+        self.project_rean = project_ENGIE.prepare(example_data_path_str)
 
-    # Test inputs to the regression model, at monthly time resolution
+        self.project_rean.reanalysis["merra2"] = self.project_rean.reanalysis["merra2"].loc[:'2019-04-15 12:30']
+        self.project_rean.reanalysis["era5"] = self.project_rean.reanalysis["era5"].loc['1999-01-15 12:00':]
+
     def test_monthly_inputs(self):
+        """
+        Test inputs to the regression model, at monthly time resolution
+        """
         reset_prng()
-        # ____________________________________________________________________
-        # Test inputs to the regression model, at monthly time resolution
-        self.analysis = plant_analysis.MonteCarloAEP(
+
+        self.analysis = aep.MonteCarloAEP(
             self.project,
             reanal_products=["merra2", "era5"],
             time_resolution="M",
             reg_temperature=True,
             reg_winddirection=True,
         )
-        df = self.analysis._aggregate.df
+        df = self.analysis._aggregate
         df_rean = self.analysis._reanalysis_aggregate
 
         # Check the pre-processing functions
@@ -54,12 +53,14 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         self.check_process_loss_estimates_monthly(df)
         self.check_process_reanalysis_data_monthly(df, df_rean)
 
-    # Test reanalysis start and end dates depending on time resolution and end date argument
     def test_reanalysis_aggregate_monthly(self):
+        """
+        Test reanalysis start and end dates depending on time resolution and end date argument
+        """
         reset_prng()
         # ____________________________________________________________________
         # Test default aggregate reanalysis values and date range, at monthly time resolution
-        self.analysis = plant_analysis.MonteCarloAEP(
+        self.analysis = aep.MonteCarloAEP(
             self.project_rean, reanal_products=["merra2", "era5"], time_resolution="M"
         )
         df_rean = self.analysis._reanalysis_aggregate
@@ -84,7 +85,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         # Check for invalid user-defined end dates
         # Date range doesn't include full 20 years
         with pytest.raises(ValueError):
-            self.analysis = plant_analysis.MonteCarloAEP(
+            self.analysis = aep.MonteCarloAEP(
                 self.project_rean,
                 reanal_products=["merra2", "era5"],
                 time_resolution="M",
@@ -93,7 +94,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
 
         # End date out of bounds, monthly
         with pytest.raises(ValueError):
-            self.analysis = plant_analysis.MonteCarloAEP(
+            self.analysis = aep.MonteCarloAEP(
                 self.project_rean,
                 reanal_products=["merra2", "era5"],
                 time_resolution="M",
@@ -102,7 +103,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
 
         # ____________________________________________________________________
         # Test aggregate reanalysis values and date range with user-defined end date, at monthly time resolution
-        self.analysis = plant_analysis.MonteCarloAEP(
+        self.analysis = aep.MonteCarloAEP(
             self.project_rean,
             reanal_products=["merra2", "era5"],
             time_resolution="M",
@@ -130,7 +131,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         reset_prng()
         # ____________________________________________________________________
         # Test default aggregate reanalysis values and date range, at daily time resolution
-        self.analysis = plant_analysis.MonteCarloAEP(
+        self.analysis = aep.MonteCarloAEP(
             self.project_rean, reanal_products=["merra2", "era5"], time_resolution="D"
         )
         df_rean = self.analysis._reanalysis_aggregate
@@ -155,7 +156,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         # Check for invalid user-defined end dates
         # Date range doesn't include full 20 years
         with pytest.raises(ValueError):
-            self.analysis = plant_analysis.MonteCarloAEP(
+            self.analysis = aep.MonteCarloAEP(
                 self.project_rean,
                 reanal_products=["merra2", "era5"],
                 time_resolution="D",
@@ -164,7 +165,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
 
         # End date out of bounds, daily
         with pytest.raises(ValueError):
-            self.analysis = plant_analysis.MonteCarloAEP(
+            self.analysis = aep.MonteCarloAEP(
                 self.project_rean,
                 reanal_products=["merra2", "era5"],
                 time_resolution="D",
@@ -173,7 +174,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
 
         # ____________________________________________________________________
         # Test aggregate reanalysis values and date range with user-defined end date, at daily time resolution
-        self.analysis = plant_analysis.MonteCarloAEP(
+        self.analysis = aep.MonteCarloAEP(
             self.project_rean,
             reanal_products=["merra2", "era5"],
             time_resolution="D",
@@ -201,7 +202,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         reset_prng()
         # ____________________________________________________________________
         # Test default aggregate reanalysis values and date range, at hourly time resolution
-        self.analysis = plant_analysis.MonteCarloAEP(
+        self.analysis = aep.MonteCarloAEP(
             self.project_rean, reanal_products=["merra2", "era5"], time_resolution="H"
         )
         df_rean = self.analysis._reanalysis_aggregate
@@ -226,7 +227,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         # Check for invalid user-defined end dates
         # Date range doesn't include full 20 years
         with pytest.raises(ValueError):
-            self.analysis = plant_analysis.MonteCarloAEP(
+            self.analysis = aep.MonteCarloAEP(
                 self.project_rean,
                 reanal_products=["merra2", "era5"],
                 time_resolution="H",
@@ -235,7 +236,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
 
         # End date out of bounds, hourly
         with pytest.raises(ValueError):
-            self.analysis = plant_analysis.MonteCarloAEP(
+            self.analysis = aep.MonteCarloAEP(
                 self.project_rean,
                 reanal_products=["merra2", "era5"],
                 time_resolution="H",
@@ -244,7 +245,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
 
         # ____________________________________________________________________
         # Test aggregate reanalysis values and date range with user-defined end date, at hourly time resolution
-        self.analysis = plant_analysis.MonteCarloAEP(
+        self.analysis = aep.MonteCarloAEP(
             self.project_rean,
             reanal_products=["merra2", "era5"],
             time_resolution="H",
@@ -272,7 +273,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         reset_prng()
         # ____________________________________________________________________
         # Test linear regression model, at monthly time resolution
-        self.analysis = plant_analysis.MonteCarloAEP(
+        self.analysis = aep.MonteCarloAEP(
             self.project,
             reanal_products=["merra2", "era5"],
             time_resolution="M",
@@ -290,14 +291,14 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         reset_prng()
         # ____________________________________________________________________
         # Test inputs to the regression model, at monthly time resolution
-        self.analysis = plant_analysis.MonteCarloAEP(
+        self.analysis = aep.MonteCarloAEP(
             self.project,
             reanal_products=["merra2", "era5"],
             time_resolution="D",
             reg_temperature=True,
             reg_winddirection=True,
         )
-        df = self.analysis._aggregate.df
+        df = self.analysis._aggregate
 
         # Check the pre-processing functions
         self.check_process_revenue_meter_energy_daily(df)
@@ -308,7 +309,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         reset_prng()
         # ____________________________________________________________________
         # Test GAM regression model (can be used at daily time resolution only)
-        self.analysis = plant_analysis.MonteCarloAEP(
+        self.analysis = aep.MonteCarloAEP(
             self.project,
             reanal_products=["merra2", "era5"],
             time_resolution="D",
@@ -325,7 +326,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         reset_prng()
         # ____________________________________________________________________
         # Test GBM regression model (can be used at daily time resolution only)
-        self.analysis = plant_analysis.MonteCarloAEP(
+        self.analysis = aep.MonteCarloAEP(
             self.project,
             reanal_products=["era5"],
             time_resolution="D",
@@ -342,7 +343,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         reset_prng()
         # ____________________________________________________________________
         # Test ETR regression model (can be used at daily time resolution only)
-        self.analysis = plant_analysis.MonteCarloAEP(
+        self.analysis = aep.MonteCarloAEP(
             self.project,
             reanal_products=["merra2"],
             time_resolution="D",
@@ -359,7 +360,7 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         reset_prng()
         # ____________________________________________________________________
         # Test GAM regression model (can be used at daily time resolution only)
-        self.analysis = plant_analysis.MonteCarloAEP(
+        self.analysis = aep.MonteCarloAEP(
             self.project,
             reanal_products=["merra2", "era5"],
             time_resolution="D",
@@ -411,10 +412,10 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         expected = {
             "merra2": [5.42523278, 6.86883337, 5.02690892],
             "era5": [5.20508049, 6.71586744, 5.23824611],
-            "merra2_wd": [11.74700241, 250.90081133, 123.70142025],
-            "era5_wd": [23.4291153, 253.14150601, 121.25886916],
-            "merra2_temperature_K": [289.87128364, 275.26493716, 281.72562887],
-            "era5_temperature_K": [290.82110632, 276.62490053, 282.71629935],
+            "merra2_winddirection": [11.74700241, 250.90081133, 123.70142025],
+            "era5_winddirection": [23.4291153, 253.14150601, 121.25886916],
+            "merra2_temperature": [289.87128364, 275.26493716, 281.72562887],
+            "era5_temperature": [290.82110632, 276.62490053, 282.71629935],
         }
 
         date_ind = pd.to_datetime(["2014-06-01", "2014-12-01", "2015-10-01"])
@@ -466,10 +467,10 @@ class TestPandasPrufPlantAnalysis(unittest.TestCase):
         expected = {
             "merra2": np.array([11.02459231, 7.04306896, 8.41880152]),
             "era5": np.array([10.47942319, 7.71069617, 9.60864791]),
-            "merra2_wd": np.array([213.81683361, 129.08053181, 170.39815032]),
-            "era5_wd": np.array([212.23854097, 127.75317448, 170.33488958]),
-            "merra2_temperature_K": np.array([279.67922333, 285.69317833, 278.15574917]),
-            "era5_temperature_K": np.array([281.14880642, 285.81961816, 280.42017656]),
+            "merra2_winddirection": np.array([213.81683361, 129.08053181, 170.39815032]),
+            "era5_winddirection": np.array([212.23854097, 127.75317448, 170.33488958]),
+            "merra2_temperature": np.array([279.67922333, 285.69317833, 278.15574917]),
+            "era5_temperature": np.array([281.14880642, 285.81961816, 280.42017656]),
         }
 
         date_ind = pd.to_datetime(["2014-01-02", "2014-10-12", "2015-12-28"])
