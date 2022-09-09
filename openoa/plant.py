@@ -865,7 +865,7 @@ def column_validator(df: pd.DataFrame, column_names={}) -> None | list[str]:
             in the validation process.
     """
     try:
-        missing = set(column_names.values()).difference(df.columns)
+        missing = set(column_names.values()).difference(df.columns.tolist() + df.index.names)
     except AttributeError:
         # Catches 'NoneType' object has no attribute 'columns' for no data
         missing = column_names.values()
@@ -892,6 +892,15 @@ def dtype_converter(df: pd.DataFrame, column_types={}) -> list[str]:
         if new_type in (np.datetime64, pd.DatetimeIndex):
             try:
                 df[column] = pd.DatetimeIndex(df[column])
+            except KeyError:
+                try:
+                    if isinstance(df.index, pd.MultiIndex):
+                        df = df.index.set_levels(
+                            pd.DatetimeIndex(df.index.get_level_values(column)), level=column
+                        )
+                    df = df.reindex(pd.DatetimeIndex(df.index))
+                except Exception as e:  # noqa: disable=E722
+                    errors.append(column)
             except Exception as e:  # noqa: disable=E722
                 errors.append(column)
             continue
@@ -1049,7 +1058,12 @@ def rename_columns(df: pd.DataFrame, col_map: dict, reverse: bool = True) -> pd.
     """
     if reverse:
         col_map = {v: k for k, v in col_map.items()}
-    return df.rename(columns=col_map)
+    df = df.rename(columns=col_map)
+    if isinstance(df.index, pd.MultiIndex):
+        df.index = df.index.rename([col_map.get(name, name) for name in df.index.names])
+    else:
+        df.index = df.index.rename(col_map.get(df.index.name, df.index.name))
+    return df
 
 
 ############################
@@ -1127,7 +1141,7 @@ class PlantData:
         converter=convert_to_list,
         validator=attrs.validators.deep_iterable(
             iterable_validator=attrs.validators.instance_of(list),
-            member_validator=attrs.validators.in_([*ANALYSIS_REQUIREMENTS] + ["all", None]),
+            member_validator=attrs.validators.in_([*ANALYSIS_REQUIREMENTS] + ["all", type(None)]),
         ),
         on_setattr=[attr.setters.convert, attr.setters.validate],
     )

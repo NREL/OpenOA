@@ -161,7 +161,8 @@ def convert_datetime_column(
 
     # Create the UTC-converted time-stamp
     try:
-        df[t_utc] = pd.to_datetime([el.astimezone(tz.tzutc()) for el in dt_col]).tz_convert("UTC")
+        utc = tz.tzutc()
+        df[t_utc] = pd.to_datetime([el.astimezone(utc) for el in df.index]).tz_convert("UTC")
     except AttributeError:  # catches numpy datetime error for astimezone() not existing
         df = df.tz_convert("UTC")
         df[t_utc] = df.index
@@ -409,7 +410,7 @@ def dalyight_savings_plot(
         plt.title(f"{year}, Spring")
         plt.ylabel("Power")
         plt.xlabel("Date")
-        plt.legend(loc="lower left")
+        plt.legend(loc="lower left", fontsize=10)
         plt.xticks(rotation=30)
         plt.grid(True)
 
@@ -461,7 +462,7 @@ def dalyight_savings_plot(
         plt.title(f"{year}, Fall")
         plt.ylabel("Power")
         plt.xlabel("Date")
-        plt.legend(loc="lower left")
+        plt.legend(loc="lower left", fontsize=10)
         plt.xticks(rotation=30)
         plt.grid(True)
 
