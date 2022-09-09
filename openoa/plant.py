@@ -1129,7 +1129,7 @@ class PlantData:
         converter=convert_to_list,  # noqa: F821
         validator=attrs.validators.deep_iterable(
             iterable_validator=attrs.validators.instance_of(list),
-            member_validator=attrs.validators.in_([*ANALYSIS_REQUIREMENTS] + ["all", None]),
+            member_validator=attrs.validators.in_([*ANALYSIS_REQUIREMENTS] + ["all", type(None)]),
         ),
         on_setattr=[attr.setters.convert, attr.setters.validate],
     )
