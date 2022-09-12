@@ -142,8 +142,8 @@ class SimpleMetProcessing(unittest.TestCase):
         nptest.assert_allclose(computed_v2, expected_v2)
 
     def test_compute_veer(self):
-        wind_low = np.linspace(2.0, 10.0, 10)
-        wind_high = np.linspace(8.0, 25.0, 10)
+        wind_low = pd.Series(np.linspace(2.0, 10.0, 10))
+        wind_high = pd.Series(np.linspace(8.0, 25.0, 10))
         height_low = 30.0
         height_high = 80.0
 
