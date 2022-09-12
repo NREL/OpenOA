@@ -10,47 +10,71 @@ import numpy as np
 import pandas as pd
 import scipy.constants as const
 
+from openoa.utils._converters import df_to_series
 
-def compute_wind_direction(u: pd.Series | str, v: pd.Series | str, data: pd.DataFrame = None):
+
+# Define constants
+R = 287.058  # Gas constant for dry air, units of J/kg/K
+Rw = 461.5  # Gas constant of water vapour, unit J/kg/K
+
+
+def compute_wind_direction(
+    u: pd.Series | str, v: pd.Series | str, data: pd.DataFrame = None
+) -> pd.Series:
     """Compute wind direction given u and v wind vector components
 
     Args:
-        u(:obj:`pandas.Series` | `str`): the zonal component of the wind; units of m/s
-        v(:obj:`pandas.Series` | `str`): the meridional component of the wind; units of m/s
-        data(:obj:`pandas.DataFrame`): The pandas DataFrame containg the columns `u` and `v`
+        u(:obj:`pandas.Series` | `str`): A pandas `Series` of the zonal component of the wind,
+            in m/s, or the name of the column in `data`.
+        v(:obj:`pandas.Series` | `str`): A pandas `Series` of the meridional component of the wind,
+            in m/s, or the name of the column in `data`.
+        data(:obj:`pandas.DataFrame`): The pandas DataFrame containg the columns `u` and `v`.
 
     Returns:
         :obj:`pandas.Series`: wind direction; units of degrees
     """
+    if data is not None:
+        u, v = df_to_series(data, u, v)
+
     wd = 180 + np.arctan2(u, v) * 180 / np.pi  # Calculate wind direction in degrees
-    wd[wd == 360] = 0  # Make calculations of 360 equal to 0
-
-    return wd
+    return pd.Series(np.where(wd != 360, wd, 0))
 
 
-def compute_u_v_components(wind_speed, wind_dir):
+def compute_u_v_components(
+    wind_speed: pd.Series | str, wind_dir: pd.Series | str, data: pd.DataFrame = None
+) -> pd.Series:
     """Compute vector components of the horizontal wind given wind speed and direction
 
     Args:
-        wind_speed(pandas.Series): horizontal wind speed; units of m/s
-        wind_dir(pandas.Series): wind direction; units of degrees
+        wind_speed(pandas.Series): A pandas `Series` of the horizontal wind speed, in m/s, or the
+            name of the column in `data`.
+        wind_dir(pandas.Series): A pandas `Series` of the wind direction, in degrees, or the name of
+            the column in `data`.
 
     Returns:
         (tuple):
             u(pandas.Series): the zonal component of the wind; units of m/s.
             v(pandas.Series): the meridional component of the wind; units of m/s
     """
+    if data is not None:
+        wind_speed, wind_dir = df_to_series(data, wind_speed, wind_dir)
+
     # Send exception if any negative data found
     if (wind_speed[wind_speed < 0].size > 0) | (wind_dir[wind_dir < 0].size > 0):
         raise Exception("Some of your wind speed or direction data is negative. Check your data")
 
-    u = np.round(-wind_speed * np.sin(wind_dir * np.pi / 180), 10)  # round to 10 digits
+    u = np.round(-wind_speed * np.sin(wind_dir * np.pi / 180), 10)
     v = np.round(-wind_speed * np.cos(wind_dir * np.pi / 180), 10)
 
     return u, v
 
 
-def compute_air_density(temp_col, pres_col, humi_col=None):
+def compute_air_density(
+    temp_col: pd.Series | str,
+    pres_col: pd.Series | str,
+    humi_col: pd.Series | str = None,
+    data: pd.DataFrame = None,
+):
     """
     Calculate air density from the ideal gas law based on the definition provided by IEC 61400-12
     given pressure, temperature and relative humidity.
@@ -68,20 +92,19 @@ def compute_air_density(temp_col, pres_col, humi_col=None):
     Returns:
         :obj:`pandas.Series`: Rho, calcualted air density; units of kg/m3
     """
+    if data is not None:
+        temp_col, pres_col, humi_col = df_to_series(data, temp_col, pres_col, humi_col)
     # Check if humidity column is provided and create default humidity array with values of 0.5 if necessary
     if humi_col is not None:
         rel_humidity = humi_col
     else:
-        rel_humidity = np.repeat(0.5, temp_col.shape[0])
+        rel_humidity = np.full(temp_col.shape[0], 0.5)
+
     # Send exception if any negative data found
     if np.any(temp_col < 0) | np.any(pres_col < 0) | np.any(rel_humidity < 0):
         raise Exception(
             "Some of your temperature, pressure or humidity data is negative. Check your data."
         )
-
-    # protect against python 2 integer division rules
-    temp_col = temp_col.astype(float)
-    pres_col = pres_col.astype(float)
 
     R_const = 287.05  # Gas constant for dry air, units of J/kg/K
     Rw_const = 461.5  # Gas constant of water vapour, unit J/kg/K

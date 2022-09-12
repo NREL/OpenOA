@@ -6,6 +6,7 @@ throughout the utils subpackage.
 from __future__ import annotations
 
 from math import ceil
+from itertools import filterfalse
 
 import pandas as pd
 
@@ -42,7 +43,8 @@ def convert_args_to_lists(length: int, *args) -> list[list]:
 
 def df_to_series(data: pd.DataFrame, *args: str) -> tuple[pd.Series, ...]:
     """Converts a `DataFrame` and dynamic number of column names to a an equal number of pandas `Series`
-    corresponding to the column names.
+    corresponding to the column names. If `None` is passed as an argument to args, then `None` will
+    be returned in place of a Series to maintain consistent ordering of inputs and outputs.
 
     Args:
         data (obj:`pandas.DataFrame`): The `DataFrame` object containg the column names in `args`.
@@ -50,14 +52,19 @@ def df_to_series(data: pd.DataFrame, *args: str) -> tuple[pd.Series, ...]:
             returned back as pandas `Series` objects.
 
     Raises:
+        ValueError: Raised if `data` is not a pandas `DataFrame`.
         ValueError: Raised if any of the args passed is not contained in `data`.
 
     Returns:
         tuple[pandas.Series, ...]: A pandas `Series` for each of the column names passed in `args`
     """
-    if len(invalid := set(args).difference(data.columns)) > 0:
+    if not isinstance(data, pd.DataFrame):
+        raise ValueError("The input to `data` must be a pandas `DataFrame`.")
+
+    # Check for valid column names in args, ignoring any None values
+    if len(invalid := set(filterfalse(lambda x: x is None, args)).difference(data.columns)) > 0:
         raise ValueError(f"The following args are not columns of `data`: {invalid}")
-    return tuple(data.loc[:, col].copy() for col in args)
+    return tuple(data.loc[:, col].copy() if col is not None else col for col in args)
 
 
 def multiple_df_to_single_df(*args: pd.DataFrame, align_col: str | None = None) -> pd.DataFrame:
