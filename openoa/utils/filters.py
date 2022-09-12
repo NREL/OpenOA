@@ -85,7 +85,7 @@ def range_flag(
     if col is None:
         col = data.columns.tolist()
 
-    upper, lower = convert_args_to_lists(len(col), upper, lower)
+    upper, lower = (len(col), upper, lower)
     if len(col) != len(lower) != len(upper):
         raise ValueError("The inputs to `col`, `above`, and `below` must be the same length.")
 
@@ -142,7 +142,7 @@ def unresponsive_flag(
 
 def std_range_flag(
     data: pd.DataFrame | pd.Series,
-    threshold: float = 2.0,
+    threshold: float | list[float] = 2.0,
     col: list[str] | None = None,
 ) -> pd.Series | pd.DataFrame:
     """Flag time stamps for which the measurement is outside of the threshold number of standard deviations

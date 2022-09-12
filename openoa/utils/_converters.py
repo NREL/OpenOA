@@ -5,7 +5,25 @@ throughout the utils subpackage.
 
 from __future__ import annotations
 
+from math import ceil
+
 import pandas as pd
+
+
+def _list_of_len(x: list, length: int) -> list:
+    """Converts a list of dynamic length to one of length `length` by repeating the elements of `x`
+    until the desired length is reached.
+
+    Args:
+        x (`list`): The list to be expanded.
+        length (`int`): The desired length of `x`
+
+    Returns:
+        list: A list of length `length` with repeating elements of `x`.
+    """
+    if (actual := len(x)) == length:
+        return x
+    return (x * ceil(length / actual))[:length]
 
 
 def convert_args_to_lists(length: int, *args) -> list[list]:
@@ -19,7 +37,7 @@ def convert_args_to_lists(length: int, *args) -> list[list]:
     Returns:
         list[list]: A list of lists of length `length` for each argument passed.
     """
-    return [a * length if isinstance(a, list) else [a] * length for a in args]
+    return [a if isinstance(a, list) else [a] * length for a in args]
 
 
 def df_to_series(data: pd.DataFrame, *args: str) -> tuple[pd.Series, ...]:
