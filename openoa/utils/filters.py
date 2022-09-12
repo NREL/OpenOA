@@ -15,42 +15,6 @@ from sklearn.cluster import KMeans
 from openoa.utils._converters import series_to_df, convert_args_to_lists
 
 
-def _convert_to_df(data: pd.DataFrame | pd.Series, *args) -> tuple[bool, pd.DataFrame, list[Any]]:
-    """Converts the passed `data` to a `pandas.DataFrame`, if needed, and converts the
-    additional method arguments to a list of the inputs if the passed value is a `pandas.Series`.
-
-    Args:
-        data (:obj:`pd.DataFrame` | `pd.Series`): The data to be filtered.
-
-    Raises:
-        TypeError: Raised if `data` is not a pandas `Series` or `DataFrame`.
-
-    Returns:
-        tuple[bool, pd.DataFrame, list[Any]]:
-            to_series (:obj:`bool`) is an indicator for if `data` will need to be converted
-                back to a `pandas.Series` object
-            data (:obj:`pandas.DataFrame`): `data` converted to a DataFrame, as needed.
-            args (:obj:`list[Any]`): A list of the original arguments passed, but now
-                encapsulated in individual lists, if the data passed was a `pandas.Series`,
-                otherwise, the original arguments.
-            `
-    """
-    if not isinstance(data, (pd.Series, pd.DataFrame)):
-        raise TypeError("Inputs to `data` must be a pandas Series or DataFrame object.")
-
-    if to_series := isinstance(data, pd.Series):
-        data = data.to_frame()
-
-        # Only convert the args if they're passed
-        if args:
-            args = [[a] for a in args]
-
-    # Only return args values if they're passed
-    if args:
-        return to_series, data, args
-    return to_series, data
-
-
 def range_flag(
     data: pd.DataFrame | pd.Series,
     lower: float | list[float],
@@ -85,7 +49,7 @@ def range_flag(
     if col is None:
         col = data.columns.tolist()
 
-    upper, lower = (len(col), upper, lower)
+    upper, lower = convert_args_to_lists(len(col), upper, lower)
     if len(col) != len(lower) != len(upper):
         raise ValueError("The inputs to `col`, `above`, and `below` must be the same length.")
 
@@ -119,7 +83,8 @@ def unresponsive_flag(
             boolean entries.
     """
     # Prepare the inputs to be standardized for use with DataFrames
-    to_series, data = _convert_to_df(data)
+    if to_series := isinstance(data, pd.Series):
+        data = series_to_df(data)
     if col is None:
         col = data.columns.tolist()
     if not isinstance(threshold, int):
@@ -167,7 +132,8 @@ def std_range_flag(
             boolean entries.
     """
     # Prepare the inputs to be standardized for use with DataFrames
-    to_series, data = _convert_to_df(data)
+    if to_series := isinstance(data, pd.Series):
+        data = series_to_df(data)
     if col is None:
         col = data.columns.tolist()
 
