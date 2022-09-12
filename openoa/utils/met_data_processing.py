@@ -13,7 +13,7 @@ import scipy.constants as const
 from openoa.utils._converters import df_to_series
 
 
-# Define constants
+# Define constants used in some of the methods
 R = 287.058  # Gas constant for dry air, units of J/kg/K
 Rw = 461.5  # Gas constant of water vapour, unit J/kg/K
 
@@ -106,11 +106,8 @@ def compute_air_density(
             "Some of your temperature, pressure or humidity data is negative. Check your data."
         )
 
-    R_const = 287.05  # Gas constant for dry air, units of J/kg/K
-    Rw_const = 461.5  # Gas constant of water vapour, unit J/kg/K
     rho = (1 / temp_col) * (
-        pres_col / R_const
-        - rel_humidity * (0.0000205 * np.exp(0.0631846 * temp_col)) * (1 / R_const - 1 / Rw_const)
+        pres_col / R - rel_humidity * (0.0000205 * np.exp(0.0631846 * temp_col)) * (1 / R - 1 / Rw)
     )
 
     return rho
@@ -134,8 +131,7 @@ def pressure_vertical_extrapolation(p0, temp_avg, z0, z1):
     if (p0[p0 < 0].size > 0) | (temp_avg[temp_avg < 0].size > 0):
         raise Exception("Some of your temperature of pressure data is negative. Check your data")
 
-    R_const = 287.058  # Gas constant for dry air, units of J/kg/K
-    p1 = p0 * np.exp(-const.g * (z1 - z0) / R_const / temp_avg)  # Pressure at z1
+    p1 = p0 * np.exp(-const.g * (z1 - z0) / R / temp_avg)  # Pressure at z1
 
     return p1
 

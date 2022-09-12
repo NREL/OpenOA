@@ -3,6 +3,7 @@ import unittest
 import numpy as np
 import pandas as pd
 from numpy import testing as nptest
+
 from openoa.utils import met_data_processing as mt
 
 
@@ -38,7 +39,7 @@ class SimpleMetProcessing(unittest.TestCase):
         pres = np.arange(90000, 110000, 5000)
 
         rho = mt.compute_air_density(temp, pres)  # Test result
-        rho_ans = np.array([1.11744, 1.1581, 1.19706, 1.23427])  # Expected result
+        rho_ans = np.array([1.11741, 1.15807, 1.19702, 1.23424])  # Expected result
 
         nptest.assert_array_almost_equal(rho, rho_ans, decimal=5)
 
