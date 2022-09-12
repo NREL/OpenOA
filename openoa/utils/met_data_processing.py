@@ -335,7 +335,8 @@ def compute_veer(
     Returns:
         veer(:obj:`array`): veer (deg/m)
     """
-
+    if data is not None:
+        wind_a, wind_b = df_to_series(data, wind_a, wind_b)
     # Calculate wind direction change
     delta_dir = wind_b - wind_a
 
