@@ -5,8 +5,9 @@ import numpy as np
 import pandas as pd
 import pytest
 from numpy import testing as nptest
-from openoa.analysis import aep
 from examples import project_ENGIE, example_data_path_str
+
+from openoa.analysis import aep
 
 
 def reset_prng():
@@ -15,7 +16,6 @@ def reset_prng():
 
 
 class TestLongTermMonteCarloAEP(unittest.TestCase):
-
     def setUp(self):
         """
         Python Unittest setUp method.
@@ -29,8 +29,12 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         # Set up a new project with modified reanalysis start and end dates
         self.project_rean = project_ENGIE.prepare(example_data_path_str)
 
-        self.project_rean.reanalysis["merra2"] = self.project_rean.reanalysis["merra2"].loc[:'2019-04-15 12:30']
-        self.project_rean.reanalysis["era5"] = self.project_rean.reanalysis["era5"].loc['1999-01-15 12:00':]
+        self.project_rean.reanalysis["merra2"] = self.project_rean.reanalysis["merra2"].loc[
+            :"2019-04-15 12:30"
+        ]
+        self.project_rean.reanalysis["era5"] = self.project_rean.reanalysis["era5"].loc[
+            "1999-01-15 12:00":
+        ]
 
     def test_monthly_inputs(self):
         """
@@ -528,7 +532,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
 
     def check_simulation_results_etr_daily(self, s):
         # Make sure AEP results are consistent to six decimal places
-        expected_results = [12.938536, 8.561798, 1.334704, 5.336189, 0.057874, 11.339976]
+        expected_results = [12.938535, 8.561778, 1.334704, 5.33619, 0.057874, 11.339982]
 
         calculated_results = [
             s.aep_GWh.mean(),
