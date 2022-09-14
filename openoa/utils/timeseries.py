@@ -2,14 +2,19 @@
 This module provides useful functions for processing timeseries data
 """
 
-from datetime import datetime
+from __future__ import annotations
+
+import datetime
 
 import numpy as np
 import pandas as pd
-from pytz import timezone
+from pytz import utc, timezone
+from dateutil.parser import parse
+
+from openoa.utils._converters import df_to_series
 
 
-def convert_local_to_utc(d, tz_string):
+def convert_local_to_utc(d: str | datetime.datetime, tz_string: str) -> datetime.datetime:
     """
     Convert timestamps in local time to UTC. The function can only act on a single timestamp at a time, so
     for example use the .apply function in Pandas:
@@ -29,67 +34,100 @@ def convert_local_to_utc(d, tz_string):
         :obj:`datetime.datetime`: the local date converted to UTC time
 
     """
-    if d.tzinfo:
-        raise Exception("d parameter must not have a timezone")
+    # TODO: Make a second copy of this method that aligns with the QA.convert_datetime_column method
+    if isinstance(d, str):
+        d = parse(d)
+    if not isinstance(d, datetime.datetime):
+        raise TypeError(
+            "The input to `d` must be a `datetime.datetime` object or a string that can be converted to one."
+        )
 
-    d_obj = datetime(
-        d.year, d.month, d.day, d.hour, d.minute
-    )  # Convert datetime object into simple integer form
-    tz = timezone(tz_string)  # define timezone
-    d_local = tz.localize(d_obj, is_dst=True)  # localize the date object
-    utc = timezone("UTC")  # define UTC timezone
-    d_utc = d_local.astimezone(utc)  # calculate UTC time
-
-    return d_utc
+    # Define the timezone, and convert to a the localized timestamp as needed
+    tz = timezone(tz_string)
+    # TODO: Figure out why a datetime object with tzinfo encoded is different than localizing with pytz
+    d_local = d if d.tzinfo else tz.localize(d, is_dst=True)
+    return d_local.astimezone(utc)  # calculate UTC time
 
 
-def find_time_gaps(t_series, freq):
-    """
-    Find data gaps in input data and report them
+def convert_dt_to_utc(
+    dt_col: pd.Series | str, tz_string: str, data: pd.DataFrame = None
+) -> pd.Series:
+    """Converts a pandas `Series` of timestamps, string-formatted or `datetime.datetime` objects
+        that are in a local timezone `tz_string` to a UTC encoded pandas `Series`.
 
     Args:
-        t_series(:obj:`pandas.Series`): Pandas series of datetime objects
-        freq(:obj:`string`): time series frequency
+        dt_col (:obj:`pandas.Series` | `str`): A pandas `Series` of datetime objects or
+            string-encoded timestamps, or a the name of the column in `data`.
+        tz_string (str): The string name for the expected timezone of the provided timestamps in `dt_col`.
+        data (:obj:`pandas.DataFrame`, optional): The pandas `DataFrame` containing the timestamp
+            column: `dt_col`. Defaults to None.
 
     Returns:
-        :obj:`pandas.Series`: Series of missing time stamps in datetime format
+        pd.Series: _description_
     """
+    if isinstance(data, pd.DataFrame):
+        dt_col = df_to_series(data, dt_col)
+    if isinstance(dt_col[0], str):
+        dt_col = dt_col.apply(parse)
 
-    # Convert 't_series' to Pandas series in case a time index is passed
-    t_series = pd.Series(t_series)
-
-    if t_series.size == 0:
-        return t_series
-
-    range_dt = pd.Series(
-        data=pd.date_range(t_series.min(), end=t_series.max(), freq=freq)
-    )  # Full range of timestamps
-
-    # Find missing time stamps by concatenating full timestamps and actual and removing duplicates
-    # What remains is those timestamps not found in the data
-    missing_dt = (pd.concat([range_dt, t_series])).drop_duplicates(keep=False)
-
-    return missing_dt
+    # If the timezone information is already encoded, then convert it to a UTC-converted
+    # pandas datetime object automatically, otherwise, localize it, then convert it
+    if dt_col[0].tzinfo is not None:
+        return pd.to_datetime(dt_col, utc=True)
+    return dt_col.dt.tz_localize(tz_string, ambiguous=True).dt.tz_convert(utc)
 
 
-def find_duplicate_times(t_series, freq):
+def find_time_gaps(dt_col: pd.Series | str, freq: str, data: pd.DataFrame = None) -> pd.Series:
+    """
+    Finds gaps in `dt_col` based on the expected frequency, `freq`, and returns them.
+
+    Args:
+        dt_col(:obj:`pandas.Series`): Pandas `Series` of `datetime.datetime` objects or the name
+            of the column in `data`.
+        freq(:obj:`string`): The expected frequency of the timestamps, which should align with
+            the pandas timestamp conventions (https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases).
+        data (:obj:`pandas.DataFrame`, optional): The pandas `DataFrame` containing the timestamp
+            column: `dt_col`. Defaults to None.
+
+    Returns:
+        :obj:`pandas.Series`: Series of missing time stamps in datetime.datetime format
+    """
+    if isinstance(data, pd.DataFrame):
+        dt_col = df_to_series(data, dt_col)
+
+    if isinstance(dt_col, pd.DatetimeIndex):
+        dt_col = dt_col.to_series()
+
+    # If the difference for all of the timestamps is the expected frequency, 0 (duplicate), or a NaT
+    # (first element of `diff`), then return an empty series
+    if np.all(dt_col.diff().isin([pd.Timedelta(freq), pd.Timedelta("0"), pd.NaT])):
+        return pd.Series([], name=dt_col.name, dtype="object")
+
+    # Create a date range object and return a Series of the set difference of both objects
+    range_dt = pd.Series(data=pd.date_range(dt_col.min(), end=dt_col.max(), freq=freq))
+    return pd.Series(tuple(set(range_dt).difference(dt_col)), name=dt_col.name)
+
+
+def find_duplicate_times(dt_col: pd.Series | str, data: pd.DataFrame = None):
     """
     Find duplicate input data and report them. The first duplicated item is not reported, only subsequent duplicates.
 
     Args:
-        t_series(:obj:`pandas.Series`): Pandas series of datetime objects
-        freq(:obj:`string`): time series frequency
+        dt_col(:obj:`pandas.Series` | `str`): Pandas series of datetime.datetime objects or the name of the
+            column in `data`.
+        data (:obj:`pandas.DataFrame`, optional): The pandas `DataFrame` containing the timestamp
+            column: `dt_col`. Defaults to None.
 
     Returns:
         :obj:`pandas.Series`: Duplicates from input data
     """
+    if isinstance(data, pd.DataFrame):
+        dt_col = df_to_series(data, dt_col)
 
-    # Convert 't_series' to Pandas series in case a time index is passed
-    t_series = pd.Series(t_series)
+    if isinstance(dt_col, pd.DatetimeIndex):
+        dt_col = dt_col.to_series()
 
-    repeated_steps = t_series[t_series.duplicated()]
-
-    return repeated_steps
+    return dt_col[dt_col.duplicated()]
 
 
 def gap_fill_data_frame(df, time_col, freq):
