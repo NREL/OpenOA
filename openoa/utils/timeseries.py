@@ -130,71 +130,78 @@ def find_duplicate_times(dt_col: pd.Series | str, data: pd.DataFrame = None):
     return dt_col[dt_col.duplicated()]
 
 
-def gap_fill_data_frame(df, time_col, freq):
+def gap_fill_data_frame(data: pd.DataFrame, dt_col: str, freq: str) -> pd.DataFrame:
     """
-    Find missing timestamps in the input data frame and add rows with NaN values for those missing rows.
-    Return a new data frame that has no missing timestamps and that is sorted by time.
+    Insert any missing timestamps into `data` while filling the data columns with NaNs.
 
     Args:
-        df(:obj:`pandas.DataFrame`): the input data frame
-        time_col(:obj:`str`): name of the column in 'df' with time data
+        data(:obj:`pandas.DataFrame`): The dataframe with potentially missing timestamps.
+        dt_col(:obj:`str`): Name of the column in 'data' with timestamps.
+        freq(:obj:`str`): The expected frequency of the timestamps.
 
     Returns:
         :obj:`pandas.DataFrame`: output data frame with NaN data for the data gaps
 
     """
     # If the dataframe is empty, just return it.
-    if df[time_col].size == 0:
-        return df
+    if data.shape[0] == 0:
+        return data
 
-    timestamp_gaps = find_time_gaps(df[time_col], freq)  # Find gaps in timestep
-    gap_df = pd.DataFrame(columns=df.columns)
-    gap_df[time_col] = timestamp_gaps
+    gap_df = pd.DataFrame(columns=data.columns)
+    gap_df[dt_col] = find_time_gaps(data[dt_col], freq)
 
-    return df.append(gap_df).sort_values(time_col)
+    return data.append(gap_df).sort_values(dt_col)
 
 
-def percent_nan(s):
+def percent_nan(col: pd.Series | str, data: pd.DataFrame = None):
     """
     Return percentage of data that are Nan or 1 if the series is empty.
 
     Args:
-        s(:obj:`pandas.Series`): The data to be checked for 'na' values
+        col(:obj:`pandas.Series`): The pandas `Series` to be checked for NaNs, or the name of the
+            column in `data`.
+        data (:obj:`pandas.DataFrame`, optional): The pandas `DataFrame` containing the timestamp
+            column: `col`. Defaults to None.
 
     Returns:
         :obj:`float`: Percentage of NaN data in the data series
     """
-    if len(s) > 0:
-        perc = np.float64((s.isnull().sum())) / np.float64(len(s))
-    else:
-        perc = 1
-    return perc
+    if isinstance(data, pd.DataFrame):
+        col = df_to_series(data, col)
+    return 1 if (denominator := float(col.size)) == 0 else col.isnull().sum() / denominator
 
 
-def num_days(s):
+def num_days(dt_col: pd.Series | str, data: pd.DataFrame = None) -> int:
     """
-    Return number of days in 's'
+    Calculates the number of non-duplicate days in `dt_col`.
 
     Args:
-        s(:obj:`pandas.Series`): The data to be checked for number of days.
+        dt_col(:obj:`pandas.Series` | str): A pandas `Series` of timeseries data to be checked for
+            the number of days contained in the data
+        data (:obj:`pandas.DataFrame`, optional): The pandas `DataFrame` containing the timestamp
+            column: `dt_col`. Defaults to None.
 
     Returns:
         :obj:`int`: Number of days in the data
     """
-    n_days = len(s.resample("D"))
+    if isinstance(data, pd.DataFrame):
+        dt_col = df_to_series(data, dt_col)
+    return dt_col.drop_duplicates().resample("D").asfreq().index.size
 
-    return n_days
 
-
-def num_hours(s):
+def num_hours(dt_col: pd.Series | str, data: pd.DataFrame = None) -> int:
     """
-    Return number of data points in 's'
+    Calculates the number of non-duplicate hours in `dt_col`.
 
     Args:
-        s(:obj:`pandas.Series`): The data to be checked for number of data points
+        dt_col(:obj:`pandas.Series` | str): A pandas `Series` of timeseries data to be checked for
+            the number of hours contained in the data
+        data (:obj:`pandas.DataFrame`, optional): The pandas `DataFrame` containing the timestamp
+            column: `dt_col`. Defaults to None.
+
     Returns:
         :obj:`int`: Number of hours in the data
     """
-    n_hours = len(s.resample("H"))
-
-    return n_hours
+    if isinstance(data, pd.DataFrame):
+        dt_col = df_to_series(data, dt_col)
+    return dt_col.drop_duplicates().resample("H").asfreq().index.size
