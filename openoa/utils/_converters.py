@@ -6,6 +6,10 @@ throughout the utils subpackage.
 from __future__ import annotations
 
 from math import ceil
+from typing import Any, Callable
+from inspect import getfullargspec
+from operator import setitem
+from functools import wraps
 from itertools import filterfalse
 
 import pandas as pd
@@ -112,3 +116,74 @@ def series_to_df(*args: pd.Series) -> pd.DataFrame:
     if len(args) > 1:
         return multiple_df_to_single_df(*args)
     return args[0]
+
+
+def series_method(data_cols: list[str] = None):
+    """Wrapper method for methods that operate on pandas `Series`, and not `DataFrame`s that allows
+    the passing of column names that are potentially contained in a pandas `DataFrame` to be pulled
+    out as separate pandas `Series` objects to be passed back to the method. This is a convenience
+    wrapper that reduces the amount of boilerplate required to enable both `DataFrame` and `Series`
+    arguments to be used interchangably in a single method's API.
+
+    Args:
+        data_cols (list[str], optional): The names of the method arguments that should be converted
+            from `str` to pandas `Series` when `data` is provided as a pandas `DataFrame` to the
+            focal method. Defaults to None.
+    """
+
+    def decorator(func: Callable):
+        """Gathes the arg indices from `data_cols` to be used in `wrapper`."""
+        argspec = getfullargspec(func)
+        arg_ix_list = []
+        if data_cols is not None:
+            arg_ix_list = [argspec.args.index(name) for name in data_cols]
+
+        @wraps(func)
+        def wrapper(*args: Any, **kwargs: Any):
+            """Returns the results of `func` after converting the arguments as needed."""
+            if (df := kwargs["data"]) is None and arg_ix_list == []:
+                return func(*args, *kwargs)
+            args = list(args)
+            new_args = df_to_series(df, *(args[ix] for ix in arg_ix_list))
+            _ = [setitem(args, ix, new) for ix, new in zip(arg_ix_list, new_args)]
+            _ = kwargs.pop("data")
+            return func(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
+def dataframe_method(data_cols: list[str] = None):
+    """Wrapper method for methods that operate on a pandas `DataFrame`, and not `Series` that allows
+    the passing of the `Series`, so that they can be combined in a `DataFrame`and passed back to the
+    method. This is a convenience wrapper that reduces the amount of boilerplate required to enable
+    both `DataFrame` and `Series` arguments to be used interchangably in a single method's API.
+
+    Args:
+        data_cols (list[str], optional): The names of the method arguments that should be converted
+            from a pandas `Series` to `str`, along with the creation of the `data` keyword argument
+            when the column data is passed as a `Series`. Defaults to None.
+    """
+
+    def decorator(func: Callable):
+        """Gathes the arg indices from `data_cols` to be used in `wrapper`."""
+        argspec = getfullargspec(func)
+        arg_ix_list = []
+        if data_cols is not None:
+            arg_ix_list = [argspec.args.index(name) for name in data_cols]
+
+        @wraps(func)
+        def wrapper(*args: Any, **kwargs: Any):
+            """Returns the results of `func` after converting the arguments as needed."""
+            if kwargs["data"] is not None and arg_ix_list == []:
+                return func(*args, *kwargs)
+            args = list(args)
+            df = series_to_df(*(args[ix] for ix in arg_ix_list))
+            _ = [setitem(args, ix, args[ix].name) for ix in arg_ix_list]
+            kwargs["data"] = df
+            return func(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
