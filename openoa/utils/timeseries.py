@@ -11,7 +11,7 @@ import pandas as pd
 from pytz import utc, timezone
 from dateutil.parser import parse
 
-from openoa.utils._converters import df_to_series
+from openoa.utils._converters import series_method
 
 
 def convert_local_to_utc(d: str | datetime.datetime, tz_string: str) -> datetime.datetime:
@@ -49,6 +49,7 @@ def convert_local_to_utc(d: str | datetime.datetime, tz_string: str) -> datetime
     return d_local.astimezone(utc)  # calculate UTC time
 
 
+@series_method(data_cols=["dt_col"])
 def convert_dt_to_utc(
     dt_col: pd.Series | str, tz_string: str, data: pd.DataFrame = None
 ) -> pd.Series:
@@ -65,8 +66,6 @@ def convert_dt_to_utc(
     Returns:
         pd.Series: _description_
     """
-    if isinstance(data, pd.DataFrame):
-        dt_col = df_to_series(data, dt_col)
     if isinstance(dt_col[0], str):
         dt_col = dt_col.apply(parse)
 
@@ -77,6 +76,7 @@ def convert_dt_to_utc(
     return dt_col.dt.tz_localize(tz_string, ambiguous=True).dt.tz_convert(utc)
 
 
+@series_method(data_cols=["dt_col"])
 def find_time_gaps(dt_col: pd.Series | str, freq: str, data: pd.DataFrame = None) -> pd.Series:
     """
     Finds gaps in `dt_col` based on the expected frequency, `freq`, and returns them.
@@ -92,9 +92,6 @@ def find_time_gaps(dt_col: pd.Series | str, freq: str, data: pd.DataFrame = None
     Returns:
         :obj:`pandas.Series`: Series of missing time stamps in datetime.datetime format
     """
-    if isinstance(data, pd.DataFrame):
-        dt_col = df_to_series(data, dt_col)
-
     if isinstance(dt_col, pd.DatetimeIndex):
         dt_col = dt_col.to_series()
 
@@ -108,6 +105,7 @@ def find_time_gaps(dt_col: pd.Series | str, freq: str, data: pd.DataFrame = None
     return pd.Series(tuple(set(range_dt).difference(dt_col)), name=dt_col.name)
 
 
+@series_method(data_cols=["dt_col"])
 def find_duplicate_times(dt_col: pd.Series | str, data: pd.DataFrame = None):
     """
     Find duplicate input data and report them. The first duplicated item is not reported, only subsequent duplicates.
@@ -121,9 +119,7 @@ def find_duplicate_times(dt_col: pd.Series | str, data: pd.DataFrame = None):
     Returns:
         :obj:`pandas.Series`: Duplicates from input data
     """
-    if isinstance(data, pd.DataFrame):
-        dt_col = df_to_series(data, dt_col)
-
+    print(type(dt_col), type(data))
     if isinstance(dt_col, pd.DatetimeIndex):
         dt_col = dt_col.to_series()
 
@@ -153,6 +149,7 @@ def gap_fill_data_frame(data: pd.DataFrame, dt_col: str, freq: str) -> pd.DataFr
     return data.append(gap_df).sort_values(dt_col)
 
 
+@series_method(data_cols=["col"])
 def percent_nan(col: pd.Series | str, data: pd.DataFrame = None):
     """
     Return percentage of data that are Nan or 1 if the series is empty.
@@ -166,11 +163,10 @@ def percent_nan(col: pd.Series | str, data: pd.DataFrame = None):
     Returns:
         :obj:`float`: Percentage of NaN data in the data series
     """
-    if isinstance(data, pd.DataFrame):
-        col = df_to_series(data, col)
     return 1 if (denominator := float(col.size)) == 0 else col.isnull().sum() / denominator
 
 
+@series_method(data_cols=["dt_col"])
 def num_days(dt_col: pd.Series | str, data: pd.DataFrame = None) -> int:
     """
     Calculates the number of non-duplicate days in `dt_col`.
@@ -184,11 +180,10 @@ def num_days(dt_col: pd.Series | str, data: pd.DataFrame = None) -> int:
     Returns:
         :obj:`int`: Number of days in the data
     """
-    if isinstance(data, pd.DataFrame):
-        dt_col = df_to_series(data, dt_col)
     return dt_col.drop_duplicates().resample("D").asfreq().index.size
 
 
+@series_method(data_cols=["dt_col"])
 def num_hours(dt_col: pd.Series | str, data: pd.DataFrame = None) -> int:
     """
     Calculates the number of non-duplicate hours in `dt_col`.
@@ -202,6 +197,4 @@ def num_hours(dt_col: pd.Series | str, data: pd.DataFrame = None) -> int:
     Returns:
         :obj:`int`: Number of hours in the data
     """
-    if isinstance(data, pd.DataFrame):
-        dt_col = df_to_series(data, dt_col)
     return dt_col.drop_duplicates().resample("H").asfreq().index.size

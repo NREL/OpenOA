@@ -146,7 +146,7 @@ def series_method(data_cols: list[str] = None):
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any):
             """Returns the results of `func` after converting the arguments as needed."""
-            if (df := kwargs["data"]) is None and arg_ix_list == []:
+            if (df := kwargs.get("data", None)) is None or arg_ix_list == []:
                 return func(*args, *kwargs)
             args = list(args)
             new_args = df_to_series(df, *(args[ix] for ix in arg_ix_list))

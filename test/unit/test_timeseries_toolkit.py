@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 from pytz import timezone
 from numpy import testing as nptest
+
 from openoa.utils import timeseries
 
 
@@ -70,12 +71,12 @@ class SimpleTimeseriesTests(unittest.TestCase):
         # Manually set one row to another and detect it
         day_of_data = self.day_of_data.copy()
         day_of_data[1] = day_of_data[2]
-        dupes = timeseries.find_duplicate_times(day_of_data, "10min")
+        dupes = timeseries.find_duplicate_times(day_of_data)
         self.assertEqual(dupes.size, 1, "T1: Detect one duplicated row")
 
         # Input series of length zero
         day_of_data = pd.Series(dtype=np.float64)
-        dupes = timeseries.find_duplicate_times(day_of_data, "10min")
+        dupes = timeseries.find_duplicate_times(day_of_data)
         self.assertEqual(dupes.size, 0, "T2: Empty series should have zero duplicates")
 
     def test_gap_fill_data_frame(self):
