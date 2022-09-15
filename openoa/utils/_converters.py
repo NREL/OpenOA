@@ -65,6 +65,11 @@ def df_to_series(data: pd.DataFrame, *args: str) -> tuple[pd.Series, ...]:
     if not isinstance(data, pd.DataFrame):
         raise ValueError("The input to `data` must be a pandas `DataFrame`.")
 
+    if any(isinstance(arg, pd.Series) for arg in args):
+        raise TypeError(
+            "When `data` is passed, all data column arguments must be the name of the column in `data`, and not a pandas Series."
+        )
+
     # Check for valid column names in args, ignoring any None values
     if len(invalid := set(filterfalse(lambda x: x is None, args)).difference(data.columns)) > 0:
         raise ValueError(f"The following args are not columns of `data`: {invalid}")
@@ -88,7 +93,7 @@ def multiple_df_to_single_df(*args: pd.DataFrame, align_col: str | None = None) 
         pd.DataFrame: _description_
     """
     if not all(isinstance(el, pd.DataFrame) for el in args):
-        raise TypeError("At least one of the provided values was not a pandas Series")
+        raise TypeError("At least one of the provided values was not a pandas DataFrame")
     if align_col is not None:
         if not all(align_col in df for df in args):
             raise ValueError(
