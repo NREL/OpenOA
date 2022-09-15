@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -37,6 +39,22 @@ test_df_list3 = [
     test_df3[["b"]].reset_index(drop=False),
     test_df3[["c"]].reset_index(drop=False),
 ]
+
+
+@series_method(data_cols=["col1", "col2"])
+def sample_series_handling_method(
+    col1: pd.Series | str, x: float, y: float, col2: pd.Series | str, data: pd.DataFrame = None
+):
+    """A method that returns the column and data objects to ensure correctness of the wrapper."""
+    return col1, col2, data
+
+
+@dataframe_method(data_cols=["col_a", "col_b"])
+def sample_df_handling_method(
+    col_a: pd.Series | str, x: float, col_b: pd.Series | str, y: float, data: pd.DataFrame = None
+):
+    """A method that returns the column and data objects to ensure correctness of the wrapper."""
+    return col_a, col_b, data
 
 
 def test_list_of_len():
@@ -150,7 +168,8 @@ def test_multiple_df_to_single_df():
     y = test_df3
     y_test = multiple_df_to_single_df(*test_df_list3, align_col=test_align_col3)
     tm.assert_frame_equal(y, y_test)
-    not tm.assert_frame_equal(test_df2, y_test)
+    assert test_df2.index.name is None and y_test.index.name == "index"
+    tm.assert_frame_equal(test_df2, y_test, check_names=False)
 
     # Ensure non DataFrame arguments fail
     with pytest.raises(TypeError):
@@ -159,3 +178,36 @@ def test_multiple_df_to_single_df():
     # Check that a missing `align_col` fails
     with pytest.raises(ValueError):
         multiple_df_to_single_df(*test_df_list3, align_col="Index")
+
+
+def test_series_to_df():
+    """Tests the `series_to_df` method."""
+
+    # Test simple use case
+    y = test_df1
+    y_test = series_to_df(test_series_a1, test_series_b1, test_series_c1)
+    tm.assert_frame_equal(y, y_test)
+
+    # Ensure nans get inserted appropriately
+    y = test_df2
+    y_test = series_to_df(test_series_a2, test_series_b1, test_series_c1)
+    tm.assert_frame_equal(y, y_test)
+
+    # Ensure all invalid inputs will fail
+    with pytest.raises(TypeError):
+        series_to_df(test_series_a1, test_series_b1, "c")
+
+    # Ensure one input series maps correctly
+    for x, y in zip([test_series_a1, test_series_b1, test_series_c1], test_df_list1):
+        y_test = series_to_df(x)
+        tm.assert_frame_equal(y, y_test)
+
+
+def test_series_method():
+    """Tests the `series_method` wrapper via `sample_series_handling_method()`."""
+    pass
+
+
+def test_dataframe_method():
+    """Tests the `series_method` wrapper via `sample_df_handling_method()`."""
+    pass
