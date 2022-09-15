@@ -63,7 +63,7 @@ def df_to_series(data: pd.DataFrame, *args: str) -> tuple[pd.Series, ...]:
         tuple[pandas.Series, ...]: A pandas `Series` for each of the column names passed in `args`
     """
     if not isinstance(data, pd.DataFrame):
-        raise ValueError("The input to `data` must be a pandas `DataFrame`.")
+        raise TypeError("The input to `data` must be a pandas `DataFrame`.")
 
     if any(isinstance(arg, pd.Series) for arg in args):
         raise TypeError(
