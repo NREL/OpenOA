@@ -227,11 +227,12 @@ def series_method(data_cols: list[str] = None):
 
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any):
-            """Returns the results of `func` after converting the arguments as needed."""
             if no_df := (df := kwargs.get("data", None)) is None:
                 if arg_ix_list == []:
+
                     # Let the original method handle the provided arguments if unconfigured
                     return func(*args, *kwargs)
+
             args = list(args)
 
             # Fetch the user inputs, convert them to the Series and None values, as appropriate, and
@@ -269,13 +270,14 @@ def dataframe_method(data_cols: list[str] = None):
 
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any):
-            """Returns the results of `func` after converting the arguments as needed."""
             args = list(args)
             arg_list = _get_arguments(args, kwargs, arg_ix_list, data_cols)
             if (df := kwargs.get("data", None)) is not None:
+
                 # If a DataFrame is provided and the wrapper is unconfigured, then pass straight to the function
                 if arg_ix_list == []:
                     return func(*args, *kwargs)
+
                 # If data is passed, then convert Series arguments to Series.name, and check for the
                 # existence of the column in the data
                 arg_list = [arg.name if isinstance(arg, pd.Series) else arg for arg in arg_list]

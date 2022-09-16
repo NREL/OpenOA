@@ -263,11 +263,16 @@ def test_dataframe_method():
     assert y_test_a == "a"
     assert y_test_c == "c"
 
-    # Ensure that the wrapper converts the series to series.name when a DataFrame is passed
-    y = test_df1[["c", "a"]]
+    # Ensure nothing changes when names and dataframes are passed
     y_test_c, y_test_a, y_test_df = sample_df_handling_method(
         "c", 1.0, test_series_a1, 2.0, data=test_df1
     )
+    tm.assert_frame_equal(test_df1, y_test_df)
+    assert y_test_a == "a"
+    assert y_test_c == "c"
+
+    # Ensure that the wrapper converts the series to series.name when a DataFrame is passed
+    y_test_c, y_test_a, y_test_df = sample_df_handling_method("c", 1.0, "a", 2.0, data=test_df1)
     tm.assert_frame_equal(test_df1, y_test_df)
     assert y_test_a == "a"
     assert y_test_c == "c"
@@ -281,6 +286,10 @@ def test_dataframe_method():
     assert y_test_a == "a"
     assert y_test_c == "c"
 
-    # Check for failures
+    # Check for failure on inconsistent data passing when no dataframe is provided
     with pytest.raises(TypeError):
         sample_df_handling_method("c", 1.0, test_series_c1, 2.0)
+
+    # Check for failure when an invalid column name is passed
+    with pytest.raises(ValueError):
+        sample_df_handling_method("d", 1.0, "a", 2.0, data=test_df1)
