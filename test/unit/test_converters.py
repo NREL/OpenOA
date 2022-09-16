@@ -44,7 +44,7 @@ test_df_list3 = [
 @series_method(data_cols=["col1", "col2"])
 def sample_series_handling_method(
     col1: pd.Series | str, x: float, y: float, col2: pd.Series | str, data: pd.DataFrame = None
-):
+) -> tuple[pd.Series, pd.Series, None]:
     """A method that returns the column and data objects to ensure correctness of the wrapper."""
     return col1, col2, data
 
@@ -52,7 +52,7 @@ def sample_series_handling_method(
 @dataframe_method(data_cols=["col_a", "col_b"])
 def sample_df_handling_method(
     col_a: pd.Series | str, x: float, col_b: pd.Series | str, y: float, data: pd.DataFrame = None
-):
+) -> tuple[str, str, pd.DataFrame]:
     """A method that returns the column and data objects to ensure correctness of the wrapper."""
     return col_a, col_b, data
 
@@ -185,13 +185,23 @@ def test_series_to_df():
 
     # Test simple use case
     y = test_df1
-    y_test = series_to_df(test_series_a1, test_series_b1, test_series_c1)
+    y_test, (y_test_a1, y_test_b1, y_test_c1) = series_to_df(
+        test_series_a1, test_series_b1, test_series_c1
+    )
     tm.assert_frame_equal(y, y_test)
+    assert y_test_a1 == test_series_a1.name
+    assert y_test_b1 == test_series_b1.name
+    assert y_test_c1 == test_series_c1.name
 
     # Ensure nans get inserted appropriately
     y = test_df2
-    y_test = series_to_df(test_series_a2, test_series_b1, test_series_c1)
+    y_test, (y_test_a2, y_test_b2, y_test_c2) = series_to_df(
+        test_series_a2, test_series_b1, test_series_c1
+    )
     tm.assert_frame_equal(y, y_test)
+    assert y_test_a2 == test_series_a2.name
+    assert y_test_b2 == test_series_b1.name
+    assert y_test_c2 == test_series_c1.name
 
     # Ensure all invalid inputs will fail
     with pytest.raises(TypeError):
@@ -199,8 +209,9 @@ def test_series_to_df():
 
     # Ensure one input series maps correctly
     for x, y in zip([test_series_a1, test_series_b1, test_series_c1], test_df_list1):
-        y_test = series_to_df(x)
+        y_test, [name] = series_to_df(x)
         tm.assert_frame_equal(y, y_test)
+        assert name == x.name
 
 
 def test_series_method():
@@ -230,4 +241,46 @@ def test_series_method():
 
 def test_dataframe_method():
     """Tests the `series_method` wrapper via `sample_df_handling_method()`."""
-    pass
+
+    # Ensure that the wrapper converts the Series to column names and the data to a DataFrame
+    y = test_df1[["c", "a"]]
+    y_test_c, y_test_a, y_test_df = sample_df_handling_method(
+        test_series_c1,
+        1.0,
+        test_series_a1,
+        2.0,
+    )
+    tm.assert_frame_equal(y, y_test_df)
+    assert y_test_a == "a"
+    assert y_test_c == "c"
+
+    # Ensure that the wrapper converts the series to series.name when a DataFrame is passed
+    y = test_df1[["c", "a"]]
+    y_test_c, y_test_a, y_test_df = sample_df_handling_method(
+        test_series_c1, 1.0, test_series_a1, 2.0, data=test_df1
+    )
+    tm.assert_frame_equal(test_df1, y_test_df)
+    assert y_test_a == "a"
+    assert y_test_c == "c"
+
+    # Ensure that the wrapper converts the series to series.name when a DataFrame is passed
+    y = test_df1[["c", "a"]]
+    y_test_c, y_test_a, y_test_df = sample_df_handling_method(
+        "c", 1.0, test_series_a1, 2.0, data=test_df1
+    )
+    tm.assert_frame_equal(test_df1, y_test_df)
+    assert y_test_a == "a"
+    assert y_test_c == "c"
+
+    # Ensure that the wrapper converts the series to series.name when a DataFrame is passed
+    y = test_df1[["c", "a"]]
+    y_test_c, y_test_a, y_test_df = sample_df_handling_method(
+        test_series_c1, 1.0, test_series_a1, 2.0, data=test_df1
+    )
+    tm.assert_frame_equal(test_df1, y_test_df)
+    assert y_test_a == "a"
+    assert y_test_c == "c"
+
+    # Check for failures
+    with pytest.raises(TypeError):
+        sample_df_handling_method("c", 1.0, test_series_c1, 2.0)

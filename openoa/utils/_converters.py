@@ -6,13 +6,10 @@ throughout the utils subpackage.
 from __future__ import annotations
 
 from math import ceil
-from typing import Any, Callable
+from typing import Any, Type, Callable
 from inspect import getfullargspec
-from tkinter import N
-from operator import setitem
 from functools import wraps
 from itertools import filterfalse
-from multiprocessing.sharedctypes import Value
 
 import pandas as pd
 
@@ -31,6 +28,80 @@ def _list_of_len(x: list, length: int) -> list:
     if (actual := len(x)) == length:
         return x
     return (x * ceil(length / actual))[:length]
+
+
+def _check_cols_in_df(data, *args):
+    """Ensures that the columm names provided to `args` are contained in the pandas `DataFrame`, `data`.
+
+    Args:
+        data (obj:`pandas.DataFrame`): The DataFrame object containing a dynamic-length list of
+            columns contained in `args`.
+        args : Desired column names of `data`, or `None`.
+
+    Raises:
+        ValueError: Raised if one of the values provided to `args` is not column or `None`.
+    """
+    if any(isinstance(arg, pd.Series) for arg in args):
+        raise TypeError(
+            "Some of the column arguments are Series, which cannot be DataFrame column names."
+        )
+    if len(invalid := set(filterfalse(lambda x: x is None, args)).difference(data.columns)) > 0:
+        raise ValueError(f"The following args are not columns of `data`: {invalid}")
+
+
+def _get_arguments(args: list, kwargs: dict, arg_ix_list: list[int], data_cols: list[str]) -> list:
+    """Gets the desired arguments from a combined list of indices their corresponding argument names
+    from the `args` and `kwargs` passsed to a function.
+
+    Args:
+        args (:obj:`list`): The orginal function arguments
+        kwargs (:obj:`dict`): The original function keyword arguments
+        arg_ix_list (:obj:`list[int]`): The indicies within `args` of the values of `data_cols`.
+        data_cols (:obj:`list[str]`): The names of the desired `args` or `kwargs`.
+
+    Returns:
+        `list`: A list of the extracted values or None if it does not exist.
+    """
+    arg_list = []
+    for ix, name in zip(arg_ix_list, data_cols):
+        try:
+            arg_list.append(args[ix])
+        except IndexError:
+            # Check that the argument isn't in fact an optional keyword argument
+            try:
+                arg_list.append(kwargs[name])
+            except KeyError:
+                # Insert a None if no arg/kwarg is found, which is due to the use of unpassed
+                # kwarg argument that is defaulted to None
+                arg_list.append(None)
+    return arg_list
+
+
+def _update_arguments(
+    args: list, kwargs: dict, arg_ix_list: list, data_cols: list, arg_list: list
+) -> tuple[list, dict]:
+    """Update the `args` and `kwargs` for a set of updated arguments contained in `arg_list`.
+
+    Args:
+        args (`list`): The originally passed function arguments.
+        kwargs (`dict`): The originally passed function keyword arguments.
+        arg_ix_list (`list`): The indices of the arguments to update.
+        data_cols (`list`): The names of the arguments to update.
+        arg_list (`list`): The new argument values, corresponding to both `arg_ix_list` and `data_cols`.
+
+    Returns:
+        tuple[list, dict]: _description_
+    """
+    for ix, name, new in zip(arg_ix_list, data_cols, arg_list):
+        try:
+            args[ix] = new
+        except IndexError:
+            try:
+                kwargs[name] = new
+            except KeyError:
+                # No need to pass through a non-existent input that is defaulted to None
+                pass
+    return args, kwargs
 
 
 def convert_args_to_lists(length: int, *args) -> list[list]:
@@ -81,8 +152,7 @@ def df_to_series(data: pd.DataFrame, *args: str) -> tuple[pd.Series, ...]:
         )
 
     # Check for valid column names in args, ignoring any None values
-    if len(invalid := set(filterfalse(lambda x: x is None, args)).difference(data.columns)) > 0:
-        raise ValueError(f"The following args are not columns of `data`: {invalid}")
+    _check_cols_in_df(data, *args)
     return tuple(data.loc[:, col].copy() if col is not None else col for col in args)
 
 
@@ -114,7 +184,7 @@ def multiple_df_to_single_df(*args: pd.DataFrame, align_col: str | None = None) 
     return pd.concat(args, join="outer", axis=1)
 
 
-def series_to_df(*args: pd.Series) -> pd.DataFrame:
+def series_to_df(*args: pd.Series) -> tuple[pd.DataFrame, list[str | int]]:
     """Convert a dynamic number of pandas `Series` to a single pandas `DataFrame` by concatenating
     with an outer join, so the any missing values being filled with a NaN value, and each argument
     becomes a column of the resulting `DataFrame`.
@@ -123,14 +193,16 @@ def series_to_df(*args: pd.Series) -> pd.DataFrame:
         args(:obj:`pandas.Series`): A series of of pandas `Series` objects that share a common axis.
 
     Returns:
-        pd.DataFrame: A single data structure combining all the passed arguments.
+        tuple[pandas.DataFrame, list[str | int, ...]]: A single data structure combining all the
+            passed arguments, and the `name` associated with each passed `Series`.
     """
     if not all(isinstance(el, pd.Series) for el in args):
         raise TypeError("At least one of the provided values was not a pandas Series")
+    names = [el.name for el in args]
     args = [el.to_frame() for el in args]
     if len(args) > 1:
-        return multiple_df_to_single_df(*args)
-    return args[0]
+        return multiple_df_to_single_df(*args), names
+    return args[0], names
 
 
 def series_method(data_cols: list[str] = None):
@@ -158,31 +230,15 @@ def series_method(data_cols: list[str] = None):
             """Returns the results of `func` after converting the arguments as needed."""
             if no_df := (df := kwargs.get("data", None)) is None:
                 if arg_ix_list == []:
-                    # Let the original method handle the provided arguments if wrapper not configured
+                    # Let the original method handle the provided arguments if unconfigured
                     return func(*args, *kwargs)
             args = list(args)
-            arg_list = []
-            for ix, name in zip(arg_ix_list, data_cols):
-                try:
-                    arg_list.append(args[ix])
-                except IndexError:
-                    # Check that the argument isn't in fact an optional keyword argument
-                    try:
-                        arg_list.append(kwargs[name])
-                    except KeyError:
-                        # Insert a None if no arg/kwarg is found, which is due to the use of unpassed
-                        # kwarg argument that is defaulted to None
-                        arg_list.append(None)
-            new_args = df_to_series(df, *arg_list)
-            for ix, name, new in zip(arg_ix_list, data_cols, new_args):
-                try:
-                    setitem(args, ix, new)
-                except IndexError:
-                    try:
-                        kwargs[name] = new
-                    except KeyError:
-                        # No need to pass through a non-existent input that is defaulted to None
-                        pass
+
+            # Fetch the user inputs, convert them to the Series and None values, as appropriate, and
+            # update the args and kwargs for the new values
+            arg_list = _get_arguments(args, kwargs, arg_ix_list, data_cols)  # Fetch inputs
+            new_args = df_to_series(df, *arg_list)  # Convert inputs
+            args, kwargs = _update_arguments(args, kwargs, arg_ix_list, data_cols, new_args)
             if not no_df:
                 kwargs.pop("data")
             return func(*args, **kwargs)
@@ -214,11 +270,25 @@ def dataframe_method(data_cols: list[str] = None):
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any):
             """Returns the results of `func` after converting the arguments as needed."""
-            if kwargs["data"] is not None and arg_ix_list == []:
-                return func(*args, *kwargs)
             args = list(args)
-            df = series_to_df(*(args[ix] for ix in arg_ix_list))
-            _ = [setitem(args, ix, args[ix].name) for ix in arg_ix_list]
+            arg_list = _get_arguments(args, kwargs, arg_ix_list, data_cols)
+            if (df := kwargs.get("data", None)) is not None:
+                # If a DataFrame is provided and the wrapper is unconfigured, then pass straight to the function
+                if arg_ix_list == []:
+                    return func(*args, *kwargs)
+                # If data is passed, then convert Series arguments to Series.name, and check for the
+                # existence of the column in the data
+                arg_list = [arg.name if isinstance(arg, pd.Series) else arg for arg in arg_list]
+                _check_cols_in_df(df, *arg_list)
+
+                # Update the args and kwargs as need and call the function
+                args, kwargs = _update_arguments(args, kwargs, arg_ix_list, data_cols, arg_list)
+                return func(*args, **kwargs)
+
+            # When no data is provided, then convert the Series arguments, update args and kwargs,
+            # appropriately, then call the function
+            df, arg_list = series_to_df(*arg_list)
+            args, kwargs = _update_arguments(args, kwargs, arg_ix_list, data_cols, arg_list)
             kwargs["data"] = df
             return func(*args, **kwargs)
 
