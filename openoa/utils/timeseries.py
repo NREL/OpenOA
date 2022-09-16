@@ -119,7 +119,6 @@ def find_duplicate_times(dt_col: pd.Series | str, data: pd.DataFrame = None):
     Returns:
         :obj:`pandas.Series`: Duplicates from input data
     """
-    print(type(dt_col), type(data))
     if isinstance(dt_col, pd.DatetimeIndex):
         dt_col = dt_col.to_series()
 
@@ -172,19 +171,19 @@ def num_days(dt_col: pd.Series | str, data: pd.DataFrame = None) -> int:
     Calculates the number of non-duplicate days in `dt_col`.
 
     Args:
-        dt_col(:obj:`pandas.Series` | str): A pandas `Series` of timeseries data to be checked for
-            the number of days contained in the data
+        dt_col(:obj:`pandas.Series` | str): A pandas `Series` with a timeseries index to be checked
+            for the number of days contained in the data.
         data (:obj:`pandas.DataFrame`, optional): The pandas `DataFrame` containing the timestamp
-            column: `dt_col`. Defaults to None.
+            column: `dt_col` and having a timeseries index. Defaults to None.
 
     Returns:
         :obj:`int`: Number of days in the data
     """
-    return dt_col.drop_duplicates().resample("D").asfreq().index.size
+    return dt_col[~dt_col.index.duplicated()].resample("D").asfreq().index.size
 
 
 @series_method(data_cols=["dt_col"])
-def num_hours(dt_col: pd.Series | str, data: pd.DataFrame = None) -> int:
+def num_hours(dt_col: pd.Series | str, *, data: pd.DataFrame = None) -> int:
     """
     Calculates the number of non-duplicate hours in `dt_col`.
 
@@ -197,4 +196,4 @@ def num_hours(dt_col: pd.Series | str, data: pd.DataFrame = None) -> int:
     Returns:
         :obj:`int`: Number of hours in the data
     """
-    return dt_col.drop_duplicates().resample("H").asfreq().index.size
+    return dt_col[~dt_col.index.duplicated()].resample("H").asfreq().index.size

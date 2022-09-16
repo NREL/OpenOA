@@ -205,7 +205,27 @@ def test_series_to_df():
 
 def test_series_method():
     """Tests the `series_method` wrapper via `sample_series_handling_method()`."""
-    pass
+
+    # Ensure that the wrapper converts the string column names to series objects and the data kwarg to None
+    y_test_a, y_test_c, y_test_df = sample_series_handling_method("a", 1.0, 2.0, "c", data=test_df1)
+    tm.assert_series_equal(test_series_a1, y_test_a)
+    tm.assert_series_equal(test_series_c1, y_test_c)
+    assert y_test_df is None
+
+    # Ensure a None column argument gets handled correctly
+    y_test_a, y_test_none, y_test_df = sample_series_handling_method(
+        "a", 1.0, 2.0, None, data=test_df1
+    )
+    tm.assert_series_equal(test_series_a1, y_test_a)
+    assert y_test_none is None
+    assert y_test_df is None
+
+    # Ensure invalid arguments are handle correctly
+    with pytest.raises(TypeError):
+        sample_series_handling_method(test_series_a1, 1.0, 2.0, "c", data=test_df1)
+
+    with pytest.raises(ValueError):
+        sample_series_handling_method("a", 1.0, 2.0, "c")
 
 
 def test_dataframe_method():

@@ -8,9 +8,11 @@ from __future__ import annotations
 from math import ceil
 from typing import Any, Callable
 from inspect import getfullargspec
+from tkinter import N
 from operator import setitem
 from functools import wraps
 from itertools import filterfalse
+from multiprocessing.sharedctypes import Value
 
 import pandas as pd
 
@@ -62,10 +64,18 @@ def df_to_series(data: pd.DataFrame, *args: str) -> tuple[pd.Series, ...]:
     Returns:
         tuple[pandas.Series, ...]: A pandas `Series` for each of the column names passed in `args`
     """
+    if len(args) == 0:
+        raise ValueError("No column names provided to args for conversion to Series objects.")
+
+    series_args = [isinstance(arg, pd.Series) for arg in args]
+    if data is None:
+        if all(el or isinstance(arg, type(None)) for el, arg in zip(series_args, args)):
+            return args
+        raise ValueError("No input provided to `data`; cannot convert args to Series.")
     if not isinstance(data, pd.DataFrame):
         raise TypeError("The input to `data` must be a pandas `DataFrame`.")
 
-    if any(isinstance(arg, pd.Series) for arg in args):
+    if any(series_args):
         raise TypeError(
             "When `data` is passed, all data column arguments must be the name of the column in `data`, and not a pandas Series."
         )
@@ -146,12 +156,35 @@ def series_method(data_cols: list[str] = None):
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any):
             """Returns the results of `func` after converting the arguments as needed."""
-            if (df := kwargs.get("data", None)) is None or arg_ix_list == []:
-                return func(*args, *kwargs)
+            if no_df := (df := kwargs.get("data", None)) is None:
+                if arg_ix_list == []:
+                    # Let the original method handle the provided arguments if wrapper not configured
+                    return func(*args, *kwargs)
             args = list(args)
-            new_args = df_to_series(df, *(args[ix] for ix in arg_ix_list))
-            _ = [setitem(args, ix, new) for ix, new in zip(arg_ix_list, new_args)]
-            _ = kwargs.pop("data")
+            arg_list = []
+            for ix, name in zip(arg_ix_list, data_cols):
+                try:
+                    arg_list.append(args[ix])
+                except IndexError:
+                    # Check that the argument isn't in fact an optional keyword argument
+                    try:
+                        arg_list.append(kwargs[name])
+                    except KeyError:
+                        # Insert a None if no arg/kwarg is found, which is due to the use of unpassed
+                        # kwarg argument that is defaulted to None
+                        arg_list.append(None)
+            new_args = df_to_series(df, *arg_list)
+            for ix, name, new in zip(arg_ix_list, data_cols, new_args):
+                try:
+                    setitem(args, ix, new)
+                except IndexError:
+                    try:
+                        kwargs[name] = new
+                    except KeyError:
+                        # No need to pass through a non-existent input that is defaulted to None
+                        pass
+            if not no_df:
+                kwargs.pop("data")
             return func(*args, **kwargs)
 
         return wrapper

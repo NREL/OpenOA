@@ -107,34 +107,34 @@ class SimpleTimeseriesTests(unittest.TestCase):
 
     def test_num_days(self):
         # Test 1 day of data
-        day_of_data = pd.DataFrame(index=self.day_of_data)
-        num = timeseries.num_days(day_of_data)
+        day_of_data = pd.DataFrame(index=self.day_of_data, columns=["dt_col"])
+        num = timeseries.num_days("dt_col", data=day_of_data)
         self.assertEqual(num, 1, "One day of data...")
 
         # Test 0 days of data
-        empty_data = pd.DataFrame(index=pd.DatetimeIndex([]))
-        num = timeseries.num_days(empty_data)
+        empty_data = pd.DataFrame(index=pd.DatetimeIndex([]), columns=["dt_col"])
+        num = timeseries.num_days("dt_col", data=empty_data)
         self.assertEqual(num, 0, "Zero days of data...")
 
         # Test 2 days of data separated by a month gap
-        two_days = pd.DataFrame(index=self.two_days_of_data)
+        two_days = pd.Series(index=self.two_days_of_data, data=self.two_days_of_data.values)
         num = timeseries.num_days(two_days)
         self.assertEqual(num, 32, "Two days of data separated by a month...")
 
     def test_num_hours(self):
         # Test 1 day of data
-        day_of_data = pd.DataFrame(index=self.day_of_data)
-        num = timeseries.num_hours(day_of_data)
+        day_of_data = pd.DataFrame(index=self.day_of_data, columns=["dt_col"])
+        num = timeseries.num_hours("dt_col", data=day_of_data)
         self.assertEqual(num, 24, "One day of data...")
 
         # Test 0 days of data
-        empty_data = pd.DataFrame(index=pd.DatetimeIndex([]))
-        num = timeseries.num_hours(empty_data)
+        empty_data = pd.DataFrame(index=pd.DatetimeIndex([]), columns=["dt_col"])
+        num = timeseries.num_hours("dt_col", data=empty_data)
         self.assertEqual(num, 0, "Zero days of data...")
 
         # Test 2 days of data separated by a month gap
-        two_days = pd.DataFrame(index=self.two_days_of_data)
-        num = timeseries.num_hours(two_days)
+        two_days = pd.DataFrame(index=self.two_days_of_data, columns=["dt_col"])
+        num = timeseries.num_hours("dt_col", data=two_days)
         self.assertEqual(num, 32 * 24, "Two days of data separated by a month...")
 
     def test_percent_nan(self):
