@@ -45,7 +45,7 @@ def range_flag(
     """
     # Prepare the inputs to be standardized for use with DataFrames
     if to_series := isinstance(data, pd.Series):
-        data = series_to_df(data)
+        data, col = series_to_df(data)
     if col is None:
         col = data.columns.tolist()
 
@@ -84,7 +84,7 @@ def unresponsive_flag(
     """
     # Prepare the inputs to be standardized for use with DataFrames
     if to_series := isinstance(data, pd.Series):
-        data = series_to_df(data)
+        data, col = series_to_df(data)
     if col is None:
         col = data.columns.tolist()
     if not isinstance(threshold, int):
@@ -133,7 +133,7 @@ def std_range_flag(
     """
     # Prepare the inputs to be standardized for use with DataFrames
     if to_series := isinstance(data, pd.Series):
-        data = series_to_df(data)
+        data, col = series_to_df(data)
     if col is None:
         col = data.columns.tolist()
 
