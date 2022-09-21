@@ -20,6 +20,7 @@ import openoa
 from openoa import PlantData, logging, logged_method_call
 from openoa.utils import filters
 from openoa.utils import timeseries as tm
+from openoa.utils import pandas_plotting
 from openoa.utils import unit_conversion as un
 from openoa.utils import met_data_processing as mt
 from openoa.utils.machine_learning_setup import MachineLearningSetup
@@ -238,63 +239,6 @@ class MonteCarloAEP(object):
 
         # Log the completion of the run
         logger.info("Run completed")
-
-    def plot_reanalysis_normalized_rolling_monthly_windspeed(self):
-        """
-        Make a plot of annual average wind speeds from reanalysis data to show general trends for each
-        Highlight the period of record for plant data
-
-        Returns:
-            matplotlib.pyplot object
-        """
-        import matplotlib.pyplot as plt
-
-        project = self._plant
-
-        # Define parameters needed for plot
-        min_val = 1  # Default parameter providing y-axis minimum for shaded plant POR region
-        max_val = 1  # Default parameter providing y-axis maximum for shaded plant POR region
-        por_start = self._aggregate.index[0]  # Start of plant POR
-        por_end = self._aggregate.index[-1]  # End of plant POR
-
-        plt.figure(figsize=(14, 6))
-        for key in self._reanal_products:
-            rean_df = project.reanalysis[key]  # Set reanalysis product
-            ann_mo_ws = (
-                rean_df.resample("MS")["ws_dens_corr"].mean().to_frame()
-            )  # Take monthly average wind speed
-            ann_roll = ann_mo_ws.rolling(12).mean()  # Calculate rolling 12-month average
-            ann_roll_norm = (
-                ann_roll["ws_dens_corr"] / ann_roll["ws_dens_corr"].mean()
-            )  # Normalize rolling 12-month average
-
-            # Update min_val and max_val depending on range of data
-            if ann_roll_norm.min() < min_val:
-                min_val = ann_roll_norm.min()
-            if ann_roll_norm.max() > max_val:
-                max_val = ann_roll_norm.max()
-
-            # Plot wind speed
-            plt.plot(ann_roll_norm, label=key)
-
-        # Plot dotted line at y=1 (i.e. average wind speed)
-        plt.plot((ann_roll.index[0], ann_roll.index[-1]), (1, 1), "k--")
-
-        # Fill in plant POR region
-        plt.fill_between(
-            [por_start, por_end],
-            [min_val, min_val],
-            [max_val, max_val],
-            alpha=0.1,
-            label="Plant POR",
-        )
-
-        # Final touches to plot
-        plt.xlabel("Year")
-        plt.ylabel("Normalized wind speed")
-        plt.legend()
-        plt.tight_layout()
-        return plt
 
     def plot_reanalysis_gross_energy_data(self, outlier_thres):
         """

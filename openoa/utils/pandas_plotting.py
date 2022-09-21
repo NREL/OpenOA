@@ -5,14 +5,19 @@ This module provides helpful functions for creating various plots
 
 from __future__ import annotations
 
+import datetime
+
 import numpy as np
 import pandas as pd
 import matplotlib
+import statsmodels.api as sm
 import matplotlib.pyplot as plt
 from pyproj import Transformer
 from bokeh.models import WMTSTileSource, ColumnDataSource
 from bokeh.palettes import Category10, viridis
 from bokeh.plotting import figure
+
+from openoa.utils import filters
 
 
 plt.close("all")
@@ -990,7 +995,7 @@ def plot_by_id(
         return fig, axes_list
 
 
-def column_histograms(df: pd.DataFrame, return_fig: bool = False):
+def column_histograms(df: pd.DataFrame, columns: list = None, return_fig: bool = False):
     """Produces a histogram plot for each numeric column in `df`s.
 
     Args:
@@ -1002,8 +1007,8 @@ def column_histograms(df: pd.DataFrame, return_fig: bool = False):
         (None)
     """
     df = df.select_dtypes((int, float)).copy()
-    columns = df.columns.values
-    num_cols = columns.size
+    columns = df.columns.tolist() if columns is None else columns
+    num_cols = len(columns)
     max_cols = 3
     num_rows = int(np.ceil(num_cols / max_cols))
 
@@ -1097,3 +1102,290 @@ def plot_power_curve(
     if return_fig:
         return fig, ax
     fig.tight_layout()
+
+
+def plot_normalized_monthly_reanalysis_windspeed(
+    reanalysis: dict[str, pd.DataFrame],
+    por_start: pd.Timestamp,
+    por_end: pd.Timestamp,
+    xlim: tuple[datetime.datetime, datetime.datetime] = None,
+    ylim: tuple[float, float] = None,
+    figure_kwargs: dict = {},
+    plot_kwargs: dict = {},
+    legend_kwargs: dict = {},
+    return_fig: bool = False,
+):
+    """
+    Make a plot of annual average wind speeds from reanalysis data to show general trends for each
+    Highlight the period of record for plant data
+
+    Returns:
+        matplotlib.pyplot object
+    """
+
+    # Define parameters needed for plotting
+    min_val, max_val = (np.inf, -np.inf) if ylim is None else ylim
+
+    figure_kwargs.setdefault("figsize", (14, 6))
+    fig = plt.figure(**figure_kwargs)
+    ax = fig.add_subplot(111)
+
+    for name, df in reanalysis.items():
+        # Compute the rolling mean and normalize it over a 12 month average
+        ws = df.resample("MS")["ws_dens_corr"].mean().to_frame().rolling(12).mean()
+        ws_norm = ws["ws_dens_corr"] / ws["ws_dens_corr"].mean()
+
+        # Update the min and max values
+        min_val = min(min_val, ws_norm.min())
+        max_val = max(max_val, ws_norm.max())
+
+        ax.plot(ws_norm, label=name, **plot_kwargs)
+
+    # Plot a vertical line at y = 1
+    _xlims = (ws.index[0], ws.index[-1]) if xlim is None else xlim
+    ax.hlines(1, *_xlims, colors="k", linestyles="--")
+
+    # Fill in the period of record
+    ax.fill_between(
+        [por_start, por_end],
+        [min_val, min_val],
+        [max_val, max_val],
+        alpha=0.1,
+        label="Plant POR",
+    )
+
+    ax.grid()
+    ax.set_axisbelow(True)
+
+    if xlim is not None:
+        ax.set_xlim(xlim)
+    if ylim is not None:
+        ax.set_ylim(ylim)
+
+    ax.set_xlabel("Year")
+    ax.set_ylabel("Normalized wind speed")
+    ax.legend(**legend_kwargs)
+
+    if return_fig:
+        return fig, ax
+
+    fig.tight_layout()
+
+
+# TODO
+
+
+def plot_reanalysis_gross_energy_data(self, outlier_thres):
+    """
+    Make a plot of gross energy vs wind speed for each reanalysis product,
+    with outliers highlighted
+
+    Args:
+        outlier_thres (float): outlier threshold (typical range of 1 to 4) which adjusts outlier sensitivity detection
+
+    Returns:
+        matplotlib.pyplot object
+    """
+    import matplotlib.pyplot as plt
+
+    valid_aggregate = self._aggregate
+    plt.figure(figsize=(9, 9))
+
+    # Loop through each reanalysis product and make a scatterplot of monthly wind speed vs plant energy
+    for p in np.arange(0, len(list(self._reanal_products))):
+        col_name = self._reanal_products[p]  # Reanalysis column in monthly data frame
+        # Plot
+        plt.subplot(2, 2, p + 1)
+
+        if (
+            self.time_resolution == "M"
+        ):  # Monthly case: apply robust linear regression for outliers detection
+            x = sm.add_constant(
+                valid_aggregate[col_name]
+            )  # Define 'x'-values (constant needed for regression function)
+            y = (
+                valid_aggregate["gross_energy_gwh"] * 30 / valid_aggregate["num_days_expected"]
+            )  # Normalize energy data to 30-days
+
+            rlm = sm.RLM(
+                y, x, M=sm.robust.norms.HuberT(t=outlier_thres)
+            )  # Robust linear regression with HuberT algorithm (threshold equal to outlier_thres)
+            rlm_results = rlm.fit()
+
+            r2 = np.corrcoef(
+                x.loc[rlm_results.weights == 1, col_name], y[rlm_results.weights == 1]
+            )[
+                0, 1
+            ]  # Get R2 from valid data
+
+            # Continue plotting
+            plt.plot(
+                x.loc[rlm_results.weights != 1, col_name],
+                y[rlm_results.weights != 1],
+                "rx",
+                label="Outlier",
+            )
+            plt.plot(
+                x.loc[rlm_results.weights == 1, col_name],
+                y[rlm_results.weights == 1],
+                ".",
+                label="Valid data",
+            )
+            plt.title(col_name + ", R2=" + str(np.round(r2, 3)))
+            plt.ylabel("30-day normalized gross energy (GWh)")
+
+        else:  # Daily/hourly case: apply bin filter for outliers detection
+            x = valid_aggregate[col_name]
+            y = valid_aggregate["gross_energy_gwh"]
+            plant_capac = self._plant.metadata.capacity / 1000.0 * self._hours_in_res
+
+            # Apply bin filter
+            flag = filters.bin_filter(
+                bin_col=y,
+                value_col=x,
+                bin_width=0.06 * plant_capac,
+                threshold=outlier_thres,  # wind bin threshold (stdev outside the median)
+                center_type="median",
+                bin_min=0.01 * plant_capac,
+                bin_max=0.85 * plant_capac,
+                threshold_type="std",
+                direction="all",  # both left and right (from the median)
+            )
+
+            # Continue plotting
+            plt.plot(
+                x.loc[flag],
+                y[flag],
+                "rx",
+                label="Outlier",
+            )
+            plt.plot(
+                x.loc[~flag],
+                y[~flag],
+                ".",
+                label="Valid data",
+            )
+
+            if self.time_resolution == "D":
+                plt.ylabel("Daily gross energy (GWh)")
+            elif self.time_resolution == "H":
+                plt.ylabel("Hourly gross energy (GWh)")
+            plt.title(col_name)
+
+        plt.xlabel("Wind speed (m/s)")
+
+    plt.tight_layout()
+    return plt
+
+
+def plot_result_aep_distributions(self):
+    """
+    Plot a distribution of AEP values from the Monte-Carlo OA method
+
+    Returns:
+        matplotlib.pyplot object
+    """
+    import matplotlib.pyplot as plt
+
+    fig = plt.figure(figsize=(14, 12))
+
+    sim_results = self.results
+
+    ax = fig.add_subplot(2, 2, 1)
+    ax.hist(sim_results["aep_GWh"], 40, density=1)
+    ax.text(
+        0.05,
+        0.9,
+        "AEP mean = " + str(np.round(sim_results["aep_GWh"].mean(), 1)) + " GWh/yr",
+        transform=ax.transAxes,
+    )
+    ax.text(
+        0.05,
+        0.8,
+        "AEP unc = "
+        + str(np.round(sim_results["aep_GWh"].std() / sim_results["aep_GWh"].mean() * 100, 1))
+        + "%",
+        transform=ax.transAxes,
+    )
+    plt.xlabel("AEP (GWh/yr)")
+
+    ax = fig.add_subplot(2, 2, 2)
+    ax.hist(sim_results["avail_pct"] * 100, 40, density=1)
+    ax.text(
+        0.05,
+        0.9,
+        "Mean = " + str(np.round((sim_results["avail_pct"].mean()) * 100, 1)) + " %",
+        transform=ax.transAxes,
+    )
+    plt.xlabel("Availability Loss (%)")
+
+    ax = fig.add_subplot(2, 2, 3)
+    ax.hist(sim_results["curt_pct"] * 100, 40, density=1)
+    ax.text(
+        0.05,
+        0.9,
+        "Mean: " + str(np.round((sim_results["curt_pct"].mean()) * 100, 2)) + " %",
+        transform=ax.transAxes,
+    )
+    plt.xlabel("Curtailment Loss (%)")
+    plt.tight_layout()
+    return plt
+
+
+def plot_aep_boxplot(self, param, lab):
+    """
+    Plot box plots of AEP results sliced by a specified Monte Carlo parameter
+
+    Args:
+        param(:obj:`list`): The Monte Carlo parameter on which to split the AEP results
+        lab(:obj:`str`): The name to use for the parameter when producing the figure
+
+    Returns:
+        (none)
+    """
+
+    import matplotlib.pyplot as plt
+
+    sim_results = self.results
+
+    tmp_df = pd.DataFrame(data={"aep": sim_results.aep_GWh, "param": param})
+    tmp_df.boxplot(column="aep", by="param", figsize=(8, 6))
+    plt.ylabel("AEP (GWh/yr)")
+    plt.xlabel(lab)
+    plt.title("AEP estimates by %s" % lab)
+    plt.suptitle("")
+    plt.tight_layout()
+    return plt
+
+
+def plot_aggregate_plant_data_timeseries(self):
+    """
+    Plot timeseries of monthly/daily gross energy, availability and curtailment
+
+    Returns:
+        matplotlib.pyplot object
+    """
+    import matplotlib.pyplot as plt
+
+    valid_aggregate = self._aggregate
+
+    plt.figure(figsize=(12, 9))
+
+    # Gross energy
+    plt.subplot(2, 1, 1)
+    plt.plot(valid_aggregate.gross_energy_gwh, ".-")
+    plt.grid("on")
+    plt.xlabel("Year")
+    plt.ylabel("Gross energy (GWh)")
+
+    # Availability and curtailment
+    plt.subplot(2, 1, 2)
+    plt.plot(valid_aggregate.availability_pct * 100, ".-", label="Availability")
+    plt.plot(valid_aggregate.curtailment_pct * 100, ".-", label="Curtailment")
+    plt.grid("on")
+    plt.xlabel("Year")
+    plt.ylabel("Loss (%)")
+    plt.legend()
+
+    plt.tight_layout()
+    return plt
