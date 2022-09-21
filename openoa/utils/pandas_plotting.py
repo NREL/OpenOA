@@ -3,7 +3,8 @@ This module provides helpful functions for creating various plots
 
 """
 
-# Import required packages
+from __future__ import annotations
+
 import numpy as np
 import pandas as pd
 import matplotlib
@@ -1030,3 +1031,69 @@ def column_histograms(df: pd.DataFrame, return_fig: bool = False):
     plt.show()
     if return_fig:
         return fig, axes_list
+
+
+def plot_power_curve(
+    wind_speed: pd.Series,
+    power: pd.Series,
+    flag: np.ndarray | pd.Series,
+    flag_labels: tuple[str, str] = None,
+    xlim: tuple[float, float] = None,
+    ylim: tuple[float, float] = None,
+    legend: bool = False,
+    return_fig: bool = False,
+    figure_kwargs: dict = {},
+    legend_kwargs: dict = {},
+    scatter_kwargs: dict = {},
+) -> None | tuple[plt.Figure, plt.Axes]:
+    """Plots the individual points on a power curve, with an optional `flag` filtering for singling
+    out readings in the figure. If `flag` is all false values then no overlaid flagged scatter points
+    will be created.
+
+    Args:
+        wind_speed (:obj: `pandas.Series`): A pandas Series or numpy array of the recorded wind speeds, in m/s.
+        power (:obj: `pandas.Series` | `np.ndarray`): A pandas Series or numpy array of the recorded power, in kW.
+        flag (:obj: `np.ndarray` | `pd.Series`): A pandas Series or numpy array of booleans for which points to flag in the windspeed and power data.
+        flag_labels (:obj: `tuple[str, str]`, optional): The labels to give to the scatter points, where the 0th entry is the flagged points, and the second entry correpsponds to the standard power curve. Defaults to None.
+        xlim (:obj: `tuple[float, float]`, optional): A tuple of the x-axis (min, max) values. Defaults to None.
+        ylim (:obj: `tuple[float, float]`, optional): A tuple of the y-axis (min, max) values. Defaults to None.
+        legend (:obj:`bool`, optional): Set to True to place a legend in the figure, otherwise set to False. Defaults to False.
+        return_fig (:obj:`bool`, optional): Set to True to return the figure and axes objects, otherwise set to False. Defaults to False.
+        figure_kwargs (:obj:`dict`, optional): Additional keyword arguments that should be passed to `plt.figure`. Defaults to {}.
+        scatter_kwargs (:obj:`dict`, optional): Additional keyword arguments that should be passed to `ax.scatter`. Defaults to {}.
+        legend_kwargs (:obj:`dict`, optional): Additional keyword arguments that should be passed to `ax.legend`. Defaults to {}.
+
+    Returns:
+        None | tuple[plt.Figure, plt.Axes]: _description_
+    """
+    figure_kwargs.setdefault("dpi", 200)
+    fig = plt.figure(**figure_kwargs)
+    ax = fig.add_subplot(111)
+
+    if ~np.all(flag):
+        pc_label = "Power Curve" if flag_labels is None else flag_labels[1]
+        ax.scatter(wind_speed, power, label=pc_label, **scatter_kwargs)
+    else:
+        pc_label = "Power Curve" if flag_labels is None else flag_labels[1]
+        flagged_label = "Flagged Readings" if flag_labels is None else flag_labels[0]
+        ax.scatter(wind_speed, power, label=pc_label, **scatter_kwargs)
+        ax.scatter(wind_speed[flag], power[flag], label=flagged_label, **scatter_kwargs)
+
+    if legend:
+        ax.legend(**legend_kwargs)
+
+    ax.grid()
+    ax.set_axisbelow(True)
+
+    ax.set_xlabel("Wind Speed (m/s)")
+    ax.set_ylabel("Power (kW)")
+
+    if xlim is not None:
+        ax.set_xlim(xlim)
+
+    if ylim is not None:
+        ax.set_ylim(ylim)
+
+    if return_fig:
+        return fig, ax
+    fig.tight_layout()
