@@ -1110,19 +1110,37 @@ def plot_normalized_monthly_reanalysis_windspeed(
     por_end: pd.Timestamp,
     xlim: tuple[datetime.datetime, datetime.datetime] = None,
     ylim: tuple[float, float] = None,
+    return_fig: bool = False,
     figure_kwargs: dict = {},
     plot_kwargs: dict = {},
     legend_kwargs: dict = {},
-    return_fig: bool = False,
 ):
-    """
-    Make a plot of annual average wind speeds from reanalysis data to show general trends for each
-    Highlight the period of record for plant data
+    """Make a plot of the normalized annual average wind speeds from reanalysis data to show general
+    trends for each, and highlighting the period of record for the plant data.
+
+    Args:
+        reanalysis (:obj:`dict[str, pandas.DataFrame]`): `PlantData.reanalysis` dictionary of reanalysis
+            `DataFrame`s.
+        por_start (:obj:`pandas.Timestamp`): The start of the period of record; this should be a valid
+            datetime or pandas Timestamp object.
+        por_end (:obj:`pandas.Timestamp`): The end of the period of record; this should be a valid
+            datetime or pandas Timestamp object.
+        xlim (:obj:`tuple[datetime.datetime, datetime.datetime]`, optional): A tuple of datetimes
+            representing the x-axis plotting display limits. Defaults to None.
+        ylim (:obj:`tuple[float, float]`, optional): A tuple of the y-axis plotting display limits.
+            Defaults to None.
+        return_fig (:obj:`bool`, optional): _description_. Defaults to False.
+        figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
+            that are passed to `plt.figure()`. Defaults to {}.
+        plot_kwargs (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
+            `ax.plot()`. Defaults to {}.
+        legend_kwargs (:obj:`dict`, optional): Additional legend keyword arguments that are passed to
+            `ax.legend()`. Defaults to {}.
 
     Returns:
-        matplotlib.pyplot object
+        None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes]: If `return_fig` is True, then
+            the figure and axes objects are returned for further tinkering/saving.
     """
-
     # Define parameters needed for plotting
     min_val, max_val = (np.inf, -np.inf) if ylim is None else ylim
 
@@ -1175,7 +1193,16 @@ def plot_normalized_monthly_reanalysis_windspeed(
 # TODO
 
 
-def plot_reanalysis_gross_energy_data(self, outlier_thres):
+def plot_reanalysis_gross_energy_data(
+    self,
+    outlier_thres,
+    xlim: tuple[datetime.datetime, datetime.datetime] = None,
+    ylim: tuple[float, float] = None,
+    return_fig: bool = False,
+    figure_kwargs: dict = {},
+    plot_kwargs: dict = {},
+    legend_kwargs: dict = {},
+):
     """
     Make a plot of gross energy vs wind speed for each reanalysis product,
     with outliers highlighted
@@ -1186,7 +1213,10 @@ def plot_reanalysis_gross_energy_data(self, outlier_thres):
     Returns:
         matplotlib.pyplot object
     """
-    import matplotlib.pyplot as plt
+
+    figure_kwargs.setdefault("figsize", (9, 9))
+    fig = plt.figure(**figure_kwargs)
+    ax = fig.add_subplot(111)
 
     valid_aggregate = self._aggregate
     plt.figure(figsize=(9, 9))
