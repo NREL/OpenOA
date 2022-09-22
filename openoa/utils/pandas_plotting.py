@@ -1115,7 +1115,7 @@ def plot_normalized_monthly_reanalysis_windspeed(
     figure_kwargs: dict = {},
     plot_kwargs: dict = {},
     legend_kwargs: dict = {},
-):
+) -> None | tuple[plt.Figure, plt.Axes]:
     """Make a plot of the normalized annual average wind speeds from reanalysis data to show general
     trends for each, and highlighting the period of record for the plant data.
 
@@ -1130,7 +1130,7 @@ def plot_normalized_monthly_reanalysis_windspeed(
             representing the x-axis plotting display limits. Defaults to None.
         ylim (:obj:`tuple[float, float]`, optional): A tuple of the y-axis plotting display limits.
             Defaults to None.
-        return_fig (:obj:`bool`, optional): _description_. Defaults to False.
+        return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
         figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
             that are passed to `plt.figure()`. Defaults to {}.
         plot_kwargs (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
@@ -1194,22 +1194,37 @@ def plot_normalized_monthly_reanalysis_windspeed(
 def plot_reanalysis_gross_energy_data(
     aep,
     outlier_threshold: int,
-    xlim: tuple[datetime.datetime, datetime.datetime] = None,
+    xlim: tuple[float, float] = None,
     ylim: tuple[float, float] = None,
     return_fig: bool = False,
     figure_kwargs: dict = {},
     plot_kwargs: dict = {},
     legend_kwargs: dict = {},
-):
+) -> None | tuple[plt.Figure, plt.Axes]:
     """
-    Make a plot of gross energy vs wind speed for each reanalysis product,
-    with outliers highlighted
+    Makes a plot of the gross energy vs wind speed for each reanalysis product, with outliers
+    highlighted in a contrasting color and separate marker. For
 
     Args:
-        outlier_thres (float): outlier threshold (typical range of 1 to 4) which adjusts outlier sensitivity detection
+        reanalysis (:obj:`dict[str, pandas.DataFrame]`): `PlantData.reanalysis` dictionary of reanalysis
+            `DataFrame`s.
+        outlier_thres (:obj:`float`): outlier threshold (typical range of 1 to 4) which adjusts
+            outlier sensitivity detection.
+        xlim (:obj:`tuple[float, float]`, optional): A tuple of datetimes
+            representing the x-axis plotting display limits. Defaults to None.
+        ylim (:obj:`tuple[float, float]`, optional): A tuple of the y-axis plotting display limits.
+            Defaults to None.
+        return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
+        figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
+            that are passed to `plt.figure()`. Defaults to {}.
+        plot_kwargs (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
+            `ax.scatter()`. Defaults to {}.
+        legend_kwargs (:obj:`dict`, optional): Additional legend keyword arguments that are passed to
+            `ax.legend()`. Defaults to {}.
 
     Returns:
-        matplotlib.pyplot object
+        None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes]: If `return_fig` is True, then
+            the figure and axes objects are returned for further tinkering/saving.
     """
 
     figure_kwargs.setdefault("figsize", (9, 9))
@@ -1300,6 +1315,77 @@ def plot_reanalysis_gross_energy_data(
     fig.tight_layout()
 
 
+def plot_aggregate_plant_data_timeseries(
+    aep,
+    xlim: tuple[datetime.datetime, datetime.datetime] = None,
+    ylim_energy: tuple[float, float] = None,
+    ylim_loss: tuple[float, float] = None,
+    return_fig: bool = False,
+    figure_kwargs: dict = {},
+    plot_kwargs: dict = {},
+    legend_kwargs: dict = {},
+):
+    """
+    Plot timeseries of monthly/daily gross energy, availability and curtailment
+
+    Args:
+        reanalysis (:obj:`dict[str, pandas.DataFrame]`): `PlantData.reanalysis` dictionary of reanalysis
+            `DataFrame`s.
+        outlier_thres (:obj:`float`): outlier threshold (typical range of 1 to 4) which adjusts
+            outlier sensitivity detection.
+        xlim (:obj:`tuple[datetime.datetime, datetime.datetime]`, optional): A tuple of datetimes
+            representing the x-axis plotting display limits. Defaults to None.
+        ylim_energy (:obj:`tuple[float, float]`, optional): A tuple of the y-axis plotting display
+            limits for the gross energy plot (top figure). Defaults to None.
+        ylim_loss (:obj:`tuple[float, float]`, optional): A tuple of the y-axis plotting display
+            limits for the loss plot (bottom figure). Defaults to None.
+        return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
+        figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
+            that are passed to `plt.figure()`. Defaults to {}.
+        plot_kwargs (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
+            `ax.scatter()`. Defaults to {}.
+        legend_kwargs (:obj:`dict`, optional): Additional legend keyword arguments that are passed to
+            `ax.legend()`. Defaults to {}.
+
+    Returns:
+        None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes]: If `return_fig` is True, then
+            the figure and axes objects are returned for further tinkering/saving.
+    """
+    valid_aggregate = aep._aggregate
+    figure_kwargs.setdefault("figsize", (12, 9))
+    fig = plt.figure(**figure_kwargs)
+    ax1 = fig.add_subplot(211)
+    ax2 = fig.add_subplot(212, sharex=ax1)
+    axes = (ax1, ax2)
+
+    # Plot the gross energy production
+    ax1.plot(valid_aggregate["gross_energy_gwh"], ".-", label="Gross Energy (GWh)", **plot_kwargs)
+    ax1.set_xlabel("Year")
+    ax1.set_ylabel("Gross energy (GWh)")
+
+    # Joint availability and curtailment plot
+    ax2.plot(valid_aggregate.availability_pct * 100, ".-", label="Availability", **plot_kwargs)
+    ax2.plot(valid_aggregate.curtailment_pct * 100, ".-", label="Curtailment", **plot_kwargs)
+    ax2.set_xlabel("Year")
+    ax2.set_ylabel("Loss (%)")
+
+    for ax in axes:
+        ax.grid()
+        ax.set_axisbelow(True)
+        ax.legend(**legend_kwargs)
+
+    if xlim is not None:
+        ax1.set_xlim(xlim)
+    if ylim_energy is not None:
+        ax1.set_ylim(ylim_energy)
+    if ylim_loss is not None:
+        ax2.set_ylim(ylim_loss)
+
+    if return_fig:
+        return fig, ax
+    fig.tight_layout()
+
+
 def plot_result_aep_distributions(self):
     """
     Plot a distribution of AEP values from the Monte-Carlo OA method
@@ -1376,38 +1462,5 @@ def plot_aep_boxplot(self, param, lab):
     plt.xlabel(lab)
     plt.title("AEP estimates by %s" % lab)
     plt.suptitle("")
-    plt.tight_layout()
-    return plt
-
-
-def plot_aggregate_plant_data_timeseries(self):
-    """
-    Plot timeseries of monthly/daily gross energy, availability and curtailment
-
-    Returns:
-        matplotlib.pyplot object
-    """
-    import matplotlib.pyplot as plt
-
-    valid_aggregate = self._aggregate
-
-    plt.figure(figsize=(12, 9))
-
-    # Gross energy
-    plt.subplot(2, 1, 1)
-    plt.plot(valid_aggregate.gross_energy_gwh, ".-")
-    plt.grid("on")
-    plt.xlabel("Year")
-    plt.ylabel("Gross energy (GWh)")
-
-    # Availability and curtailment
-    plt.subplot(2, 1, 2)
-    plt.plot(valid_aggregate.availability_pct * 100, ".-", label="Availability")
-    plt.plot(valid_aggregate.curtailment_pct * 100, ".-", label="Curtailment")
-    plt.grid("on")
-    plt.xlabel("Year")
-    plt.ylabel("Loss (%)")
-    plt.legend()
-
     plt.tight_layout()
     return plt

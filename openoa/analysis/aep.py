@@ -1097,3 +1097,8 @@ setattr(
     "plot_reanalysis_gross_energy_data",
     pandas_plotting.plot_reanalysis_gross_energy_data,
 )
+setattr(
+    MonteCarloAEP,
+    "plot_aggregate_plant_data_timeseries",
+    pandas_plotting.plot_aggregate_plant_data_timeseries,
+)
