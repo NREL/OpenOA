@@ -16,6 +16,7 @@ from pyproj import Transformer
 from bokeh.models import WMTSTileSource, ColumnDataSource
 from bokeh.palettes import Category10, viridis
 from bokeh.plotting import figure
+from matplotlib.markers import MarkerStyle
 
 from openoa.utils import filters
 
@@ -1190,12 +1191,9 @@ def plot_normalized_monthly_reanalysis_windspeed(
     fig.tight_layout()
 
 
-# TODO
-
-
 def plot_reanalysis_gross_energy_data(
-    self,
-    outlier_thres,
+    aep,
+    outlier_threshold: int,
     xlim: tuple[datetime.datetime, datetime.datetime] = None,
     ylim: tuple[float, float] = None,
     return_fig: bool = False,
@@ -1217,64 +1215,60 @@ def plot_reanalysis_gross_energy_data(
     figure_kwargs.setdefault("figsize", (9, 9))
     fig = plt.figure(**figure_kwargs)
     ax = fig.add_subplot(111)
+    ax.set_prop_cycle(
+        color=[
+            "tab:blue",
+            "tab:orange",
+            "tab:green",
+            "tab:red",
+            "tab:brown",
+            "tab:pink",
+            "tab:gray",
+            "tab:olive",
+        ]
+    )
 
-    valid_aggregate = self._aggregate
-    plt.figure(figsize=(9, 9))
+    valid_aggregate = aep._aggregate
 
-    # Loop through each reanalysis product and make a scatterplot of monthly wind speed vs plant energy
-    for p in np.arange(0, len(list(self._reanal_products))):
-        col_name = self._reanal_products[p]  # Reanalysis column in monthly data frame
-        # Plot
-        plt.subplot(2, 2, p + 1)
-
-        if (
-            self.time_resolution == "M"
-        ):  # Monthly case: apply robust linear regression for outliers detection
-            x = sm.add_constant(
-                valid_aggregate[col_name]
-            )  # Define 'x'-values (constant needed for regression function)
-            y = (
-                valid_aggregate["gross_energy_gwh"] * 30 / valid_aggregate["num_days_expected"]
-            )  # Normalize energy data to 30-days
-
-            rlm = sm.RLM(
-                y, x, M=sm.robust.norms.HuberT(t=outlier_thres)
-            )  # Robust linear regression with HuberT algorithm (threshold equal to outlier_thres)
+    # Monthly case: apply robust linear regression for outliers detection
+    if aep.time_resolution == "M":
+        for name, df in aep._plant.reanalysis.items():
+            x = sm.add_constant(valid_aggregate[name])
+            y = valid_aggregate["gross_energy_gwh"] * 30 / valid_aggregate["num_days_expected"]
+            rlm = sm.RLM(y, x, M=sm.robust.norms.HuberT(t=outlier_threshold))
             rlm_results = rlm.fit()
-
-            r2 = np.corrcoef(
-                x.loc[rlm_results.weights == 1, col_name], y[rlm_results.weights == 1]
-            )[
-                0, 1
-            ]  # Get R2 from valid data
-
-            # Continue plotting
-            plt.plot(
-                x.loc[rlm_results.weights != 1, col_name],
-                y[rlm_results.weights != 1],
-                "rx",
-                label="Outlier",
+            ix_outlier = rlm_results.weights != 1
+            r2 = np.corrcoef(x.loc[~ix_outlier, name], y[~ix_outlier])[0, 1]
+            ax.scatter(
+                x.loc[~ix_outlier, name],
+                y[~ix_outlier],
+                marker=MarkerStyle(marker="o", fillstyle="none"),
+                label=f"Valid {name} Data (R2={r2:.3f})",
+                **plot_kwargs,
             )
-            plt.plot(
-                x.loc[rlm_results.weights == 1, col_name],
-                y[rlm_results.weights == 1],
-                ".",
-                label="Valid data",
+            ax.scatter(
+                x.loc[ix_outlier, name],
+                y[ix_outlier],
+                marker="x",
+                label=f"{name} Outlier",
+                **plot_kwargs,
             )
-            plt.title(col_name + ", R2=" + str(np.round(r2, 3)))
-            plt.ylabel("30-day normalized gross energy (GWh)")
 
-        else:  # Daily/hourly case: apply bin filter for outliers detection
-            x = valid_aggregate[col_name]
+        ax.set_ylabel("30-day normalized gross energy (GWh)")
+
+    # Daily/hourly case: apply bin filter for outliers detection
+    else:
+        for name, df in aep._plant.reanalysis.items():
+            x = valid_aggregate[name]
             y = valid_aggregate["gross_energy_gwh"]
-            plant_capac = self._plant.metadata.capacity / 1000.0 * self._hours_in_res
+            plant_capac = aep._plant.metadata.capacity / 1000.0 * aep._hours_in_res
 
             # Apply bin filter
             flag = filters.bin_filter(
                 bin_col=y,
                 value_col=x,
                 bin_width=0.06 * plant_capac,
-                threshold=outlier_thres,  # wind bin threshold (stdev outside the median)
+                threshold=outlier_threshold,  # wind bin threshold (stdev outside the median)
                 center_type="median",
                 bin_min=0.01 * plant_capac,
                 bin_max=0.85 * plant_capac,
@@ -1283,29 +1277,27 @@ def plot_reanalysis_gross_energy_data(
             )
 
             # Continue plotting
-            plt.plot(
-                x.loc[flag],
-                y[flag],
-                "rx",
-                label="Outlier",
-            )
-            plt.plot(
-                x.loc[~flag],
-                y[~flag],
-                ".",
-                label="Valid data",
-            )
+            ax.scatter(x.loc[flag], y[flag], "x", label=f"{name} Outlier", **plot_kwargs)
+            ax.scatter(x.loc[~flag], y[~flag], ".", label=f"Valid {name} data", **plot_kwargs)
 
-            if self.time_resolution == "D":
-                plt.ylabel("Daily gross energy (GWh)")
-            elif self.time_resolution == "H":
-                plt.ylabel("Hourly gross energy (GWh)")
-            plt.title(col_name)
+        if aep.time_resolution == "D":
+            ax.set_ylabel("Daily gross energy (GWh)")
+        elif aep.time_resolution == "H":
+            ax.set_ylabel("Hourly gross energy (GWh)")
 
-        plt.xlabel("Wind speed (m/s)")
+    ax.grid()
+    ax.set_axisbelow(True)
+    ax.legend(**legend_kwargs)
+    ax.set_xlabel("Wind speed (m/s)")
 
-    plt.tight_layout()
-    return plt
+    if xlim is not None:
+        ax.set_xlim(xlim)
+    if ylim is not None:
+        ax.set_ylim(ylim)
+
+    if return_fig:
+        return fig, ax
+    fig.tight_layout()
 
 
 def plot_result_aep_distributions(self):

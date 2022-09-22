@@ -19,6 +19,7 @@ from sklearn.model_selection import KFold
 from openoa import PlantData, logging, logged_method_call
 from openoa.utils import filters
 from openoa.utils import timeseries as tm
+from openoa.utils import pandas_plotting
 from openoa.utils import unit_conversion as un
 from openoa.utils import met_data_processing as mt
 from openoa.utils.machine_learning_setup import MachineLearningSetup
@@ -1087,3 +1088,12 @@ class MonteCarloAEP(object):
 
         # Return long-term availabilty and curtailment
         return mc_avail_lt, mc_curt_lt
+
+
+# Attach external methods
+
+setattr(
+    MonteCarloAEP,
+    "plot_reanalysis_gross_energy_data",
+    pandas_plotting.plot_reanalysis_gross_energy_data,
+)
