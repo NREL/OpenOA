@@ -1102,3 +1102,8 @@ setattr(
     "plot_aggregate_plant_data_timeseries",
     pandas_plotting.plot_aggregate_plant_data_timeseries,
 )
+setattr(
+    MonteCarloAEP,
+    "plot_result_aep_distributions",
+    pandas_plotting.plot_result_aep_distributions,
+)
