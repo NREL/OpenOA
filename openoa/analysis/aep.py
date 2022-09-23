@@ -1094,6 +1094,11 @@ class MonteCarloAEP(object):
 
 setattr(
     MonteCarloAEP,
+    "plot_normalized_monthly_reanalysis_windspeed",
+    pandas_plotting.plot_normalized_monthly_reanalysis_windspeed,
+)
+setattr(
+    MonteCarloAEP,
     "plot_reanalysis_gross_energy_data",
     pandas_plotting.plot_reanalysis_gross_energy_data,
 )

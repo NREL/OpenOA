@@ -1108,9 +1108,7 @@ def plot_power_curve(
 
 
 def plot_normalized_monthly_reanalysis_windspeed(
-    reanalysis: dict[str, pd.DataFrame],
-    por_start: pd.Timestamp,
-    por_end: pd.Timestamp,
+    aep: "MonteCarloAEP",
     xlim: tuple[datetime.datetime, datetime.datetime] = None,
     ylim: tuple[float, float] = None,
     return_fig: bool = False,
@@ -1122,12 +1120,7 @@ def plot_normalized_monthly_reanalysis_windspeed(
     trends for each, and highlighting the period of record for the plant data.
 
     Args:
-        reanalysis (:obj:`dict[str, pandas.DataFrame]`): `PlantData.reanalysis` dictionary of reanalysis
-            `DataFrame`s.
-        por_start (:obj:`pandas.Timestamp`): The start of the period of record; this should be a valid
-            datetime or pandas Timestamp object.
-        por_end (:obj:`pandas.Timestamp`): The end of the period of record; this should be a valid
-            datetime or pandas Timestamp object.
+        aep (:obj:`openoa.analysis.MonteCarloAEP`): An initialized MonteCarloAEP object.
         xlim (:obj:`tuple[datetime.datetime, datetime.datetime]`, optional): A tuple of datetimes
             representing the x-axis plotting display limits. Defaults to None.
         ylim (:obj:`tuple[float, float]`, optional): A tuple of the y-axis plotting display limits.
@@ -1146,13 +1139,15 @@ def plot_normalized_monthly_reanalysis_windspeed(
     """
     # Define parameters needed for plotting
     min_val, max_val = (np.inf, -np.inf) if ylim is None else ylim
+    por_start = aep._aggregate.index[0]
+    por_end = aep._aggregate.index[-1]
 
     figure_kwargs.setdefault("figsize", (14, 6))
     figure_kwargs.setdefault("dpi", 200)
     fig = plt.figure(**figure_kwargs)
     ax = fig.add_subplot(111)
 
-    for name, df in reanalysis.items():
+    for name, df in aep._plant.reanalysis.items():
         # Compute the rolling mean and normalize it over a 12 month average
         ws = df.resample("MS")["ws_dens_corr"].mean().to_frame().rolling(12).mean()
         ws_norm = ws["ws_dens_corr"] / ws["ws_dens_corr"].mean()
