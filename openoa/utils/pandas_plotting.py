@@ -1486,14 +1486,70 @@ def plot_result_aep_distributions(
     plt.show()
 
 
+def _generate_swarm_values(y, n_bins=None, width: float = 0.5):
+    """Create the x-coordiantes for `y` so that plotting each value in the distribution of `y` appears
+    like that of a `seaborn.swarmplot` without requiring an additional dependency.
+
+    Args:
+        y (:obj:`pandas.Series`): The values to generate a matching x-value for a non-overlapping
+            scatter plot of all the points in the distribution.
+        n_bins (:obj:`int`, optional): The number of bins to use to generate the x-coordinates. If
+            `None`, then it is `y.size // 6`. Defaults to None.
+        width (:obj:`float`, optional): The maximum width of the x data in either
+            direction. Defaults to 0.5.
+
+    Returns:
+        :obj:`numpy.ndarray` An array of x-coordinates to plot as a scatter against `y`.
+    """
+    if n_bins is None:
+        n_bins = y.size // 6
+
+    # Get the upper bound of each bin
+    x = np.zeros_like(y)
+    y_min, y_max = y.min(), y.max()
+    dy = (y_max - y_min) / n_bins
+    y_bins = np.linspace(y_min + dy, y_max - dy, n_bins - 1)
+
+    # Divide the indices into their appropriate bins
+    i = np.arange(y.size)
+    ix_bin_groups = [0] * n_bins
+    y_bin_groups = [0] * n_bins
+    n_max = 0
+    for j, y_bin in enumerate(y_bins):
+        ix_bin = y <= y_bin
+        ix_bin_groups[j], y_bin_groups[j] = i[ix_bin], y[ix_bin]
+        n_max = max(n_max, len(ix_bin_groups[j]))
+        i, y = i[~ix_bin], y[~ix_bin]
+
+    # Fill in the last bin grouping values
+    ix_bin_groups[-1], y_bin_groups[-1] = i, y
+    n_max = max(n_max, len(ix_bin_groups[-1]))
+
+    # Assign the x indices in alternating fashion for each bin to ensure the x values are roughly symmetric
+    dx = 1 / (n_max // 2)
+    for i, vals in zip(ix_bin_groups, y_bin_groups):
+        if len(i) > 1:
+            j = len(i) % 2
+            i = i[np.argsort(vals)]
+            a = i[j::2]
+            b = i[j + 1 :: 2]
+            x[a] = (0.5 + j / 3 + np.arange(len(b))) * dx * width
+            x[b] = (0.5 + j / 3 + np.arange(len(b))) * -dx * width
+
+    return x
+
+
 def plot_aep_boxplot(
     aep: MonteCarloAEP,
     parameter: pd.Series,
     label: str,
     ylim: tuple[float, float] = (None, None),
+    with_points: bool = False,
     return_fig: bool = False,
     figure_kwargs: dict = {},
-    plot_kwargs: dict = {},
+    plot_kwargs_box: dict = {},
+    plot_kwargs_points: dict = {},
+    legend_kwargs: dict = {},
 ) -> None | tuple[plt.Figure, plt.Axes]:
     """Plot box plots of AEP results sliced by a specified Monte Carlo parameter
 
@@ -1504,11 +1560,16 @@ def plot_aep_boxplot(
         label (:obj:`str`): The name of the parameter, which will also be used as the x-axis label.
         ylim (:obj:`tuple[float, float]`, optional): A tuple of the y-axis plotting display limits.
             Defaults to None.
+        with_points (:obj:`bool`, optional): Flag to plot the individual points like a seaborn `swarmplot`. Defaults to False.
         return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
         figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
             that are passed to `plt.figure()`. Defaults to {}.
-        plot_kwargs (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
+        plot_kwargs_box (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
             `ax.boxplot()`. Defaults to {}.
+        plot_kwargs_points (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
+            `ax.boxplot()`. Defaults to {}.
+        legend_kwargs (:obj:`dict`, optional): Additional legend keyword arguments that are passed to
+            `ax.legend()`. Defaults to {}.
 
     Returns:
         None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes, dict]: If `return_fig` is
@@ -1523,11 +1584,30 @@ def plot_aep_boxplot(
 
     parameters = parameter.unique()
     parameters.sort()
-    plot_kwargs.setdefault("labels", parameters)
-    box_data = ax.boxplot([df.loc[df[label] == el, "aep"] for el in parameters], **plot_kwargs)
+    y_groups = [df.loc[df[label] == el, "aep"] for el in parameters]
+
+    plot_kwargs_box.setdefault("labels", parameters)
+    box_data = ax.boxplot(y_groups, **plot_kwargs_box)
+
+    if with_points:
+        widths = plot_kwargs_box.get("widths", np.full(len(y_groups), 0.5))
+        plot_kwargs_points.setdefault("marker", "o")
+        plot_kwargs_points.setdefault("facecolor", "none")
+        plot_kwargs_points.setdefault("edgecolor", "green")
+        plot_kwargs_points.setdefault("alpha", 0.5)
+        for x_start, (y, width) in enumerate(zip(y_groups, widths)):
+            x = _generate_swarm_values(y, width=width * 0.9) + x_start + 1
+            label = "Individual AEP Points" if x_start == width.size - 1 else None
+            ax.scatter(x, y, zorder=0, label=label, **plot_kwargs_points)
 
     ax.grid()
     ax.set_axisbelow(True)
+
+    handles, labels = [box_data["fliers"][0]], ["Outliers"]
+    _handles, _labels = ax.get_legend_handles_labels()
+    handles.extend(_handles)
+    labels.extend(_labels)
+    ax.legend(handles, labels, **legend_kwargs)
 
     ax.set_ylabel("AEP (GWh/yr)")
     ax.set_xlabel(label)
@@ -1538,3 +1618,98 @@ def plot_aep_boxplot(
         return fig, ax, box_data
     fig.tight_layout()
     plt.show()
+
+
+# TODO: Turbine Long Term Gross Energy
+
+
+def plot_filtered_power_curves(self, save_folder, output_to_terminal=False):
+    """
+    Plot the raw and flagged power curve data and save to file.
+
+    Args:
+        save_folder('obj':'str'): The pathname to where figure files should be saved
+        output_to_terminal('obj':'boolean'): Indicate whether or not to output figures to terminal
+
+    Returns:
+        (None)
+    """
+    import matplotlib.pyplot as plt
+
+    dic = self._scada_dict
+
+    # Loop through turbines
+    for t in self._turbs:
+        filt_df = dic[t].loc[dic[t]["flag_final"]]  # Filter only for valid data
+
+        plt.figure(figsize=(6, 5))
+        plt.scatter(dic[t].wmet_wdspd_avg, dic[t].wtur_W_avg, s=1, label="Raw")  # Plot all data
+        plt.scatter(
+            filt_df["wmet_wdspd_avg"], filt_df["wtur_W_avg"], s=1, label="Flagged"
+        )  # Plot flagged data
+        plt.xlim(0, 30)
+        plt.xlabel("Wind speed (m/s)")
+        plt.ylabel("Power (W)")
+        plt.title("Filtered power curve for Turbine %s" % t)
+        plt.legend(loc="lower right")
+        plt.savefig(
+            "%s/filtered_power_curve_%s.png"
+            % (
+                save_folder,
+                t,
+            ),
+            dpi=200,
+        )  # Save file
+
+        # Output figure to terminal if desired
+        if output_to_terminal:
+            plt.show()
+
+        plt.close()
+
+
+def plot_daily_fitting_result(self, save_folder, output_to_terminal=False):
+    """
+    Plot the raw and flagged power curve data and save to file.
+
+    Args:
+        save_folder('obj':'str'): The pathname to where figure files should be saved
+        output_to_terminal('obj':'boolean'): Indicate whether or not to output figures to terminal
+
+    Returns:
+        (None)
+    """
+    import matplotlib.pyplot as plt
+
+    mod_input = self._model_dict
+
+    # Loop through turbines
+    for t in self._turbs:
+        df = mod_input[(t)]
+        daily_reanal = self._daily_reanal_dict
+        ws_daily = daily_reanal["windspeed_ms"]
+
+        df_imputed = df.loc[df["energy_kwh_corr"] != df["energy_imputed"]]
+
+        plt.figure(figsize=(6, 5))
+        plt.plot(ws_daily, self._turb_lt_gross[t], "r.", alpha=0.1, label="Modeled")
+        plt.plot(df["windspeed_ms"], df["energy_imputed"], ".", label="Input")
+        plt.plot(df_imputed["windspeed_ms"], df_imputed["energy_imputed"], ".", label="Imputed")
+        plt.xlabel("Wind speed (m/s)")
+        plt.ylabel("Daily Energy (kWh)")
+        plt.title("Daily SCADA Energy Fitting, Turbine %s" % t)
+        plt.legend(loc="lower right")
+        plt.savefig(
+            "%s/daily_power_curve_%s.png"
+            % (
+                save_folder,
+                t,
+            ),
+            dpi=200,
+        )  # Save file
+
+        # Output figure to terminal if desired
+        if output_to_terminal:
+            plt.show()
+
+        plt.close()
