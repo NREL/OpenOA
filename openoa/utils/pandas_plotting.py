@@ -1487,7 +1487,7 @@ def plot_result_aep_distributions(
 
 
 def plot_aep_boxplot(
-    aep: "MonteCarloAEP",  # noqa: F821
+    aep: MonteCarloAEP,
     parameter: pd.Series,
     label: str,
     ylim: tuple[float, float] = (None, None),
