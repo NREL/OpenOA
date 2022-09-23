@@ -1112,3 +1112,8 @@ setattr(
     "plot_result_aep_distributions",
     pandas_plotting.plot_result_aep_distributions,
 )
+setattr(
+    MonteCarloAEP,
+    "plot_aep_boxplot",
+    pandas_plotting.plot_aep_boxplot,
+)

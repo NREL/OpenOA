@@ -6,8 +6,7 @@ This module provides helpful functions for creating various plots
 from __future__ import annotations
 
 import datetime
-from operator import truediv
-from tkinter.tix import Tree
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -21,6 +20,10 @@ from bokeh.plotting import figure
 from matplotlib.markers import MarkerStyle
 
 from openoa.utils import filters
+
+
+if TYPE_CHECKING:
+    from openoa.analysis import MonteCarloAEP
 
 
 plt.close("all")
@@ -1046,8 +1049,8 @@ def plot_power_curve(
     power: pd.Series,
     flag: np.ndarray | pd.Series,
     flag_labels: tuple[str, str] = None,
-    xlim: tuple[float, float] = None,
-    ylim: tuple[float, float] = None,
+    xlim: tuple[float, float] = (None, None),
+    ylim: tuple[float, float] = (None, None),
     legend: bool = False,
     return_fig: bool = False,
     figure_kwargs: dict = {},
@@ -1063,8 +1066,8 @@ def plot_power_curve(
         power (:obj: `pandas.Series` | `np.ndarray`): A pandas Series or numpy array of the recorded power, in kW.
         flag (:obj: `np.ndarray` | `pd.Series`): A pandas Series or numpy array of booleans for which points to flag in the windspeed and power data.
         flag_labels (:obj: `tuple[str, str]`, optional): The labels to give to the scatter points, where the 0th entry is the flagged points, and the second entry correpsponds to the standard power curve. Defaults to None.
-        xlim (:obj: `tuple[float, float]`, optional): A tuple of the x-axis (min, max) values. Defaults to None.
-        ylim (:obj: `tuple[float, float]`, optional): A tuple of the y-axis (min, max) values. Defaults to None.
+        xlim (:obj: `tuple[float, float]`, optional): A tuple of the x-axis (min, max) values. Defaults to (None, None).
+        ylim (:obj: `tuple[float, float]`, optional): A tuple of the y-axis (min, max) values. Defaults to (None, None).
         legend (:obj:`bool`, optional): Set to True to place a legend in the figure, otherwise set to False. Defaults to False.
         return_fig (:obj:`bool`, optional): Set to True to return the figure and axes objects, otherwise set to False. Defaults to False.
         figure_kwargs (:obj:`dict`, optional): Additional keyword arguments that should be passed to `plt.figure`. Defaults to {}.
@@ -1096,11 +1099,8 @@ def plot_power_curve(
     ax.set_xlabel("Wind Speed (m/s)")
     ax.set_ylabel("Power (kW)")
 
-    if xlim is not None:
-        ax.set_xlim(xlim)
-
-    if ylim is not None:
-        ax.set_ylim(ylim)
+    ax.set_xlim(xlim)
+    ax.set_ylim(ylim)
 
     if return_fig:
         return fig, ax
@@ -1108,9 +1108,9 @@ def plot_power_curve(
 
 
 def plot_normalized_monthly_reanalysis_windspeed(
-    aep: "MonteCarloAEP",
-    xlim: tuple[datetime.datetime, datetime.datetime] = None,
-    ylim: tuple[float, float] = None,
+    aep: MonteCarloAEP,
+    xlim: tuple[datetime.datetime, datetime.datetime] = (None, None),
+    ylim: tuple[float, float] = (None, None),
     return_fig: bool = False,
     figure_kwargs: dict = {},
     plot_kwargs: dict = {},
@@ -1122,9 +1122,9 @@ def plot_normalized_monthly_reanalysis_windspeed(
     Args:
         aep (:obj:`openoa.analysis.MonteCarloAEP`): An initialized MonteCarloAEP object.
         xlim (:obj:`tuple[datetime.datetime, datetime.datetime]`, optional): A tuple of datetimes
-            representing the x-axis plotting display limits. Defaults to None.
+            representing the x-axis plotting display limits. Defaults to (None, None).
         ylim (:obj:`tuple[float, float]`, optional): A tuple of the y-axis plotting display limits.
-            Defaults to None.
+            Defaults to (None, None).
         return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
         figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
             that are passed to `plt.figure()`. Defaults to {}.
@@ -1174,10 +1174,8 @@ def plot_normalized_monthly_reanalysis_windspeed(
     ax.grid()
     ax.set_axisbelow(True)
 
-    if xlim is not None:
-        ax.set_xlim(xlim)
-    if ylim is not None:
-        ax.set_ylim(ylim)
+    ax.set_xlim(xlim)
+    ax.set_ylim(ylim)
 
     ax.set_xlabel("Year")
     ax.set_ylabel("Normalized wind speed")
@@ -1192,8 +1190,8 @@ def plot_normalized_monthly_reanalysis_windspeed(
 def plot_reanalysis_gross_energy_data(
     aep,
     outlier_threshold: int,
-    xlim: tuple[float, float] = None,
-    ylim: tuple[float, float] = None,
+    xlim: tuple[float, float] = (None, None),
+    ylim: tuple[float, float] = (None, None),
     return_fig: bool = False,
     figure_kwargs: dict = {},
     plot_kwargs: dict = {},
@@ -1209,9 +1207,9 @@ def plot_reanalysis_gross_energy_data(
         outlier_thres (:obj:`float`): outlier threshold (typical range of 1 to 4) which adjusts
             outlier sensitivity detection.
         xlim (:obj:`tuple[float, float]`, optional): A tuple of datetimes
-            representing the x-axis plotting display limits. Defaults to None.
+            representing the x-axis plotting display limits. Defaults to (None, None).
         ylim (:obj:`tuple[float, float]`, optional): A tuple of the y-axis plotting display limits.
-            Defaults to None.
+            Defaults to (None, None).
         return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
         figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
             that are passed to `plt.figure()`. Defaults to {}.
@@ -1304,10 +1302,8 @@ def plot_reanalysis_gross_energy_data(
     ax.legend(**legend_kwargs)
     ax.set_xlabel("Wind speed (m/s)")
 
-    if xlim is not None:
-        ax.set_xlim(xlim)
-    if ylim is not None:
-        ax.set_ylim(ylim)
+    ax.set_xlim(xlim)
+    ax.set_ylim(ylim)
 
     if return_fig:
         return fig, ax
@@ -1316,9 +1312,9 @@ def plot_reanalysis_gross_energy_data(
 
 def plot_aggregate_plant_data_timeseries(
     aep,
-    xlim: tuple[datetime.datetime, datetime.datetime] = None,
-    ylim_energy: tuple[float, float] = None,
-    ylim_loss: tuple[float, float] = None,
+    xlim: tuple[datetime.datetime, datetime.datetime] = (None, None),
+    ylim_energy: tuple[float, float] = (None, None),
+    ylim_loss: tuple[float, float] = (None, None),
     return_fig: bool = False,
     figure_kwargs: dict = {},
     plot_kwargs: dict = {},
@@ -1330,14 +1326,12 @@ def plot_aggregate_plant_data_timeseries(
     Args:
         reanalysis (:obj:`dict[str, pandas.DataFrame]`): `PlantData.reanalysis` dictionary of reanalysis
             `DataFrame`s.
-        outlier_thres (:obj:`float`): outlier threshold (typical range of 1 to 4) which adjusts
-            outlier sensitivity detection.
         xlim (:obj:`tuple[datetime.datetime, datetime.datetime]`, optional): A tuple of datetimes
             representing the x-axis plotting display limits. Defaults to None.
         ylim_energy (:obj:`tuple[float, float]`, optional): A tuple of the y-axis plotting display
             limits for the gross energy plot (top figure). Defaults to None.
         ylim_loss (:obj:`tuple[float, float]`, optional): A tuple of the y-axis plotting display
-            limits for the loss plot (bottom figure). Defaults to None.
+            limits for the loss plot (bottom figure). Defaults to (None, None).
         return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
         figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
             that are passed to `plt.figure()`. Defaults to {}.
@@ -1375,12 +1369,9 @@ def plot_aggregate_plant_data_timeseries(
         ax.set_axisbelow(True)
         ax.legend(**legend_kwargs)
 
-    if xlim is not None:
-        ax1.set_xlim(xlim)
-    if ylim_energy is not None:
-        ax1.set_ylim(ylim_energy)
-    if ylim_loss is not None:
-        ax2.set_ylim(ylim_loss)
+    ax1.set_xlim(xlim)
+    ax1.set_ylim(ylim_energy)
+    ax2.set_ylim(ylim_loss)
 
     if return_fig:
         return fig, axes
@@ -1389,12 +1380,12 @@ def plot_aggregate_plant_data_timeseries(
 
 def plot_result_aep_distributions(
     aep,
-    xlim_aep: tuple[float, float] = None,
-    xlim_availability: tuple[float, float] = None,
-    xlim_curtail: tuple[float, float] = None,
-    ylim_aep: tuple[float, float] = None,
-    ylim_availability: tuple[float, float] = None,
-    ylim_curtail: tuple[float, float] = None,
+    xlim_aep: tuple[float, float] = (None, None),
+    xlim_availability: tuple[float, float] = (None, None),
+    xlim_curtail: tuple[float, float] = (None, None),
+    ylim_aep: tuple[float, float] = (None, None),
+    ylim_availability: tuple[float, float] = (None, None),
+    ylim_curtail: tuple[float, float] = (None, None),
     return_fig: bool = False,
     figure_kwargs: dict = {},
     plot_kwargs: dict = {},
@@ -1404,18 +1395,19 @@ def plot_result_aep_distributions(
     Plot a distribution of AEP values from the Monte-Carlo OA method
 
     Args:
-        reanalysis (:obj:`dict[str, pandas.DataFrame]`): `PlantData.reanalysis` dictionary of reanalysis
-            `DataFrame`s.
-        outlier_thres (:obj:`float`): outlier threshold (typical range of 1 to 4) which adjusts
-            outlier sensitivity detection.
+        aep (:obj:`openoa.analysis.MonteCarloAEP`): The `MonteCarloAEP` object.
         xlim_aep (:obj:`tuple[float, float]`, optional): A tuple of floats representing the x-axis plotting display
-            limits for the AEP subplot. Defaults to None.
+            limits for the AEP subplot. Defaults to (None, None).
         xlim_availability (:obj:`tuple[float, float]`, optional): A tuple of floats representing the x-axis plotting
-            display limits for the availability subplot. Defaults to None.
+            display limits for the availability subplot. Defaults to (None, None).
         xlim_curtail (:obj:`tuple[float, float]`, optional): A tuple of floats representing the
-            x-axis plotting display limits for the curtailment subplot. Defaults to None.
-        ylim (:obj:`tuple[float, float]`, optional): A tuple of the y-axis plotting display limits.
-            Defaults to None.
+            x-axis plotting display limits for the curtailment subplot. Defaults to (None, None).
+        ylim_aep (:obj:`tuple[float, float]`, optional): A tuple of floats representing the y-axis plotting display
+            limits for the AEP subplot. Defaults to (None, None).
+        ylim_availability (:obj:`tuple[float, float]`, optional): A tuple of floats representing the y-axis plotting
+            display limits for the availability subplot. Defaults to (None, None).
+        ylim_curtail (:obj:`tuple[float, float]`, optional): A tuple of floats representing the
+            y-axis plotting display limits for the curtailment subplot. Defaults to (None, None).
         return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
         figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
             that are passed to `plt.figure()`. Defaults to {}.
@@ -1481,46 +1473,68 @@ def plot_result_aep_distributions(
     # Delete the extra axes
     fig.delaxes(axes.flatten()[3])
 
-    if xlim_aep is not None:
-        ax1.set_xlim(xlim_aep)
-    if xlim_availability is not None:
-        ax2.set_xlim(xlim_availability)
-    if xlim_curtail is not None:
-        ax3.set_xlim(xlim_curtail)
+    ax1.set_xlim(xlim_aep)
+    ax2.set_xlim(xlim_availability)
+    ax3.set_xlim(xlim_curtail)
 
-    if ylim_aep is not None:
-        ax1.set_ylim(ylim_aep)
-    if ylim_availability is not None:
-        ax2.set_ylim(ylim_availability)
-    if ylim_curtail is not None:
-        ax3.set_ylim(ylim_curtail)
+    ax1.set_ylim(ylim_aep)
+    ax2.set_ylim(ylim_availability)
+    ax3.set_ylim(ylim_curtail)
 
     if return_fig:
         return fig, axes
     plt.show()
 
 
-def plot_aep_boxplot(self, param, lab):
-    """
-    Plot box plots of AEP results sliced by a specified Monte Carlo parameter
+def plot_aep_boxplot(
+    aep: "MonteCarloAEP",  # noqa: F821
+    parameter: pd.Series,
+    label: str,
+    ylim: tuple[float, float] = (None, None),
+    return_fig: bool = False,
+    figure_kwargs: dict = {},
+    plot_kwargs: dict = {},
+) -> None | tuple[plt.Figure, plt.Axes]:
+    """Plot box plots of AEP results sliced by a specified Monte Carlo parameter
 
     Args:
-        param(:obj:`list`): The Monte Carlo parameter on which to split the AEP results
-        lab(:obj:`str`): The name to use for the parameter when producing the figure
+        aep (:obj:`openoa.analysis.MonteCarloAEP`): An initialized and run MonteCarloAEP
+            object.
+        parameter (:obj:`pandas.Series`): A pandas `Series` of the data to split the AEP results.
+        label (:obj:`str`): The name of the parameter, which will also be used as the x-axis label.
+        ylim (:obj:`tuple[float, float]`, optional): A tuple of the y-axis plotting display limits.
+            Defaults to None.
+        return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
+        figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
+            that are passed to `plt.figure()`. Defaults to {}.
+        plot_kwargs (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
+            `ax.boxplot()`. Defaults to {}.
 
     Returns:
-        (none)
+        None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes, dict]: If `return_fig` is
+            True, then the figure object, axes object, and a dictionary of the boxplot objects are
+            returned for further tinkering/saving.
     """
+    df = pd.DataFrame(data={"aep": aep.results.aep_GWh, label: parameter})
+    figure_kwargs.setdefault("figsize", (8, 6))
 
-    import matplotlib.pyplot as plt
+    fig = plt.figure(**figure_kwargs)
+    ax = fig.add_subplot(111)
 
-    sim_results = self.results
+    parameters = parameter.unique()
+    parameters.sort()
+    plot_kwargs.setdefault("labels", parameters)
+    box_data = ax.boxplot([df.loc[df[label] == el, "aep"] for el in parameters], **plot_kwargs)
 
-    tmp_df = pd.DataFrame(data={"aep": sim_results.aep_GWh, "param": param})
-    tmp_df.boxplot(column="aep", by="param", figsize=(8, 6))
-    plt.ylabel("AEP (GWh/yr)")
-    plt.xlabel(lab)
-    plt.title("AEP estimates by %s" % lab)
-    plt.suptitle("")
-    plt.tight_layout()
-    return plt
+    ax.grid()
+    ax.set_axisbelow(True)
+
+    ax.set_ylabel("AEP (GWh/yr)")
+    ax.set_xlabel(label)
+
+    ax.set_ylim(ylim)
+
+    if return_fig:
+        return fig, ax, box_data
+    fig.tight_layout()
+    plt.show()
