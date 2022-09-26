@@ -4,11 +4,7 @@
 OpenOA Operational Analysis Framework
 #####################################
 
-|Binder Badge| |Gitter Badge| |Journal of Open Source Software Badge|
-
-|Documentation Badge| |Tests Badge| |Code Coverage Badge|
-
-|pre-commit| |Code style: black| |Imports: isort|
+|Binder Badge| |Gitter Badge| |Journal of Open Source Software Badge| |Documentation Badge| |Tests Badge| |Code Coverage Badge| |pre-commit| |Code style: black| |Imports: isort|
 
 .. ::
 
@@ -18,6 +14,9 @@ OpenOA Operational Analysis Framework
     -, for subsections
     ^, for subsubsections
     ", for paragraphs
+
+Overview
+********
 
 This library provides a generic framework for working with large timeseries data from wind plants. Its development
 has been motivated by the WP3 Benchmarking (PRUF) project, which aims to provide a reference implementaiton for
@@ -55,8 +54,9 @@ If you use this software in your work, please cite our JOSS article with the fol
     }
 
 
-Contents
-========
+Table of Contents
+*****************
+
 .. toctree::
     :maxdepth: 2
 

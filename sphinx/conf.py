@@ -136,7 +136,10 @@ todo_include_todos = False
 # a list of builtin themes.
 #
 html_theme = "pydata_sphinx_theme"
-
+html_static_path = ["_static"]
+html_css_files = [
+    "css/custom.css",
+]
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
@@ -148,8 +151,9 @@ html_theme_options = {
     "show_nav_level": 2,
     "navigation_depth": 2,
     "collapse_navigation": True,
+    "navbar_align": "left",
 }
-html_sidebars = {"**": ["search-field.html", "sidebar-nav-bs", "sidebar-ethical-ads"]}
+html_sidebars = {"**": []}  # ["search-field.html", "sidebar-nav-bs", "sidebar-ethical-ads"]
 html_logo = str(
     Path("../Open OA Final Logos").resolve() / "Color" / "Open OA Color Transparent Background.png"
 )
