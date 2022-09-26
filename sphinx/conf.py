@@ -29,14 +29,14 @@ new_nb = nbmerge.merge_notebooks(
     "./",
     (
         "./examples.ipynb",
-        "../examples/00_toolkit_examples.ipynb",
-        "../examples/01a_qc_tz_unaware_data.ipynb",
-        "../examples/01b_qc_tz_aware_data.ipynb",
-        "../examples/02_plant_aep_analysis.ipynb",
-        "../examples/02b_augmented_plant_aep_analysis.ipynb",
-        "../examples/03_turbine_ideal_energy.ipynb",
-        "../examples/04_electrical_losses.ipynb",
-        "../examples/05_eya_gap_analysis.ipynb",
+        "../examples/00_intro_to_plant_data.ipynb",
+        # TODO: uncomment when the examples are updated and reincorporated
+        # "../examples/01_utils_examples.ipynb",
+        # "../examples/02_plant_aep_analysis.ipynb",
+        # "../examples/02b_augmented_plant_aep_analysis.ipynb",
+        # "../examples/03_turbine_ideal_energy.ipynb",
+        # "../examples/04_electrical_losses.ipynb",
+        # "../examples/05_eya_gap_analysis.ipynb",
     ),
 )
 nbmerge.write_notebook(new_nb, "./examplesout.ipynb")
@@ -114,7 +114,7 @@ release = find_version("openoa", "__init__.py")
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = "en"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -133,32 +133,44 @@ todo_include_todos = False
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = "sphinx_rtd_theme"
+html_theme = "pydata_sphinx_theme"
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
+# html_theme_options = {
+#     "canonical_url": "",
+#     "analytics_id": "",
+#     # 'logo_only': False,
+#     "display_version": True,
+#     "prev_next_buttons_location": "bottom",
+#     # 'style_external_links': False,
+#     # 'vcs_pageview_mode': 'display_github',
+#     # Toc options
+#     "collapse_navigation": False,
+#     "sticky_navigation": True,
+#     "navigation_depth": 4,
+#     # 'includehidden': True,
+#     # 'titles_only': False
+# }
 html_theme_options = {
-    "canonical_url": "",
-    "analytics_id": "",
-    # 'logo_only': False,
-    "display_version": True,
-    "prev_next_buttons_location": "bottom",
-    # 'style_external_links': False,
-    # 'vcs_pageview_mode': 'display_github',
-    # Toc options
+    "github_url": "https://github.com/NREL/OpenOA",
     "collapse_navigation": False,
-    "sticky_navigation": True,
-    "navigation_depth": 4,
-    # 'includehidden': True,
-    # 'titles_only': False
+    "show_toc_level": 2,
+    "navbar_start": ["navbar-logo"],
+    "show_nav_level": 2,
+    "navigation_depth": 2,
+    "logo": {
+        "link": "https://github.com/NREL/OpenOA/blob/main/Open%20OA%20Final%20Logos/Color/Open%20OA%20Color%20Transparent%20Background.png",
+    },
 }
+html_sidebars = {"**": ["sidebar-nav-bs", "sidebar-ethical-ads"]}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ["_static"]
+# html_static_path = ["_static"]
 
 
 # -- Options for HTMLHelp output ------------------------------------------
@@ -240,8 +252,8 @@ autodoc_mock_imports = [
     "pygam",
     "scipy",
     "tqdm",
-    #    "matplotlib", ## These are actually required to generate the Bokeh plot in the pandas_plotting docs
-    #    "pyproj",
-    #    "shapely",
-    #    "bokeh",
+    "matplotlib",
+    "pyproj",
+    "shapely",
+    "bokeh",
 ]

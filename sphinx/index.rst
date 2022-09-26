@@ -62,7 +62,7 @@ If you use this software in your work, please cite our JOSS article with the fol
     install.rst
     examplesout
     toolkits.rst
-    methods.rst
+    analysis.rst
     types.rst
     contributing.rst
     credit.rst
