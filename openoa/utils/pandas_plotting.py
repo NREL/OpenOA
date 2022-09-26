@@ -18,7 +18,7 @@ plt.close("all")
 font = {"family": "serif", "size": 14}
 matplotlib.rc("font", **font)
 matplotlib.rc("text", usetex=False)
-matplotlib.rcParams.update("figure.figsize", (15, 6))
+matplotlib.rcParams.update({"figure.figsize": (15, 6)})
 
 
 def coordinateMapping(lon1, lat1, lon2, lat2):
@@ -803,22 +803,26 @@ def plot_windfarm(
     Returns:
         Bokeh_plot(:obj:`axes handle`): windfarm map
 
-    # TODO: UPDATE THIS DOCSTRING
-    # Example:
-    #     .. bokeh-plot::
+    """
+    """
+    TODO: Add this back in when it can be debugged
+    lats, lons = transformer.transform(...) -> ValueError: not enough values to unpack (expected 2, got 0)
 
-    #         import pandas as pd
-    #         from bokeh.plotting import figure, output_file, show
+    Example:
+        .. bokeh-plot::
 
-    #         from openoa.utils.pandas_plotting import plot_windfarm
+            import pandas as pd
+            from bokeh.plotting import figure, output_file, show
 
-    #         from examples import project_ENGIE
+            from openoa.utils.pandas_plotting import plot_windfarm
 
-    #         # Load plant object
-    #         project = project_ENGIE.prepare("../examples/data/la_haute_borne")
+            from examples import project_ENGIE
 
-    #         # Create the bokeh wind farm plot
-    #         show(plot_windfarm(project.asset, tile_name="ESRI", plot_width=600, plot_height=600))
+            # Load plant object
+            project = project_ENGIE.prepare("../examples/data/la_haute_borne")
+
+            # Create the bokeh wind farm plot
+            show(plot_windfarm(project.asset, tile_name="ESRI", plot_width=600, plot_height=600))
     """
 
     # See https://wiki.openstreetmap.org/wiki/Tile_servers for various tile services
@@ -889,8 +893,8 @@ def plot_windfarm(
         else:
             asset_df["auto_line_color"] = "black"
 
-    # Create the bokeh data source
-    source = ColumnDataSource(asset_df)
+    # Create the bokeh data source without the "geometry" that isn't compatible with bokeh
+    source = ColumnDataSource(asset_df.drop(columns=["geometry"]))
 
     # Create a bokeh figure with tiles
     plot_map = figure(
