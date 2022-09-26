@@ -805,26 +805,21 @@ def plot_windfarm(
         Bokeh_plot(:obj:`axes handle`): windfarm map
 
     # TODO: UPDATE THIS DOCSTRING
-    Example:
-        .. bokeh-plot::
+    # Example:
+    #     .. bokeh-plot::
 
-            import pandas as pd
+    #         import pandas as pd
+    #         from bokeh.plotting import figure, output_file, show
 
-            from bokeh.plotting import figure, output_file, show
+    #         from openoa.utils.pandas_plotting import plot_windfarm
 
-            from openoa.toolkits.pandas_plotting import plot_windfarm
-            from openoa.types import PlantData
+    #         from examples import project_ENGIE
 
-            from examples.project_ENGIE import Project_Engie
+    #         # Load plant object
+    #         project = project_ENGIE.prepare("../examples/data/la_haute_borne")
 
-            # Load plant object
-            project = Project_Engie("../examples/data/la_haute_borne")
-
-            # Prepare data
-            project.prepare()
-
-            # Create the bokeh wind farm plot
-            show(plot_windfarm(project,tile_name="ESRI",plot_width=600,plot_height=600))
+    #         # Create the bokeh wind farm plot
+    #         show(plot_windfarm(project.asset, tile_name="ESRI", plot_width=600, plot_height=600))
     """
 
     # See https://wiki.openstreetmap.org/wiki/Tile_servers for various tile services

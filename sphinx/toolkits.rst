@@ -1,17 +1,25 @@
-.. toolkits:
+.. utils:
 
-Toolkits
-=============================
+Utils
+=====
 
-Toolkit modules provide abstract functions that operate on Pandas data frames and series. They can be used in isolation
-as a useful library, or can be used through a higher level Analysis method. Toolkit modules are organized by function
-and in general will only operate on data types from one particular backend. Currently, every toolkit function is
-implemented with Pandas.
+The utils subpackage provides module-level themed methods that operate on Pandas `DataFrame`s and
+`Series` interchangeably, consistent with the OpenOA v3 approach of Pandas-based operations and
+functionality. These modules and their methods can be used in isolation as a useful library, or
+through a higher level analysis method.
+
+Quality Assurance
+-----------------
+
+.. automodule:: openoa.utils.qa
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 Filters
 ---------------------
 
-.. automodule:: openoa.toolkits.filters
+.. automodule:: openoa.utils.filters
     :members:
     :undoc-members:
     :show-inheritance:
@@ -20,10 +28,10 @@ Filters
 Power Curve
 ---------------------
 
-.. automodule:: openoa.toolkits.power_curve
+.. automodule:: openoa.utils.power_curve
     :undoc-members:
 
-.. automodule:: openoa.toolkits.power_curve.functions
+.. automodule:: openoa.utils.power_curve.functions
     :members:
     :undoc-members:
     :show-inheritance:
@@ -32,7 +40,7 @@ Power Curve
 Imputing
 ---------------------
 
-.. automodule:: openoa.toolkits.imputing
+.. automodule:: openoa.utils.imputing
     :members:
     :undoc-members:
     :show-inheritance:
@@ -40,7 +48,7 @@ Imputing
 Timeseries
 ---------------------
 
-.. automodule:: openoa.toolkits.timeseries
+.. automodule:: openoa.utils.timeseries
     :members:
     :undoc-members:
     :show-inheritance:
@@ -48,7 +56,7 @@ Timeseries
 Met Data Processing
 ---------------------
 
-.. automodule:: openoa.toolkits.met_data_processing
+.. automodule:: openoa.utils.met_data_processing
     :members:
     :undoc-members:
     :show-inheritance:
@@ -57,7 +65,7 @@ Met Data Processing
 Metadata Fetch
 ---------------------
 
-.. automodule:: openoa.toolkits.metadata_fetch
+.. automodule:: openoa.utils.metadata_fetch
     :members:
     :undoc-members:
     :show-inheritance:
@@ -66,7 +74,7 @@ Metadata Fetch
 Unit Conversion
 ---------------------
 
-.. automodule:: openoa.toolkits.unit_conversion
+.. automodule:: openoa.utils.unit_conversion
     :members:
     :undoc-members:
     :show-inheritance:
@@ -75,16 +83,7 @@ Unit Conversion
 Plotting
 ---------------------
 
-.. automodule:: openoa.toolkits.pandas_plotting
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-
-Reanalysis Downloading
-----------------------
-
-.. automodule:: openoa.toolkits.reanalysis_downloading
+.. automodule:: openoa.utils.pandas_plotting
     :members:
     :undoc-members:
     :show-inheritance:
