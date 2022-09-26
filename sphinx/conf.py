@@ -20,6 +20,7 @@ import io
 import os
 import re
 import sys
+from pathlib import Path
 
 import nbmerge
 
@@ -60,6 +61,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.napoleon",
     "sphinx.ext.todo",
+    "sphinx_design",
     "m2r2",
     "nbsphinx",
     "bokeh.sphinxext.bokeh_plot",
@@ -71,8 +73,8 @@ templates_path = ["_templates"]
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
 #
-source_suffix = [".rst", ".md"]
 # source_suffix = '.rst'
+source_suffix = [".rst", ".md"]
 
 # The master toctree document.
 master_doc = "index"
@@ -139,33 +141,18 @@ html_theme = "pydata_sphinx_theme"
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-# html_theme_options = {
-#     "canonical_url": "",
-#     "analytics_id": "",
-#     # 'logo_only': False,
-#     "display_version": True,
-#     "prev_next_buttons_location": "bottom",
-#     # 'style_external_links': False,
-#     # 'vcs_pageview_mode': 'display_github',
-#     # Toc options
-#     "collapse_navigation": False,
-#     "sticky_navigation": True,
-#     "navigation_depth": 4,
-#     # 'includehidden': True,
-#     # 'titles_only': False
-# }
 html_theme_options = {
     "github_url": "https://github.com/NREL/OpenOA",
-    "collapse_navigation": False,
-    "show_toc_level": 2,
     "navbar_start": ["navbar-logo"],
+    "show_toc_level": 2,
     "show_nav_level": 2,
     "navigation_depth": 2,
-    "logo": {
-        "link": "https://github.com/NREL/OpenOA/blob/main/Open%20OA%20Final%20Logos/Color/Open%20OA%20Color%20Transparent%20Background.png",
-    },
+    "collapse_navigation": True,
 }
-html_sidebars = {"**": ["sidebar-nav-bs", "sidebar-ethical-ads"]}
+html_sidebars = {"**": ["search-field.html", "sidebar-nav-bs", "sidebar-ethical-ads"]}
+html_logo = str(
+    Path("../Open OA Final Logos").resolve() / "Color" / "Open OA Color Transparent Background.png"
+)
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -176,7 +163,7 @@ html_sidebars = {"**": ["sidebar-nav-bs", "sidebar-ethical-ads"]}
 # -- Options for HTMLHelp output ------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = "OpenOAdoc"
+# htmlhelp_basename = "OpenOAdoc"
 
 
 # -- Options for LaTeX output ---------------------------------------------

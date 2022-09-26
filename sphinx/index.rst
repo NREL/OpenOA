@@ -55,17 +55,18 @@ If you use this software in your work, please cite our JOSS article with the fol
     }
 
 
+Contents
+========
 .. toctree::
     :maxdepth: 2
-    :caption: Contents:
 
-    install.rst
+    install
     examplesout
-    toolkits.rst
-    analysis.rst
+    toolkits
+    analysis
     types.rst
-    contributing.rst
-    credit.rst
+    contributing
+    credit
 
 
 .. |Binder Badge| image:: https://mybinder.org/badge_logo.svg
