@@ -16,10 +16,9 @@ from bokeh.plotting import figure
 
 plt.close("all")
 font = {"family": "serif", "size": 14}
-
 matplotlib.rc("font", **font)
 matplotlib.rc("text", usetex=False)
-matplotlib.rcParams["figure.figsize"] = (15, 6)
+matplotlib.rcParams.update("figure.figsize", (15, 6))
 
 
 def coordinateMapping(lon1, lat1, lon2, lat2):
