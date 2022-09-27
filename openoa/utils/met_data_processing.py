@@ -104,6 +104,8 @@ def compute_air_density(
     Returns:
         :obj:`pandas.Series`: Rho, calcualted air density; units of kg/m3
     """
+    if data is not None:
+        temp_col, pres_col, humi_col = df_to_series(data, temp_col, pres_col, humi_col)
     # Check if humidity column is provided and create default humidity array with values of 0.5 if necessary
     rel_humidity = humi_col if humi_col is not None else np.full(temp_col.shape[0], 0.5)
 
@@ -197,6 +199,8 @@ def compute_turbulence_intensity(
     Returns:
         :obj:`pd.Series`: turbulence intensity, (unitless ratio)
     """
+    if data is not None:
+        mean_col, std_col = df_to_series(data, mean_col, std_col)
     return std_col / mean_col
 
 
