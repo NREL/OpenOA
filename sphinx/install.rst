@@ -11,6 +11,6 @@
     ", for paragraphs
 
 Install
-*******
+#######
 
 .. mdinclude:: ../readme.md

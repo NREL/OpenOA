@@ -1,14 +1,14 @@
 .. methods:
 
 Analysis Methods
-======================
+################
 
 Analysis Methods are a collection of modules and classes to accomplish high level analysis of plant data. They integrate
 the more abstract toolkit modules with specific PlantData classes to create a reproducible process. Analysis modules may
 respect the engine parameter of PlantData objects to support multi-platform, scalable analysis.
 
 Plant Level Analysis
---------------------
+********************
 
 .. automodule:: openoa.analysis.aep
     :members:
@@ -21,7 +21,7 @@ Plant Level Analysis
     :show-inheritance:
 
 Turbine Level Analysis
-----------------------
+**********************
 
 .. automodule:: openoa.analysis.turbine_long_term_gross_energy
     :members:
@@ -29,7 +29,7 @@ Turbine Level Analysis
     :show-inheritance:
 
 Electrical Losses Analysis
---------------------------
+**************************
 
 .. automodule:: openoa.analysis.electrical_losses
     :members:

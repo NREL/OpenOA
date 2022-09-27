@@ -1,7 +1,7 @@
 .. types:
 
 Plant Data
-==================
+##########
 
 New data imported into the openoa toolkit can take advantage of the data structures in the :py:mod:`plant`
 module. As of v3, users can use the :py:class:`openoa.plant.PlantData` class, instead of subclassing :py:class:`PlantData`,
@@ -29,10 +29,10 @@ each of the inputs, users can access the dictionary elements :py:attr:`col_map`,
 work with the various mappings.
 
 Data Schema User Guide
-----------------------
+**********************
 
 SCADA
-^^^^^
+=====
 
 :py:attr:`PlantData.scada` is configured by the :py:class:`openoa.plant.SCADAMetaData` class, which is set in the configuration
 data with the "scada" key. Users can set each of the following "Field Name" keys with their own
@@ -71,7 +71,7 @@ data type or can be converted to that type.
 ==================== ==================================   =============================
 
 Tower
-^^^^^
+=====
 
 :py:attr:`PlantData.tower` is configured by the :py:class:`openoa.plant.TowerMetaData` class, which is set in the configuration
 data with the "tower" key. Users can set each of the following "Field Name" keys with their own
@@ -87,7 +87,7 @@ data type or can be converted to that type.
 ==================== ==================================   =============================
 
 Curtail
-^^^^^^^
+=======
 
 :py:attr:`PlantData.curtail` is configured by the :py:class:`openoa.plant.CurtailMetaData` class, which is set in the configuration
 data with the "curtail" key. Users can set each of the following "Field Name" keys with their own
@@ -105,7 +105,7 @@ data type or can be converted to that type.
 ==================== ====================================   ===============================
 
 Status
-^^^^^^
+======
 
 :py:attr:`PlantData.status` is configured by the :py:class:`openoa.plant.StatusMetaData` class, which is set in the configuration
 data with the "status" key. Users can set each of the following "Field Name" keys with their own
@@ -124,7 +124,7 @@ listed data type or can be converted to that type.
 ==================== ===================================   ==============================
 
 Asset
-^^^^^^
+=====
 
 :py:attr:`PlantData.asset` is configured by the :py:class:`openoa.plant.AssetMetaData` class, which is set in the configuration
 data with the "asset" key. Users can set each of the following "Field Name" keys with their own
@@ -147,7 +147,7 @@ type or can be converted to that type.
 
 
 Reanalysis
-^^^^^^^^^^
+==========
 
 :py:attr:`PlantData.reanalysis` is configured by the :py:class:`openoa.plant.ReanlysisMetaData` class, which is set in the configuration
 data with the "reanalysis" key, but it should be noted that reanalysis data should be a dictionary
@@ -160,7 +160,7 @@ the "freq" field. Users just have to ensure that the columns are already using t
 and that each column is already using the listed data type or can be converted to that type.
 
 MERRA-2
-"""""""
+-------
 
 Data are based on the single-level diagnostic data available here: https://disc.gsfc.nasa.gov/datasets/M2T1NXSLV_V5.12.4/summary?keywords=%22MERRA-2%22
 
@@ -172,7 +172,7 @@ degrees Celsius per vertical kilometer. Pressure at 50m is extrapolated from sur
 data provided in this dataset using the hypsometric equation.
 
 NCEP-2
-""""""
+------
 
 Data are based on the single-level diagnostic data available here: https://rda.ucar.edu/datasets/ds091.0/
 
@@ -184,7 +184,7 @@ degrees Celsius per vertical kilometer. Pressure at 10m is extrapolated from sur
 data provided in this dataset using the hypsometric equation.
 
 ERA5
-""""
+----
 
 Data are based on the model-level data available here: https://rda.ucar.edu/datasets/ds627.0/
 
@@ -208,13 +208,17 @@ data provided in this dataset using the hypsometric equation.
  surface_pressure     float                                     Pa
 ==================== =======================================   ==================================
 
-PlantData and PlantMetaData API
--------------------------------
+PlantData API
+*************
 
 .. autoclass:: openoa.plant.PlantData
     :members:
     :no-undoc-members:
     :show-inheritance:
+
+
+PlantMetaData API
+*****************
 
 .. autoclass:: openoa.plant.PlantMetaData
     :members:
