@@ -2,52 +2,85 @@
 This module provides methods for processing meteorological data.
 """
 
+from __future__ import annotations
+
 import warnings
 
 import numpy as np
 import pandas as pd
 import scipy.constants as const
 
+from openoa.utils._converters import df_to_series
 
-def compute_wind_direction(u, v):
+
+# Define constants used in some of the methods
+R = 287.058  # Gas constant for dry air, units of J/kg/K
+Rw = 461.5  # Gas constant of water vapour, unit J/kg/K
+
+
+def compute_wind_direction(
+    u: pd.Series | str, v: pd.Series | str, data: pd.DataFrame = None
+) -> pd.Series:
     """Compute wind direction given u and v wind vector components
 
     Args:
-        u(:obj:`pandas.Series`): the zonal component of the wind; units of m/s
-        v(:obj:`pandas.Series`): the meridional component of the wind; units of m/s
+        u(:obj:`pandas.Series` | `str`): A pandas `Series` of the zonal component of the wind,
+            in m/s, or the name of the column in `data`.
+        v(:obj:`pandas.Series` | `str`): A pandas `Series` of the meridional component of the wind,
+            in m/s, or the name of the column in `data`.
+        data(:obj:`pandas.DataFrame`): The pandas `DataFrame` containg the columns `u` and `v`.
 
     Returns:
         :obj:`pandas.Series`: wind direction; units of degrees
     """
+    if data is not None:
+        u, v = df_to_series(data, u, v)
+
     wd = 180 + np.arctan2(u, v) * 180 / np.pi  # Calculate wind direction in degrees
-    wd[wd == 360] = 0  # Make calculations of 360 equal to 0
-
-    return wd
+    return pd.Series(np.where(wd != 360, wd, 0))
 
 
-def compute_u_v_components(wind_speed, wind_dir):
+def compute_u_v_components(
+    wind_speed: pd.Series | str, wind_dir: pd.Series | str, data: pd.DataFrame = None
+) -> pd.Series:
     """Compute vector components of the horizontal wind given wind speed and direction
 
     Args:
-        wind_speed(pandas.Series): horizontal wind speed; units of m/s
-        wind_dir(pandas.Series): wind direction; units of degrees
+        wind_speed(:obj:`pandas.Series` | `str`): A pandas `Series` of the horizontal wind speed, in
+            m/s, or the name of the column in `data`.
+        wind_dir(:obj:`pandas.Series` | `str`): A pandas `Series` of the wind direction, in degrees,
+            or the name of the column in `data`.
+        data(:obj:`pandas.DataFrame`): The pandas `DataFrame` containg the columns `wind_speed` and
+            `wind_direction`.
+
+    Raises:
+        ValueError: Raised if any of the `wind_speed` or `wind_dir` values are negative.
 
     Returns:
         (tuple):
             u(pandas.Series): the zonal component of the wind; units of m/s.
             v(pandas.Series): the meridional component of the wind; units of m/s
     """
-    # Send exception if any negative data found
-    if (wind_speed[wind_speed < 0].size > 0) | (wind_dir[wind_dir < 0].size > 0):
-        raise Exception("Some of your wind speed or direction data is negative. Check your data")
+    if data is not None:
+        wind_speed, wind_dir = df_to_series(data, wind_speed, wind_dir)
 
-    u = np.round(-wind_speed * np.sin(wind_dir * np.pi / 180), 10)  # round to 10 digits
+    if np.any(wind_speed < 0):
+        raise ValueError("Negative values exist in the `wind_speed` data.")
+    if np.any(wind_dir < 0):
+        raise ValueError("Negative values exist in the `wind_dir` data.")
+
+    u = np.round(-wind_speed * np.sin(wind_dir * np.pi / 180), 10)
     v = np.round(-wind_speed * np.cos(wind_dir * np.pi / 180), 10)
 
     return u, v
 
 
-def compute_air_density(temp_col, pres_col, humi_col=None):
+def compute_air_density(
+    temp_col: pd.Series | str,
+    pres_col: pd.Series | str,
+    humi_col: pd.Series | str = None,
+    data: pd.DataFrame = None,
+):
     """
     Calculate air density from the ideal gas law based on the definition provided by IEC 61400-12
     given pressure, temperature and relative humidity.
@@ -58,130 +91,165 @@ def compute_air_density(temp_col, pres_col, humi_col=None):
     Humidity values are optional. According to the IEC a humiditiy of 50% (0.5) is set as default value.
 
     Args:
-        temp_col(:obj:`array-like`): array with temperature values; units of Kelvin
-        pres_col(:obj:`array-like`): array with pressure values; units of Pascals
-        humi_col(:obj:`array-like`): optional array with relative humidity values; dimensionless (range 0 to 1)
+        temp_col(:obj:`pandas.Series` | `str`): A pandas `Series` of the temperature values, in
+            Kelvin, or the name of the column in `data`.
+        pres_col(:obj:`pandas.Series` | `str`): A pandas `Series` of the pressure values, in Pascals,
+            or the name of the column in `data`.
+        humi_col(:obj:`pandas.Series` | `str`): An optional pandas `Series` of the relative humidity
+            values, as a decimal in the range (0, 1), or the name of the column in `data`, by default
+            None.
+        data(:obj:`pandas.DataFrame`): The pandas `DataFrame` containg the columns `temp_col` and
+            `pres_col`, and optionally `humi_col`.
+
+    Raises:
+        ValueError: Raised if any of the `temp_col` or `pres_col`, or `humi_col` values are negative.
 
     Returns:
         :obj:`pandas.Series`: Rho, calcualted air density; units of kg/m3
     """
+    if data is not None:
+        temp_col, pres_col, humi_col = df_to_series(data, temp_col, pres_col, humi_col)
     # Check if humidity column is provided and create default humidity array with values of 0.5 if necessary
     if humi_col is not None:
         rel_humidity = humi_col
     else:
-        rel_humidity = np.repeat(0.5, temp_col.shape[0])
-    # Send exception if any negative data found
-    if np.any(temp_col < 0) | np.any(pres_col < 0) | np.any(rel_humidity < 0):
-        raise Exception(
-            "Some of your temperature, pressure or humidity data is negative. Check your data."
-        )
+        rel_humidity = np.full(temp_col.shape[0], 0.5)
 
-    # protect against python 2 integer division rules
-    temp_col = temp_col.astype(float)
-    pres_col = pres_col.astype(float)
+    if np.any(temp_col < 0):
+        raise ValueError("Negative values exist in the temperature data.")
+    if np.any(pres_col < 0):
+        raise ValueError("Negative values exist in the pressure data.")
+    if np.any(rel_humidity < 0):
+        raise ValueError("Negative values exist in the humidity data.")
 
-    R_const = 287.05  # Gas constant for dry air, units of J/kg/K
-    Rw_const = 461.5  # Gas constant of water vapour, unit J/kg/K
     rho = (1 / temp_col) * (
-        pres_col / R_const
-        - rel_humidity * (0.0000205 * np.exp(0.0631846 * temp_col)) * (1 / R_const - 1 / Rw_const)
+        pres_col / R - rel_humidity * (0.0000205 * np.exp(0.0631846 * temp_col)) * (1 / R - 1 / Rw)
     )
 
     return rho
 
 
-def pressure_vertical_extrapolation(p0, temp_avg, z0, z1):
+def pressure_vertical_extrapolation(
+    p0: pd.Series | str,
+    temp_avg: pd.Series | str,
+    z0: pd.Series | str,
+    z1: pd.Series | str,
+    data: pd.DataFrame = None,
+) -> pd.Series:
     """
     Extrapolate pressure from height z0 to height z1 given the average temperature in the layer.
     The hydostatic equation is used to peform the extrapolation.
 
     Args:
-        p0(:obj:`pandas.Series`): pressure at height z0; units of Pascals
-        temp_avg(:obj:`pandas.Series`): mean temperature between z0 and z1; units of Kelvin
-        z0(:obj:`pandas.Series`): height above surface; units of meters
-        z1(:obj:`pandas.Series`): extrapolation height; units of meters
+        p0(:obj:`pandas.Series`): A pandas `Series` of the pressure at height z0, in Pascals, or the
+            name of the column in `data`.
+        temp_avg(:obj:`pandas.Series`): A pandas `Series` of the mean temperature between z0 and z1,
+            in Kelvin, or the name of the column in `data`.
+        z0(:obj:`pandas.Series`): A pandas `Series` of the height above surface, in meters, or the
+            name of the column in `data`.
+        z1(:obj:`pandas.Series`): A pandas `Series` of the extrapolation height, in meters, or the
+            name of the column in `data`.
+        data(:obj:`pandas.DataFrame`): The pandas `DataFrame` containg the columns `p0`, `temp_avg`,
+            `z0`, and `z1`.
+
+    Raises:
+        ValueError: Raised if any of the `p0` or `temp_avg` values are negative.
 
     Returns:
-        :obj:`pandas.Series`: p1, extrapolated pressure at z1; units of Pascals
+        :obj:`pandas.Series`: p1, extrapolated pressure at z1, in Pascals
     """
-    # Send exception if any negative data found
-    if (p0[p0 < 0].size > 0) | (temp_avg[temp_avg < 0].size > 0):
-        raise Exception("Some of your temperature of pressure data is negative. Check your data")
+    if data is not None:
+        p0, temp_avg, z0, z1 = df_to_series(data, p0, temp_avg, z0, z1)
 
-    R_const = 287.058  # Gas constant for dry air, units of J/kg/K
-    p1 = p0 * np.exp(-const.g * (z1 - z0) / R_const / temp_avg)  # Pressure at z1
+    if np.any(p0 < 0):
+        raise ValueError("Negative values exist in the `p0` data.")
+    if np.any(temp_avg < 0):
+        raise ValueError("Negative values exist in the `temp_avg` data.")
 
+    p1 = p0 * np.exp(-const.g * (z1 - z0) / R / temp_avg)  # Pressure at z1
     return p1
 
 
-def air_density_adjusted_wind_speed(wind_col, density_col):
+def air_density_adjusted_wind_speed(
+    wind_col: pd.Series | str, density_col: pd.Series | str, data: pd.DataFrame = None
+) -> pd.Series:
     """
     Apply air density correction to wind speed measurements following IEC-61400-12-1 standard
 
     Args:
-        wind_col(:obj:`str`): array containing the wind speed data; units of m/s
-        density_col(:obj:`str`): array containing the air density data; units of kg/m3
+        wind_col(:obj:`pandas.Series` | `str`): A pandas `Series` containing the wind speed data,
+            in m/s, or the name of the column in `data`
+        density_col(:obj:`pandas.Series` | `str`): A pandas `Series` containing the air density data,
+            in kg/m3, or the name of the column in `data`
+        data(:obj:`pandas.DataFrame`): The pandas `DataFrame` containg the columns `wind_col` and
+            `density_col`.
 
     Returns:
-        :obj:`pandas.Series`: density-adjusted wind speeds; units of m/s
+        :obj:`pandas.Series`: density-adjusted wind speeds, in m/s
     """
-    rho_mean = density_col.mean()  # Mean air density across sample
-    dens_adjusted_ws = wind_col * np.power(
-        density_col / rho_mean, 1.0 / 3
-    )  # Density adjusted wind speeds
+    if data is not None:
+        wind_col, density_col = df_to_series(data, wind_col, density_col)
 
-    return dens_adjusted_ws
+    return wind_col * np.power(density_col / density_col.mean(), 1.0 / 3)
 
 
-def compute_turbulence_intensity(mean_col, std_col):
+def compute_turbulence_intensity(
+    mean_col: pd.Series | str, std_col: pd.Series | str, data: pd.DataFrame = None
+) -> pd.Series:
     """
     Compute turbulence intensity
 
     Args:
-        mean_col(:obj:`array`): array containing the wind speed mean  data; units of m/s
-        std_col(:obj:`array`): array containing the wind speed standard deviation data; units of m/s
+        mean_col(:obj:`pandas.Series` | `str`): A pandas `Series` containing the wind speed mean
+            data, in m/s, or the name of the column in `data`.
+        std_col(:obj:`pandas.Series` | `str`): A pandas `Series` containing the wind speed standard
+            deviation data, in m/s, or the name of the column in `data`.
+        data(:obj:`pandas.DataFrame`): The pandas `DataFrame` containg the columns `mean_col` and `std_col`.
 
     Returns:
-        :obj:`array`: turbulence intensity, (unitless ratio)
+        :obj:`pd.Series`: turbulence intensity, (unitless ratio)
     """
+    if data is not None:
+        mean_col, std_col = df_to_series(data, mean_col, std_col)
     return std_col / mean_col
 
+
 def compute_shear(
-    data: pd.DataFrame, ws_heights: dict, return_reference_values: bool = False
-) -> np.array:
+    data: pd.DataFrame, ws_heights: dict[str, float], return_reference_values: bool = False
+) -> pd.Series | tuple[pd.Series, float, pd.Series]:
     """
     Computes shear coefficient between wind speed measurements using the power law.
     The shear coefficient is obtained by evaluating the expression for an OLS regression coefficient.
 
     Updated version targeting OpenOA V3 due to the following api breaking change:
-        - Removal of ref_col, instead, returning the reference column used 
+        - Removal of ref_col, instead, returning the reference column used
 
     Args:
-        data(:obj:`pandas.DataFrame`): dataframe with wind speed columns
-        ws_heights(:obj:`dict`): keys are strings of columns in <data> containing wind speed data, values are
-                                 associated sensor heights (m)
-        return_reference_values(:obj: `bool`): If True, this function returns a three element tuple where the
-                                               first element is the array of shear exponents, the second element
-                                               is the reference height (float), and the third element is the
-                                               reference wind speed (array). These reference values can be used
-                                               for extrapolating wind speed. Defaults to False.
+        data(:obj:`pandas.DataFrame`): A pandas `DataFrame` with wind speed columns that correspond
+            to the keys of `ws_heights`.
+        ws_heights(:obj:`dict[str, float]`): A dictionary with wind speed column names of `data` as
+            keys and their respective sensor heights (m) as values.
+        return_reference_values(:obj: `bool`): If True, this function returns a three element tuple
+            where the first element is the array of shear exponents, the second element is the
+            reference height (float), and the third element is the array of reference wind speeds.
+            These reference values can be used for extrapolating wind speed. Defaults to False.
 
     Returns:
         If return_reference_values is False (default):
-        :obj:`numpy.array`: shear coefficient (unitless)
+        :obj:`pandas.Series`: shear coefficient (unitless)
 
         If return_reference_values is True:
-        :obj:`tuple`: (shear coefficient (unitless), reference height (m), reference wind speed)
+        :obj:`tuple[pandas.Series, float, pandas.Series]`: The shear coefficient (unitless), reference
+            height (m), and reference wind speed.
 
     """
 
-    # create "u" 2-D array; where element [i,j] is the wind speed measurement at the ith timestep and jth sensor height
-    u: np.ndarray = data[ws_heights.keys()].to_numpy()
+    # Extract the wind speed columns from `data` and create "u" 2-D array; where element
+    # [i,j] is the wind speed measurement at the ith timestep and jth sensor height
+    u: np.ndarray = np.column_stack(df_to_series(data, *ws_heights))
 
     # create "z" 2_D array; columns are filled with the sensor height
-    n: int = len(data)
-    heights: list = [np.full(n, height) for height in ws_heights.values()]
-    z: np.ndarray = np.column_stack(tuple(heights))
+    z: np.ndarray = np.repeat([[*ws_heights.values()]], len(data), axis=0)
 
     # take log of z & u
     with warnings.catch_warnings():  # suppress log division by zero warning.
@@ -221,42 +289,60 @@ def compute_shear(
 
         return alpha, z_ref, u_ref
 
-def extrapolate_windspeed(v1, z1: float, z2: float, shear):
+
+def extrapolate_windspeed(
+    v1: pd.Series | str, z1: float, z2: float, shear: pd.Series | str, data: pd.DataFrame = None
+):
     """
     Extrapolates wind speed vertically using the Power Law.
 
     Args:
-        v1(:obj: `pandas.Series` | `numpy.array` | `float`): Wind speed measurements at the reference height.
+        v1(:obj: `pandas.Series` | `float` | `str`): A pandas `Series` of the wind
+            speed measurements at the reference height, or the name of the column in `data`.
         z1(:obj:`float`): Height of reference wind speed measurements; units in meters
         z2(:obj:`float`): Target extrapolation height; units in meters
-        shear(:obj: `pandas.Series` | `numpy.array` | `float`): Shear value(s)
+        shear(:obj: `pandas.Series` | `float` | `str`): A pandas `Series` of the shear
+            values, or the name of the column in `data`.
+        data(:obj:`pandas.DataFrame`): The pandas `DataFrame` containg the columns `v1` and `shear`.
 
     Returns:
         :obj: (`pandas.Series` | `numpy.array` | `float`): Wind speed extrapolated to target height.
     """
+    if data is not None:
+        v1, shear = df_to_series(data, v1, shear)
+    return v1 * (z2 / z1) ** shear
 
-    target_ws = v1 * (z2 / z1) ** shear
 
-    return target_ws
-
-
-def compute_veer(wind_a, height_a, wind_b, height_b):
+def compute_veer(
+    wind_a: pd.Series | str,
+    height_a: float,
+    wind_b: pd.Series | str,
+    height_b: float,
+    data: pd.DataFrame = None,
+):
     """
     Compute veer between wind direction measurements
 
     Args:
-        wind_a, wind_b(:obj:`array`): arrays containing the wind direction mean data; units of deg
-        height_a, height_b(:obj:`array`): sensor heights (m)
+        wind_a(:obj:`pandas.Series` | `str`): A pandas `Series` containing the wind direction mean
+            data, in degrees, or the name of the column in `data`.
+        height_a(:obj:`float`): sensor height for `wind_a`
+        wind_b(:obj:`pandas.Series` | `str`): A pandas `Series` containing the wind direction mean
+            data, in degrees, or the name of the column in `data`.
+        height_b(:obj:`float`): sensor height for `wind_b`
+        data(:obj:`pandas.DataFrame`): The pandas `DataFrame` containg the columns `wind_a`, and `wind_b`.
 
     Returns:
         veer(:obj:`array`): veer (deg/m)
     """
-
+    if data is not None:
+        wind_a, wind_b = df_to_series(data, wind_a, wind_b)
     # Calculate wind direction change
     delta_dir = wind_b - wind_a
 
-    # Convert absolute values greater than 180 to normal range
-    delta_dir[delta_dir > 180] = delta_dir[delta_dir > 180] - 360.0
-    delta_dir[delta_dir <= (-180)] = delta_dir[delta_dir <= (-180)] + 360.0
+    # Convert absolute values greater than outside 180 to a normal range
+    delta_dir = delta_dir.where(delta_dir <= 180, delta_dir - 360.0).where(
+        delta_dir > -180, delta_dir + 360.0
+    )
 
     return delta_dir / (height_b - height_a)

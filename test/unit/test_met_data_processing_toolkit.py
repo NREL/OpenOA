@@ -3,6 +3,7 @@ import unittest
 import numpy as np
 import pandas as pd
 from numpy import testing as nptest
+
 from openoa.utils import met_data_processing as mt
 
 
@@ -38,7 +39,7 @@ class SimpleMetProcessing(unittest.TestCase):
         pres = np.arange(90000, 110000, 5000)
 
         rho = mt.compute_air_density(temp, pres)  # Test result
-        rho_ans = np.array([1.11744, 1.1581, 1.19706, 1.23427])  # Expected result
+        rho_ans = np.array([1.11741, 1.15807, 1.19702, 1.23424])  # Expected result
 
         nptest.assert_array_almost_equal(rho, rho_ans, decimal=5)
 
@@ -141,8 +142,8 @@ class SimpleMetProcessing(unittest.TestCase):
         nptest.assert_allclose(computed_v2, expected_v2)
 
     def test_compute_veer(self):
-        wind_low = np.linspace(2.0, 10.0, 10)
-        wind_high = np.linspace(8.0, 25.0, 10)
+        wind_low = pd.Series(np.linspace(2.0, 10.0, 10))
+        wind_high = pd.Series(np.linspace(8.0, 25.0, 10))
         height_low = 30.0
         height_high = 80.0
 
