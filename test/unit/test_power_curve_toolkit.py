@@ -3,6 +3,7 @@ import unittest
 import numpy as np
 import pandas as pd
 from numpy import testing as nptest
+
 from openoa.utils import power_curve
 from openoa.utils.power_curve.parametric_forms import logistic5param, logistic5param_capped
 
@@ -92,7 +93,7 @@ class TestPowerCurveFunctions(unittest.TestCase):
 
     def test_gam(self):
         # Create test data using logistic5param form
-        curve = power_curve.gam(windspeed_column=self.x, power_column=self.y, n_splines=20)
+        curve = power_curve.gam(windspeed_col=self.x, power_col=self.y, n_splines=20)
         y_pred = curve(self.x)
         # Does the spline-fit power curve match the test data?
         nptest.assert_allclose(
@@ -101,13 +102,13 @@ class TestPowerCurveFunctions(unittest.TestCase):
 
     def test_3paramgam(self):
         # Create test data using logistic5param form
-        winddir = np.random.random(100)
-        airdens = np.random.random(100)
+        winddir = pd.Series(np.random.random(100), name="winddir")
+        airdens = pd.Series(np.random.random(100), name="airdens")
         curve = power_curve.gam_3param(
-            windspeed_column=self.x,
-            winddir_column=winddir,
-            airdens_column=airdens,
-            power_column=self.y,
+            windspeed_col=self.x,
+            wind_direction_col=winddir,
+            air_density_col=airdens,
+            power_col=self.y,
             n_splines=20,
         )
         y_pred = curve(self.x, winddir, airdens)

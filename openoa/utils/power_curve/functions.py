@@ -187,7 +187,13 @@ def gam_3param(
     model = LinearGAM(n_splines=n_splines).fit(X, y)
 
     # Wrap the prediction function in a closure to pack input variables
-    def predict(windspeed_col, wind_direction_col, air_density_col):
+    @dataframe_method(data_cols=["windspeed_col", "wind_direction_col", "air_density_col"])
+    def predict(
+        windspeed_col: str | pd.Series,
+        wind_direction_col: str | pd.Series,
+        air_density_col: str | pd.Series,
+        data: pd.DataFrame = None,
+    ):
         X = data[[windspeed_col, wind_direction_col, air_density_col]]
         return model.predict(X)
 
