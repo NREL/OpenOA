@@ -12,8 +12,8 @@ class SimpleFilters(unittest.TestCase):
         pass
 
     def test_range_flag_series(self):
-        x = pd.Series(np.array([-1, 0, 1]))
-        y = pd.Series([True, False, True])
+        x = pd.Series(np.array([-1, 0, 1]), name="data")
+        y = pd.Series([True, False, True], name="data")
         y_test = filters.range_flag(x, -0.5, 0.5)
         self.assertTrue(isinstance(y_test, pd.Series))
         self.assertTrue(y.equals(y_test))
@@ -53,7 +53,7 @@ class SimpleFilters(unittest.TestCase):
             filters.range_flag(x, [2], 6, ["a", "b"])
 
     def test_unresponsive_flag(self):
-        x = pd.Series(np.array([-1, -1, -1, 2, 2, 2, 3, 4, 5, 1, 1, 1, 1, 3, 3]))
+        x = pd.Series(np.array([-1, -1, -1, 2, 2, 2, 3, 4, 5, 1, 1, 1, 1, 3, 3]), name="data")
         y = pd.Series(
             [
                 True,
@@ -71,13 +71,14 @@ class SimpleFilters(unittest.TestCase):
                 True,
                 False,
                 False,
-            ]
+            ],
+            name="data",
         )
         y_test = filters.unresponsive_flag(x, threshold=3)
         self.assertTrue(y.equals(y_test))
 
     def test_unresonsive_flag_errors(self):
-        x = pd.Series(np.array([-1, -1, -1, 2, 2, 2, 3, 4, 5, 1, 1, 1, 1, 3, 3]))
+        x = pd.Series(np.array([-1, -1, -1, 2, 2, 2, 3, 4, 5, 1, 1, 1, 1, 3, 3]), name="data")
         with self.assertRaises(TypeError):
             filters.unresponsive_flag(x, threshold=3.5)
 
@@ -126,14 +127,14 @@ class SimpleFilters(unittest.TestCase):
         self.assertTrue(y.equals(y_test))
 
     def test_window_range_flag(self):
-        x = pd.Series(np.array([-1, -1, -1, 1, 1, 1, -1]))
-        window = pd.Series(np.array([1, 2, 3, 4, 5, 6, 7]))
-        y = pd.Series([False, False, True, False, False, False, True])
+        x = pd.Series(np.array([-1, -1, -1, 1, 1, 1, -1]), name="data")
+        window = pd.Series(np.array([1, 2, 3, 4, 5, 6, 7]), name="window")
+        y = pd.Series([False, False, True, False, False, False, True], name="data")
         y_test = filters.window_range_flag(window, 3, 8, x, -0.5, 1.5)
         self.assertTrue(y.equals(y_test))
 
     def test_std_range_flag(self):
-        x = pd.Series(np.array([-1, -1, -1, 1, -1, -1, -1]))
+        x = pd.Series(np.array([-1, -1, -1, 1, -1, -1, -1]), name="data")
         y_test = filters.std_range_flag(x, 2)
         y = pd.Series([False, False, False, True, False, False, False])
         nptest.assert_array_equal(y_test, y)
