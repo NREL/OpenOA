@@ -11,7 +11,7 @@ import pandas as pd
 from pygam import LinearGAM
 from scipy.optimize import differential_evolution
 
-from openoa.utils._converters import series_method
+from openoa.utils._converters import series_method, dataframe_method
 from openoa.utils.power_curve.parametric_forms import logistic5param
 from openoa.utils.power_curve.parametric_optimize import least_squares, fit_parametric_power_curve
 
@@ -138,7 +138,7 @@ def gam(
             :py:attr:`data`.
         power_col(:obj:`str` | `pandas.Series`): Power data, or the name of the column in
             :py:attr:`data`.
-        n_splines (:obj:`int`): number of splines to use in the fit
+        n_splines (:obj:`int`): Number of splines to use in the fit. Defaults to 20.
         data(:obj:`pandas.DataFrame`, optional): a pandas DataFrame containing
             :py:attr:`windspeed_col` and :py:attr:`power_col`. Defaults to None.
 
@@ -150,33 +150,45 @@ def gam(
     return LinearGAM(n_splines=n_splines).fit(windspeed_col.values, power_col.values).predict
 
 
-def gam_3param(windspeed_column, winddir_column, airdens_column, power_column, n_splines=20):
+@dataframe_method(data_cols=["windspeed_col", "wind_direction_col", "air_density_col", "power_col"])
+def gam_3param(
+    windspeed_col: str | pd.Series,
+    wind_direction_col: str | pd.Series,
+    air_density_col: str | pd.Series,
+    power_col: str | pd.Series,
+    n_splines: int = 20,
+    data: pd.DataFrame = None,
+) -> Callable:
     """
     Use a generalized additive model to fit power to wind speed, wind direction and air density.
 
     Args:
-        windspeed_column (:obj:`pandas.Series`): Wind speed feature column
-        power_column (:obj:`pandas.Series`): Power response column
-        winddir_column (:obj:`pandas.Series`): Optional. Wind direction feature column
-        airdens_column (:obj:`pandas.Series`): Optional. Air density feature column
-        n_splines (:obj:`int`): number of splines to use in the fit
+        windspeed_col(:obj:`str` | `pandas.Series`): Windspeed data, or the name of the column in
+            :py:attr:`data`.
+        wind_direction_col(:obj:`str` | `pandas.Series`): Wind direction data, or the name of the
+            column in :py:attr:`data`.
+        air_density_col(:obj:`str` | `pandas.Series`): Air density data, or the name of the column
+            in :py:attr:`data`.
+        power_col(:obj:`str` | `pandas.Series`): Power data, or the name of the column in
+            :py:attr:`data`.
+        n_splines (:obj:`int`): Number of splines to use in the fit. Defaults to 20.
+        data(:obj:`pandas.DataFrame`, optional): a pandas DataFrame containing
+            :py:attr:`windspeed_col`, :py:attr:`wind_direction_col`, :py:attr:`air_density_col`,
+            and :py:attr:`power_col`. Defaults to None.
 
     Returns:
-        :obj:`function`: Python function of type (Array[float] -> Array[float]) implementing the power curve.
-
+        :obj:`Callable`: Python function of type (Array[float] -> Array[float]) implementing the power curve.
     """
-    # create dataframe input to LinearGAM
-    X = pd.DataFrame({"ws": windspeed_column, "wd": winddir_column, "dens": airdens_column})
-
-    # Set response
-    y = power_column.values
+    # create dataframe input to LinearGAM and predicted response variable
+    X = data[[windspeed_col, wind_direction_col, air_density_col]]
+    y = data[power_col]
 
     # Fit the model
-    s = LinearGAM(n_splines=n_splines).fit(X, y)
+    model = LinearGAM(n_splines=n_splines).fit(X, y)
 
     # Wrap the prediction function in a closure to pack input variables
-    def predict(windspeed_column, winddir_column, airdens_column):
-        X = pd.DataFrame({"ws": windspeed_column, "wd": winddir_column, "dens": airdens_column})
-        return s.predict(X)
+    def predict(windspeed_col, wind_direction_col, air_density_col):
+        X = data[[windspeed_col, wind_direction_col, air_density_col]]
+        return model.predict(X)
 
     return predict
