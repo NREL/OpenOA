@@ -49,13 +49,14 @@ from __future__ import annotations
 
 from typing import Any
 
-import attrs
 import numpy as np
+import pandas as pd
+import sklearn
 from attrs import field, define
 from pygam import GAM
 from sklearn.metrics import r2_score, make_scorer
 from sklearn.ensemble import ExtraTreesRegressor, GradientBoostingRegressor
-from sklearn.model_selection import KFold
+from sklearn.model_selection import KFold, RandomizedSearchCV
 
 
 def _algorithm_map(abbreviation: str) -> GAM | ExtraTreesRegressor | GradientBoostingRegressor:
@@ -76,8 +77,10 @@ def _algorithm_map(abbreviation: str) -> GAM | ExtraTreesRegressor | GradientBoo
         return GradientBoostingRegressor()
     if abbreviation == "gam":
         return GAM()
+
+    valid = ("etr", "gbm", "gam")
     raise NotImplementedError(
-        f"The input algorithm: {abbreviation} is either not implemented or the abbreviation is incorrect."
+        f"The input algorithm: {abbreviation} is not implemented, please provide one of: {valid}"
     )
 
 
@@ -112,50 +115,55 @@ class MachineLearningSetup:
         # Set scorer as R2
         self.my_scorer = make_scorer(r2_score, greater_is_better=True)
 
-    def hyper_report(self, results, n_top=5):
+    def hyper_report(self, results: dict, n_top: int = 5) -> None:
         """
-        Output hyperparameter optimization results into terminal window in order
-        of mean validation score.
+        Output hyperparameter optimization results into terminal window in order of mean validation score.
 
         Args:
             results(:obj:'dict'): Dictionary containg cross-validation results
             n_top(:obj:`int`): The number of results to output
 
         Returns:
-            (none)
+            (none): Top :py:param:`n_top` results are printed.
         """
 
         # Loop through cross validation results and output to terminal
         for i in range(1, n_top + 1):
             candidates = np.flatnonzero(results["rank_test_score"] == i)
             for candidate in candidates:
-                print("Model with rank: {0}".format(i) + "\n")
-                print(
-                    "Mean validation score: {0:.3f} (std: {1:.3f})".format(
-                        results["mean_test_score"][candidate], results["std_test_score"][candidate]
-                    )
-                    + "\n"
+                print(f"Model with rank: {i}\n")
+                message = (
+                    f"Mean validation score: {results['mean_test_score'][candidate]:.3f} "
+                    f"(std: {results['std_test_score'][candidate]:.3f})\n"
                 )
-                print("Parameters: {0}".format(results["params"][candidate]) + "\n")
+                print(message)
+                print(f"Parameters: {results['params'][candidate]}\n")
                 print("")
 
-    def hyper_optimize(self, X, y, cv=KFold(n_splits=5), n_iter_search=20, report=True):
+    def hyper_optimize(
+        self,
+        X: np.ndarray | pd.DataFrame,
+        y: np.ndarray | pd.Series,
+        cv: sklearn.model_selection._split = KFold(n_splits=5),
+        n_iter_search: int = 20,
+        report: bool = True,
+    ) -> None:
         """
         Optimize hyperparameters through cross-validation
 
         Args:
-            X(:obj:'numpy array or pandas dataframe): The inputs or features
-            Y(:obj:'numpy array or pandas series): The target or predictand
-            cv(:obj:'sklearn.model_selection._split'): The train/test splitting method
-            n_iter_search(:obj:'int'): The number of random hyperparmeter samples to use
-            report(:obj:'boolean'): Indicator on whether to output a summary report
-                                    on optimization results
+            X(:obj:'numpy.ndarray` | `pandas.DataFrame`): The inputs or features.
+            Y(:obj:'numpy.ndarray` | `pandas.Series`): The target or to-be-predicted data.
+            cv(:obj:'sklearn.model_selection._split'): The train/test splitting method. Defaults to
+                :py:class:`KFold(n_splits=5)`.
+            n_iter_search(:obj:'int'): The number of random hyperparmeter samples to use. Defaults
+                to 20.
+            report(:obj:'boolean'): Indicator on whether to output a summary report on optimization
+                results. Defaults to True.
 
         Returns:
             (none)
         """
-        from sklearn.model_selection import RandomizedSearchCV
-
         # Setup randomized cross-validated grid search
         self.random_search = RandomizedSearchCV(
             self.algorithm,
