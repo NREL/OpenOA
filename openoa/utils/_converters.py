@@ -184,13 +184,15 @@ def multiple_df_to_single_df(*args: pd.DataFrame, align_col: str | None = None) 
     return pd.concat(args, join="outer", axis=1)
 
 
-def series_to_df(*args: pd.Series) -> tuple[pd.DataFrame, list[str | int]]:
+def series_to_df(*args: pd.Series, names: list[str] = None) -> tuple[pd.DataFrame, list[str | int]]:
     """Convert a dynamic number of pandas `Series` to a single pandas `DataFrame` by concatenating
     with an outer join, so the any missing values being filled with a NaN value, and each argument
     becomes a column of the resulting `DataFrame`.
 
     Args:
         args(:obj:`pandas.Series`): A series of of pandas `Series` objects that share a common axis.
+        names(:obj:`list[str]`): A list of alternative names for the Series to be used as the column
+            name in the returned DataFrame and list of new args in place of None.
 
     Returns:
         tuple[pandas.DataFrame, list[str | int, ...]]: A single data structure combining all the
@@ -198,7 +200,12 @@ def series_to_df(*args: pd.Series) -> tuple[pd.DataFrame, list[str | int]]:
     """
     if not all(isinstance(el, pd.Series) for el in args):
         raise TypeError("At least one of the provided values was not a pandas Series")
-    names = [el.name for el in args]
+
+    # Rename the series to the name of the method argument if it doesn't already have name
+    if names is not None:
+        names = [name if el.name is None else el.name for el, name in zip(args, names)]
+    args = [el.rename(name) if el.name is None else el for el, name in zip(args, names)]
+
     args = [el.to_frame() for el in args]
     if len(args) > 1:
         return multiple_df_to_single_df(*args), names
@@ -289,7 +296,7 @@ def dataframe_method(data_cols: list[str] = None):
 
             # When no data is provided, then convert the Series arguments, update args and kwargs,
             # appropriately, then call the function
-            df, arg_list = series_to_df(*arg_list)
+            df, arg_list = series_to_df(*arg_list, names=data_cols)
             args, kwargs = _update_arguments(args, kwargs, arg_ix_list, data_cols, arg_list)
             kwargs["data"] = df
             return func(*args, **kwargs)
