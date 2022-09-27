@@ -30,16 +30,18 @@ def IEC(
     for values outside the cutoff range: [:py:attr:`windspeed_start`, :py:attr:`windspeed_end`].
 
     Args:
-        windspeed_column(:obj:`str` | `pandas.Series`): Windspeed data, or the name of the column in
+        windspeed_col(:obj:`str` | `pandas.Series`): Windspeed data, or the name of the column in
             :py:attr:`data`.
-        power_column(:obj:`str` | `pandas.Series`): Power data, or the name of the column in
+        power_col(:obj:`str` | `pandas.Series`): Power data, or the name of the column in
             :py:attr:`data`.
         bin_width(:obj:`float`): Width of windspeed bin. Defaults to 0.5 m/s, per the standard.
         windspeed_start(:obj:`float`): Left edge of first windspeed bin. Defaults to 0.0.
         windspeed_end(:obj:`float`): Right edge of last windspeed bin. Defaults to 30.0
+        data(:obj:`pandas.DataFrame`, optional): a pandas DataFrame containing
+            :py:attr:`windspeed_col` and :py:attr:`power_col`. Defaults to None.
 
     Returns:
-        :obj:`function`: Python function of type (Array[float] -> Array[float]) implementing the power curve.
+        :obj:`Callable`: Python function of type (Array[float] -> Array[float]) implementing the power curve.
 
     """
 
@@ -75,7 +77,11 @@ def IEC(
 def logistic_5_parametric(
     windspeed_col: str | pd.Series, power_col: str | pd.Series, data: pd.DataFrame = None
 ) -> Callable:
-    """
+    """In this case, the function fits the 5 parameter logistics function to observed data via a
+    least-squares optimization (i.e. minimizing the sum of the squares of the residual between the
+    points as evaluated by the parameterized function and the points of observed data).
+
+    Extra:
     The present implementation follows the filtering method reported in:
 
         M. Yesilbudaku Partitional clustering-based outlier detection
@@ -93,26 +99,23 @@ def logistic_5_parametric(
         A comprehensive review on wind turbine power curve modeling techniques
         Renew. Sust. Energy Rev., 30 (2014), pp. 452-460
 
-    In this case, the function fits the 5 parameter logistics function to
-    observed data via a least-squares optimization (i.e. minimizing the sum of
-    the squares of the residual between the points as evaluated by the
-    parameterized function and the points of observed data).
 
 
     Args:
-        windspeed_column (:obj:`pandas.Series`): feature column
-        power_column (:obj:`pandas.Series`): response column
-        bin_width(:obj:`float`): width of windspeed bin, default is 0.5 m/s according to standard
-        windspeed_start(:obj:`float`): left edge of first windspeed bin
-        windspeed_end(:obj:`float`): right edge of last windspeed bin
+        windspeed_col(:obj:`str` | `pandas.Series`): Windspeed data, or the name of the column in
+            :py:attr:`data`.
+        power_col(:obj:`str` | `pandas.Series`): Power data, or the name of the column in
+            :py:attr:`data`.
+        data(:obj:`pandas.DataFrame`, optional): a pandas DataFrame containing
+            :py:attr:`windspeed_col` and :py:attr:`power_col`. Defaults to None.
 
     Returns:
         :obj:`function`: Python function of type (Array[float] -> Array[float]) implementing the power curve.
 
     """
     return fit_parametric_power_curve(
-        windspeed_column,
-        power_column,
+        windspeed_col,
+        power_col,
         curve=logistic5param,
         optimization_algorithm=differential_evolution,
         cost_function=least_squares,
