@@ -12,17 +12,17 @@ class SimpleMetProcessing(unittest.TestCase):
         pass
 
     def test_compute_wind_direction(self):
-        u = [0, -1, -1, -1, 0, 1, 1, 1]  # u-vector of wind
-        v = [-1, -1, 0, 1, 1, 1, 0, -1]  # v-vector of wind
+        u = pd.Series([0, -1, -1, -1, 0, 1, 1, 1])
+        v = pd.Series([-1, -1, 0, 1, 1, 1, 0, -1])
         wd_ans = [0, 45, 90, 135, 180, 225, 270, 315]  # Expected result
 
         y = mt.compute_wind_direction(u, v)  # Test result
         nptest.assert_array_equal(y, wd_ans)
 
     def test_compute_u_v_components(self):
-        wind_speed = np.array([1, 1, 1, 1, 1, 1, 1, 1])  # Wind speed
-        wind_direction = np.array([0, 45, 90, 135, 180, 225, 270, 315])  # Wind direction
-        u, v = mt.compute_u_v_components(wind_speed, wind_direction)  # Test result
+        wind_speed = pd.Series(np.array([1, 1, 1, 1, 1, 1, 1, 1]))
+        wind_direction = pd.Series(np.array([0, 45, 90, 135, 180, 225, 270, 315]))
+        u, v = mt.compute_u_v_components(wind_speed, wind_direction)
 
         sqrt_2 = 1 / np.sqrt(2)  # Handy constant
 
@@ -35,8 +35,8 @@ class SimpleMetProcessing(unittest.TestCase):
     def test_compute_air_density(self):
         # Test data frame with pressure and temperature data
 
-        temp = np.arange(280, 300, 5)
-        pres = np.arange(90000, 110000, 5000)
+        temp = pd.Series(np.arange(280, 300, 5))
+        pres = pd.Series(np.arange(90000, 110000, 5000))
 
         rho = mt.compute_air_density(temp, pres)  # Test result
         rho_ans = np.array([1.11741, 1.15807, 1.19702, 1.23424])  # Expected result
@@ -45,10 +45,10 @@ class SimpleMetProcessing(unittest.TestCase):
 
     def test_pressure_vertical_extrapolation(self):
         # Define test data
-        p_samp = np.array([1e6, 9.5e5])  # pressure at lower level
-        z0_samp = np.array([0, 30])  # lower level height
-        z1_samp = np.array([100, 100])  # extrapolation level height
-        t_samp = np.array([290, 300])  # average temperature in layer between z0 and z1
+        p_samp = pd.Series(np.array([1e6, 9.5e5]))  # pressure at lower level
+        z0_samp = pd.Series(np.array([0, 30]))  # lower level height
+        z1_samp = pd.Series(np.array([100, 100]))  # extrapolation level height
+        t_samp = pd.Series(np.array([290, 300]))  # average temperature in layer between z0 and z1
 
         p1 = mt.pressure_vertical_extrapolation(p_samp, t_samp, z0_samp, z1_samp)  # Test result
         p1_ans = np.array([988288.905, 942457.391])  # Expected result
@@ -57,8 +57,8 @@ class SimpleMetProcessing(unittest.TestCase):
 
     def test_air_density_adjusted_wind_speed(self):
         # Test dataframe with wind speed and density data
-        wind_speed = np.arange(0, 10, 2)
-        dens = np.arange(1.10, 1.20, 0.02)
+        wind_speed = pd.Series(np.arange(0, 10, 2))
+        dens = pd.Series(np.arange(1.10, 1.20, 0.02))
 
         adjusted_ws = mt.air_density_adjusted_wind_speed(wind_speed, dens)  # Test answer
         adjusted_ws_ans = np.array([0.0, 1.988235, 4.0, 6.034885, 8.092494])  # Expected answer
@@ -66,8 +66,8 @@ class SimpleMetProcessing(unittest.TestCase):
         nptest.assert_array_almost_equal(adjusted_ws, adjusted_ws_ans, decimal=5)
 
     def test_compute_turbulence_intensity(self):
-        mean = np.linspace(2.0, 25.0, 10)
-        std = np.linspace(0.1, 2.0, 10)
+        mean = pd.Series(np.linspace(2.0, 25.0, 10))
+        std = pd.Series(np.linspace(0.1, 2.0, 10))
         computed_TI = mt.compute_turbulence_intensity(mean, std)
         expected_TI = np.array(
             [
@@ -131,8 +131,8 @@ class SimpleMetProcessing(unittest.TestCase):
         nptest.assert_allclose(computed_u_ref, expected_u_ref)
 
     def test_extrapolate_windspeed(self):
-        alpha = np.array([0.26, 0.31, 0.21])
-        v1 = np.array([5.632, 6.893, 6.023])
+        alpha = pd.Series(np.array([0.26, 0.31, 0.21]))
+        v1 = pd.Series(np.array([5.632, 6.893, 6.023]))
         z1 = 80
         z2 = 100
 

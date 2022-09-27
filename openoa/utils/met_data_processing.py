@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 import scipy.constants as const
 
-from openoa.utils._converters import df_to_series
+from openoa.utils._converters import df_to_series, series_method
 
 
 # Define constants used in some of the methods
@@ -18,6 +18,7 @@ R = 287.058  # Gas constant for dry air, units of J/kg/K
 Rw = 461.5  # Gas constant of water vapour, unit J/kg/K
 
 
+@series_method(data_cols=["u", "v"])
 def compute_wind_direction(
     u: pd.Series | str, v: pd.Series | str, data: pd.DataFrame = None
 ) -> pd.Series:
@@ -33,13 +34,11 @@ def compute_wind_direction(
     Returns:
         :obj:`pandas.Series`: wind direction; units of degrees
     """
-    if data is not None:
-        u, v = df_to_series(data, u, v)
-
     wd = 180 + np.arctan2(u, v) * 180 / np.pi  # Calculate wind direction in degrees
     return pd.Series(np.where(wd != 360, wd, 0))
 
 
+@series_method(data_cols=["wind_speed", "wind_dir"])
 def compute_u_v_components(
     wind_speed: pd.Series | str, wind_dir: pd.Series | str, data: pd.DataFrame = None
 ) -> pd.Series:
@@ -61,9 +60,6 @@ def compute_u_v_components(
             u(pandas.Series): the zonal component of the wind; units of m/s.
             v(pandas.Series): the meridional component of the wind; units of m/s
     """
-    if data is not None:
-        wind_speed, wind_dir = df_to_series(data, wind_speed, wind_dir)
-
     if np.any(wind_speed < 0):
         raise ValueError("Negative values exist in the `wind_speed` data.")
     if np.any(wind_dir < 0):
@@ -75,6 +71,7 @@ def compute_u_v_components(
     return u, v
 
 
+@series_method(data_cols=["temp_col", "pres_col", "humi_col"])
 def compute_air_density(
     temp_col: pd.Series | str,
     pres_col: pd.Series | str,
@@ -110,10 +107,7 @@ def compute_air_density(
     if data is not None:
         temp_col, pres_col, humi_col = df_to_series(data, temp_col, pres_col, humi_col)
     # Check if humidity column is provided and create default humidity array with values of 0.5 if necessary
-    if humi_col is not None:
-        rel_humidity = humi_col
-    else:
-        rel_humidity = np.full(temp_col.shape[0], 0.5)
+    rel_humidity = humi_col if humi_col is not None else np.full(temp_col.shape[0], 0.5)
 
     if np.any(temp_col < 0):
         raise ValueError("Negative values exist in the temperature data.")
@@ -129,6 +123,7 @@ def compute_air_density(
     return rho
 
 
+@series_method(data_cols=["p0", "temp_avg", "z0", "z1"])
 def pressure_vertical_extrapolation(
     p0: pd.Series | str,
     temp_avg: pd.Series | str,
@@ -158,18 +153,15 @@ def pressure_vertical_extrapolation(
     Returns:
         :obj:`pandas.Series`: p1, extrapolated pressure at z1, in Pascals
     """
-    if data is not None:
-        p0, temp_avg, z0, z1 = df_to_series(data, p0, temp_avg, z0, z1)
-
     if np.any(p0 < 0):
         raise ValueError("Negative values exist in the `p0` data.")
     if np.any(temp_avg < 0):
         raise ValueError("Negative values exist in the `temp_avg` data.")
 
-    p1 = p0 * np.exp(-const.g * (z1 - z0) / R / temp_avg)  # Pressure at z1
-    return p1
+    return p0 * np.exp(-const.g * (z1 - z0) / R / temp_avg)  # Pressure at z1
 
 
+@series_method(data_cols=["wind_col", "density_col"])
 def air_density_adjusted_wind_speed(
     wind_col: pd.Series | str, density_col: pd.Series | str, data: pd.DataFrame = None
 ) -> pd.Series:
@@ -187,12 +179,10 @@ def air_density_adjusted_wind_speed(
     Returns:
         :obj:`pandas.Series`: density-adjusted wind speeds, in m/s
     """
-    if data is not None:
-        wind_col, density_col = df_to_series(data, wind_col, density_col)
-
     return wind_col * np.power(density_col / density_col.mean(), 1.0 / 3)
 
 
+@series_method(data_cols=["mean_col", "std_col"])
 def compute_turbulence_intensity(
     mean_col: pd.Series | str, std_col: pd.Series | str, data: pd.DataFrame = None
 ) -> pd.Series:
@@ -290,6 +280,7 @@ def compute_shear(
         return alpha, z_ref, u_ref
 
 
+@series_method(data_cols=["v1", "shear"])
 def extrapolate_windspeed(
     v1: pd.Series | str, z1: float, z2: float, shear: pd.Series | str, data: pd.DataFrame = None
 ):
@@ -308,11 +299,10 @@ def extrapolate_windspeed(
     Returns:
         :obj: (`pandas.Series` | `numpy.array` | `float`): Wind speed extrapolated to target height.
     """
-    if data is not None:
-        v1, shear = df_to_series(data, v1, shear)
     return v1 * (z2 / z1) ** shear
 
 
+@series_method(data_cols=["wind_a", "wind_b"])
 def compute_veer(
     wind_a: pd.Series | str,
     height_a: float,
@@ -335,8 +325,6 @@ def compute_veer(
     Returns:
         veer(:obj:`array`): veer (deg/m)
     """
-    if data is not None:
-        wind_a, wind_b = df_to_series(data, wind_a, wind_b)
     # Calculate wind direction change
     delta_dir = wind_b - wind_a
 
