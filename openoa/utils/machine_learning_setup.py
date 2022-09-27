@@ -86,10 +86,27 @@ def _algorithm_map(abbreviation: str) -> GAM | ExtraTreesRegressor | GradientBoo
 
 @define(auto_attribs=True)
 class MachineLearningSetup:
-    algorithm: str = field(converters=(str.lower, _algorithm_map))
+    """ML setup and method routinization class. The primary purpose for this class is for
+    standardizing the setup and use of machine learning-based models in the analysis subpackage.
+
+    Args:
+        algorithm(:obj:`str`): One of "etr", "gbm", or "gam" to initialize an
+            :py:class:`sklearn.ensemble.ExtraTreesRegressor`,
+            :py:class:`sklearn.ensemble.GradientBoostingRegressor`, or
+            :py:class:`pygam.GAM` model, respectively.
+        params(:obj:`dict`): Custom hyperparameter settings to be used for the passed
+            :py:attr:`algorithm`.
+    """
+
+    algorithm: str = field(converter=(str.lower, _algorithm_map))
     params: dict = field(default={})
-    hyper_range: dict = field(default={})
-    my_scorer: Any = field(init=False)  # Not able to be user set
+
+    # Internal, non-user specified attributes
+    hyper_range: dict = field(default={}, init=False)
+    my_scorer: Any = field(init=False)
+    random_search: Any = field(init=False)
+    opt_hyp: Any = field(init=False)
+    opt_model: Any = field(init=False)
 
     def __attrs_post_init__(self):
         """
@@ -111,6 +128,8 @@ class MachineLearningSetup:
             }
         elif isinstance(self.algorithm, GAM):
             self.hyper_range = {"n_splines": np.arange(5, 40)}
+
+        self.hyper_range.update(self.params)
 
         # Set scorer as R2
         self.my_scorer = make_scorer(r2_score, greater_is_better=True)
