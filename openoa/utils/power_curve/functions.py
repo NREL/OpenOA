@@ -123,21 +123,31 @@ def logistic_5_parametric(
     )
 
 
-def gam(windspeed_column, power_column, n_splines=20):
+@series_method(data_cols=["windspeed_col", "power_col"])
+def gam(
+    windspeed_col: str | pd.Series,
+    power_col: str | pd.Series,
+    n_splines: int = 20,
+    data: pd.DataFrame = None,
+) -> Callable:
     """
-    Use a generalized additive model to fit power to wind speed.
+    Use the generalized additive model, :py:class:`pygam.LinearGAM` to fit power to wind speed.
 
     Args:
-        windspeed_column (:obj:`pandas.Series`): Wind speed feature column
-        power_column (:obj:`pandas.Series`): Power response column
+        windspeed_col(:obj:`str` | `pandas.Series`): Windspeed data, or the name of the column in
+            :py:attr:`data`.
+        power_col(:obj:`str` | `pandas.Series`): Power data, or the name of the column in
+            :py:attr:`data`.
         n_splines (:obj:`int`): number of splines to use in the fit
+        data(:obj:`pandas.DataFrame`, optional): a pandas DataFrame containing
+            :py:attr:`windspeed_col` and :py:attr:`power_col`. Defaults to None.
 
     Returns:
-        :obj:`function`: Python function of type (Array[float] -> Array[float]) implementing the power curve.
+        :obj:`Callable`: Python function of type (Array[float] -> Array[float]) implementing the power curve.
 
     """
     # Fit the model
-    return LinearGAM(n_splines=n_splines).fit(windspeed_column.values, power_column.values).predict
+    return LinearGAM(n_splines=n_splines).fit(windspeed_col.values, power_col.values).predict
 
 
 def gam_3param(windspeed_column, winddir_column, airdens_column, power_column, n_splines=20):
