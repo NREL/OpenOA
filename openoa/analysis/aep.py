@@ -955,11 +955,11 @@ class MonteCarloAEP(FromDictMixin):
         # Apply range filter to wind speed
         df_sub = df_sub.assign(flag_range=filters.range_flag(df_sub[reanal], lower=0, upper=40))
         if self.reg_temperature:
-            # Apply range filter to temperatre
+            # Apply range filter to temperature, in Kelvin
             df_sub = df_sub.assign(
                 flag_range_T=filters.range_flag(
-                    df_sub[reanal + "_temperature"], lower=200, upper=320
-                )  # Temperature is in Kelvin
+                    df_sub[f"{reanal}_temperature"], lower=200, upper=320
+                )
             )
         # Apply window range filter
         df_sub.loc[:, "flag_window"] = filters.window_range_flag(
@@ -976,10 +976,10 @@ class MonteCarloAEP(FromDictMixin):
                 # Monthly linear regression (i.e., few data points):
                 # filter outliers based on robust linear regression
                 # using Huber algorithm to flag outliers
-                X = sm.add_constant(df_sub[reanal])  # Reanalysis data with constant column
-                y = (
-                    df_sub["gross_energy_gwh"] * 30 / df_sub["num_days_expected"]
-                )  # Energy data (normalized to 30-days)
+
+                # Reanalysis data with constant column, and energy data normalized to 30 days
+                X = sm.add_constant(df_sub[reanal])
+                y = df_sub["gross_energy_gwh"] * 30 / df_sub["num_days_expected"]
 
                 # Perform robust linear regression
                 rlm = sm.RLM(y, X, M=sm.robust.norms.HuberT(self._run.outlier_threshold))
@@ -1007,15 +1007,11 @@ class MonteCarloAEP(FromDictMixin):
             df_sub.loc[:, "flag_outliers"] = False
 
         # Create a 'final' flag which is true if any of the previous flags are true
-        df_sub.loc[:, "flag_final"] = (
-            (df_sub.loc[:, "flag_range"])
-            | (df_sub.loc[:, "flag_window"])
-            | (df_sub.loc[:, "flag_outliers"])
+        df_sub.loc[:, "flag_final"] = df_sub[["flag_range", "flag_window", "flag_outliers"]].any(
+            axis=1
         )
         if self.reg_temperature:
-            df_sub.loc[:, "flag_final"] = (df_sub.loc[:, "flag_final"]) | (
-                df_sub.loc[:, "flag_range_T"]
-            )
+            df_sub.loc[:, "flag_final"] = df_sub[["flag_final", "flag_range_T"]].any(axis=1)
 
         # Define valid data
         valid_data = df_sub.loc[
@@ -1023,14 +1019,12 @@ class MonteCarloAEP(FromDictMixin):
             [reanal, "energy_gwh", "availability_gwh", "curtailment_gwh"],
         ]
         if self.reg_wind_direction:
-            valid_data_to_add = df_sub.loc[
-                ~df_sub.loc[:, "flag_final"],
-                [reanal + "_winddirection", reanal + "_windspeed_u", reanal + "_windspeed_v"],
-            ]
+            add_cols = [f"{reanal}_{x}" for x in ("winddirection", "windspeed_u", "windspeed_v")]
+            valid_data_to_add = df_sub.loc[~df_sub.loc[:, "flag_final"], add_cols]
             valid_data = pd.concat([valid_data, valid_data_to_add], axis=1)
 
         if self.reg_temperature:
-            valid_data_to_add = df_sub.loc[~df_sub.loc[:, "flag_final"], [reanal + "_temperature"]]
+            valid_data_to_add = df_sub.loc[~df_sub.loc[:, "flag_final"], [f"{reanal}_temperature"]]
             valid_data = pd.concat([valid_data, valid_data_to_add], axis=1)
 
         if self.time_resolution == "M":
@@ -1068,41 +1062,29 @@ class MonteCarloAEP(FromDictMixin):
         reg_data = self.filter_outliers(n)
 
         # Now monte carlo sample the data
-        mc_energy = (
-            reg_data["energy_gwh"] * self._run.metered_energy_fraction
-        )  # Create new Monte-Carlo sampled data frame and sample energy data
-        mc_availability = (
-            reg_data["availability_gwh"] * self._run.loss_fraction
-        )  # Calculate MC-generated availability
-        mc_curtailment = (
-            reg_data["curtailment_gwh"] * self._run.loss_fraction
-        )  # Calculate MC-generated curtailment
+        # Create new Monte-Carlo sampled data frame and sample energy data, calculate MC-generated
+        # availability and curtailment
+        mc_energy = reg_data["energy_gwh"] * self._run.metered_energy_fraction
+        mc_availability = reg_data["availability_gwh"] * self._run.loss_fraction
+        mc_curtailment = reg_data["curtailment_gwh"] * self._run.loss_fraction
 
         # Calculate gorss energy and normalize to 30-days
         mc_gross_energy = mc_energy + mc_availability + mc_curtailment
         if self.time_resolution == "M":
             num_days_expected = reg_data["num_days_expected"]
-            mc_gross_norm = (
-                mc_gross_energy * 30 / num_days_expected
-            )  # Normalize gross energy to 30-day months
+            mc_gross_norm = mc_gross_energy * 30 / num_days_expected
         else:
             mc_gross_norm = mc_gross_energy
 
-        # Set reanalysis product
-        reg_inputs = reg_data[
-            self._run.reanalysis_product
-        ]  # Copy wind speed data to Monte Carlo data frame
+        # Set reanalysis product for MC inputs
+        reg_inputs = reg_data[self._run.reanalysis_product]
 
         if self.reg_temperature:  # if temperature is considered as regression variable
-            mc_temperature = reg_data[
-                self._run.reanalysis_product + "_temperature"
-            ]  # Copy temperature data to Monte Carlo data frame
+            mc_temperature = reg_data[f"{self._run.reanalysis_product}_temperature"]
             reg_inputs = pd.concat([reg_inputs, mc_temperature], axis=1)
 
         if self.reg_wind_direction:  # if wind direction is considered as regression variable
-            mc_wind_direction = reg_data[
-                self._run.reanalysis_product + "_winddirection"
-            ]  # Copy wind direction data to Monte Carlo data frame
+            mc_wind_direction = reg_data[f"{self._run.reanalysis_product}_winddirection"]
             reg_inputs = pd.concat([reg_inputs, np.sin(np.deg2rad(mc_wind_direction))], axis=1)
             reg_inputs = pd.concat([reg_inputs, np.cos(np.deg2rad(mc_wind_direction))], axis=1)
 
@@ -1333,7 +1315,7 @@ class MonteCarloAEP(FromDictMixin):
         ]  # Get last 'x' years of data from reanalysis product
 
         # Temperature and wind direction
-        namescol = [self._run.reanalysis_product + "_" + var for var in self.reanalysis_vars]
+        namescol = [f"{self._run.reanalysis_product}_{var}" for var in self.reanalysis_vars]
         long_term_temp = self._reanalysis_aggregate[namescol].dropna()[
             ws_df.index[-1]
             + ws_df.index.freq
@@ -1343,7 +1325,7 @@ class MonteCarloAEP(FromDictMixin):
             long_term_reg_inputs = pd.concat(
                 [
                     long_term_reg_inputs,
-                    long_term_temp[self._run.reanalysis_product + "_temperature"],
+                    long_term_temp[f"{self._run.reanalysis_product}_temperature"],
                 ],
                 axis=1,
             )
@@ -1351,8 +1333,8 @@ class MonteCarloAEP(FromDictMixin):
             wd_aggregate = np.rad2deg(
                 np.pi
                 - np.arctan2(
-                    -long_term_temp[self._run.reanalysis_product + "_windspeed_u"],
-                    long_term_temp[self._run.reanalysis_product + "_windspeed_v"],
+                    -long_term_temp[f"{self._run.reanalysis_product}_windspeed_u"],
+                    long_term_temp[f"{self._run.reanalysis_product}_windspeed_v"],
                 )
             )  # Calculate wind direction
             long_term_reg_inputs = pd.concat(
