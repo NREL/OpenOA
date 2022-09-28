@@ -6,6 +6,7 @@
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+
 from openoa import logging, logged_method_call
 
 
@@ -62,7 +63,7 @@ class ElectricalLosses(object):
             )
         self.UQ = UQ
 
-        self._plant = plant
+        self.plant = plant
 
         self._min_per_hour = 60  # Mintues per hour converter
         self._hours_per_day = 24  # Hours per day converter
@@ -104,9 +105,9 @@ class ElectricalLosses(object):
         self._monthly_meter = True  # Keep track of reported meter data frequency
 
         if (
-            (self._plant._meter_freq != "MS")
-            & (self._plant._meter_freq != "M")
-            & (self._plant._meter_freq != "1MS")
+            (self.plant._meter_freq != "MS")
+            & (self.plant._meter_freq != "M")
+            & (self.plant._meter_freq != "1MS")
         ):
             self.process_meter()
             self._monthly_meter = False  # Set to false if sub-monthly frequency
@@ -165,7 +166,7 @@ class ElectricalLosses(object):
         """
         logger.info("Processing SCADA data")
 
-        scada_df = self._plant._scada.df
+        scada_df = self.plant._scada.df
 
         # Sum up SCADA data power and energy and count number of entries
         scada_sum = scada_df.groupby(scada_df.index)[["energy_kwh"]].sum()
@@ -181,8 +182,8 @@ class ElectricalLosses(object):
         expected_count = (
             self._hours_per_day
             * self._min_per_hour
-            / (pd.to_timedelta(self._plant._scada_freq).total_seconds() / 60)
-            * self._plant._num_turbines
+            / (pd.to_timedelta(self.plant._scada_freq).total_seconds() / 60)
+            * self.plant._num_turbines
         )
 
         # Correct sum of turbine energy for cases with missing reported data
@@ -207,7 +208,7 @@ class ElectricalLosses(object):
         """
         logger.info("Processing meter data")
 
-        meter_df = self._plant._meter.df
+        meter_df = self.plant._meter.df
 
         # Sum up meter data to daily
         self._meter_daily = meter_df.resample("D").sum()
@@ -217,7 +218,7 @@ class ElectricalLosses(object):
         expected_mcount = (
             self._hours_per_day
             * self._min_per_hour
-            / (pd.to_timedelta(self._plant._meter_freq).total_seconds() / 60)
+            / (pd.to_timedelta(self.plant._meter_freq).total_seconds() / 60)
         )
 
         # Keep only data with all turbines reporting for every time step during the day
@@ -244,7 +245,7 @@ class ElectricalLosses(object):
 
             self._run = self._inputs.loc[n]
 
-            meter_df = self._plant._meter.df
+            meter_df = self.plant._meter.df
 
             # If monthly meter data, sum the corrected daily turbine energy to monthly and merge with meter
             if self._monthly_meter:
@@ -260,8 +261,8 @@ class ElectricalLosses(object):
                     scada_monthly.index.daysinmonth
                     * self._hours_per_day
                     * self._min_per_hour
-                    / (pd.to_timedelta(self._plant._scada_freq).total_seconds() / 60)
-                    * self._plant._num_turbines
+                    / (pd.to_timedelta(self.plant._scada_freq).total_seconds() / 60)
+                    * self.plant._num_turbines
                 )
                 scada_monthly["perc"] = (
                     scada_monthly["count"] / scada_monthly["expected_count_monthly"]

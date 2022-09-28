@@ -16,7 +16,6 @@ from sklearn.metrics import r2_score, mean_squared_error
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import KFold
 
-import openoa
 from openoa import PlantData, logging, logged_method_call
 from openoa.utils import filters
 from openoa.utils import timeseries as tm
@@ -59,7 +58,7 @@ class MonteCarloAEPResult(object):
 
 
 # Long Term AEP
-class MonteCarloAEP(object):
+class MonteCarloAEP:
     """
     A serial (Pandas-driven) implementation of the benchmark PRUF operational
     analysis implementation. This module collects standard processing and
@@ -102,26 +101,26 @@ class MonteCarloAEP(object):
         Initialize APE_MC analysis with data and parameters.
 
         Args:
-         plant(:obj:`PlantData object`): PlantData object from which PlantAnalysis should draw data.
-         reanal_products(obj:`list`) : List of reanalysis products to use for Monte Carlo sampling. Defaults to ["merra2", "ncep2", "erai"].
-         uncertainty_meter(:obj:`float`): uncertainty on revenue meter data
-         uncertainty_losses(:obj:`float`): uncertainty on long-term losses
-         uncertainty_windiness(:obj:`tuple`): number of years to use for the windiness correction
-         uncertainty_loss_max(:obj:`tuple`): threshold for the combined availabilty and curtailment monthly loss threshold
-         outlier_detection(:obj:`bool`): whether to perform (True) or not (False - default) outlier detection filtering
-         uncertainty_outlier(:obj:`tuple`): min and max thresholds (Monte-Carlo sampled) for the outlier detection filter. At monthly resolution, this is the tuning constant for Huber’s t function for a robust linear regression. At daily/hourly resolution, this is the number of stdev of wind speed used as threshold for the bin filter.
-         uncertainty_nan_energy(:obj:`float`): threshold to flag days/months based on NaNs
-         time_resolution(:obj:`string`): whether to perform the AEP calculation at monthly ('M'), daily ('D') or hourly ('H') time resolution
-         end_date_lt(:obj:`string` or :obj:`pandas.Timestamp`): The last date to use for the long-term correction. Note that only the component of the date corresponding to the time_resolution argument is considered. If None, the end of the last complete month of reanalysis data will be used.
-         reg_model(:obj:`string`): which model to use for the regression ('lin' for linear, 'gam', 'gbm', 'etr'). At monthly time resolution only linear regression is allowed because of the reduced number of data points.
-         ml_setup_kwargs(:obj:`kwargs`): keyword arguments to MachineLearningSetup class
-         reg_temperature(:obj:`bool`): whether to include temperature (True) or not (False) as regression input
-         reg_winddirection(:obj:`bool`): whether to include wind direction (True) or not (False) as regression input
+            plant(:obj:`PlantData object`): PlantData object from which PlantAnalysis should draw data.
+            reanal_products(obj:`list`) : List of reanalysis products to use for Monte Carlo sampling. Defaults to ["merra2", "ncep2", "erai"].
+            uncertainty_meter(:obj:`float`): uncertainty on revenue meter data
+            uncertainty_losses(:obj:`float`): uncertainty on long-term losses
+            uncertainty_windiness(:obj:`tuple`): number of years to use for the windiness correction
+            uncertainty_loss_max(:obj:`tuple`): threshold for the combined availabilty and curtailment monthly loss threshold
+            outlier_detection(:obj:`bool`): whether to perform (True) or not (False - default) outlier detection filtering
+            uncertainty_outlier(:obj:`tuple`): min and max thresholds (Monte-Carlo sampled) for the outlier detection filter. At monthly resolution, this is the tuning constant for Huber’s t function for a robust linear regression. At daily/hourly resolution, this is the number of stdev of wind speed used as threshold for the bin filter.
+            uncertainty_nan_energy(:obj:`float`): threshold to flag days/months based on NaNs
+            time_resolution(:obj:`string`): whether to perform the AEP calculation at monthly ('M'), daily ('D') or hourly ('H') time resolution
+            end_date_lt(:obj:`string` or :obj:`pandas.Timestamp`): The last date to use for the long-term correction. Note that only the component of the date corresponding to the time_resolution argument is considered. If None, the end of the last complete month of reanalysis data will be used.
+            reg_model(:obj:`string`): which model to use for the regression ('lin' for linear, 'gam', 'gbm', 'etr'). At monthly time resolution only linear regression is allowed because of the reduced number of data points.
+            ml_setup_kwargs(:obj:`kwargs`): keyword arguments to MachineLearningSetup class
+            reg_temperature(:obj:`bool`): whether to include temperature (True) or not (False) as regression input
+            reg_winddirection(:obj:`bool`): whether to include wind direction (True) or not (False) as regression input
         """
         logger.info("Initializing MonteCarloAEP Analysis Object")
 
         self._aggregate = pd.DataFrame()
-        self._plant = plant  # defined at runtime
+        self.plant = plant  # defined at runtime
         self._reanal_products = reanal_products  # set of reanalysis products to use
 
         # Memo dictionaries help speed up computation
@@ -249,7 +248,7 @@ class MonteCarloAEP(object):
         """
         import matplotlib.pyplot as plt
 
-        project = self._plant
+        project = self.plant
 
         # Define parameters needed for plot
         min_val = 1  # Default parameter providing y-axis minimum for shaded plant POR region
@@ -358,7 +357,7 @@ class MonteCarloAEP(object):
             else:  # Daily/hourly case: apply bin filter for outliers detection
                 x = valid_aggregate[col_name]
                 y = valid_aggregate["gross_energy_gwh"]
-                plant_capac = self._plant.metadata.capacity / 1000.0 * self._hours_in_res
+                plant_capac = self.plant.metadata.capacity / 1000.0 * self._hours_in_res
 
                 # Apply bin filter
                 flag = filters.bin_filter(
@@ -573,7 +572,7 @@ class MonteCarloAEP(object):
         Returns:
             (None)
         """
-        df = self._plant.meter  # Get the meter data frame
+        df = self.plant.meter  # Get the meter data frame
 
         # Create the monthly/daily data frame by summing meter energy
         self._aggregate = (
@@ -595,8 +594,8 @@ class MonteCarloAEP(object):
             # Get actual number of days per month in the raw data
             # (used when trimming beginning and end of monthly data frame)
             # If meter data has higher resolution than monthly
-            if (self._plant.metadata.meter.frequency == "1MS") | (
-                self._plant.metadata.meter.frequency == "1M"
+            if (self.plant.metadata.meter.frequency == "1MS") | (
+                self.plant.metadata.meter.frequency == "1M"
             ):
                 self._aggregate["num_days_actual"] = self._aggregate["num_days_expected"]
             else:
@@ -613,7 +612,7 @@ class MonteCarloAEP(object):
         Returns:
             (None)
         """
-        df = self._plant.curtail
+        df = self.plant.curtail
 
         curt_aggregate = np.divide(
             df.resample(self._resample_freq)[["availability", "curtailment"]].sum(), 1e6
@@ -685,9 +684,9 @@ class MonteCarloAEP(object):
         # Identify start and end dates for long-term correction
         # First find date range common to all reanalysis products and drop minute field of start date
         start_date = max(
-            [self._plant.reanalysis[key].index.min() for key in self._reanal_products]
+            [self.plant.reanalysis[key].index.min() for key in self._reanal_products]
         ).replace(minute=0)
-        end_date = min([self._plant.reanalysis[key].index.max() for key in self._reanal_products])
+        end_date = min([self.plant.reanalysis[key].index.max() for key in self._reanal_products])
 
         # Next, update the start date to make sure it corresponds to a full time period
         start_date_minus = start_date - pd.DateOffset(hours=1)
@@ -751,8 +750,8 @@ class MonteCarloAEP(object):
 
         # Now loop through the different reanalysis products, density-correct wind speeds, and take monthly averages
         for key in self._reanal_products:
-            rean_df = self._plant.reanalysis[key]
-            # rean_df = rean_df.rename(self._plant.metadata[key].col_map)
+            rean_df = self.plant.reanalysis[key]
+            # rean_df = rean_df.rename(self.plant.metadata[key].col_map)
             rean_df["ws_dens_corr"] = mt.air_density_adjusted_wind_speed(
                 rean_df["windspeed"], rean_df["density"]
             )  # Density correct wind speeds
@@ -908,7 +907,7 @@ class MonteCarloAEP(object):
         ]
 
         # Set maximum range for using bin-filter, convert from MW to GWh
-        plant_capac = self._plant.metadata.capacity / 1000.0 * self._hours_in_res
+        plant_capac = self.plant.metadata.capacity / 1000.0 * self._hours_in_res
 
         # Apply range filter to wind speed
         df_sub = df_sub.assign(flag_range=filters.range_flag(df_sub[reanal], lower=0, upper=40))

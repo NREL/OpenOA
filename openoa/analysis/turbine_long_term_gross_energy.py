@@ -9,6 +9,7 @@ import random
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+
 from openoa import logging, logged_method_call
 from openoa.utils import filters, imputing, timeseries, met_data_processing
 from openoa.utils.power_curve import functions
@@ -79,8 +80,8 @@ class TurbineLongTermGrossEnergy(object):
             )
         self.UQ = UQ
 
-        self._plant = plant  # Set plant as attribute of analysis object
-        self._turbs = self._plant._scada.df["id"].unique()  # Store turbine names
+        self.plant = plant  # Set plant as attribute of analysis object
+        self._turbs = self.plant._scada.df["id"].unique()  # Store turbine names
 
         # Get start and end of POR days in SCADA
         self._por_start = format(plant._scada.df.index.min(), "%Y-%m-%d")
@@ -96,7 +97,7 @@ class TurbineLongTermGrossEnergy(object):
         self._scada_daily_valid = pd.DataFrame()
 
         # Set number of 'valid' counts required when summing data to daily values
-        self._num_valid_daily = 60.0 / (pd.to_timedelta(self._plant._scada_freq).seconds / 60) * 24
+        self._num_valid_daily = 60.0 / (pd.to_timedelta(self.plant._scada_freq).seconds / 60) * 24
 
         # Initially sort the different turbine data into dictionary entries
         logger.info("Processing SCADA data into dictionaries by turbine (this can take a while)")
@@ -260,7 +261,7 @@ class TurbineLongTermGrossEnergy(object):
             (None)
         """
 
-        df = self._plant._scada.df
+        df = self.plant._scada.df
         dic = self._scada_dict
 
         # Loop through turbine IDs
@@ -362,7 +363,7 @@ class TurbineLongTermGrossEnergy(object):
             ]
             return
 
-        reanal = self._plant._reanalysis._product[self._run.reanalysis_product].df
+        reanal = self.plant._reanalysis._product[self._run.reanalysis_product].df
         reanal["u_ms"], reanal["v_ms"] = met_data_processing.compute_u_v_components(
             reanal["windspeed_ms"], reanal["winddirection_deg"]
         )

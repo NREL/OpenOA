@@ -6,6 +6,7 @@
 
 import numpy as np
 import pandas as pd
+
 from openoa import logging, logged_method_call
 
 
@@ -85,7 +86,7 @@ class EYAGapAnalysis(object):
         self._savefigpath = save_fig_path
 
         # Plant variable to use for plotting
-        self._plant = plant
+        self.plant = plant
         self._data = []  # Array to hold index values for each plant
 
     @logged_method_call
@@ -184,7 +185,7 @@ class EYAGapAnalysis(object):
         my_plot = trans.plot(kind="bar", stacked=True, bottom=blank, legend=None, figsize=(12, 6))
         my_plot.plot(step.index, step.values, "k")
         my_plot.set_ylabel("Energy (GWh/yr)")
-        my_plot.set_title(self._plant)
+        my_plot.set_title(self.plant)
 
         # Get the y-axis position for the labels
         y_height = trans.amount.cumsum().shift(1).fillna(0)
