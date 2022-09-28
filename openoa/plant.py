@@ -19,6 +19,7 @@ from pyproj import Transformer
 from shapely.geometry import Point
 
 import openoa.utils.met_data_processing as met
+from openoa.utils.metadata_fetch import attach_eia_data
 
 
 # *************************************************************************
@@ -1144,12 +1145,14 @@ class PlantData:
     reanalysis: dict[str, pd.DataFrame] | None = attr.ib(
         default=None, converter=load_to_pandas_dict  # noqa: F821
     )
-    preprocess: Callable | None = attr.ib(default=None)
+    preprocess: Callable | None = attr.ib(default=None)  # Not currently in use
 
+    # No user initialization required for attributes defined below here
     # Error catching in validation
     _errors: dict[str, list[str]] = attr.ib(
         default={"missing": {}, "dtype": {}, "frequency": {}, "attributes": []}, init=False
-    )  # No user initialization required
+    )
+    eia: dict = attr.ib(default={}, init=False)
 
     def __attrs_post_init__(self):
         self._calculate_reanalysis_columns()
@@ -1829,3 +1832,4 @@ def from_entr(
 
 
 setattr(PlantData, "from_entr", classmethod(from_entr))
+setattr(PlantData, "attach_eia_data", attach_eia_data)

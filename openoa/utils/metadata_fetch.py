@@ -2,29 +2,55 @@
 This module fetches metadata of wind farms
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+from pathlib import Path
+
 import eia
 import numpy as np
 import pandas as pd
+
 from openoa.utils import unit_conversion
 
 
-def fetch_eia(api_key, plant_id, file_path):
+if TYPE_CHECKING:
+    from openoa import PlantData
+
+
+def fetch_eia(
+    api_key: str,
+    plant_id: str,
+    file_path: str | Path,
+    plant_file: str | Path,
+    plant_sheet: str | Path,
+    wind_file: str | Path,
+    wind_sheet: str | Path,
+):
     """
-    Read in EIA data of wind farm of interest
-    - from EIA API for monthly productions, return monthly net energy generation time series
-    - from local Excel files for wind farm metadata, return dictionary of metadata
+    Read in EIA data of wind farm of interest:
+     - from EIA API for monthly productions, return monthly net energy generation time series
+     - from local Excel files for wind farm metadata, return dictionary of metadata
 
     Args:
-        api_key(:obj:`string`): 32-character user-specific API key, obtained from EIA
-        plant_id(:obj:`string`): 5-character EIA power plant code
-        file_path(:obj:`string`): directory with EIA metadata .xlsx files in 2017
+        api_key(:obj:`str`): 32-character user-specific API key, obtained from EIA.
+        plant_id(:obj:`str`): 5-character EIA power plant code.
+        file_path(:obj:`str`): Directory with EIA metadata .xlsx files.
+        plant_file(:obj:`str` | `Path`): Name of the plant metadata Excel file in :py:attr:`file_path`.
+            Formerly hard-coded to: "2___Plant_Y2017.xlsx".
+        plant_sheet(:obj:`str`): The name of the sheet containing the data in :py:attr:`plant_file`.
+            Formerly hard-coded as "Plant".
+        wind_file(:obj:`str` | `Path`): Name of the wind metadata Excel file in :py:attr:`file_path`.
+            Formerly hard-coded to: ""3_2_Wind_Y2017.xlsx".
+        wind_sheet(:obj:`str`): The name of the sheet containing the data in :py:attr:`plant_file`.
+            Formerly hard-coded as "Operable".
 
     Returns:
         :obj:`pandas.Series`: monthly net energy generation in MWh
         :obj:`dictionary`: metadata of the wind farm with 'plant_id'
 
     """
-
+    file_path = Path(file_path).resolve()
     # EIA metadata
 
     plant_var_list = [
@@ -49,8 +75,8 @@ def fetch_eia(api_key, plant_id, file_path):
         "Turbine Hub Height (Feet)",
     ]
 
-    def meta_dic_fn(metafile, sheet, var_list):
-        all_plant = pd.read_excel(file_path + metafile, sheet_name=sheet, skiprows=1)
+    def meta_dic_fn(metafile: str | Path, sheet: str, var_list: list[str]):
+        all_plant = pd.read_excel(file_path / metafile, sheet_name=sheet, skiprows=1)
 
         eia_plant = all_plant.loc[
             all_plant["Plant Code"] == np.int64(plant_id)
@@ -67,17 +93,17 @@ def fetch_eia(api_key, plant_id, file_path):
         return out_dic
 
     # file path with 2017 EIA metadata files
-    plant_dic = meta_dic_fn("2___Plant_Y2017.xlsx", "Plant", plant_var_list)
-    wind_dic = meta_dic_fn("3_2_Wind_Y2017.xlsx", "Operable", wind_var_list)
+    plant_dict = meta_dic_fn(plant_file, plant_sheet, plant_var_list)
+    wind_dict = meta_dic_fn(wind_file, wind_sheet, wind_var_list)
 
-    # convert feet to meter
-    hubheight_meter = np.round(
-        unit_conversion.convert_feet_to_meter(wind_dic["Turbine Hub Height (Feet)"])
+    # convert feet to meter and delete reference to feet
+    hub_height = np.round(
+        unit_conversion.convert_feet_to_meter(wind_dict["Turbine Hub Height (Feet)"])
     )
-    wind_dic.update({"Turbine Hub Height (m)": hubheight_meter})
-    wind_dic.pop("Turbine Hub Height (Feet)", None)  # delete hub height in feet
-    out_dic = plant_dic.copy()
-    out_dic.update(wind_dic)  # append dictionary
+    wind_dict.update({"Turbine Hub Height (m)": hub_height})
+    wind_dict.pop("Turbine Hub Height (Feet)", None)
+    out_dic = plant_dict.copy()
+    out_dic.update(wind_dict)  # append dictionary
 
     # EIA monthly energy production data
 
@@ -93,24 +119,37 @@ def fetch_eia(api_key, plant_id, file_path):
     return eia_monthly, out_dic
 
 
-def add_eia_meta_to_project(project, api_key, plant_id, file_path):
+def attach_eia_data(
+    project: PlantData,
+    api_key: str,
+    plant_id: str,
+    file_path: str | Path,
+    plant_file: str | Path,
+    plant_sheet: str | Path,
+    wind_file: str | Path,
+    wind_sheet: str | Path,
+):
     """
     Assign EIA meta data to PlantData object.
 
     Args:
         project(:obj:`PlantData`): PlantData object for a particular project
-        api_key(:obj:`string`): 32-character user-specific API key, obtained from EIA
-        plant_id(:obj:`string`): 5-character EIA power plant code
-        file_path(:obj:`string`): directory with EIA metadata .xlsx files
+        api_key(:obj:`str`): 32-character user-specific API key, obtained from EIA.
+        plant_id(:obj:`str`): 5-character EIA power plant code.
+        file_path(:obj:`str`): Directory with EIA metadata .xlsx files.
+        plant_file(:obj:`str` | `Path`): Name of the plant metadata Excel file in :py:attr:`file_path`.
+            Formerly hard-coded to: "2___Plant_Y2017.xlsx".
+        plant_sheet(:obj:`str`): The name of the sheet containing the data in :py:attr:`plant_file`.
+        wind_file(:obj:`str` | `Path`): Name of the wind metadata Excel file in :py:attr:`file_path`.
+            Formerly hard-coded to: ""3_2_Wind_Y2017.xlsx".
+        wind_sheet(:obj:`str`): The name of the sheet containing the data in :py:attr:`plant_file`.
 
     Returns:
         (None)
     """
-
-    project._eia = {}
-    project._eia["api_key"] = api_key
-    project._eia["data_dir"] = file_path
-    project._eia["eia_id"] = plant_id
-    project._eia["monthly_energy"], project._eia["meta_data"] = fetch_eia(
-        api_key, plant_id, file_path
+    project.eia["api_key"] = api_key
+    project.eia["data_dir"] = file_path
+    project.eia["eia_id"] = plant_id
+    project.eia["monthly_energy"], project.eia["meta_data"] = fetch_eia(
+        api_key, plant_id, file_path, plant_file, plant_sheet, wind_file, wind_sheet
     )
