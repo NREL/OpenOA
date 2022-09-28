@@ -94,12 +94,15 @@ def clean_scada(scada_file: str | Path) -> pd.DataFrame:
         ix_turbine = scada_df["Wind_turbine_name"] == t_id
 
         # Cancel out readings where the wind vane direction repeats more than 3 times in a row
-        ix_flag = filters.unresponsive_flag(scada_df.loc[ix_turbine, "Va_avg"], 3)
-        scada_df.loc[ix_turbine & ix_flag, sensor_cols] = np.nan
+        ix_flag = filters.unresponsive_flag(scada_df.loc[ix_turbine], 3, col=["Va_avg"])
+        scada_df.loc[ix_turbine].loc[ix_flag.values, sensor_cols]
 
         # Cancel out the temperature readings where the value repeats more than 20 times in a row
-        ix_flag = filters.unresponsive_flag(scada_df.loc[ix_turbine, "Ot_avg"], 20)
-        scada_df.loc[ix_turbine & ix_flag, "Ot_avg"] = np.nan
+        ix_flag = filters.unresponsive_flag(scada_df.loc[ix_turbine], 20, col=["Ot_avg"])
+
+        # NOTE: ix_flag is flattened here because as a series it's shape = (N, 1) and
+        # incompatible with this style of indexing, so we need it as shape = (N,)
+        scada_df.loc[ix_turbine, "Ot_avg"].loc[ix_flag.values.flatten()] = np.nan
 
     logger.info("Converting pitch to the range [-180, 180]")
     scada_df.loc[:, "Ba_avg"] = scada_df["Ba_avg"] % 360
@@ -112,7 +115,7 @@ def clean_scada(scada_file: str | Path) -> pd.DataFrame:
     return scada_df
 
 
-def prepare(path : str | Path ="data/la_haute_borne", return_value="plantdata"):
+def prepare(path: str | Path = "data/la_haute_borne", return_value="plantdata"):
     """
     Do all loading and preparation of the data for this plant.
     args:
@@ -174,7 +177,9 @@ def prepare(path : str | Path ="data/la_haute_borne", return_value="plantdata"):
     reanalysis_merra2_df = pd.read_csv(path / "merra2_la_haute_borne.csv")
 
     # Create datetime field with a UTC base
-    reanalysis_merra2_df["datetime"] = pd.to_datetime(reanalysis_merra2_df["datetime"], utc=True).dt.tz_localize(None)
+    reanalysis_merra2_df["datetime"] = pd.to_datetime(
+        reanalysis_merra2_df["datetime"], utc=True
+    ).dt.tz_localize(None)
 
     # calculate wind direction from u, v
     reanalysis_merra2_df["winddirection_deg"] = met.compute_wind_direction(
@@ -192,7 +197,9 @@ def prepare(path : str | Path ="data/la_haute_borne", return_value="plantdata"):
     reanalysis_era5_df = reanalysis_era5_df.loc[:, ~reanalysis_era5_df.columns.duplicated()].copy()
 
     # Create datetime field with a UTC base
-    reanalysis_era5_df["datetime"] = pd.to_datetime(reanalysis_era5_df["datetime"], utc=True).dt.tz_localize(None)
+    reanalysis_era5_df["datetime"] = pd.to_datetime(
+        reanalysis_era5_df["datetime"], utc=True
+    ).dt.tz_localize(None)
 
     # Fill the 2 missing time stamps with NaN values
     reanalysis_era5_df = reanalysis_era5_df.set_index(pd.DatetimeIndex(reanalysis_era5_df.datetime))
@@ -240,3 +247,7 @@ def prepare(path : str | Path ="data/la_haute_borne", return_value="plantdata"):
         )
 
         return engie_plantdata
+
+
+if __name__ == "__main__":
+    prepare()
