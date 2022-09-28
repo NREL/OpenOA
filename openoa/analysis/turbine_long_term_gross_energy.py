@@ -106,7 +106,7 @@ class TurbineLongTermGrossEnergy(object):
     @logged_method_call
     def run(
         self,
-        reanal_subset=["erai", "ncep2", "merra2"],
+        reanalysis_subset=["erai", "ncep2", "merra2"],
         uncertainty_scada=0.005,
         wind_bin_thresh=(1, 3),
         max_power_filter=(0.8, 0.9),
@@ -118,7 +118,7 @@ class TurbineLongTermGrossEnergy(object):
         Perform pre-processing of data into an internal representation for which the analysis can run more quickly.
 
         Args:
-         reanal_subset(:obj:`list`): Which reanalysis products to use for long-term correction
+         reanalysis_subset(:obj:`list`): Which reanalysis products to use for long-term correction
          uncertainty_scada(:obj:`float`): uncertainty imposed to scada data (used in UQ = True case only)
          max_power_filter(:obj:`tuple`): Maximum power threshold (fraction) to which the bin filter
            should be applied (default is the interval between 0.8 and 0.9). This should be a tuple in
@@ -141,7 +141,7 @@ class TurbineLongTermGrossEnergy(object):
         self.enable_plotting = enable_plotting
         self.plot_dir = plot_dir
 
-        self._reanal = reanal_subset  # Reanalysis data to consider in fitting
+        self._reanal = reanalysis_subset  # Reanalysis data to consider in fitting
 
         # Check uncertainty types
         vars = [wind_bin_thresh, max_power_filter, correction_threshold]

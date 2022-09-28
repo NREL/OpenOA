@@ -11,6 +11,7 @@ import random
 import attrs
 import numpy as np
 import pandas as pd
+import numpy.typing as npt
 import statsmodels.api as sm
 from tqdm import tqdm
 from attrs import field, define
@@ -28,6 +29,8 @@ from openoa.utils.machine_learning_setup import MachineLearningSetup
 
 
 logger = logging.getLogger(__name__)
+
+NDArrayFloat = npt.NDArray[np.float64]
 
 
 def get_annual_values(data):
@@ -131,25 +134,28 @@ class MonteCarloAEP(FromDictMixin):
     )
     uncertainty_meter: float = field(default=0.005, converter=float)
     uncertainty_losses: float = field(default=0.05, converter=float)
-    uncertainty_windiness: tuple[int, int] = field(
+    uncertainty_windiness: NDArrayFloat = field(
         default=(10, 20),
+        converter=np.array,
         validator=attrs.validators.deep_iterable(
-            iterable_validator=attrs.validators.instance_of(tuple),
-            member_validator=attrs.validators.instance_of(int),
+            iterable_validator=attrs.validators.instance_of(np.ndarray),
+            member_validator=attrs.validators.instance_of(float),
         ),
     )
-    uncertainty_loss_max: tuple[int, int] = field(
+    uncertainty_loss_max: NDArrayFloat = field(
         default=(10, 20),
+        converter=np.array,
         validator=attrs.validators.deep_iterable(
-            iterable_validator=attrs.validators.instance_of(tuple),
-            member_validator=attrs.validators.instance_of(int),
+            iterable_validator=attrs.validators.instance_of(np.ndarray),
+            member_validator=attrs.validators.instance_of(float),
         ),
     )
     outlier_detection: bool = field(default=False, converter=bool)
-    uncertainty_outlier: tuple[float, float] = field(
+    uncertainty_outlier: NDArrayFloat = field(
         default=(1, 3),
+        converter=np.array,
         validator=attrs.validators.deep_iterable(
-            iterable_validator=attrs.validators.instance_of(tuple),
+            iterable_validator=attrs.validators.instance_of(np.ndarray),
             member_validator=attrs.validators.instance_of(float),
         ),
     )
@@ -172,51 +178,22 @@ class MonteCarloAEP(FromDictMixin):
         """
         logger.info("Initializing MonteCarloAEP Analysis Object")
 
-        self.aggregate = pd.DataFrame()
-        self.plant = plant  # defined at runtime
-        self.reanalysis_products = reanal_products  # set of reanalysis products to use
-
         # Memo dictionaries help speed up computation
         self.outlier_filtering = {}  # Combinations of outlier filter results
         self.long_term_sampling = {}  # Combinations of long-term reanalysis data sampling
         self.opt_model = {}  # Optimized ML model hyperparameters for each reanalysis product
 
         # Define relevant uncertainties, data ranges and max thresholds to be applied in Monte Carlo sampling
-        self.uncertainty_meter = np.float64(uncertainty_meter)
-        self.uncertainty_losses = np.float64(uncertainty_losses)
-        self.uncertainty_windiness = np.array(uncertainty_windiness, dtype=np.float64)
-        self.uncertainty_outlier = np.array(uncertainty_outlier, dtype=np.float64)
-        self.uncertainty_loss_max = np.array(uncertainty_loss_max, dtype=np.float64)
-        self.uncertainty_nan_energy = np.float64(uncertainty_nan_energy)
-        self.outlier_detection = outlier_detection
 
-        # Check that selected time resolution is allowed
-        if time_resolution not in ["M", "D", "H"]:
-            raise ValueError(
-                "time_res has to either be M (monthly, default) or D (daily) or H (hourly)"
-            )
-        self.time_resolution = time_resolution
-        self._resample_freq = {"M": "MS", "D": "D", "H": "H"}[self.time_resolution]
-        self._hours_in_res = {"M": 30 * 24, "D": 1 * 24, "H": 1}[self.time_resolution]
+        self.resample_freq = {"M": "MS", "D": "D", "H": "H"}[self.time_resolution]
+        self.resample_hours = {"M": 30 * 24, "D": 1 * 24, "H": 1}[self.time_resolution]
         self._calendar_samples = {"M": 12, "D": 365, "H": 365 * 24}[self.time_resolution]
         self.num_days_lt = (31, 28.25, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
 
-        if end_date_lt is not None:
-            self.end_date_lt = pd.to_datetime(end_date_lt).replace(minute=0)  # drop minute field
-        else:
-            self.end_date_lt = end_date_lt
-
-        # Check that choices for regression inputs are allowed
-        if reg_temperature not in [True, False]:
-            raise ValueError(
-                "reg_temperature has to either be True (if temperature is considered in the regression), or False (if temperature is omitted"
-            )
-        if reg_winddirection not in [True, False]:
-            raise ValueError(
-                "reg_winddirection has to either be True (if wind direction is considered in the regression), or False (if wind direction is omitted"
-            )
-        self.reg_winddirection = reg_winddirection
-        self.reg_temperature = reg_temperature
+        if self.end_date_lt is not None:
+            self.end_date_lt = pd.to_datetime(self.end_date_lt).replace(
+                minute=0
+            )  # drop minute field
 
         # Build list of regression variables
         self._rean_vars = []
@@ -225,48 +202,42 @@ class MonteCarloAEP(FromDictMixin):
         if self.reg_winddirection:
             self._rean_vars += ["windspeed_u", "windspeed_v"]
 
-        # Check that selected regression model is allowed
-        if reg_model not in ["lin", "gbm", "etr", "gam"]:
-            raise ValueError(
-                "reg_model has to either be lin (Linear regression, default), gbm (Gradient boosting model), etr (Extra trees regressor) or gam (Generalized additive model)"
-            )
-        self.reg_model = reg_model
-        self.ml_setup_kwargs = ml_setup_kwargs
-
         # Monthly data can only use robust linear regression because of limited number of data
-        if (time_resolution == "M") & (reg_model != "lin"):
+        if (self.time_resolution == "M") & (self.reg_model != "lin"):
             raise ValueError("For monthly time resolution, only linear regression is allowed!")
 
         # Run preprocessing step
+        self.aggregate = pd.DataFrame()
         self.calculate_aggregate_dataframe()
 
         # Store start and end of period of record
-        self._start_por = self.aggregate.index.min()
-        self._end_por = self.aggregate.index.max()
+        self.start_por = self.aggregate.index.min()
+        self.end_por = self.aggregate.index.max()
 
         # Create a data frame to store monthly/daily reanalysis data over plant period of record
         self._reanalysis_por = self.aggregate.loc[
-            (self.aggregate.index >= self._start_por) & (self.aggregate.index <= self._end_por)
+            (self.aggregate.index >= self.start_por) & (self.aggregate.index <= self.end_por)
         ]
 
     @logged_method_call
-    def run(self, num_sim, reanal_subset=None):
+    def run(self, num_sim: int, reanalysis_subset: list[str] = None):
         """
         Perform pre-processing of data into an internal representation for which the analysis can run more quickly.
 
         Args:
-            reanal_subset(:obj:`list`): list of str data indicating which reanalysis products to use in OA
             num_sim(:obj:`int`): number of simulations to perform
+            reanalysis_subset(:obj:`list[str]`): list of reanalysis abbreviations indicating which
+                reanalysis products to use for operational analysis.
 
         Returns:
             None
         """
         self.num_sim = num_sim
 
-        if reanal_subset is None:
-            self.reanal_subset = self.reanalysis_products
+        if reanalysis_subset is None:
+            self.reanalysis_subset = self.reanalysis_products
         else:
-            self.reanal_subset = reanal_subset
+            self.reanalysis_subset = reanalysis_subset
 
         # Write parameters of run to the log file
         logged_self_params = [
@@ -276,7 +247,7 @@ class MonteCarloAEP(FromDictMixin):
             "uncertainty_windiness",
             "uncertainty_nan_energy",
             "num_sim",
-            "reanal_subset",
+            "reanalysis_subset",
         ]
         logged_params = {name: getattr(self, name) for name in logged_self_params}
         logger.info("Running with parameters: {}".format(logged_params))
@@ -410,7 +381,7 @@ class MonteCarloAEP(FromDictMixin):
             else:  # Daily/hourly case: apply bin filter for outliers detection
                 x = valid_aggregate[col_name]
                 y = valid_aggregate["gross_energy_gwh"]
-                plant_capac = self.plant.metadata.capacity / 1000.0 * self._hours_in_res
+                plant_capac = self.plant.metadata.capacity / 1000.0 * self.resample_hours
 
                 # Apply bin filter
                 flag = filters.bin_filter(
@@ -629,12 +600,12 @@ class MonteCarloAEP(FromDictMixin):
 
         # Create the monthly/daily data frame by summing meter energy
         self.aggregate = (
-            df.resample(self._resample_freq)["energy"].sum() / 1e6
+            df.resample(self.resample_freq)["energy"].sum() / 1e6
         ).to_frame()  # Get monthly energy values in GWh
         self.aggregate.rename(columns={"energy": "energy_gwh"}, inplace=True)  # Rename kWh to MWh
 
         # Determine how much 10-min data was missing for each year-month/daily energy value. Flag accordigly if any is missing
-        self.aggregate["energy_nan_perc"] = df.resample(self._resample_freq)["energy"].apply(
+        self.aggregate["energy_nan_perc"] = df.resample(self.resample_freq)["energy"].apply(
             tm.percent_nan
         )  # Get percentage of meter data that were NaN when summing to monthly/daily
 
@@ -668,7 +639,7 @@ class MonteCarloAEP(FromDictMixin):
         df = self.plant.curtail
 
         curt_aggregate = np.divide(
-            df.resample(self._resample_freq)[["availability", "curtailment"]].sum(), 1e6
+            df.resample(self.resample_freq)[["availability", "curtailment"]].sum(), 1e6
         )  # Get sum of avail and curt losses in GWh
 
         curt_aggregate.rename(
@@ -695,10 +666,10 @@ class MonteCarloAEP(FromDictMixin):
             self.aggregate["curtailment_gwh"], self.aggregate["gross_energy_gwh"]
         )
 
-        self.aggregate["avail_nan_perc"] = df.resample(self._resample_freq)["availability"].apply(
+        self.aggregate["avail_nan_perc"] = df.resample(self.resample_freq)["availability"].apply(
             tm.percent_nan
         )  # Get percentage of 10-min meter data that were NaN when summing to monthly/daily
-        self.aggregate["curt_nan_perc"] = df.resample(self._resample_freq)["curtailment"].apply(
+        self.aggregate["curt_nan_perc"] = df.resample(self.resample_freq)["curtailment"].apply(
             tm.percent_nan
         )  # Get percentage of 10-min meter data that were NaN when summing to monthly/daily
 
@@ -780,7 +751,7 @@ class MonteCarloAEP(FromDictMixin):
         # Define empty data frame that spans our period of interest
         self._reanalysis_aggregate = pd.DataFrame(
             index=pd.date_range(
-                start=start_date, end=end_date, freq=self._resample_freq
+                start=start_date, end=end_date, freq=self.resample_freq
             ),  # tz="UTC"),
             dtype=float,
         )
@@ -808,14 +779,14 @@ class MonteCarloAEP(FromDictMixin):
             rean_df["ws_dens_corr"] = mt.air_density_adjusted_wind_speed(
                 rean_df["windspeed"], rean_df["density"]
             )  # Density correct wind speeds
-            self._reanalysis_aggregate[key] = rean_df.resample(self._resample_freq)[
+            self._reanalysis_aggregate[key] = rean_df.resample(self.resample_freq)[
                 "ws_dens_corr"
             ].mean()  # .to_frame() # Get average wind speed by year-month
 
             if self.reg_winddirection | self.reg_temperature:
                 namescol = [key + "_" + var for var in self._rean_vars]
                 self._reanalysis_aggregate[namescol] = (
-                    rean_df[self._rean_vars].resample(self._resample_freq).mean()
+                    rean_df[self._rean_vars].resample(self.resample_freq).mean()
                 )
 
             if self.reg_winddirection:  # if wind direction is considered as regression variable
@@ -900,7 +871,7 @@ class MonteCarloAEP(FromDictMixin):
         """
 
         # Create extra long list of renanalysis product names to sample from
-        reanal_list = list(np.repeat(self.reanal_subset, self.num_sim))
+        reanal_list = list(np.repeat(self.reanalysis_subset, self.num_sim))
 
         inputs = {
             "reanalysis_product": np.asarray(random.sample(reanal_list, self.num_sim)),
@@ -960,7 +931,7 @@ class MonteCarloAEP(FromDictMixin):
         ]
 
         # Set maximum range for using bin-filter, convert from MW to GWh
-        plant_capac = self.plant.metadata.capacity / 1000.0 * self._hours_in_res
+        plant_capac = self.plant.metadata.capacity / 1000.0 * self.resample_hours
 
         # Apply range filter to wind speed
         df_sub = df_sub.assign(flag_range=filters.range_flag(df_sub[reanal], lower=0, upper=40))
