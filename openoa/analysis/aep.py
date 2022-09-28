@@ -163,7 +163,7 @@ class MonteCarloAEP(FromDictMixin):
         ),
     )
     uncertainty_nan_energy: float = field(default=0.01, converter=float)
-    time_resolution: str = field(default="M", validator=attrs.validators.in_(("MS", "D", "H")))
+    time_resolution: str = field(default="M", validator=attrs.validators.in_(("M", "D", "H")))
     end_date_lt: str | pd.Timestamp = field(default=None)
     reg_model: str = field(
         default="lin", converter=str, validator=attrs.validators.in_(("lin", "gbm", "etr", "gam"))
@@ -172,19 +172,13 @@ class MonteCarloAEP(FromDictMixin):
     reg_temperature: bool = field(default=False, converter=bool)
     reg_wind_direction: bool = field(default=False, converter=bool)
 
-    # Internally created attributes
+    # Internally created attributes need to be given a type before usage
     resample_freq: str = field(init=False)
     resample_hours: int = field(init=False)
     calendar_samples: int = field(init=False)
-    outlier_filtering: dict = field(
-        default={}, init=False
-    )  # Combinations of outlier filter results
-    long_term_sampling: dict = field(
-        default={}, init=False
-    )  # Combinations of long-term reanalysis data sampling
-    opt_model: dict = field(
-        default={}, init=False
-    )  # Optimized ML model hyperparameters for each reanalysis product
+    outlier_filtering: dict = field(default={}, init=False)
+    long_term_sampling: dict = field(default={}, init=False)
+    opt_model: dict = field(default={}, init=False)
     reanalysis_vars: list[str] = field(default=[], init=False)
     aggregate: pd.DataFrame = field(default=pd.DataFrame(), init=False)
     start_por: pd.Timestamp = field(init=False)
@@ -210,8 +204,6 @@ class MonteCarloAEP(FromDictMixin):
     def __attrs_post_init__(self):
         """
         Initialize APE_MC analysis with data and parameters.
-
-
         """
         logger.info("Initializing MonteCarloAEP Analysis Object")
 
@@ -220,12 +212,11 @@ class MonteCarloAEP(FromDictMixin):
         self.calendar_samples = {"M": 12, "D": 365, "H": 365 * 24}[self.time_resolution]
 
         if self.end_date_lt is not None:
-            self.end_date_lt = pd.to_datetime(self.end_date_lt).replace(
-                minute=0
-            )  # drop minute field
+            # Set to the bottom of the bottom of the hour
+            self.end_date_lt = pd.to_datetime(self.end_date_lt).replace(minute=0)
 
         # Build list of regression variables
-
+        # self.reanalysis_vars = []  # Recreate because of data persistency bug
         if self.reg_temperature:
             self.reanalysis_vars.append("temperature")
         if self.reg_wind_direction:
@@ -803,8 +794,8 @@ class MonteCarloAEP(FromDictMixin):
             ].mean()  # .to_frame() # Get average wind speed by year-month
 
             if self.reg_wind_direction | self.reg_temperature:
-                namescol = [key + "_" + var for var in self.reanalysis_vars]
-                self._reanalysis_aggregate[namescol] = (
+                cols = [f"{key}_{var}" for var in self.reanalysis_vars]
+                self._reanalysis_aggregate[cols] = (
                     rean_df[self.reanalysis_vars].resample(self.resample_freq).mean()
                 )
 
@@ -941,6 +932,7 @@ class MonteCarloAEP(FromDictMixin):
 
         # If valid data hasn't yet been stored in dictionary, determine the valid data
         df = self.aggregate
+        print(self.aggregate.columns)
 
         # First set of filters checking combined losses and if the Nan data flag was on
         df_sub = df.loc[
