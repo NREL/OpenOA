@@ -176,16 +176,17 @@ class MonteCarloAEP(FromDictMixin):
     resample_freq: str = field(init=False)
     resample_hours: int = field(init=False)
     calendar_samples: int = field(init=False)
-    outlier_filtering: dict = field(default={}, init=False)
-    long_term_sampling: dict = field(default={}, init=False)
-    opt_model: dict = field(default={}, init=False)
-    reanalysis_vars: list[str] = field(default=[], init=False)
-    aggregate: pd.DataFrame = field(default=pd.DataFrame(), init=False)
+    outlier_filtering: dict = field(factory=dict, init=False)
+    long_term_sampling: dict = field(factory=dict, init=False)
+    opt_model: dict = field(factory=dict, init=False)
+    reanalysis_vars: list[str] = field(factory=list, init=False)
+    aggregate: pd.DataFrame = field(init=False)
     start_por: pd.Timestamp = field(init=False)
     end_por: pd.Timestamp = field(init=False)
     reanalysis_por: pd.DataFrame = field(init=False)
-    num_days_lt: tuple[int, int, int, int, int, int, int, int, int, int, int, int] = field(
-        default=(31, 28.25, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31), init=False
+    num_days_lt: tuple = field(
+        default=(31, 28.25, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31),
+        init=False,
     )
     _reanalysis_aggregate: pd.DataFrame = field(init=False)
     num_sim: int = field(init=False)
@@ -200,7 +201,7 @@ class MonteCarloAEP(FromDictMixin):
     _run: pd.DataFrame = field(init=False)
     results: pd.DataFrame = field(init=False)
 
-    @logged_method_call
+    # @logged_method_call
     def __attrs_post_init__(self):
         """
         Initialize APE_MC analysis with data and parameters.
