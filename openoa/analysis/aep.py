@@ -8,15 +8,18 @@ from __future__ import annotations
 
 import random
 
+import attrs
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
 from tqdm import tqdm
+from attrs import field, define
 from sklearn.metrics import r2_score, mean_squared_error
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import KFold
 
 from openoa import PlantData, logging, logged_method_call
+from openoa.plant import FromDictMixin
 from openoa.utils import filters
 from openoa.utils import timeseries as tm
 from openoa.utils import unit_conversion as un
@@ -57,8 +60,15 @@ class MonteCarloAEPResult(object):
     pass
 
 
+def _convert_time_resolution_string(x: str):
+    if x == "M":
+        return "MS"
+    return x
+
+
 # Long Term AEP
-class MonteCarloAEP:
+@define(auto_attribs=True)
+class MonteCarloAEP(FromDictMixin):
     """
     A serial (Pandas-driven) implementation of the benchmark PRUF operational
     analysis implementation. This module collects standard processing and
@@ -76,50 +86,93 @@ class MonteCarloAEP:
 
         5. Run AEP Monte Carlo - run the OA process iteratively to get distribution of AEP results
     The end result is a distribution of AEP results which we use to assess expected AEP and associated uncertainty
+
+    Args:
+        plant(:obj:`PlantData`): PlantData object from which PlantAnalysis should draw data.
+        reanal_products(obj:`list[str]`) : List of reanalysis products to use for Monte Carlo
+            sampling. Defaults to ["merra2", "ncep2", "era5"].
+        uncertainty_meter(:obj:`float`): Uncertainty on revenue meter data. Defaults to 0.005.
+        uncertainty_losses(:obj:`float`): Uncertainty on long-term losses. Defaults to 0.05.
+        uncertainty_windiness(:obj:`tuple[int, int]`): number of years to use for the windiness
+            correction. Defaults to (10, 20).
+        uncertainty_loss_max(:obj:`tuple[int, int]`): Threshold for the combined availabilty and
+            curtailment monthly loss threshold. Defaults to (10, 20).
+        outlier_detection(:obj:`bool`): whether to perform (True) or not (False - default) outlier
+            detection filtering. Defaults to False.
+        uncertainty_outlier(:obj:`tuple[float, float]`): Min and max thresholds (Monte-Carlo
+            sampled) for the outlier detection filter. At monthly resolution, this is the tuning
+            constant for Huber's t function for a robust linear regression. At daily/hourly
+            resolution, this is the number of stdev of wind speed used as threshold for the bin
+            filter. Defaults to (1, 3).
+        uncertainty_nan_energy(:obj:`float`): Threshold to flag days/months based on NaNs. Defaults
+            to 0.01.
+        time_resolution(:obj:`string`): whether to perform the AEP calculation at monthly ("M"),
+            daily ("D") or hourly ("H") time resolution. Defaults to "M".
+        end_date_lt(:obj:`string` or :obj:`pandas.Timestamp`): The last date to use for the
+            long-term correction. Note that only the component of the date corresponding to the
+            time_resolution argument is considered. If None, the end of the last complete month of
+            reanalysis data will be used. Defaults to None.
+        reg_model(:obj:`string`): Which model to use for the regression ("lin" for linear, "gam" for,
+            general additive, "gbm" for gradient boosting, or "etr" for extra treees). At monthly
+            time resolution only linear regression is allowed because of the reduced number of data
+            points. Defaults to "lin".
+        ml_setup_kwargs(:obj:`kwargs`): Keyword arguments to
+            :py:class:`openoa.utils.machine_learning_setup.MachineLearningSetup` class. Defaults to {}.
+        reg_temperature(:obj:`bool`): Indicator to include temperature (True) or not (False) as a
+            regression input. Defaults to False.
+        reg_winddirection(:obj:`bool`): Indicator to include wind direction (True) or not (False) as
+            a regression input. Defaults to False.
     """
 
+    plant: PlantData = field(validator=attrs.validators.instance_of(PlantData))
+    reanalysis_products: list[str] = field(
+        default=["merra2", "ncep2", "era5"],
+        validator=attrs.validators.in_(("merra2", "ncep2", "erai", "era5")),
+    )
+    uncertainty_meter: float = field(default=0.005, converter=float)
+    uncertainty_losses: float = field(default=0.05, converter=float)
+    uncertainty_windiness: tuple[int, int] = field(
+        default=(10, 20),
+        validator=attrs.validators.deep_iterable(
+            iterable_validator=attrs.validators.instance_of(tuple),
+            member_validator=attrs.validators.instance_of(int),
+        ),
+    )
+    uncertainty_loss_max: tuple[int, int] = field(
+        default=(10, 20),
+        validator=attrs.validators.deep_iterable(
+            iterable_validator=attrs.validators.instance_of(tuple),
+            member_validator=attrs.validators.instance_of(int),
+        ),
+    )
+    outlier_detection: bool = field(default=False, converter=bool)
+    uncertainty_outlier: tuple[float, float] = field(
+        default=(1, 3),
+        validator=attrs.validators.deep_iterable(
+            iterable_validator=attrs.validators.instance_of(tuple),
+            member_validator=attrs.validators.instance_of(float),
+        ),
+    )
+    uncertainty_nan_energy: float = field(default=0.01, converter=float)
+    time_resolution: str = field(default="M", validator=attrs.validators.in_(("MS", "D", "H")))
+    end_date_lt: str | pd.Timestamp = field(default=None)
+    reg_model: str = field(
+        default="lin", converter=str, validator=attrs.validators.in_(("lin", "gbm", "etr", "gam"))
+    )
+    ml_setup_kwargs: dict = field(default={}, converter=dict)
+    reg_temperature: bool = field(default=False, converter=bool)
+    reg_winddirection: bool = field(default=False, converter=bool)
+
     @logged_method_call
-    def __init__(
-        self,
-        plant: PlantData,
-        reanal_products: list[str] = ["merra2", "ncep2", "erai", "era5"],
-        uncertainty_meter: float = 0.005,
-        uncertainty_losses: float = 0.05,
-        uncertainty_windiness: tuple[int, int] = (10, 20),
-        uncertainty_loss_max: tuple[int, int] = (10, 20),
-        outlier_detection: bool = False,
-        uncertainty_outlier: tuple[float] = (1, 3),
-        uncertainty_nan_energy: float = 0.01,
-        time_resolution: str = "M",
-        end_date_lt: str | pd.Timestamp = None,
-        reg_model: str = "lin",
-        ml_setup_kwargs: dict = {},
-        reg_temperature: bool = False,
-        reg_winddirection: bool = False,
-    ):
+    def __attrs_post_init__(self):
         """
         Initialize APE_MC analysis with data and parameters.
 
-        Args:
-            plant(:obj:`PlantData object`): PlantData object from which PlantAnalysis should draw data.
-            reanal_products(obj:`list`) : List of reanalysis products to use for Monte Carlo sampling. Defaults to ["merra2", "ncep2", "erai"].
-            uncertainty_meter(:obj:`float`): uncertainty on revenue meter data
-            uncertainty_losses(:obj:`float`): uncertainty on long-term losses
-            uncertainty_windiness(:obj:`tuple`): number of years to use for the windiness correction
-            uncertainty_loss_max(:obj:`tuple`): threshold for the combined availabilty and curtailment monthly loss threshold
-            outlier_detection(:obj:`bool`): whether to perform (True) or not (False - default) outlier detection filtering
-            uncertainty_outlier(:obj:`tuple`): min and max thresholds (Monte-Carlo sampled) for the outlier detection filter. At monthly resolution, this is the tuning constant for Huber’s t function for a robust linear regression. At daily/hourly resolution, this is the number of stdev of wind speed used as threshold for the bin filter.
-            uncertainty_nan_energy(:obj:`float`): threshold to flag days/months based on NaNs
-            time_resolution(:obj:`string`): whether to perform the AEP calculation at monthly ('M'), daily ('D') or hourly ('H') time resolution
-            end_date_lt(:obj:`string` or :obj:`pandas.Timestamp`): The last date to use for the long-term correction. Note that only the component of the date corresponding to the time_resolution argument is considered. If None, the end of the last complete month of reanalysis data will be used.
-            reg_model(:obj:`string`): which model to use for the regression ('lin' for linear, 'gam', 'gbm', 'etr'). At monthly time resolution only linear regression is allowed because of the reduced number of data points.
-            ml_setup_kwargs(:obj:`kwargs`): keyword arguments to MachineLearningSetup class
-            reg_temperature(:obj:`bool`): whether to include temperature (True) or not (False) as regression input
-            reg_winddirection(:obj:`bool`): whether to include wind direction (True) or not (False) as regression input
+
         """
         logger.info("Initializing MonteCarloAEP Analysis Object")
 
-        self._aggregate = pd.DataFrame()
+        self.aggregate = pd.DataFrame()
         self.plant = plant  # defined at runtime
         self.reanalysis_products = reanal_products  # set of reanalysis products to use
 
@@ -188,12 +241,12 @@ class MonteCarloAEP:
         self.calculate_aggregate_dataframe()
 
         # Store start and end of period of record
-        self._start_por = self._aggregate.index.min()
-        self._end_por = self._aggregate.index.max()
+        self._start_por = self.aggregate.index.min()
+        self._end_por = self.aggregate.index.max()
 
         # Create a data frame to store monthly/daily reanalysis data over plant period of record
-        self._reanalysis_por = self._aggregate.loc[
-            (self._aggregate.index >= self._start_por) & (self._aggregate.index <= self._end_por)
+        self._reanalysis_por = self.aggregate.loc[
+            (self.aggregate.index >= self._start_por) & (self.aggregate.index <= self._end_por)
         ]
 
     @logged_method_call
@@ -253,8 +306,8 @@ class MonteCarloAEP:
         # Define parameters needed for plot
         min_val = 1  # Default parameter providing y-axis minimum for shaded plant POR region
         max_val = 1  # Default parameter providing y-axis maximum for shaded plant POR region
-        por_start = self._aggregate.index[0]  # Start of plant POR
-        por_end = self._aggregate.index[-1]  # End of plant POR
+        por_start = self.aggregate.index[0]  # Start of plant POR
+        por_end = self.aggregate.index[-1]  # End of plant POR
 
         plt.figure(figsize=(14, 6))
         for key in self.reanalysis_products:
@@ -308,7 +361,7 @@ class MonteCarloAEP:
         """
         import matplotlib.pyplot as plt
 
-        valid_aggregate = self._aggregate
+        valid_aggregate = self.aggregate
         plt.figure(figsize=(9, 9))
 
         # Loop through each reanalysis product and make a scatterplot of monthly wind speed vs plant energy
@@ -484,7 +537,7 @@ class MonteCarloAEP:
         """
         import matplotlib.pyplot as plt
 
-        valid_aggregate = self._aggregate
+        valid_aggregate = self.aggregate
 
         plt.figure(figsize=(12, 9))
 
@@ -555,7 +608,7 @@ class MonteCarloAEP:
             self.trim_monthly_df()
 
         # Drop any data that have NaN gross energy values or NaN reanalysis data
-        self._aggregate = self._aggregate.dropna(
+        self.aggregate = self.aggregate.dropna(
             subset=["gross_energy_gwh"] + [product for product in self.reanalysis_products]
         )
 
@@ -575,21 +628,21 @@ class MonteCarloAEP:
         df = self.plant.meter  # Get the meter data frame
 
         # Create the monthly/daily data frame by summing meter energy
-        self._aggregate = (
+        self.aggregate = (
             df.resample(self._resample_freq)["energy"].sum() / 1e6
         ).to_frame()  # Get monthly energy values in GWh
-        self._aggregate.rename(columns={"energy": "energy_gwh"}, inplace=True)  # Rename kWh to MWh
+        self.aggregate.rename(columns={"energy": "energy_gwh"}, inplace=True)  # Rename kWh to MWh
 
         # Determine how much 10-min data was missing for each year-month/daily energy value. Flag accordigly if any is missing
-        self._aggregate["energy_nan_perc"] = df.resample(self._resample_freq)["energy"].apply(
+        self.aggregate["energy_nan_perc"] = df.resample(self._resample_freq)["energy"].apply(
             tm.percent_nan
         )  # Get percentage of meter data that were NaN when summing to monthly/daily
 
         if self.time_resolution == "M":
             # Create a column with expected number of days per month (to be used when normalizing to 30-days for regression)
-            days_per_month = (pd.Series(self._aggregate.index)).dt.daysinmonth
-            days_per_month.index = self._aggregate.index
-            self._aggregate["num_days_expected"] = days_per_month
+            days_per_month = (pd.Series(self.aggregate.index)).dt.daysinmonth
+            days_per_month.index = self.aggregate.index
+            self.aggregate["num_days_expected"] = days_per_month
 
             # Get actual number of days per month in the raw data
             # (used when trimming beginning and end of monthly data frame)
@@ -597,9 +650,9 @@ class MonteCarloAEP:
             if (self.plant.metadata.meter.frequency == "1MS") | (
                 self.plant.metadata.meter.frequency == "1M"
             ):
-                self._aggregate["num_days_actual"] = self._aggregate["num_days_expected"]
+                self.aggregate["num_days_actual"] = self.aggregate["num_days_expected"]
             else:
-                self._aggregate["num_days_actual"] = df.resample("MS")["energy"].apply(tm.num_days)
+                self.aggregate["num_days_actual"] = df.resample("MS")["energy"].apply(tm.num_days)
 
     @logged_method_call
     def process_loss_estimates(self):
@@ -623,46 +676,46 @@ class MonteCarloAEP:
             inplace=True,
         )
         # Merge with revenue meter monthly/daily data
-        self._aggregate = self._aggregate.join(curt_aggregate)
+        self.aggregate = self.aggregate.join(curt_aggregate)
 
         # Add gross energy field
-        self._aggregate["gross_energy_gwh"] = un.compute_gross_energy(
-            self._aggregate["energy_gwh"],
-            self._aggregate["availability_gwh"],
-            self._aggregate["curtailment_gwh"],
+        self.aggregate["gross_energy_gwh"] = un.compute_gross_energy(
+            self.aggregate["energy_gwh"],
+            self.aggregate["availability_gwh"],
+            self.aggregate["curtailment_gwh"],
             "energy",
             "energy",
         )
 
         # Calculate percentage-based losses
-        self._aggregate["availability_pct"] = np.divide(
-            self._aggregate["availability_gwh"], self._aggregate["gross_energy_gwh"]
+        self.aggregate["availability_pct"] = np.divide(
+            self.aggregate["availability_gwh"], self.aggregate["gross_energy_gwh"]
         )
-        self._aggregate["curtailment_pct"] = np.divide(
-            self._aggregate["curtailment_gwh"], self._aggregate["gross_energy_gwh"]
+        self.aggregate["curtailment_pct"] = np.divide(
+            self.aggregate["curtailment_gwh"], self.aggregate["gross_energy_gwh"]
         )
 
-        self._aggregate["avail_nan_perc"] = df.resample(self._resample_freq)["availability"].apply(
+        self.aggregate["avail_nan_perc"] = df.resample(self._resample_freq)["availability"].apply(
             tm.percent_nan
         )  # Get percentage of 10-min meter data that were NaN when summing to monthly/daily
-        self._aggregate["curt_nan_perc"] = df.resample(self._resample_freq)["curtailment"].apply(
+        self.aggregate["curt_nan_perc"] = df.resample(self._resample_freq)["curtailment"].apply(
             tm.percent_nan
         )  # Get percentage of 10-min meter data that were NaN when summing to monthly/daily
 
-        self._aggregate["nan_flag"] = False  # Set flag to false by default
-        self._aggregate.loc[
-            (self._aggregate["energy_nan_perc"] > self.uncertainty_nan_energy)
-            | (self._aggregate["avail_nan_perc"] > self.uncertainty_nan_energy)
-            | (self._aggregate["curt_nan_perc"] > self.uncertainty_nan_energy),
+        self.aggregate["nan_flag"] = False  # Set flag to false by default
+        self.aggregate.loc[
+            (self.aggregate["energy_nan_perc"] > self.uncertainty_nan_energy)
+            | (self.aggregate["avail_nan_perc"] > self.uncertainty_nan_energy)
+            | (self.aggregate["curt_nan_perc"] > self.uncertainty_nan_energy),
             "nan_flag",
         ] = True  # If more than 1% of data are NaN, set flag to True
 
         # By default, assume all reported losses are representative of long-term operational
-        self._aggregate["availability_typical"] = True
-        self._aggregate["curtailment_typical"] = True
+        self.aggregate["availability_typical"] = True
+        self.aggregate["curtailment_typical"] = True
 
         # By default, assume combined availability and curtailment losses are below the threshold to be considered valid
-        self._aggregate["combined_loss_valid"] = True
+        self.aggregate["combined_loss_valid"] = True
 
     @logged_method_call
     def process_reanalysis_data(self):
@@ -777,8 +830,8 @@ class MonteCarloAEP:
                 )  # Calculate wind direction
 
         # TODO JP: Had to localize the timezone after V3 update. Is there a better way to do this?
-        # self._aggregate.index = self._aggregate.index.tz_localize("UTC")
-        self._aggregate = self._aggregate.join(
+        # self.aggregate.index = self.aggregate.index.tz_localize("UTC")
+        self.aggregate = self.aggregate.join(
             self._reanalysis_aggregate
         )  # Merge monthly reanalysis data to monthly energy data frame
 
@@ -793,12 +846,12 @@ class MonteCarloAEP:
         Returns:
             (None)
         """
-        for p in self._aggregate.index[[0, -1]]:  # Loop through 1st and last data entry
+        for p in self.aggregate.index[[0, -1]]:  # Loop through 1st and last data entry
             if (
-                self._aggregate.loc[p, "num_days_expected"]
-                != self._aggregate.loc[p, "num_days_actual"]
+                self.aggregate.loc[p, "num_days_expected"]
+                != self.aggregate.loc[p, "num_days_actual"]
             ):
-                self._aggregate.drop(p, inplace=True)  # Drop the row from data frame
+                self.aggregate.drop(p, inplace=True)  # Drop the row from data frame
 
     @logged_method_call
     def calculate_long_term_losses(self):
@@ -812,7 +865,7 @@ class MonteCarloAEP:
         Returns:
             (None)
         """
-        df = self._aggregate
+        df = self.aggregate
 
         # isolate availabilty and curtailment values that are representative of average plant performance
         avail_valid = df.loc[df["availability_typical"], "availability_pct"].to_frame()
@@ -897,7 +950,7 @@ class MonteCarloAEP:
             return valid_data
 
         # If valid data hasn't yet been stored in dictionary, determine the valid data
-        df = self._aggregate
+        df = self.aggregate
 
         # First set of filters checking combined losses and if the Nan data flag was on
         df_sub = df.loc[

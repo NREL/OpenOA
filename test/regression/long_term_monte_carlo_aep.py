@@ -49,7 +49,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
             reg_temperature=True,
             reg_winddirection=True,
         )
-        df = self.analysis._aggregate
+        df = self.analysis.aggregate
         df_rean = self.analysis._reanalysis_aggregate
 
         # Check the pre-processing functions
@@ -302,7 +302,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
             reg_temperature=True,
             reg_winddirection=True,
         )
-        df = self.analysis._aggregate
+        df = self.analysis.aggregate
 
         # Check the pre-processing functions
         self.check_process_revenue_meter_energy_daily(df)
