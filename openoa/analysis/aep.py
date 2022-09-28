@@ -123,19 +123,22 @@ class MonteCarloAEP(FromDictMixin):
             :py:class:`openoa.utils.machine_learning_setup.MachineLearningSetup` class. Defaults to {}.
         reg_temperature(:obj:`bool`): Indicator to include temperature (True) or not (False) as a
             regression input. Defaults to False.
-        reg_winddirection(:obj:`bool`): Indicator to include wind direction (True) or not (False) as
+        reg_wind_direction(:obj:`bool`): Indicator to include wind direction (True) or not (False) as
             a regression input. Defaults to False.
     """
 
     plant: PlantData = field(validator=attrs.validators.instance_of(PlantData))
     reanalysis_products: list[str] = field(
         default=["merra2", "ncep2", "era5"],
-        validator=attrs.validators.in_(("merra2", "ncep2", "erai", "era5")),
+        validator=attrs.validators.deep_iterable(
+            iterable_validator=attrs.validators.instance_of(list),
+            member_validator=attrs.validators.in_(("merra2", "ncep2", "erai", "era5")),
+        ),
     )
     uncertainty_meter: float = field(default=0.005, converter=float)
     uncertainty_losses: float = field(default=0.05, converter=float)
     uncertainty_windiness: NDArrayFloat = field(
-        default=(10, 20),
+        default=(10.0, 20.0),
         converter=np.array,
         validator=attrs.validators.deep_iterable(
             iterable_validator=attrs.validators.instance_of(np.ndarray),
@@ -143,7 +146,7 @@ class MonteCarloAEP(FromDictMixin):
         ),
     )
     uncertainty_loss_max: NDArrayFloat = field(
-        default=(10, 20),
+        default=(10.0, 20.0),
         converter=np.array,
         validator=attrs.validators.deep_iterable(
             iterable_validator=attrs.validators.instance_of(np.ndarray),
@@ -152,7 +155,7 @@ class MonteCarloAEP(FromDictMixin):
     )
     outlier_detection: bool = field(default=False, converter=bool)
     uncertainty_outlier: NDArrayFloat = field(
-        default=(1, 3),
+        default=(1.0, 3.0),
         converter=np.array,
         validator=attrs.validators.deep_iterable(
             iterable_validator=attrs.validators.instance_of(np.ndarray),
@@ -167,7 +170,41 @@ class MonteCarloAEP(FromDictMixin):
     )
     ml_setup_kwargs: dict = field(default={}, converter=dict)
     reg_temperature: bool = field(default=False, converter=bool)
-    reg_winddirection: bool = field(default=False, converter=bool)
+    reg_wind_direction: bool = field(default=False, converter=bool)
+
+    # Internally created attributes
+    resample_freq: str = field(init=False)
+    resample_hours: int = field(init=False)
+    calendar_samples: int = field(init=False)
+    outlier_filtering: dict = field(
+        default={}, init=False
+    )  # Combinations of outlier filter results
+    long_term_sampling: dict = field(
+        default={}, init=False
+    )  # Combinations of long-term reanalysis data sampling
+    opt_model: dict = field(
+        default={}, init=False
+    )  # Optimized ML model hyperparameters for each reanalysis product
+    reanalysis_vars: list[str] = field(default=[], init=False)
+    aggregate: pd.DataFrame = field(default=pd.DataFrame(), init=False)
+    start_por: pd.Timestamp = field(init=False)
+    end_por: pd.Timestamp = field(init=False)
+    reanalysis_por: pd.DataFrame = field(init=False)
+    num_days_lt: tuple[int, int, int, int, int, int, int, int, int, int, int, int] = field(
+        default=(31, 28.25, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31), init=False
+    )
+    _reanalysis_aggregate: pd.DataFrame = field(init=False)
+    num_sim: int = field(init=False)
+    reanalysis_subset: list[str] = field(init=False)
+    long_term_losses: tuple[pd.Series, pd.Series] = field(init=False)
+    mc_inputs: pd.DataFrame = field(init=False)
+    _mc_num_points: NDArrayFloat = field(init=False)
+    _r2_score: NDArrayFloat = field(init=False)
+    _mse_score: NDArrayFloat = field(init=False)
+    _mc_intercept: NDArrayFloat = field(init=False)
+    _mc_slope: NDArrayFloat = field(init=False)
+    _run: pd.DataFrame = field(init=False)
+    results: pd.DataFrame = field(init=False)
 
     @logged_method_call
     def __attrs_post_init__(self):
@@ -178,17 +215,9 @@ class MonteCarloAEP(FromDictMixin):
         """
         logger.info("Initializing MonteCarloAEP Analysis Object")
 
-        # Memo dictionaries help speed up computation
-        self.outlier_filtering = {}  # Combinations of outlier filter results
-        self.long_term_sampling = {}  # Combinations of long-term reanalysis data sampling
-        self.opt_model = {}  # Optimized ML model hyperparameters for each reanalysis product
-
-        # Define relevant uncertainties, data ranges and max thresholds to be applied in Monte Carlo sampling
-
         self.resample_freq = {"M": "MS", "D": "D", "H": "H"}[self.time_resolution]
         self.resample_hours = {"M": 30 * 24, "D": 1 * 24, "H": 1}[self.time_resolution]
-        self._calendar_samples = {"M": 12, "D": 365, "H": 365 * 24}[self.time_resolution]
-        self.num_days_lt = (31, 28.25, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
+        self.calendar_samples = {"M": 12, "D": 365, "H": 365 * 24}[self.time_resolution]
 
         if self.end_date_lt is not None:
             self.end_date_lt = pd.to_datetime(self.end_date_lt).replace(
@@ -196,11 +225,11 @@ class MonteCarloAEP(FromDictMixin):
             )  # drop minute field
 
         # Build list of regression variables
-        self._rean_vars = []
+
         if self.reg_temperature:
-            self._rean_vars += ["temperature"]
-        if self.reg_winddirection:
-            self._rean_vars += ["windspeed_u", "windspeed_v"]
+            self.reanalysis_vars.append("temperature")
+        if self.reg_wind_direction:
+            self.reanalysis_vars.extend(["windspeed_u", "windspeed_v"])
 
         # Monthly data can only use robust linear regression because of limited number of data
         if (self.time_resolution == "M") & (self.reg_model != "lin"):
@@ -215,7 +244,7 @@ class MonteCarloAEP(FromDictMixin):
         self.end_por = self.aggregate.index.max()
 
         # Create a data frame to store monthly/daily reanalysis data over plant period of record
-        self._reanalysis_por = self.aggregate.loc[
+        self.reanalysis_por = self.aggregate.loc[
             (self.aggregate.index >= self.start_por) & (self.aggregate.index <= self.end_por)
         ]
 
@@ -233,30 +262,25 @@ class MonteCarloAEP(FromDictMixin):
             None
         """
         self.num_sim = num_sim
-
-        if reanalysis_subset is None:
-            self.reanalysis_subset = self.reanalysis_products
-        else:
-            self.reanalysis_subset = reanalysis_subset
+        self.reanalysis_subset = (
+            self.reanalysis_products if reanalysis_subset is None else reanalysis_subset
+        )
 
         # Write parameters of run to the log file
-        logged_self_params = [
-            "uncertainty_meter",
-            "uncertainty_losses",
-            "uncertainty_loss_max",
-            "uncertainty_windiness",
-            "uncertainty_nan_energy",
-            "num_sim",
-            "reanalysis_subset",
-        ]
-        logged_params = {name: getattr(self, name) for name in logged_self_params}
+        logged_params = dict(
+            uncertainty_meter=self.uncertainty_meter,
+            uncertainty_losses=self.uncertainty_losses,
+            uncertainty_loss_max=self.uncertainty_loss_max,
+            uncertainty_windiness=self.uncertainty_windiness,
+            uncertainty_nan_energy=self.uncertainty_nan_energy,
+            num_sim=self.num_sim,
+            reanalysis_subset=self.reanalysis_subset,
+        )
         logger.info("Running with parameters: {}".format(logged_params))
 
         # Start the computation
         self.calculate_long_term_losses()
-
         self.setup_monte_carlo_inputs()
-
         self.results = self.run_AEP_monte_carlo()
 
         # Log the completion of the run
@@ -698,11 +722,6 @@ class MonteCarloAEP(FromDictMixin):
             - calculate monthly/daily average temperature
             - append monthly/daily averages to monthly/daily energy data frame
 
-        Args:
-            (None)
-
-        Returns:
-            (None)
         """
 
         # Identify start and end dates for long-term correction
@@ -783,13 +802,13 @@ class MonteCarloAEP(FromDictMixin):
                 "ws_dens_corr"
             ].mean()  # .to_frame() # Get average wind speed by year-month
 
-            if self.reg_winddirection | self.reg_temperature:
-                namescol = [key + "_" + var for var in self._rean_vars]
+            if self.reg_wind_direction | self.reg_temperature:
+                namescol = [key + "_" + var for var in self.reanalysis_vars]
                 self._reanalysis_aggregate[namescol] = (
-                    rean_df[self._rean_vars].resample(self.resample_freq).mean()
+                    rean_df[self.reanalysis_vars].resample(self.resample_freq).mean()
                 )
 
-            if self.reg_winddirection:  # if wind direction is considered as regression variable
+            if self.reg_wind_direction:  # if wind direction is considered as regression variable
                 self._reanalysis_aggregate[key + "_winddirection"] = np.rad2deg(
                     np.pi
                     - (
@@ -847,11 +866,11 @@ class MonteCarloAEP(FromDictMixin):
         curt_long_term = self.groupby_time_res(curt_valid)["curtailment_pct"]
 
         # Ensure there are 12 or 365 data points in long-term average. If not, throw an exception:
-        if avail_long_term.shape[0] < self._calendar_samples:
+        if avail_long_term.shape[0] < self.calendar_samples:
             raise Exception(
                 "Not all calendar days/months represented in long-term availability calculation"
             )
-        if curt_long_term.shape[0] < self._calendar_samples:
+        if curt_long_term.shape[0] < self.calendar_samples:
             raise Exception(
                 "Not all calendar days/months represented in long-term curtailment calculation"
             )
@@ -861,7 +880,7 @@ class MonteCarloAEP(FromDictMixin):
     def setup_monte_carlo_inputs(self):
         """
         Create and populate the data frame defining the simulation parameters.
-        This data frame is stored as self._inputs
+        This data frame is stored as self.mc_inputs
 
         Args:
             (None)
@@ -895,7 +914,7 @@ class MonteCarloAEP(FromDictMixin):
                 / 10.0
             )
 
-        self._inputs = pd.DataFrame(inputs)
+        self.mc_inputs = pd.DataFrame(inputs)
 
     @logged_method_call
     def filter_outliers(self, n):
@@ -1003,7 +1022,7 @@ class MonteCarloAEP(FromDictMixin):
             ~df_sub.loc[:, "flag_final"],
             [reanal, "energy_gwh", "availability_gwh", "curtailment_gwh"],
         ]
-        if self.reg_winddirection:
+        if self.reg_wind_direction:
             valid_data_to_add = df_sub.loc[
                 ~df_sub.loc[:, "flag_final"],
                 [reanal + "_winddirection", reanal + "_windspeed_u", reanal + "_windspeed_v"],
@@ -1080,7 +1099,7 @@ class MonteCarloAEP(FromDictMixin):
             ]  # Copy temperature data to Monte Carlo data frame
             reg_inputs = pd.concat([reg_inputs, mc_temperature], axis=1)
 
-        if self.reg_winddirection:  # if wind direction is considered as regression variable
+        if self.reg_wind_direction:  # if wind direction is considered as regression variable
             mc_wind_direction = reg_data[
                 self._run.reanalysis_product + "_winddirection"
             ]  # Copy wind direction data to Monte Carlo data frame
@@ -1167,7 +1186,7 @@ class MonteCarloAEP(FromDictMixin):
         self._mse_score = np.empty(num_sim, dtype=np.float64)
 
         num_vars = 1
-        if self.reg_winddirection:
+        if self.reg_wind_direction:
             num_vars = num_vars + 2
         if self.reg_temperature:
             num_vars = num_vars + 1
@@ -1185,7 +1204,7 @@ class MonteCarloAEP(FromDictMixin):
         # Loop through number of simulations, run regression each time, store AEP results
         for n in tqdm(np.arange(num_sim)):
 
-            self._run = self._inputs.loc[n]
+            self._run = self.mc_inputs.loc[n]
 
             # Run regression
             fitted_model = self.run_regression(n)
@@ -1200,23 +1219,23 @@ class MonteCarloAEP(FromDictMixin):
             gross_lt = fitted_model.predict(inputs)
 
             # Get POR gross energy by applying regression result to POR regression inputs
-            reg_inputs_por = [self._reanalysis_por[self._run.reanalysis_product]]
+            reg_inputs_por = [self.reanalysis_por[self._run.reanalysis_product]]
             if self.reg_temperature:
                 reg_inputs_por += [
-                    self._reanalysis_por[self._run.reanalysis_product + "_temperature"]
+                    self.reanalysis_por[self._run.reanalysis_product + "_temperature"]
                 ]
-            if self.reg_winddirection:
+            if self.reg_wind_direction:
                 reg_inputs_por += [
                     np.sin(
                         np.deg2rad(
-                            self._reanalysis_por[self._run.reanalysis_product + "_winddirection"]
+                            self.reanalysis_por[self._run.reanalysis_product + "_winddirection"]
                         )
                     )
                 ]
                 reg_inputs_por += [
                     np.cos(
                         np.deg2rad(
-                            self._reanalysis_por[self._run.reanalysis_product + "_winddirection"]
+                            self.reanalysis_por[self._run.reanalysis_product + "_winddirection"]
                         )
                     )
                 ]
@@ -1225,7 +1244,7 @@ class MonteCarloAEP(FromDictMixin):
             # Create padans dataframe for gross_por and group by calendar date to have a single full year
             gross_por = self.groupby_time_res(
                 pd.DataFrame(
-                    data=gross_por, index=self._reanalysis_por[self._run.reanalysis_product].index
+                    data=gross_por, index=self.reanalysis_por[self._run.reanalysis_product].index
                 )
             )
 
@@ -1314,7 +1333,7 @@ class MonteCarloAEP(FromDictMixin):
         ]  # Get last 'x' years of data from reanalysis product
 
         # Temperature and wind direction
-        namescol = [self._run.reanalysis_product + "_" + var for var in self._rean_vars]
+        namescol = [self._run.reanalysis_product + "_" + var for var in self.reanalysis_vars]
         long_term_temp = self._reanalysis_aggregate[namescol].dropna()[
             ws_df.index[-1]
             + ws_df.index.freq
@@ -1328,7 +1347,7 @@ class MonteCarloAEP(FromDictMixin):
                 ],
                 axis=1,
             )
-        if self.reg_winddirection:
+        if self.reg_wind_direction:
             wd_aggregate = np.rad2deg(
                 np.pi
                 - np.arctan2(

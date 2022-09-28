@@ -44,7 +44,7 @@ ANALYSIS_REQUIREMENTS = {
             "columns": ["windspeed", "density"],
             "conditional_columns": {
                 "reg_temperature": ["temperature"],
-                "reg_winddirection": ["windspeed_u", "windspeed_v"],
+                "reg_wind_direction": ["windspeed_u", "windspeed_v"],
             },
             "freq": _at_least_monthly,
         },

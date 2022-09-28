@@ -5,6 +5,7 @@ from test import example_data_path_str
 import numpy as np
 import numpy.testing as npt
 from examples.project_ENGIE import Project_Engie
+
 from openoa.analysis.turbine_long_term_gross_energy import TurbineLongTermGrossEnergy
 
 
@@ -23,7 +24,7 @@ class TestLongTermGrossEnergy(unittest.TestCase):
         self.analysis = TurbineLongTermGrossEnergy(self.project, UQ=False)
 
         self.analysis.run(
-            reanal_subset=["era5", "merra2"],
+            reanalysis_subset=["era5", "merra2"],
             max_power_filter=0.85,
             wind_bin_thresh=1.0,
             correction_threshold=0.9,
@@ -49,7 +50,7 @@ class TestLongTermGrossEnergyUQ(unittest.TestCase):
         self.project.prepare()
 
         self.analysis_uq = TurbineLongTermGrossEnergy(self.project, UQ=True, num_sim=5)
-        self.analysis_uq.run(enable_plotting=False, reanal_subset=["era5", "merra2"])
+        self.analysis_uq.run(enable_plotting=False, reanalysis_subset=["era5", "merra2"])
 
     def test_longterm_gross_energy_results(self):
         reset_prng()

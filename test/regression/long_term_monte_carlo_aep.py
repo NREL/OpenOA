@@ -44,10 +44,10 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
 
         self.analysis = aep.MonteCarloAEP(
             self.project,
-            reanal_products=["merra2", "era5"],
+            reanalysis_products=["merra2", "era5"],
             time_resolution="M",
             reg_temperature=True,
-            reg_winddirection=True,
+            reg_wind_direction=True,
         )
         df = self.analysis.aggregate
         df_rean = self.analysis._reanalysis_aggregate
@@ -65,7 +65,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         # ____________________________________________________________________
         # Test default aggregate reanalysis values and date range, at monthly time resolution
         self.analysis = aep.MonteCarloAEP(
-            self.project_rean, reanal_products=["merra2", "era5"], time_resolution="M"
+            self.project_rean, reanalysis_products=["merra2", "era5"], time_resolution="M"
         )
         df_rean = self.analysis._reanalysis_aggregate
 
@@ -91,7 +91,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         with pytest.raises(ValueError):
             self.analysis = aep.MonteCarloAEP(
                 self.project_rean,
-                reanal_products=["merra2", "era5"],
+                reanalysis_products=["merra2", "era5"],
                 time_resolution="M",
                 end_date_lt="2018-12-15 12:00",
             )
@@ -100,7 +100,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         with pytest.raises(ValueError):
             self.analysis = aep.MonteCarloAEP(
                 self.project_rean,
-                reanal_products=["merra2", "era5"],
+                reanalysis_products=["merra2", "era5"],
                 time_resolution="M",
                 end_date_lt="2019-04-15 13:00",
             )
@@ -109,7 +109,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         # Test aggregate reanalysis values and date range with user-defined end date, at monthly time resolution
         self.analysis = aep.MonteCarloAEP(
             self.project_rean,
-            reanal_products=["merra2", "era5"],
+            reanalysis_products=["merra2", "era5"],
             time_resolution="M",
             end_date_lt="2019-02-10 12:00",
         )
@@ -136,7 +136,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         # ____________________________________________________________________
         # Test default aggregate reanalysis values and date range, at daily time resolution
         self.analysis = aep.MonteCarloAEP(
-            self.project_rean, reanal_products=["merra2", "era5"], time_resolution="D"
+            self.project_rean, reanalysis_products=["merra2", "era5"], time_resolution="D"
         )
         df_rean = self.analysis._reanalysis_aggregate
 
@@ -162,7 +162,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         with pytest.raises(ValueError):
             self.analysis = aep.MonteCarloAEP(
                 self.project_rean,
-                reanal_products=["merra2", "era5"],
+                reanalysis_products=["merra2", "era5"],
                 time_resolution="D",
                 end_date_lt="2019-01-14 23:00",
             )
@@ -171,7 +171,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         with pytest.raises(ValueError):
             self.analysis = aep.MonteCarloAEP(
                 self.project_rean,
-                reanal_products=["merra2", "era5"],
+                reanalysis_products=["merra2", "era5"],
                 time_resolution="D",
                 end_date_lt="2019-04-15 13:00",
             )
@@ -180,7 +180,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         # Test aggregate reanalysis values and date range with user-defined end date, at daily time resolution
         self.analysis = aep.MonteCarloAEP(
             self.project_rean,
-            reanal_products=["merra2", "era5"],
+            reanalysis_products=["merra2", "era5"],
             time_resolution="D",
             end_date_lt="2019-02-10 12:00",
         )
@@ -207,7 +207,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         # ____________________________________________________________________
         # Test default aggregate reanalysis values and date range, at hourly time resolution
         self.analysis = aep.MonteCarloAEP(
-            self.project_rean, reanal_products=["merra2", "era5"], time_resolution="H"
+            self.project_rean, reanalysis_products=["merra2", "era5"], time_resolution="H"
         )
         df_rean = self.analysis._reanalysis_aggregate
 
@@ -233,7 +233,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         with pytest.raises(ValueError):
             self.analysis = aep.MonteCarloAEP(
                 self.project_rean,
-                reanal_products=["merra2", "era5"],
+                reanalysis_products=["merra2", "era5"],
                 time_resolution="H",
                 end_date_lt="2019-01-15 10:00",
             )
@@ -242,7 +242,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         with pytest.raises(ValueError):
             self.analysis = aep.MonteCarloAEP(
                 self.project_rean,
-                reanal_products=["merra2", "era5"],
+                reanalysis_products=["merra2", "era5"],
                 time_resolution="H",
                 end_date_lt="2019-04-15 13:00",
             )
@@ -251,7 +251,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         # Test aggregate reanalysis values and date range with user-defined end date, at hourly time resolution
         self.analysis = aep.MonteCarloAEP(
             self.project_rean,
-            reanal_products=["merra2", "era5"],
+            reanalysis_products=["merra2", "era5"],
             time_resolution="H",
             end_date_lt="2019-02-10 12:00",
         )
@@ -279,11 +279,11 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         # Test linear regression model, at monthly time resolution
         self.analysis = aep.MonteCarloAEP(
             self.project,
-            reanal_products=["merra2", "era5"],
+            reanalysis_products=["merra2", "era5"],
             time_resolution="M",
             reg_model="lin",
             reg_temperature=False,
-            reg_winddirection=False,
+            reg_wind_direction=False,
         )
         # Run Monte Carlo AEP analysis, confirm the results are consistent
         self.analysis.run(num_sim=10)
@@ -297,10 +297,10 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         # Test inputs to the regression model, at monthly time resolution
         self.analysis = aep.MonteCarloAEP(
             self.project,
-            reanal_products=["merra2", "era5"],
+            reanalysis_products=["merra2", "era5"],
             time_resolution="D",
             reg_temperature=True,
-            reg_winddirection=True,
+            reg_wind_direction=True,
         )
         df = self.analysis.aggregate
 
@@ -315,11 +315,11 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         # Test GAM regression model (can be used at daily time resolution only)
         self.analysis = aep.MonteCarloAEP(
             self.project,
-            reanal_products=["merra2", "era5"],
+            reanalysis_products=["merra2", "era5"],
             time_resolution="D",
             reg_model="gam",
             reg_temperature=True,
-            reg_winddirection=True,
+            reg_wind_direction=True,
         )
         # Run Monte Carlo AEP analysis, confirm the results are consistent
         self.analysis.run(num_sim=5)
@@ -332,11 +332,11 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         # Test GBM regression model (can be used at daily time resolution only)
         self.analysis = aep.MonteCarloAEP(
             self.project,
-            reanal_products=["era5"],
+            reanalysis_products=["era5"],
             time_resolution="D",
             reg_model="gbm",
             reg_temperature=True,
-            reg_winddirection=False,
+            reg_wind_direction=False,
         )
         # Run Monte Carlo AEP analysis, confirm the results are consistent
         self.analysis.run(num_sim=5)
@@ -349,11 +349,11 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         # Test ETR regression model (can be used at daily time resolution only)
         self.analysis = aep.MonteCarloAEP(
             self.project,
-            reanal_products=["merra2"],
+            reanalysis_products=["merra2"],
             time_resolution="D",
             reg_model="etr",
             reg_temperature=False,
-            reg_winddirection=False,
+            reg_wind_direction=False,
         )
         # Run Monte Carlo AEP analysis, confirm the results are consistent
         self.analysis.run(num_sim=5)
@@ -366,12 +366,12 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         # Test GAM regression model (can be used at daily time resolution only)
         self.analysis = aep.MonteCarloAEP(
             self.project,
-            reanal_products=["merra2", "era5"],
+            reanalysis_products=["merra2", "era5"],
             time_resolution="D",
             outlier_detection=True,
             reg_model="gam",
             reg_temperature=True,
-            reg_winddirection=True,
+            reg_wind_direction=True,
         )
         # Run Monte Carlo AEP analysis, confirm the results are consistent
         self.analysis.run(num_sim=5)
