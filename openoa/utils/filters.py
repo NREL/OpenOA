@@ -12,7 +12,12 @@ import scipy as sp
 import pandas as pd
 from sklearn.cluster import KMeans
 
-from openoa.utils._converters import series_to_df, convert_args_to_lists
+from openoa.utils._converters import (
+    series_to_df,
+    series_method,
+    dataframe_method,
+    convert_args_to_lists,
+)
 
 
 def range_flag(
@@ -150,6 +155,7 @@ def std_range_flag(
     return flag[col[0]] if to_series else flag
 
 
+@series_method(data_cols=["window_col", "value_col"])
 def window_range_flag(
     window_col: str | pd.Series = None,
     window_start: float = -np.inf,
@@ -177,32 +183,11 @@ def window_range_flag(
     Returns:
         :obj:`pandas.Series`: Series with boolean entries.
     """
-    if data is not None:
-        if not isinstance(window_col, str):
-            raise TypeError(
-                "The input to `window_col` must be a string if `data` is a pandas DataFrame."
-            )
-        if not isinstance(value_col, str):
-            raise TypeError(
-                "The input to `value_col` must be a string if `data` is a pandas DataFrame."
-            )
-
-        window_col = data[:, window_col].copy()
-        value_col = data[:, value_col].copy()
-
-    if not isinstance(window_col, pd.Series):
-        raise TypeError(
-            "The input to `window_col` must be a pandas Series if `data` is not provided."
-        )
-    if not isinstance(value_col, pd.Series):
-        raise TypeError(
-            "The input to `value_col` must be a pandas Series if `data` is not provided."
-        )
-
     flag = window_col.between(window_start, window_end) & ~value_col.between(value_min, value_max)
     return flag
 
 
+@series_method(data_cols=["bin_col", "value_col"])
 def bin_filter(
     bin_col: pd.Series | str,
     value_col: pd.Series | str,
@@ -235,21 +220,6 @@ def bin_filter(
     Returns:
         :obj:`pandas.Series(bool)`: Array-like object with boolean entries.
     """
-
-    if data is None:
-        if not isinstance(bin_col, pd.Series) or not isinstance(value_col, pd.Series):
-            raise TypeError(
-                "Both `bin_col` and `value_col` must be a pandas Series when `data` is not provided as a pandas DataFrame."
-            )
-    elif isinstance(data, pd.DataFrame):
-        if len(set([bin_col, value_col]).intersection(data.columns)) < 2:
-            raise ValueError("Both `bin_col` and `value_col` must be columns in `data`.")
-
-        bin_col = data.loc[:, bin_col].copy()
-        value_col = data.loc[:, value_col].copy()
-    else:
-        raise TypeError("Either no input or a pandas DataFrame must be provided to `data`.")
-
     if center_type not in ("mean", "median"):
         raise ValueError("Incorrect `center_type` specified; must be one of 'mean' or 'median'.")
     if threshold_type not in ("std", "scalar"):
@@ -300,6 +270,7 @@ def bin_filter(
     return flag
 
 
+@dataframe_method(data_cols=["data_col1", "data_col2"])
 def cluster_mahalanobis_2d(
     data_col1: pd.Series | str,
     data_col2: pd.Series | str,
@@ -323,23 +294,7 @@ def cluster_mahalanobis_2d(
     Returns:
         :obj:`pandas.Series(bool)`: Array-like object with boolean entries.
     """
-    if data is None:
-        if not isinstance(data_col1, pd.Series) or not isinstance(data_col2, pd.Series):
-            raise TypeError(
-                "Both `data_col1` and `data_col2` must be a pandas Series when `data` is not provided as a pandas DataFrame."
-            )
-        if data_col1.shape != data_col2.shape:
-            raise ValueError("Both `data_col1` and `data_col2` must be the same dimension")
-
-        # Create a 2D DataFrame object to work with
-        data = pd.DataFrame({"d1": data_col1, "d2": data_col2})
-    elif isinstance(data, pd.DataFrame):
-        if len(set([data_col1, data_col2]).intersect(data.columns)) < 2:
-            raise ValueError("Both `data_col1` and `data_col2` must be columns in `data`.")
-
-        # Only work with the focal columns
-        data = data.loc[:, [data_col1, data_col2]].copy()
-
+    data = data.loc[:, [data_col1, data_col2]].copy()
     kmeans = KMeans(n_clusters=n_clusters).fit(data)
 
     # Define empty flag of 'False' values with indices matching value_col
