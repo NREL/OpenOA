@@ -121,7 +121,7 @@ class MonteCarloAEP:
 
         self._aggregate = pd.DataFrame()
         self.plant = plant  # defined at runtime
-        self._reanal_products = reanal_products  # set of reanalysis products to use
+        self.reanalysis_products = reanal_products  # set of reanalysis products to use
 
         # Memo dictionaries help speed up computation
         self.outlier_filtering = {}  # Combinations of outlier filter results
@@ -211,7 +211,7 @@ class MonteCarloAEP:
         self.num_sim = num_sim
 
         if reanal_subset is None:
-            self.reanal_subset = self._reanal_products
+            self.reanal_subset = self.reanalysis_products
         else:
             self.reanal_subset = reanal_subset
 
@@ -257,7 +257,7 @@ class MonteCarloAEP:
         por_end = self._aggregate.index[-1]  # End of plant POR
 
         plt.figure(figsize=(14, 6))
-        for key in self._reanal_products:
+        for key in self.reanalysis_products:
             rean_df = project.reanalysis[key]  # Set reanalysis product
             ann_mo_ws = (
                 rean_df.resample("MS")["ws_dens_corr"].mean().to_frame()
@@ -312,8 +312,8 @@ class MonteCarloAEP:
         plt.figure(figsize=(9, 9))
 
         # Loop through each reanalysis product and make a scatterplot of monthly wind speed vs plant energy
-        for p in np.arange(0, len(list(self._reanal_products))):
-            col_name = self._reanal_products[p]  # Reanalysis column in monthly data frame
+        for p in np.arange(0, len(list(self.reanalysis_products))):
+            col_name = self.reanalysis_products[p]  # Reanalysis column in monthly data frame
             # Plot
             plt.subplot(2, 2, p + 1)
 
@@ -556,7 +556,7 @@ class MonteCarloAEP:
 
         # Drop any data that have NaN gross energy values or NaN reanalysis data
         self._aggregate = self._aggregate.dropna(
-            subset=["gross_energy_gwh"] + [product for product in self._reanal_products]
+            subset=["gross_energy_gwh"] + [product for product in self.reanalysis_products]
         )
 
     @logged_method_call
@@ -684,9 +684,9 @@ class MonteCarloAEP:
         # Identify start and end dates for long-term correction
         # First find date range common to all reanalysis products and drop minute field of start date
         start_date = max(
-            [self.plant.reanalysis[key].index.min() for key in self._reanal_products]
+            [self.plant.reanalysis[key].index.min() for key in self.reanalysis_products]
         ).replace(minute=0)
-        end_date = min([self.plant.reanalysis[key].index.max() for key in self._reanal_products])
+        end_date = min([self.plant.reanalysis[key].index.max() for key in self.reanalysis_products])
 
         # Next, update the start date to make sure it corresponds to a full time period
         start_date_minus = start_date - pd.DateOffset(hours=1)
@@ -749,7 +749,7 @@ class MonteCarloAEP:
                 )
 
         # Now loop through the different reanalysis products, density-correct wind speeds, and take monthly averages
-        for key in self._reanal_products:
+        for key in self.reanalysis_products:
             rean_df = self.plant.reanalysis[key]
             # rean_df = rean_df.rename(self.plant.metadata[key].col_map)
             rean_df["ws_dens_corr"] = mt.air_density_adjusted_wind_speed(
