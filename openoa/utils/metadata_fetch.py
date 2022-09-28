@@ -130,7 +130,7 @@ def attach_eia_data(
     wind_sheet: str | Path,
 ):
     """
-    Assign EIA meta data to PlantData object.
+    Assign EIA meta data to PlantData object, which is by default an empty dictionary.
 
     Args:
         project(:obj:`PlantData`): PlantData object for a particular project
