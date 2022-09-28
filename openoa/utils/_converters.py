@@ -202,8 +202,9 @@ def series_to_df(*args: pd.Series, names: list[str] = None) -> tuple[pd.DataFram
         raise TypeError("At least one of the provided values was not a pandas Series")
 
     # Rename the series to the name of the method argument if it doesn't already have name
-    if names is not None:
-        names = [name if el.name is None else el.name for el, name in zip(args, names)]
+    if names is None:
+        names = [None] * len(args)
+    names = [name if el.name is None else el.name for el, name in zip(args, names)]
     args = [el.rename(name) if el.name is None else el for el, name in zip(args, names)]
 
     args = [el.to_frame() for el in args]
