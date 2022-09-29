@@ -607,23 +607,18 @@ class MonteCarloAEP(FromDictMixin):
             2. For each monthly/daily value, find percentage of NaN data used in creating it and flag if percentage is
                greater than 0
 
-        Args:
-            (None)
-        Returns:
-            (None)
         """
         df = self.plant.meter  # Get the meter data frame
 
-        # Create the monthly/daily data frame by summing meter energy
-        self.aggregate = (
-            df.resample(self.resample_freq)["energy"].sum() / 1e6
-        ).to_frame()  # Get monthly energy values in GWh
-        self.aggregate.rename(columns={"energy": "energy_gwh"}, inplace=True)  # Rename kWh to MWh
+        # Create the monthly/daily data frame by summing meter energy, in GWh
+        self.aggregate = df.resample(self.resample_freq)["energy"].sum().to_frame() / 1e6
+        self.aggregate.rename(columns={"energy": "energy_gwh"}, inplace=True)
 
         # Determine how much 10-min data was missing for each year-month/daily energy value. Flag accordigly if any is missing
+        # Get percentage of meter data that were NaN when summing to monthly/daily
         self.aggregate["energy_nan_perc"] = df.resample(self.resample_freq)["energy"].apply(
             tm.percent_nan
-        )  # Get percentage of meter data that were NaN when summing to monthly/daily
+        )
 
         if self.time_resolution == "M":
             # Create a column with expected number of days per month (to be used when normalizing to 30-days for regression)
@@ -634,9 +629,7 @@ class MonteCarloAEP(FromDictMixin):
             # Get actual number of days per month in the raw data
             # (used when trimming beginning and end of monthly data frame)
             # If meter data has higher resolution than monthly
-            if (self.plant.metadata.meter.frequency == "1MS") | (
-                self.plant.metadata.meter.frequency == "1M"
-            ):
+            if self.plant.metadata.meter.frequency in ("1M", "1MS"):
                 self.aggregate["num_days_actual"] = self.aggregate["num_days_expected"]
             else:
                 self.aggregate["num_days_actual"] = df.resample("MS")["energy"].apply(tm.num_days)
@@ -652,7 +645,7 @@ class MonteCarloAEP(FromDictMixin):
         Returns:
             (None)
         """
-        df = self.plant.curtail
+        df = self.plant.curtail.copy()
 
         curt_aggregate = np.divide(
             df.resample(self.resample_freq)[["availability", "curtailment"]].sum(), 1e6
@@ -682,20 +675,21 @@ class MonteCarloAEP(FromDictMixin):
             self.aggregate["curtailment_gwh"], self.aggregate["gross_energy_gwh"]
         )
 
+        # Get percentage of 10-min meter data that were NaN when summing to monthly/daily
         self.aggregate["avail_nan_perc"] = df.resample(self.resample_freq)["availability"].apply(
             tm.percent_nan
-        )  # Get percentage of 10-min meter data that were NaN when summing to monthly/daily
+        )
         self.aggregate["curt_nan_perc"] = df.resample(self.resample_freq)["curtailment"].apply(
             tm.percent_nan
-        )  # Get percentage of 10-min meter data that were NaN when summing to monthly/daily
+        )
 
+        # If more than 1% of data are NaN, set flag to True
         self.aggregate["nan_flag"] = False  # Set flag to false by default
-        self.aggregate.loc[
-            (self.aggregate["energy_nan_perc"] > self.uncertainty_nan_energy)
-            | (self.aggregate["avail_nan_perc"] > self.uncertainty_nan_energy)
-            | (self.aggregate["curt_nan_perc"] > self.uncertainty_nan_energy),
-            "nan_flag",
-        ] = True  # If more than 1% of data are NaN, set flag to True
+        ix_nan = (
+            self.aggregate[["energy_nan_perc", "avail_nan_perc", "curt_nan_perc"]]
+            > self.uncertainty_nan_energy
+        ).any(axis=1)
+        self.aggregate.loc[ix_nan, "nan_flag"] = True
 
         # By default, assume all reported losses are representative of long-term operational
         self.aggregate["availability_typical"] = True
@@ -723,33 +717,35 @@ class MonteCarloAEP(FromDictMixin):
         ).replace(minute=0)
         end_date = min([self.plant.reanalysis[key].index.max() for key in self.reanalysis_products])
 
-        # Next, update the start date to make sure it corresponds to a full time period
+        # Next, update the start date to make sure it corresponds to a full time period, by shifting
+        # to either the start of the next month, or start of the next day, depending on the frequency
         start_date_minus = start_date - pd.DateOffset(hours=1)
         if (self.time_resolution == "M") & (start_date.month == start_date_minus.month):
-            # If not at the beginning of a month, use the beginning of the next month as the start date
             start_date = start_date.replace(day=1, hour=0, minute=0) + pd.DateOffset(months=1)
         elif (self.time_resolution == "D") & (start_date.day == start_date_minus.day):
-            # If not at the beginning of a day, use the beginning of the next day as the start date
             start_date = start_date.replace(hour=0, minute=0) + pd.DateOffset(days=1)
 
-        # Now determine the end date based on either the user-defined end date or the end of the last full month
+        # Now determine the end date based on either the user-defined end date or the end of the
+        # last full month, or last full day
         if self.end_date_lt is not None:
-            # If valid (before the last full time period in the reanalysis data), use the specified end date
+            # If valid (before the last full time period in the data), use the specified end date
             end_date_lt_plus = self.end_date_lt + pd.DateOffset(hours=1)
             if (self.time_resolution == "M") & (self.end_date_lt.month == end_date_lt_plus.month):
-                # If not at the end of a month, use the end of the month as the new end date
                 self.end_date_lt = (
                     self.end_date_lt.replace(day=1, hour=0, minute=0)
                     + pd.DateOffset(months=1)
                     - pd.DateOffset(hours=1)
                 )
             elif (self.time_resolution == "D") & (self.end_date_lt.day == end_date_lt_plus.day):
-                # If not at the end of a day, use the end of the day as the new end date
                 self.end_date_lt = self.end_date_lt.replace(hour=23, minute=0)
 
             if self.end_date_lt > end_date:
                 raise ValueError(
-                    "Invalid end date for long-term correction. The end date cannot exceed the last full time period (defined by the time resolution) in the provided reanalysis data."
+                    (
+                        "Invalid end date for long-term correction. The end date cannot exceed the "
+                        "last full time period (defined by the time resolution) in the provided "
+                        "reanalysis data."
+                    )
                 )
             else:
                 # replace end date
@@ -776,23 +772,29 @@ class MonteCarloAEP(FromDictMixin):
         if self._reanalysis_aggregate.index[0] > start_date_required:
             if self.end_date_lt is not None:
                 raise ValueError(
-                    "Invalid end date argument for long-term correction. This end date does not provide enough reanalysis data for the long-term correction."
+                    (
+                        "Invalid end date argument for long-term correction. This end date does not "
+                        "provide enough reanalysis data for the long-term correction."
+                    )
                 )
             else:
                 raise ValueError(
-                    "The date range of the provided reanalysis data is not long enough to perform the long-term correction."
+                    (
+                        "The date range of the provided reanalysis data is not long enough to "
+                        "perform the long-term correction."
+                    )
                 )
 
-        # Now loop through the different reanalysis products, density-correct wind speeds, and take monthly averages
+        # Correct each reanalysis product, density-correct wind speeds, and take monthly averages
         for key in self.reanalysis_products:
             rean_df = self.plant.reanalysis[key]
             # rean_df = rean_df.rename(self.plant.metadata[key].col_map)
             rean_df["ws_dens_corr"] = mt.air_density_adjusted_wind_speed(
                 rean_df["windspeed"], rean_df["density"]
-            )  # Density correct wind speeds
+            )
             self._reanalysis_aggregate[key] = rean_df.resample(self.resample_freq)[
                 "ws_dens_corr"
-            ].mean()  # .to_frame() # Get average wind speed by year-month
+            ].mean()  # .to_frame()
 
             if self.reg_wind_direction | self.reg_temperature:
                 cols = [f"{key}_{var}" for var in self.reanalysis_vars]
@@ -800,7 +802,7 @@ class MonteCarloAEP(FromDictMixin):
                     rean_df[self.reanalysis_vars].resample(self.resample_freq).mean()
                 )
 
-            if self.reg_wind_direction:  # if wind direction is considered as regression variable
+            if self.reg_wind_direction:
                 self._reanalysis_aggregate[key + "_winddirection"] = np.rad2deg(
                     np.pi
                     - (
@@ -820,13 +822,7 @@ class MonteCarloAEP(FromDictMixin):
     @logged_method_call
     def trim_monthly_df(self):
         """
-        Remove first and/or last month of data if the raw data had an incomplete number of days
-
-        Args:
-            (None)
-
-        Returns:
-            (None)
+        Remove first and/or last month of data if the raw data had an incomplete number of days.
         """
         for p in self.aggregate.index[[0, -1]]:  # Loop through 1st and last data entry
             if (
@@ -835,17 +831,19 @@ class MonteCarloAEP(FromDictMixin):
             ):
                 self.aggregate.drop(p, inplace=True)  # Drop the row from data frame
 
+        # Unsure why this is any different
+        # ix = [0, -1]
+        # ix_drop = np.where(
+        #     self.aggregate["num_days_expected"].iloc[ix] == self.aggregate["num_days_actual"].iloc[ix]
+        # )
+        # self.aggregate.drop(self.aggregate.iloc[ix].index[ix_drop], inplace=True)
+
     @logged_method_call
     def calculate_long_term_losses(self):
         """
-        This function calculates long-term availability and curtailment losses based on the reported data grouped by the time resolution,
-        filtering for those data that are deemed representative of average plant performance.
-
-        Args:
-            (None)
-
-        Returns:
-            (None)
+        This function calculates long-term availability and curtailment losses based on the reported
+        data grouped by the time resolution, filtering for those data that are deemed representative
+        of average plant performance.
         """
         df = self.aggregate
 
@@ -911,11 +909,13 @@ class MonteCarloAEP(FromDictMixin):
     @logged_method_call
     def filter_outliers(self, n):
         """
-        This function filters outliers based on a combination of range filter, unresponsive sensor filter,
-        and window filter.
-        We use a memoized funciton to store the regression data in a dictionary for each combination as it
-        comes up in the Monte Carlo simulation. This saves significant computational time in not having to run
-        robust linear regression for each Monte Carlo iteration
+        This function filters outliers based on a combination of range filter, unresponsive sensor
+        filter, and window filter.
+
+        We use a memoized funciton to store the regression data in a dictionary for each
+        combination as it comes up in the Monte Carlo simulation. This saves significant
+        computational time in not having to run robust linear regression for each Monte Carlo
+        iteration.
 
         Args:
             n(:obj:`float`): Monte Carlo iteration
@@ -933,7 +933,6 @@ class MonteCarloAEP(FromDictMixin):
 
         # If valid data hasn't yet been stored in dictionary, determine the valid data
         df = self.aggregate
-        print(self.aggregate.columns)
 
         # First set of filters checking combined losses and if the Nan data flag was on
         df_sub = df.loc[
@@ -967,8 +966,7 @@ class MonteCarloAEP(FromDictMixin):
         if self.outlier_detection:
             if self.time_resolution == "M":
                 # Monthly linear regression (i.e., few data points):
-                # filter outliers based on robust linear regression
-                # using Huber algorithm to flag outliers
+                # flag outliers with robust linear regression using Huber algorithm
 
                 # Reanalysis data with constant column, and energy data normalized to 30 days
                 X = sm.add_constant(df_sub[reanal])
