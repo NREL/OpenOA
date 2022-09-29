@@ -17,8 +17,8 @@ from pyproj import Transformer
 from shapely.geometry import Point
 
 import openoa.utils.met_data_processing as met
-from openoa.analysis import MonteCarloAEP
 from openoa.utils.metadata_fetch import attach_eia_data
+from openoa.utils.unit_conversion import convert_power_to_energy
 
 
 # *************************************************************************
@@ -438,6 +438,7 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
     # Parameterizations that should not be changed
     # Prescribed mappings, datatypes, and units for in-code reference.
     name: str = field(default="scada", init=False)
+    energy: str = field(default="energy", init=False)  # calculated in PlantData
     col_map: dict = field(init=False)
     dtypes: dict = field(
         default=dict(
@@ -449,6 +450,7 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
             status=str,
             pitch=float,
             temperature=float,
+            energy=float,
         ),
         init=False,  # don't allow for user input
     )
@@ -462,6 +464,7 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
             status=None,
             pitch="deg",
             temperature="C",
+            energy="kWh",
         ),
         init=False,  # don't allow for user input
     )
@@ -476,6 +479,7 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
             status=self.status,
             pitch=self.pitch,
             temperature=self.temperature,
+            energy=self.energy,
         )
 
 
@@ -1167,6 +1171,7 @@ class PlantData:
         # TODO: Need to have a class level input for the user-preferred projection system
         # TODO: Why does the non-WGS84 projection matter?
         self.parse_asset_geometry()
+        self._calculate_turbine_energy()
 
         # Change the column names to the -25 convention for easier use in the rest of the code base
         self.update_column_names()
@@ -1618,6 +1623,12 @@ class PlantData:
                     df, meta.reanalysis[name].col_map, reverse=reverse
                 )
             self.reanalysis = reanalysis
+
+    def _calculate_turbine_energy(self) -> None:
+        energy_col = self.metadata.scada.energy
+        power_col = self.metadata.scada.power
+        frequency = self.metadata.scada.frequency
+        self.scada[energy_col] = convert_power_to_energy(self.scada[power_col], frequency)
 
     @property
     def turbine_id(self) -> np.ndarray:
