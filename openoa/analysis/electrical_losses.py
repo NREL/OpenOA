@@ -3,17 +3,29 @@
 # an average annual basis by comparing monthly energy production from the turbines
 # and the revenue meter
 
+from __future__ import annotations
+
+import attrs
 import numpy as np
 import pandas as pd
+import numpy.typing as npt
 from tqdm import tqdm
+from attrs import field, define
 
 from openoa import logging, logged_method_call
+from openoa.plant import PlantData, FromDictMixin
 
 
 logger = logging.getLogger(__name__)
 
+NDArrayFloat = npt.NDArray[np.float64]
 
-class ElectricalLosses(object):
+MINUTES_PER_HOUR = 60
+HOURS_PER_DAY = 24
+
+
+@define(auto_attribs=True)
+class ElectricalLosses(FromDictMixin):
     """
     A serial (Pandas-driven) implementation of calculating the average monthly and annual
     electrical losses at a wind plant, and their uncertainty.
@@ -36,68 +48,57 @@ class ElectricalLosses(object):
     to the actual. Daily corrected sum of turbine energy is then summed on a monthly basis. Electrical
     loss is then the difference between total corrected turbine energy production and meter production
     over those concurrent months.
+
+    Args:
+        plant(:obj:`PlantData`): PlantData object from which EYAGapAnalysis should draw data.
+        UQ(:obj:`bool`): Indicator to perform (True) or not (False) uncertainty quantification
+        num_sim(:obj:`int`): number of Monte Carlo simulations
+        uncertainty_meter(:obj:`float`): uncertainty imposed to revenue meter data (for UQ = True case)
+        uncertainty_scada(:obj:`float`): uncertainty imposed to scada data (for UQ = True case)
+        uncertainty_correction_thresh(:obj:`tuple` | `float`): Data availability thresholds (fractions)
+            under which months should be eliminated. If :py:attr:`UQ` = True, then a 2-element tuple
+            containing an upper and lower bound for a randomly selected value should be given,
+            otherwise, a scalar value should be provided.
     """
 
-    @logged_method_call
-    def __init__(self, plant, UQ=False, num_sim=20000):
-        """
-        Initialize electrical losses class with input parameters
+    plant: PlantData = field(validator=attrs.validators.instance_of(PlantData))
+    UQ: bool = field(default=False, converter=bool)
+    num_sim: int = field(default=20000, converter=int)
+    uncertainty_correction_thresh: NDArrayFloat = field(default=0.95)
+    uncertainty_meter: NDArrayFloat = field(default=0.005)
+    uncertainty_scada: NDArrayFloat = field(default=0.005)
 
-        Args:
-         plant(:obj:`PlantData object`): PlantData object from which EYAGapAnalysis should draw data.
-         num_sim:(:obj:`int`): number of Monte Carlo simulations
-         UQ:(:obj:`bool`): choice whether to perform (True) or not (False) uncertainty quantification
+    # Internally created attributes need to be given a type before usage
+    monthly_meter: bool = field(default=False, init=False)
+
+    @uncertainty_correction_thresh.validator
+    def validate_threshold_input(self, attribute: attrs.Attribute, value: tuple | float) -> None:
+        if self.UQ:
+            if not isinstance(self.uncertainty_correction_thresh, tuple):
+                raise ValueError(f"When UQ is True, {attribute.name} must be a tuple")
+        else:
+            if not isinstance(self.uncertainty_correction_thresh, float):
+                raise ValueError(f"When UQ is True, {attribute.name} must be a float")
+
+    @logged_method_call
+    def __attrs_post_init__(self):
+        """
+        Initialize logging and post-init setup steps.
         """
         logger.info("Initializing Electrical Losses Object")
 
-        # Check that selected UQ is allowed
-        if UQ:
+        # Check that selected UQ is allowed and reset num_sim if no UQ
+        if self.UQ:
             logger.info("Note: uncertainty quantification will be performed in the calculation")
-            self.num_sim = num_sim
-        elif not UQ:
+        else:
             logger.info("Note: uncertainty quantification will NOT be performed in the calculation")
             self.num_sim = 1
-        else:
-            raise ValueError(
-                "UQ has to either be True (uncertainty quantification performed, default) or False (uncertainty quantification NOT performed)"
-            )
-        self.UQ = UQ
-
-        self.plant = plant
-
-        self._min_per_hour = 60  # Mintues per hour converter
-        self._hours_per_day = 24  # Hours per day converter
 
     @logged_method_call
-    def run(
-        self, uncertainty_meter=0.005, uncertainty_scada=0.005, uncertainty_correction_thresh=0.95
-    ):
+    def run(self):
         """
         Run the electrical loss calculation in order by calling this function.
-
-        Args:
-         uncertainty_meter(:obj:`float`): uncertainty imposed to revenue meter data (for UQ = True case)
-         uncertainty_scada(:obj:`float`): uncertainty imposed to scada data (for UQ = True case)
-         uncertainty_correction_thresh(:obj:`tuple`): Data availability thresholds (fractions)
-                                                         under which months should be eliminated.
-                                                         This should be a tuple in the UQ = True case,
-                                                         a single value when UQ = False.
-        Returns:
-            (None)
         """
-        # Define uncertainties and check types
-        expected_type = float if not self.UQ else tuple
-        assert (
-            type(uncertainty_correction_thresh) == expected_type
-        ), f"uncertainty_correction_thresh must be {expected_type} for UQ={self.UQ}"
-
-        self.uncertainty_correction_thresh = np.array(
-            uncertainty_correction_thresh, dtype=np.float64
-        )
-        if self.UQ:
-            self.uncertainty_meter = uncertainty_meter
-            self.uncertainty_scada = uncertainty_scada
-
         # Process SCADA data to daily sums
         self.process_scada()
 
@@ -180,8 +181,8 @@ class ElectricalLosses(object):
 
         # Specify expected count provided all turbines reporting
         expected_count = (
-            self._hours_per_day
-            * self._min_per_hour
+            HOURS_PER_DAY
+            * MINUTES_PER_HOUR
             / (pd.to_timedelta(self.plant._scada_freq).total_seconds() / 60)
             * self.plant._num_turbines
         )
@@ -216,8 +217,8 @@ class ElectricalLosses(object):
 
         # Specify expected count provided all timestamps reporting
         expected_mcount = (
-            self._hours_per_day
-            * self._min_per_hour
+            HOURS_PER_DAY
+            * MINUTES_PER_HOUR
             / (pd.to_timedelta(self.plant._meter_freq).total_seconds() / 60)
         )
 
@@ -259,8 +260,8 @@ class ElectricalLosses(object):
                 scada_monthly["count"] = self._scada_sum.resample("MS")["count"].sum()
                 scada_monthly["expected_count_monthly"] = (
                     scada_monthly.index.daysinmonth
-                    * self._hours_per_day
-                    * self._min_per_hour
+                    * HOURS_PER_DAY
+                    * MINUTES_PER_HOUR
                     / (pd.to_timedelta(self.plant._scada_freq).total_seconds() / 60)
                     * self.plant._num_turbines
                 )

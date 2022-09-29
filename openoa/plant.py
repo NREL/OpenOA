@@ -17,6 +17,7 @@ from pyproj import Transformer
 from shapely.geometry import Point
 
 import openoa.utils.met_data_processing as met
+from openoa.analysis import MonteCarloAEP
 from openoa.utils.metadata_fetch import attach_eia_data
 
 
