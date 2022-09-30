@@ -3,9 +3,8 @@
 Analysis Methods
 ################
 
-Analysis Methods are a collection of modules and classes to accomplish high level analysis of plant data. They integrate
-the more abstract toolkit modules with specific PlantData classes to create a reproducible process. Analysis modules may
-respect the engine parameter of PlantData objects to support multi-platform, scalable analysis.
+Analysis Methods work on PlantData objects to produce high level analysis products, such as the long term AEP.
+These methods rely on the more generic toolkit modules, chaining them together to create reproducible analysis processes.
 
 Plant Level Analysis
 ********************

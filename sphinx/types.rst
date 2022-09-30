@@ -3,13 +3,15 @@
 Plant Data
 ##########
 
-New data imported into the openoa toolkit can take advantage of the data structures in the :py:mod:`plant`
-module. As of v3, users can use the :py:class:`openoa.plant.PlantData` class, instead of subclassing :py:class:`PlantData`,
-and implementing their own :py:meth:`prepare()` method. Additionally, as of v3, :py:class:`openoa.plant.PlantData` is an attrs
+This is the core data class used to contain all data relevant to a wind plant and is used throughout OpenOA.
+The PlantData holds multiple Pandas Data Frames, each with a specified schema.
+You can take advantage of the data structures in the :py:mod:`plant` module by instantiating it using one of the available constructors.
+
+:py:class:`openoa.plant.PlantData` is an attrs
 dataclass, and each of the core representations are Pandas :py:class:`DataFrame`s, e.g., :py:attr:`openoa.plant.PlantData.scada`,
 :py:attr:`openoa.plant.PlantData.reanalysis`, etc.
 
-The added benefit of adopting attrs for the core structure is many data checks can happen automatically
+The benefit of adopting attrs for the core structure is many data checks can happen automatically
 at initialization, so many of the :py:meth:`openoa.plant.PlantData.prepare` steps a user might implement, will already be addressed.
 Specifically, using the new :py:class:`openoa.plant.PlantMetaData` structure, a user can map the column names already present
 in their data to those that OpenOA will use internally, set the expected frequency of the their
