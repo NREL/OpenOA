@@ -156,15 +156,17 @@ class ElectricalLosses(FromDictMixin):
         This data frame is stored as self.inputs.
         """
         if self.UQ:
+            n_decimal = (len(str(el.split(".")[1])) for el in self.uncertainty_correction_threshold)
+            integer_multiplier = 10**n_decimal
             inputs = {
                 "meter_data_fraction": np.random.normal(1, self.uncertainty_meter, self.num_sim),
                 "scada_data_fraction": np.random.normal(1, self.uncertainty_scada, self.num_sim),
                 "correction_threshold": np.random.randint(
-                    self.uncertainty_correction_threshold[0] * 1000,
-                    self.uncertainty_correction_threshold[1] * 1000,
+                    self.uncertainty_correction_threshold[0] * integer_multiplier,
+                    self.uncertainty_correction_threshold[1] * integer_multiplier,
                     self.num_sim,
                 )
-                / 1000.0,
+                / integer_multiplier,
             }
             self.inputs = pd.DataFrame(inputs)
 
