@@ -24,7 +24,11 @@ def offset_to_seconds(offset: str | np.datetime64) -> int | float:
     Returns:
         :obj:`int` | `float`: The number of seconds corresponding to :py:attr:`offset`.
     """
-    return pd.to_timedelta(offset).total_seconds()
+    try:
+        seconds = pd.to_timedelta(offset).total_seconds()
+    except ValueError:  # Needs a leading number or the above will fail
+        seconds = pd.to_timedelta(f"1{offset}").total_seconds()
+    return seconds
 
 
 def determine_frequency_seconds(data: pd.DataFrame, index_col: str | None = None) -> int | float:
@@ -40,13 +44,14 @@ def determine_frequency_seconds(data: pd.DataFrame, index_col: str | None = None
         :obj:`int` | `float`: The number of seconds corresponding to :py:attr:`offset`.
     """
     # Get the non-duplicated DatetimeIndex values from a single level, or multi-level index
-    index = data.index.unique() if index_col is None else data.get_level_values(index_col).unique()
+    index = data.index if index_col is None else data.index.get_level_values(index_col)
+    index = index.unique()
 
     unique_diffs, counts = np.unique(np.diff(index), return_counts=True)
     return offset_to_seconds(unique_diffs[np.argmax(counts)])
 
 
-def determine_frequency(data: pd.DataFrame, index_col: str | None) -> str | int | float:
+def determine_frequency(data: pd.DataFrame, index_col: str | None = None) -> str | int | float:
     """Gets the offset alias from the datetime index of :py:attr:`data`, or calculates the most
     common time difference between all non-duplicate timestamps.
 
@@ -59,7 +64,7 @@ def determine_frequency(data: pd.DataFrame, index_col: str | None) -> str | int 
         :obj:`str` | `int` | `float`: The offset string or number of seconds between timestamps.
     """
     # Get the timetamp index values
-    index = data.index if index_col is None else data.get_level_values(index_col)
+    index = data.index if index_col is None else data.index.get_level_values(index_col)
 
     # Check for an offset string being available
     freq = index.freqstr
@@ -70,6 +75,7 @@ def determine_frequency(data: pd.DataFrame, index_col: str | None) -> str | int 
     # so
     if freq is None:
         freq = determine_frequency_seconds(data, index_col)
+    return freq
 
 
 def convert_local_to_utc(d: str | datetime.datetime, tz_string: str) -> datetime.datetime:
