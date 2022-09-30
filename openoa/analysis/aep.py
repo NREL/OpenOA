@@ -201,6 +201,16 @@ class MonteCarloAEP(FromDictMixin):
     _run: pd.DataFrame = field(init=False)
     results: pd.DataFrame = field(init=False)
 
+    @plant.validator
+    def validate_plant_ready_for_anylsis(
+        self, attribute: attrs.Attribute, value: PlantData
+    ) -> None:
+        """Validates that the value has been validated for an electrical losses analysis."""
+        if set(("MonteCarloAEP", "all")).intersection(value.analysis_type) == set():
+            raise TypeError(
+                "The input to 'plant' must be validated for at least the 'MonteCarloAEP'"
+            )
+
     # @logged_method_call
     def __attrs_post_init__(self):
         """

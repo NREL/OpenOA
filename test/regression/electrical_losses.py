@@ -14,6 +14,8 @@ class TestElectricalLosses(unittest.TestCase):
         np.random.seed(42)
         # Set up data to use for testing (ENGIE data)
         self.project = project_ENGIE.prepare(example_data_path_str)
+        self.project.analysis_type.append("ElectricalLosses")
+        self.project.validate()
 
         # Create electrical loss method object and run
         # NO UQ case
@@ -42,6 +44,8 @@ class TestElectricalLossesUQ(unittest.TestCase):
         np.random.seed(42)
         # Set up data to use for testing (ENGIE data)
         self.project = project_ENGIE.prepare(example_data_path_str)
+        self.project.analysis_type.append("ElectricalLosses")
+        self.project.validate()
 
         # Create electrical loss method object and run
         # WITH UQ
