@@ -29,6 +29,9 @@ def set_styling() -> None:
     mpl.rcParams["axes.axisbelow"] = True
 
 
+set_styling()
+
+
 def coordinateMapping(lon1, lat1, lon2, lat2):
     """Map latitude and longitude to  local cartesian coordinates
 

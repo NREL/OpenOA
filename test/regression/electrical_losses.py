@@ -5,7 +5,8 @@ import numpy.testing as npt
 
 from openoa.analysis.electrical_losses import ElectricalLosses
 
-from examples import project_ENGIE, example_data_path_str
+
+from examples import project_ENGIE, example_data_path_str  # isort:skip
 
 
 class TestElectricalLosses(unittest.TestCase):
@@ -16,7 +17,9 @@ class TestElectricalLosses(unittest.TestCase):
 
         # Create electrical loss method object and run
         # NO UQ case
-        self.analysis = ElectricalLosses(self.project, UQ=False, uncertainty_correction_threshold=0.95)
+        self.analysis = ElectricalLosses(
+            self.project, UQ=False, uncertainty_correction_threshold=0.95
+        )
         self.analysis.run()
 
     def testelectrical_losses_results(self):
@@ -42,7 +45,9 @@ class TestElectricalLossesUQ(unittest.TestCase):
 
         # Create electrical loss method object and run
         # WITH UQ
-        self.analysis_uq = ElectricalLosses(self.project, UQ=True, num_sim=3000, uncertainty_correction_threshold=(0.9, 0.995))
+        self.analysis_uq = ElectricalLosses(
+            self.project, UQ=True, num_sim=3000, uncertainty_correction_threshold=(0.9, 0.995)
+        )
         self.analysis_uq.run()
 
     def testelectrical_losses_results(self):
