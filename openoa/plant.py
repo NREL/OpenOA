@@ -1631,13 +1631,18 @@ class PlantData:
         self.scada[energy_col] = convert_power_to_energy(self.scada[power_col], frequency)
 
     @property
-    def turbine_id(self) -> np.ndarray:
+    def turbine_ids(self) -> np.ndarray:
         """The 1D array of turbine IDs. This is created from the `asset` data, or unique IDs from the
         SCADA data, if `asset` is undefined.
         """
         if self.asset is None:
             return self.scada.index.get_level_values("id").unique()
         return self.asset.loc[self.asset["type"] == "turbine"].index.values
+
+    @property
+    def n_turbines(self) -> int:
+        """The number of turbines contained in the data."""
+        return self.turbine_ids.size
 
     def turbine_df(self, turbine_id: str) -> pd.DataFrame:
         """Filters `scada` on a single `turbine_id` and returns the filtered data frame.
@@ -1653,13 +1658,18 @@ class PlantData:
         return self.scada.xs(turbine_id, level=1)
 
     @property
-    def tower_id(self) -> np.ndarray:
+    def tower_ids(self) -> np.ndarray:
         """The 1D array of met tower IDs. This is created from the `asset` data, or unique IDs from the
         tower data, if `asset` is undefined.
         """
         if self.asset is None:
             return self.tower.index.get_level_values("id").unique()
         return self.asset.loc[self.asset["type"] == "tower"].index.values
+
+    @property
+    def n_towers(self) -> int:
+        """The number of met towers contained in the data."""
+        return self.tower_ids.size
 
     def tower_df(self, tower_id: str) -> pd.DataFrame:
         """Filters `tower` on a single `tower_id` and returns the filtered data frame.
@@ -1675,12 +1685,12 @@ class PlantData:
         return self.tower.xs(tower_id, level=1)
 
     @property
-    def asset_id(self) -> np.ndarray:
+    def asset_ids(self) -> np.ndarray:
         """The ID array of turbine and met tower IDs. This is created from the `asset` data, or unique
         IDs from both the SCADA data and tower data, if `asset` is undefined.
         """
         if self.asset is None:
-            return np.concatenate([self.turbine_id, self.tower_id])
+            return np.concatenate([self.turbine_ids, self.tower_ids])
         return self.asset.index.values
 
     # NOTE: v2 AssetData methods
@@ -1732,8 +1742,8 @@ class PlantData:
         """
 
         # Get the valid IDs for both the turbines and towers
-        ix_turb = self.turbine_id if turbine_ids is None else np.array(turbine_ids)
-        ix_tower = self.tower_id if tower_ids is None else np.array(tower_ids)
+        ix_turb = self.turbine_ids if turbine_ids is None else np.array(turbine_ids)
+        ix_tower = self.tower_ids if tower_ids is None else np.array(tower_ids)
         ix = np.concatenate([ix_turb, ix_tower])
 
         distance = self.asset_distance_matrix.loc[ix, ix]
@@ -1776,14 +1786,6 @@ class PlantData:
         if "nearest_tower_id" not in self.asset.columns:
             self.calculate_nearest_neighbor()
         return self.asset.loc[id, "nearest_tower_id"].values[0]
-
-    def turbine_ids(self) -> list[str]:
-        """Convenience method for getting the unique turbine IDs from the scada data.
-
-        Returns:
-            list[str]: List of unique turbine identifiers.
-        """
-        return self.scada[self.metadata.scada.id].unique()
 
 
 # **********************************************************
