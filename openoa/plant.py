@@ -1470,8 +1470,6 @@ class PlantData:
                 for sub_name, df in data_dict[name].items():
                     actual_frequencies["reanalysis"][sub_name] = ts.determine_frequency(df)
 
-        print(actual_frequencies)
-
         invalid_freq = {}
         for name, freq in actual_frequencies.items():
             if category != "all" and category != name:

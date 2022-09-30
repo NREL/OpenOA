@@ -93,7 +93,7 @@ class ElectricalLosses(FromDictMixin):
         self, attribute: attrs.Attribute, value: PlantData
     ) -> None:
         """Validates that the value has been validated for an electrical losses analysis."""
-        if set(("ElectricalLosses", "all")) not in (value.analysis_type):
+        if set(("ElectricalLosses", "all")).intersection(value.analysis_type) == set():
             raise TypeError(
                 "The input to 'plant' must be validated for at least the 'ElectricalLosses'"
             )
@@ -118,7 +118,7 @@ class ElectricalLosses(FromDictMixin):
             if not 0.0 < value < 1.0:
                 raise ValueError(f"'{attribute.name}' must be in the range (0, 1).")
         else:
-            if any(0.0 < x < 1.0 for x in value):
+            if not all(0.0 < x < 1.0 for x in value):
                 raise ValueError(f"Each value of '{attribute.name}' must be in the range (0, 1).")
 
     @logged_method_call
@@ -144,7 +144,7 @@ class ElectricalLosses(FromDictMixin):
     @logged_method_call
     def run(self):
         """
-        Run the electrical loss calculation in order by calling this function.
+        Run the electrical losses calculation.
         """
         # Setup Monte Carlo approach, and calculate the electrical losses
         self.setup_inputs()
@@ -153,13 +153,7 @@ class ElectricalLosses(FromDictMixin):
     def setup_inputs(self):
         """
         Create and populate the data frame defining the simulation parameters.
-        This data frame is stored as self.inputs
-
-        Args:
-            (None)
-
-        Returns:
-            (None)
+        This data frame is stored as self.inputs.
         """
         if self.UQ:
             inputs = {
