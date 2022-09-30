@@ -256,7 +256,9 @@ def test_SCADAMetaData():
     valid_map.pop("frequency")
 
     meta = SCADAMetaData.from_dict(meta_dict)
-    assert meta.col_map == valid_map
+    cols = deepcopy(meta.col_map)
+    cols.pop("energy")  # need to move the internally-set mapping
+    assert cols == valid_map
     assert meta.frequency == meta_dict["frequency"]
 
     # Ensure the defaults are the defaults
