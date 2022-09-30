@@ -5,18 +5,23 @@
 
 from __future__ import annotations
 
+import datetime
+
 import attrs
 import numpy as np
 import pandas as pd
 import numpy.typing as npt
+import matplotlib.pyplot as plt
 from tqdm import tqdm
 from attrs import field, define
 
 from openoa import logging, logged_method_call
 from openoa.plant import PlantData, FromDictMixin
+from openoa.utils.pandas_plotting import set_styling
 
 
 logger = logging.getLogger(__name__)
+set_styling()
 
 NDArrayFloat = npt.NDArray[np.float64]
 
@@ -55,7 +60,7 @@ class ElectricalLosses(FromDictMixin):
         num_sim(:obj:`int`): number of Monte Carlo simulations
         uncertainty_meter(:obj:`float`): uncertainty imposed to revenue meter data (for UQ = True case)
         uncertainty_scada(:obj:`float`): uncertainty imposed to scada data (for UQ = True case)
-        uncertainty_correction_thresh(:obj:`tuple` | `float`): Data availability thresholds (fractions)
+        uncertainty_correction_threshold(:obj:`tuple` | `float`): Data availability thresholds (fractions)
             under which months should be eliminated. If :py:attr:`UQ` = True, then a 2-element tuple
             containing an upper and lower bound for a randomly selected value should be given,
             otherwise, a scalar value should be provided.
@@ -64,7 +69,7 @@ class ElectricalLosses(FromDictMixin):
     plant: PlantData = field(validator=attrs.validators.instance_of(PlantData))
     UQ: bool = field(default=False, converter=bool)
     num_sim: int = field(default=20000, converter=int)
-    uncertainty_correction_thresh: NDArrayFloat = field(default=0.95)
+    uncertainty_correction_threshold: NDArrayFloat = field(default=0.95)
     uncertainty_meter: NDArrayFloat = field(default=0.005)
     uncertainty_scada: NDArrayFloat = field(default=0.005)
 
@@ -76,16 +81,17 @@ class ElectricalLosses(FromDictMixin):
     scada_daily: pd.DataFrame = field(init=False)
     scada_full_count: pd.DataFrame = field(init=False)
     meter_daily: pd.DataFrame = field(init=False)
+    combined_energy: pd.DataFrame = field(init=False)
     total_turbine_energy: pd.DataFrame = field(init=False)
     total_meter_energy: pd.DataFrame = field(init=False)
 
-    @uncertainty_correction_thresh.validator
+    @uncertainty_correction_threshold.validator
     def validate_threshold_input(self, attribute: attrs.Attribute, value: tuple | float) -> None:
         if self.UQ:
-            if not isinstance(self.uncertainty_correction_thresh, tuple):
+            if not isinstance(self.uncertainty_correction_threshold, tuple):
                 raise ValueError(f"When UQ is True, {attribute.name} must be a tuple")
         else:
-            if not isinstance(self.uncertainty_correction_thresh, float):
+            if not isinstance(self.uncertainty_correction_threshold, float):
                 raise ValueError(f"When UQ is True, {attribute.name} must be a float")
 
     @logged_method_call
@@ -134,8 +140,8 @@ class ElectricalLosses(FromDictMixin):
                 "meter_data_fraction": np.random.normal(1, self.uncertainty_meter, self.num_sim),
                 "scada_data_fraction": np.random.normal(1, self.uncertainty_scada, self.num_sim),
                 "correction_threshold": np.random.randint(
-                    self.uncertainty_correction_thresh[0] * 1000,
-                    self.uncertainty_correction_thresh[1] * 1000,
+                    self.uncertainty_correction_threshold[0] * 1000,
+                    self.uncertainty_correction_threshold[1] * 1000,
                     self.num_sim,
                 )
                 / 1000.0,
@@ -146,7 +152,7 @@ class ElectricalLosses(FromDictMixin):
             inputs = {
                 "meter_data_fraction": 1,
                 "scada_data_fraction": 1,
-                "correction_threshold": self.uncertainty_correction_thresh,
+                "correction_threshold": self.uncertainty_correction_threshold,
             }
             self.inputs = pd.DataFrame(inputs, index=[0])
 
@@ -164,8 +170,9 @@ class ElectricalLosses(FromDictMixin):
         scada_df = self.plant.scada.copy()
 
         # Sum up SCADA data power and energy and count number of entries
-        self.scada_sum = scada_df.groupby(scada_df.index)[["energy"]].sum()
-        self.scada_sum["count"] = scada_df.groupby(scada_df.index)[["energy"]].count()
+        ix_time = self.plant.scada.index.get_level_values("time")
+        self.scada_sum = scada_df.groupby(ix_time)[["energy"]].sum()
+        self.scada_sum["count"] = scada_df.groupby(ix_time)[["energy"]].count()
 
         # Calculate daily sum of all turbine energy production and count number of entries
         self.scada_daily = self.scada_sum.resample("D")["energy"].sum().to_frame()
@@ -176,7 +183,7 @@ class ElectricalLosses(FromDictMixin):
             HOURS_PER_DAY
             * MINUTES_PER_HOUR
             / (pd.to_timedelta(self.plant.metadata.scada.frequency).total_seconds() / 60)
-            * self.plant._num_turbines
+            * self.plant.n_turbines
         )
 
         # Correct sum of turbine energy for cases with missing reported data
@@ -199,13 +206,13 @@ class ElectricalLosses(FromDictMixin):
 
         # Sum up meter data to daily
         self.meter_daily = meter_df.resample("D").sum()
-        self.meter_daily["count"] = meter_df.resample("D")["energy_kwh"].count()
+        self.meter_daily["count"] = meter_df.resample("D")["energy"].count()
 
         # Specify expected count provided all timestamps reporting
         expected_count = (
             HOURS_PER_DAY
             * MINUTES_PER_HOUR
-            / (pd.to_timedelta(self.plant.metadata.meter.frequencya).total_seconds() / 60)
+            / (pd.to_timedelta(self.plant.metadata.meter.frequency).total_seconds() / 60)
         )
 
         # Keep only data with all turbines reporting for every time step during the day
@@ -237,7 +244,7 @@ class ElectricalLosses(FromDictMixin):
                     * HOURS_PER_DAY
                     * MINUTES_PER_HOUR
                     / (pd.to_timedelta(self.plant.scada.frequency).total_seconds() / 60)
-                    * self.plant._num_turbines
+                    * self.plant.n_turbines
                 )
                 scada_monthly["percent"] = (
                     scada_monthly["count"] / scada_monthly["expected_count_monthly"]
@@ -247,20 +254,80 @@ class ElectricalLosses(FromDictMixin):
                 scada_monthly = scada_monthly.loc[
                     scada_monthly["percent"] >= _run.correction_threshold, :
                 ]
-                merge_df = meter_df.join(scada_monthly)
+                self.combined_energy = meter_df.join(
+                    scada_monthly, lsuffix="_meter", rsuffix="_scada"
+                )
 
             # If sub-monthly meter data, merge the daily data for which all turbines are reporting at all timestamps
             else:
                 # Note 'self.scada_full_count' only contains full reported data
-                merge_df = self.meter_daily.join(self.scada_full_count)
+                self.combined_energy = self.meter_daily.join(
+                    self.scada_full_count, lsuffix="_meter", rsuffix="_scada"
+                )
 
             # Drop non-concurrent timestamps and get total sums over concurrent period of record
-            merge_df.dropna(inplace=True)
-            self.merge_df = merge_df
-            merge_sum = merge_df.sum(axis=0)
+            self.combined_energy.dropna(inplace=True)
+            merge_sum = self.combined_energy.sum(axis=0)
 
             # Calculate electrical loss from difference of sum of turbine and meter energy
-            self.total_turbine_energy = merge_sum["energy"] * _run.scada_data_fraction
-            self.total_meter_energy = merge_sum["energy_kwh"] * _run.meter_data_fraction
+            self.total_turbine_energy = merge_sum["energy_scada"] * _run.scada_data_fraction
+            self.total_meter_energy = merge_sum["energy_meter"] * _run.meter_data_fraction
 
             self.electrical_losses[n] = 1 - self.total_meter_energy / self.total_turbine_energy
+
+    def plot_monthly_losses(
+        self,
+        xlim: tuple[datetime.datetime, datetime.datetime] = (None, None),
+        ylim: tuple[float, float] = (None, None),
+        return_fig: bool = False,
+        figure_kwargs: dict = {},
+        legend_kwargs: dict = {},
+        plot_kwargs: dict = {},
+    ) -> None | tuple[plt.Figure, plt.Axes]:
+        """Plots the monthly timeseries of electrical losses as a percent.
+        Args:
+            xlim(:obj: `tuple[float, float]`, optional): A tuple of the x-axis (min, max) values.
+                Defaults to (None, None).
+            ylim(:obj: `tuple[float, float]`, optional): A tuple of the y-axis (min, max) values.
+                Defaults to (None, None).
+            return_fig(:obj:`bool`, optional): Set to True to return the figure and axes objects,
+                otherwise set to False. Defaults to False.
+            figure_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be
+                passed to `plt.figure`. Defaults to {}.
+            scatter_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be
+                passed to `ax.plot`. Defaults to {}.
+            legend_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be
+                passed to `ax.legend`. Defaults to {}.
+
+        Returns:
+            None | tuple[plt.Figure, plt.Axes]: If :py:attr:`return_fig`, then return the figure
+                and axes objects in addition to showing the plot.
+        """
+        figure_kwargs.setdefault("dpi", 200)
+        fig = plt.figure(**figure_kwargs)
+        ax = fig.add_subplot(111)
+
+        monthly_energy = self.combined_energy.resample("MS").sum()
+        losses = (
+            monthly_energy["corrected_energy"] - monthly_energy["energy_meter"]
+        ) / monthly_energy["corrected_energy"]
+
+        mean = losses.mean()
+        std = losses.std()
+        ax.plot(
+            losses * 100,
+            label=f"Electrical Losses\n$\mu$={mean:.2%}, $\sigma$={std:.2%}",  # noqa: W605
+            **plot_kwargs,
+        )
+
+        ax.set_xlim(xlim)
+        ax.set_ylim(ylim)
+
+        ax.legend(**legend_kwargs)
+        ax.set_xlabel("Period of Record")
+        ax.set_ylabel("Electrical Losses (%)")
+
+        fig.tight_layout()
+        plt.show()
+        if return_fig:
+            return fig, ax

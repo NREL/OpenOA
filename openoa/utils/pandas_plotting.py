@@ -6,7 +6,7 @@ This module provides helpful functions for creating various plots
 # Import required packages
 import numpy as np
 import pandas as pd
-import matplotlib
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 from pyproj import Transformer
 from bokeh.models import WMTSTileSource, ColumnDataSource
@@ -15,11 +15,18 @@ from bokeh.plotting import figure
 
 
 plt.close("all")
-font = {"family": "serif", "size": 14}
 
-matplotlib.rc("font", **font)
-matplotlib.rc("text", usetex=False)
-matplotlib.rcParams["figure.figsize"] = (15, 6)
+
+def set_styling() -> None:
+    """Sets some of the matplotlib plotting styling to be consistent throughout any module where
+    plotting is implemented.
+    """
+    font = {"family": "serif", "size": 14}
+    mpl.rc("font", **font)
+    mpl.rc("text", usetex=False)
+    mpl.rcParams["figure.figsize"] = (15, 6)
+    mpl.rcParams["axes.grid"] = True
+    mpl.rcParams["axes.axisbelow"] = True
 
 
 def coordinateMapping(lon1, lat1, lon2, lat2):
@@ -773,7 +780,7 @@ def color_to_rgb(color):
         if max(color) > 1:
             color = tuple([i / 255 for i in color])
 
-    rgb = matplotlib.colors.to_rgb(color)
+    rgb = mpl.colors.to_rgb(color)
 
     rgb = tuple([int(i * 255) for i in rgb])
 
