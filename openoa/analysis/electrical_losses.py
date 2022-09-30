@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import datetime
+from lib2to3.pytree import convert
 
 import attrs
 import numpy as np
@@ -32,46 +33,48 @@ HOURS_PER_DAY = 24
 @define(auto_attribs=True)
 class ElectricalLosses(FromDictMixin):
     """
-    A serial (Pandas-driven) implementation of calculating the average monthly and annual
-    electrical losses at a wind plant, and their uncertainty.
-    Energy output from the turbine SCADA meter and the wind plant revenue
-    meter are used to estimate electrical losses.
+    A serial implementation of calculating the average monthly and annual electrical losses at a
+    wind power plant, and the associated uncertainty. Energy output from the turbine SCADA meter and
+    the wind plant revenue meter are used to estimate electrical losses.
 
-    The approach is to first calculate daily sums of turbine and revenue meter energy over the
-    plant period of record. Only those days where all turbines and the revenue meter were
-    reporting for all timesteps are considered. Electrical loss is then the difference in
-    total turbine energy production and meter production over those concurrent days.
+    First, the daily sums of turbine and revenue meter energy are calculated over the plant's period
+    of record where all turbines and the revenue meter contan every considered timestep. Electrical
+    losses are then calculated as the difference between the total turbine energy production and the
+    meter production over those concurrent days.
 
-    A Monte Carlo approach is applied to sample revenue meter data and SCADA data
-    with a 0.5% imposed uncertainty, and one filtering parameter is sampled too.
-    The uncertainty in estimated electrical losses is quantified as standard deviation
-    of the distribution of losses obtained from the MC sampling.
+    For uncertainty quantification, a Monte Carlo (MC) approach is used to sample the revenue meter
+    data and SCADA data with a default 0.5% imposed uncertainty, alongside a sampled filtering
+    parameter. The uncertainty in estimated electrical losses is quantified as the standard
+    deviation of the distribution of losses obtained from the MC sampling.
 
-    In the case that meter data is not provided on a daily or sub-daily basis (e.g. monthly), a
-    different approach is implemented. The sum of daily turbine energy is corrected for any missing
-    reported energy data from the turbines based on the ratio of expected number of data counts per day
-    to the actual. Daily corrected sum of turbine energy is then summed on a monthly basis. Electrical
-    loss is then the difference between total corrected turbine energy production and meter production
-    over those concurrent months.
+    If the revenue meter data is not provided on a daily or sub-daily basis (e.g. monthly), the the
+    sum of daily turbine energy is corrected for any missing reported energy data from the turbines
+    based on the ratio of expected number of data points per day to the actual data points
+    available. The daily corrected sum of turbine energy is then summed on a monthly basis.
+    Electrical loss is then the difference between the total corrected turbine energy production and
+    meter production over those concurrent months.
 
     Args:
-        plant(:obj:`PlantData`): PlantData object from which EYAGapAnalysis should draw data.
-        UQ(:obj:`bool`): Indicator to perform (True) or not (False) uncertainty quantification
-        num_sim(:obj:`int`): number of Monte Carlo simulations
-        uncertainty_meter(:obj:`float`): uncertainty imposed to revenue meter data (for UQ = True case)
-        uncertainty_scada(:obj:`float`): uncertainty imposed to scada data (for UQ = True case)
-        uncertainty_correction_threshold(:obj:`tuple` | `float`): Data availability thresholds (fractions)
-            under which months should be eliminated. If :py:attr:`UQ` = True, then a 2-element tuple
-            containing an upper and lower bound for a randomly selected value should be given,
-            otherwise, a scalar value should be provided.
+        plant(:obj:`PlantData`): A :py:attr:`openoa.plant.PlantData` object that has been validated
+            with at least `:py:attr:`openoa.plant.PlantData.analysis_type` = "ElectricalLosses".
+        UQ(:obj:`bool`): Indicator to perform (True) or not (False) uncertainty quantification.
+        num_sim(:obj:`int`): Number of Monte Carlo simulations to perform.
+        uncertainty_meter(:obj:`float`): Uncertainty imposed on the revenue meter data (for
+            :py:attr:`UQ` = True case).
+        uncertainty_scada(:obj:`float`): Uncertainty imposed on the scada data (for :py:attr:`UQ` =
+            True case).
+        uncertainty_correction_threshold(:obj:`tuple` | `float`): Data availability thresholds, in
+            the range of (0, 1), under which months should be eliminated. If :py:attr:`UQ` = True,
+            then a 2-element tuple containing an upper and lower bound for a randomly selected value
+            should be given, otherwise, a scalar value should be provided.
     """
 
     plant: PlantData = field(validator=attrs.validators.instance_of(PlantData))
     UQ: bool = field(default=False, converter=bool)
     num_sim: int = field(default=20000, converter=int)
     uncertainty_correction_threshold: NDArrayFloat = field(default=0.95)
-    uncertainty_meter: NDArrayFloat = field(default=0.005)
-    uncertainty_scada: NDArrayFloat = field(default=0.005)
+    uncertainty_meter: NDArrayFloat = field(default=0.005, converter=float)
+    uncertainty_scada: NDArrayFloat = field(default=0.005, converter=float)
 
     # Internally created attributes need to be given a type before usage
     monthly_meter: bool = field(default=False, init=False)
@@ -85,19 +88,43 @@ class ElectricalLosses(FromDictMixin):
     total_turbine_energy: pd.DataFrame = field(init=False)
     total_meter_energy: pd.DataFrame = field(init=False)
 
+    @plant.validator
+    def validate_plant_ready_for_anylsis(
+        self, attribute: attrs.Attribute, value: PlantData
+    ) -> None:
+        """Validates that the value has been validated for an electrical losses analysis."""
+        if set(("ElectricalLosses", "all")) not in (value.analysis_type):
+            raise TypeError(
+                "The input to 'plant' must be validated for at least the 'ElectricalLosses'"
+            )
+
     @uncertainty_correction_threshold.validator
     def validate_threshold_input(self, attribute: attrs.Attribute, value: tuple | float) -> None:
         if self.UQ:
-            if not isinstance(self.uncertainty_correction_threshold, tuple):
-                raise ValueError(f"When UQ is True, {attribute.name} must be a tuple")
+            if not isinstance(value, tuple):
+                raise ValueError(f"When UQ is True, {attribute.name} must be a tuple of length 2.")
+            if len(value) != 2:
+                raise ValueError(f"When UQ is True, {attribute.name} must be a tuple of length 2.")
         else:
-            if not isinstance(self.uncertainty_correction_threshold, float):
+            if not isinstance(value, float):
                 raise ValueError(f"When UQ is True, {attribute.name} must be a float")
+
+    @uncertainty_correction_threshold.validator
+    @uncertainty_meter.validator
+    @uncertainty_scada.validator
+    def validate_decimal_range(self, attribute: attrs.Attribute, value: float | tuple) -> None:
+        """Validates that the value is in the range of (0, 1)."""
+        if isinstance(value, float):
+            if not 0.0 < value < 1.0:
+                raise ValueError(f"'{attribute.name}' must be in the range (0, 1).")
+        else:
+            if any(0.0 < x < 1.0 for x in value):
+                raise ValueError(f"Each value of '{attribute.name}' must be in the range (0, 1).")
 
     @logged_method_call
     def __attrs_post_init__(self):
         """
-        Initialize logging and post-init setup steps.
+        Initialize logging and post-initialization setup steps.
         """
         logger.info("Initializing Electrical Losses Object")
 
@@ -106,14 +133,13 @@ class ElectricalLosses(FromDictMixin):
             logger.info("Note: uncertainty quantification will be performed in the calculation")
         else:
             logger.info("Note: uncertainty quantification will NOT be performed in the calculation")
-            self.num_sim = 1
+            self.num_sim = 1  # override in case of bad user input
 
-        # Process SCADA data to daily sums
+        # Process the SCADA and meter data appropriately
         self.process_scada()
-
         if self.plant.metadata.meter.frequency not in ("MS", "M", "1MS"):
             self.process_meter()
-            self.monthly_meter = False  # Set to false if sub-monthly frequency
+            self.monthly_meter = False
 
     @logged_method_call
     def run(self):

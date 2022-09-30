@@ -16,6 +16,7 @@ from attrs import field, define
 from pyproj import Transformer
 from shapely.geometry import Point
 
+import openoa.utils.timeseries as ts
 import openoa.utils.met_data_processing as met
 from openoa.utils.metadata_fetch import attach_eia_data
 from openoa.utils.unit_conversion import convert_power_to_energy
@@ -209,17 +210,20 @@ def _compose_error_message(error_dict: dict, analysis_types: list[str] = ["all"]
 
 
 def frequency_validator(
-    actual_freq: str, desired_freq: Optional[str | None | set[str]], exact: bool
+    actual_freq: str | int | float | None,
+    desired_freq: Optional[str | None | set[str]],
+    exact: bool,
 ) -> bool:
     """Helper function to check if the actual datetime stamp frequency is valid compared
     to what is required.
 
     Args:
-        actual_freq (str): The frequency of the datetime stamp, or `df.index.freq`.
+        actual_freq(:obj:`str` | `int` | `float` | `None`): The frequency of the timestamp, either
+            as an offset alias or manually determined in seconds between timestamps.
         desired_freq (Optional[str  |  None  |  set[str]]): Either the exact frequency,
             required or a set of options that are also valid, in which case any numeric
             information encoded in `actual_freq` will be dropped.
-        exact (bool): If the provided frequency codes should be exact matches (`True`),
+        exact(:obj:`bool`): If the provided frequency codes should be exact matches (`True`),
             or, if `False`, the check should be for a combination of matches.
 
     Returns:
@@ -234,11 +238,19 @@ def frequency_validator(
     if isinstance(desired_freq, str):
         desired_freq = set([desired_freq])
 
+    # If an offset alias couldn't be found, then convert the desired frequency strings to seconds
+    if not isinstance(actual_freq, str):
+        desired_freq = set([ts.offset_to_seconds(el) for el in desired_freq])
+
     if exact:
         return actual_freq in desired_freq
 
-    actual_freq = "".join(filter(str.isalpha, actual_freq))
-    return actual_freq in desired_freq
+    if isinstance(actual_freq, str):
+        actual_freq = "".join(filter(str.isalpha, actual_freq))
+        return actual_freq in desired_freq
+
+    # For non-exact matches, just check that the actual is less than the maximum allowable frequency
+    return actual_freq < max(desired_freq)
 
 
 def convert_to_list(
@@ -1444,27 +1456,21 @@ class PlantData:
         # Collect all the frequencies for each of the data types
         data_dict = self.data_dict
         actual_frequencies = {}
+
         for name, df in data_dict.items():
             if df is None:
                 continue
 
             if name in ("scada", "status", "tower"):
-                freq = df.index.get_level_values("time").freqstr
-                if freq is None:
-                    freq = pd.infer_freq(df.index.get_level_values("time"))
-                actual_frequencies[name] = freq
+                actual_frequencies[name] = ts.determine_frequency(df, "time")
             elif name in ("meter", "curtail"):
-                freq = df.index.freqstr
-                if freq is None:
-                    freq = pd.infer_freq(df.index)
-                actual_frequencies[name] = freq
+                actual_frequencies[name] = ts.determine_frequency(df)
             elif name == "reanalysis":
                 actual_frequencies["reanalysis"] = {}
                 for sub_name, df in data_dict[name].items():
-                    freq = df.index.freqstr
-                    if freq is None:
-                        freq = pd.infer_freq(df.index)
-                    actual_frequencies["reanalysis"][sub_name] = freq
+                    actual_frequencies["reanalysis"][sub_name] = ts.determine_frequency(df)
+
+        print(actual_frequencies)
 
         invalid_freq = {}
         for name, freq in actual_frequencies.items():
