@@ -277,8 +277,8 @@ class ElectricalLosses(FromDictMixin):
 
     def plot_monthly_losses(
         self,
-        xlim: tuple[datetime.datetime, datetime.datetime] = (None, None),
-        ylim: tuple[float, float] = (None, None),
+        xlim: tuple[datetime.datetime | None, datetime.datetime | None] = (None, None),
+        ylim: tuple[float | None, float | None] = (None, None),
         return_fig: bool = False,
         figure_kwargs: dict = {},
         legend_kwargs: dict = {},
