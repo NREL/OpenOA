@@ -16,10 +16,9 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 from attrs import field, define
 
-from openoa import logging, logged_method_call
+from openoa.logging import logging, logged_method_call
 from openoa.plant import PlantData, FromDictMixin
 from openoa.utils.pandas_plotting import set_styling
-
 
 logger = logging.getLogger(__name__)
 set_styling()
@@ -156,8 +155,8 @@ class ElectricalLosses(FromDictMixin):
         This data frame is stored as self.inputs.
         """
         if self.UQ:
-            n_decimal = (len(str(el.split(".")[1])) for el in self.uncertainty_correction_threshold)
-            integer_multiplier = 10**n_decimal
+            n_decimal = [len(str(el).split(".")[1]) for el in self.uncertainty_correction_threshold]
+            integer_multiplier = 10**np.array(n_decimal)
             inputs = {
                 "meter_data_fraction": np.random.normal(1, self.uncertainty_meter, self.num_sim),
                 "scada_data_fraction": np.random.normal(1, self.uncertainty_scada, self.num_sim),

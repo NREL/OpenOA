@@ -9,8 +9,7 @@ import random
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-
-from openoa import logging, logged_method_call
+from openoa.logging import logging, logged_method_call
 from openoa.utils import filters, imputing, timeseries, met_data_processing
 from openoa.utils.power_curve import functions
 

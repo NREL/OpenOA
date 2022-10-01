@@ -6,8 +6,7 @@
 
 import numpy as np
 import pandas as pd
-
-from openoa import logging, logged_method_call
+from openoa.logging import logging, logged_method_call
 
 
 logger = logging.getLogger(__name__)

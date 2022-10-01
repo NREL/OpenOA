@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 from pyproj import Proj
 from dateutil import tz
 
-from openoa import logging, logged_method_call
+from openoa.logging import logging, logged_method_call
 from openoa.utils import timeseries
 
 
