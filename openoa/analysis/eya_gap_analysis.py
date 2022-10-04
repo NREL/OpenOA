@@ -4,16 +4,90 @@
 # gross energy. The main output is a 'waterfall' plot linking the EYA-
 # estimated and operational-estimated AEP values.
 
+import attrs
 import numpy as np
 import pandas as pd
+from attrs import field, define
 
 from openoa import logging, logged_method_call
+from openoa.plant import PlantData, FromDictMixin
+from openoa.utils.pandas_plotting import set_styling
 
 
 logger = logging.getLogger(__name__)
+set_styling()
 
 
-class EYAGapAnalysis(object):
+def validate_range_0_1(instance, attribute: attrs.Attribute, value: float):
+    """Validates that the provided value is in the range of [0, 1)."""
+    if not 0.0 <= value < 1.0:
+        raise ValueError(f"The input to '{attribute.name}' must be in the range (0, 1).")
+
+
+class EYAEstimate(FromDictMixin):
+    """Dataclass for catalogging and validating the consultant-produced Energy Yield Assessment
+    (EYA) data.
+
+    Args:
+        aep(:obj:`float`): The EYA predicted Annual Energy Production (AEP), in GWh/yr.
+        gross_energy(:obj:`float`): The EYA predicted gross energy, in GWh/yr.
+        availability_losses(:obj:`float`): The EYA predicted availability losses, in the range of
+            [0, 1).
+        electrical_losses(:obj:`float`): The EYA predicted electrical losses, in the range of [0, 1).
+        turbine_losses(:obj:`float`): The EYA predicted turbine losses, in the range of [0, 1).
+        blade_degradation_losses(:obj:`float`): The EYA predicted blade degradation losses, in the
+            range of [0, 1).
+        wake_losses(:obj:`float`): The EYA predicted wake losses, in the range of [0, 1).
+
+    """
+
+    aep: float = field(convert=float)
+    gross_energy: float = field(convert=float)
+    availability_losses: float = field(convert=float, validator=validate_range_0_1)
+    electrical_losses: float = field(convert=float, validator=validate_range_0_1)
+    turbine_losses: float = field(convert=float, validator=validate_range_0_1)
+    blade_degradation_losses: float = field(convert=float, validator=validate_range_0_1)
+    wake_losses: float = field(convert=float, validator=validate_range_0_1)
+
+    @availability_losses.validator
+    @electrical_losses.validator
+    @turbine_losses.validator
+    @blade_degradation_losses.validator
+    @wake_losses.validator
+    def validate_0_1(self, attribute: attrs.Attribute, value: float) -> None:
+        """Validates that the provided value is in the range of [0, 1)."""
+        if not 0.0 <= value < 1.0:
+            raise ValueError(f"The input to '{attribute.name}' must be in the range (0, 1).")
+
+
+class OAResults(FromDictMixin):
+    """Dataclass for catalogging and validating the analysis-produced operation analysis (OA) data.
+
+    Args:
+        aep(:obj:`float`): The OA results for Annual Energy Production (AEP), in GWh/yr.
+        availability_losses(:obj:`float`): The OA results for availability losses, in the range of
+            [0, 1).
+        electrical_losses(:obj:`float`): The OA results for electrical losses, in the range of
+            [0, 1).
+        turbine_ideal_energy(:obj:`float`): The OA results for turbine ideal energy, in the range of [0, 1).
+
+    """
+
+    aep: float = field(convert=float)
+    availability_losses: float = field(convert=float, validator=validate_range_0_1)
+    electrical_losses: float = field(convert=float, validator=validate_range_0_1)
+    turbine_ideal_energy: float = field(convert=float, validator=validate_range_0_1)
+
+    @availability_losses.validator
+    @electrical_losses.validator
+    @turbine_ideal_energy.validator
+    def validate_0_1(self, attribute: attrs.Attribute, value: float) -> None:
+        """Validates that the provided value is in the range of [0, 1)."""
+        if not 0.0 <= value < 1.0:
+            raise ValueError(f"The input to '{attribute.name}' must be in the range (0, 1).")
+
+
+class EYAGapAnalysis(FromDictMixin):
     """
     A serial (Pandas-driven) implementation of performing a gap analysis between the estimated
     annual energy production (AEP) from an energy yield estimate (EYA) and the actual AEP as
@@ -39,8 +113,19 @@ class EYAGapAnalysis(object):
 
     """
 
+    plant: PlantData = field(validator=attrs.validators.instance_of(PlantData))
+    eya: EYAEstimate = field(converter=EYAEstimate.from_dict)
+    oa: OAResults = field(converter=OAResults.from_dict)
+
+    # Internally produced attributes
+    data: list = field(factory=list)
+    compiled_data: list = field(factory=list)
+    plot_index: list = field(
+        default=["eya_aep", "ideal_energy", "avail_loss", "elec_loss", "unexplained/uncertain"]
+    )
+
     @logged_method_call
-    def __init__(self, plant, eya_estimates, oa_results, make_fig=True, save_fig_path=False):
+    def __attrs_post_init__(self):
         """
         Initialize EYA gap analysis class with data and parameters.
 
@@ -55,33 +140,33 @@ class EYAGapAnalysis(object):
         """
         logger.info("Initializing EYA Gap Analysis Object")
 
-        # Store EYA inputs into dictionary
-        self._eya_estimates = {
-            "aep": eya_estimates[0],  # GWh/yr
-            "gross_energy": eya_estimates[1],  # GWh/yr
-            "availability_losses": eya_estimates[2],  # Fraction
-            "electrical_losses": eya_estimates[3],  # Fraction
-            "turbine_losses": eya_estimates[4],  # Fraction
-            "blade_degradation_losses": eya_estimates[5],  # Fraction
-            "wake_losses": eya_estimates[6],
-        }  # Fraction
+        # # Store EYA inputs into dictionary
+        # self._eya_estimates = {
+        #     "aep": eya_estimates[0],  # GWh/yr
+        #     "gross_energy": eya_estimates[1],  # GWh/yr
+        #     "availability_losses": eya_estimates[2],  # Fraction
+        #     "electrical_losses": eya_estimates[3],  # Fraction
+        #     "turbine_losses": eya_estimates[4],  # Fraction
+        #     "blade_degradation_losses": eya_estimates[5],  # Fraction
+        #     "wake_losses": eya_estimates[6],
+        # }  # Fraction
 
-        # Store OA results into dictionary
-        self._oa_results = {
-            "aep": oa_results[0],  # GWh/yr
-            "availability_losses": oa_results[1],  # Fraction
-            "electrical_losses": oa_results[2],  # Fraction
-            "turbine_ideal_energy": oa_results[3],
-        }  # Fraction
+        # # Store OA results into dictionary
+        # self._oa_results = {
+        #     "aep": oa_results[0],  # GWh/yr
+        #     "availability_losses": oa_results[1],  # Fraction
+        #     "electrical_losses": oa_results[2],  # Fraction
+        #     "turbine_ideal_energy": oa_results[3],
+        # }  # Fraction
 
-        # Axis labels for waterfall plot
-        self._plot_index = [
-            "eya_aep",
-            "ideal_energy",
-            "avail_loss",
-            "elec_loss",
-            "unexplained/uncertain",
-        ]
+        # # Axis labels for waterfall plot
+        # self._plot_index = [
+        #     "eya_aep",
+        #     "ideal_energy",
+        #     "avail_loss",
+        #     "elec_loss",
+        #     "unexplained/uncertain",
+        # ]
         self._makefig = make_fig
         self._savefigpath = save_fig_path
 
@@ -101,12 +186,12 @@ class EYAGapAnalysis(object):
             (None)
         """
 
-        self._compiled_data = self.compile_data()  # Compile EYA and OA data
+        self._ompiled_data = self.compile_data()  # Compile EYA and OA data
 
-        if self._makefig:
-            self.waterfall_plot(
-                self._compiled_data, self._plot_index, self._savefigpath
-            )  # Produce waterfall plot
+        # if self._makefig:
+        #     self.waterfall_plot(
+        #         self._compiled_data, self._plot_index, self._savefigpath
+        #     )  # Produce waterfall plot
 
         logger.info("Gap analysis complete")
 
@@ -123,22 +208,22 @@ class EYAGapAnalysis(object):
 
         # Calculate EYA ideal turbine energy
         eya_turbine_ideal_energy = (
-            self._eya_estimates["gross_energy"]
-            * (1 - self._eya_estimates["turbine_losses"])
-            * (1 - self._eya_estimates["wake_losses"])
-            * (1 - self._eya_estimates["blade_degradation_losses"])
+            self.eya.gross_energy
+            * (1 - self.eya.turbine_losses)
+            * (1 - self.eya.wake_losses)
+            * (1 - self.eya.blade_degradation_losses)
         )
 
         # Get required gap analysis values from EYA
-        eya_aep = self._eya_estimates["aep"]
-        eya_avail = self._eya_estimates["availability_losses"]
-        eya_elec = self._eya_estimates["electrical_losses"]
+        eya_aep = self.eya.aep
+        eya_avail = self.eya.availability_losses
+        eya_elec = self.eya.electrical_losses
 
         # Get required gap analysis values from OA
-        oa_turb_ideal = self._oa_results["turbine_ideal_energy"]
-        oa_aep = self._oa_results["aep"]
-        oa_avail = self._oa_results["availability_losses"]
-        oa_elec = self._oa_results["electrical_losses"]
+        oa_turb_ideal = self.oa.turbine_ideal_energy
+        oa_aep = self.oa.aep
+        oa_avail = self.oa.availability_losses
+        oa_elec = self.oa.electrical_losses
 
         # Calculate EYA-OA differences, determine the residual or unaccounted value
         turb_gross_diff = oa_turb_ideal - eya_turbine_ideal_energy
