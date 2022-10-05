@@ -6,7 +6,6 @@
 from __future__ import annotations
 
 import datetime
-from lib2to3.pytree import convert
 
 import attrs
 import numpy as np
@@ -156,7 +155,9 @@ class ElectricalLosses(FromDictMixin):
         This data frame is stored as self.inputs.
         """
         if self.UQ:
-            n_decimal = (len(str(el.split(".")[1])) for el in self.uncertainty_correction_threshold)
+            n_decimal = max(
+                len(str(el).split(".")[1]) for el in self.uncertainty_correction_threshold
+            )
             integer_multiplier = 10**n_decimal
             inputs = {
                 "meter_data_fraction": np.random.normal(1, self.uncertainty_meter, self.num_sim),
