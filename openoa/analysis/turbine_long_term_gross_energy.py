@@ -1,51 +1,59 @@
-# This class defines key analytical routines for performing a 'gap-analysis'
-# on EYA-estimated annual energy production (AEP) and that from operational data.
-# Categories considered are availability, electrical losses, and long-term
-# gross energy. The main output is a 'waterfall' plot linking the EYA-
-# estimated and operational-estiamted AEP values.
+"""
+This class defines key analytical routines for performing a gap analysis on
+EYA-estimated annual energy production (AEP) and that from operational data. Categories
+considered are availability, electrical losses, and long-term gross energy. The main
+output is a 'waterfall' plot linking the EYA-estimated and operational-estiamted AEP values.
+"""
+
+from __future__ import annotations
 
 import random
 
+import attrs
 import numpy as np
 import pandas as pd
+import numpy.typing as npt
 from tqdm import tqdm
+from attrs import field, define
 
 from openoa import logging, logged_method_call
-from openoa.utils import filters, imputing, timeseries, met_data_processing
+from openoa.plant import PlantData, FromDictMixin
+from openoa.utils import filters, imputing
+from openoa.utils import timeseries as ts
+from openoa.utils import met_data_processing as met
 from openoa.utils.power_curve import functions
 
 
 logger = logging.getLogger(__name__)
 
+NDArrayFloat = npt.NDArray[np.float64]
 
-class TurbineLongTermGrossEnergy(object):
+MINUTES_PER_HOUR = 60
+HOURS_PER_DAY = 24
+
+
+@define(auto_attribs=True)
+class TurbineLongTermGrossEnergy(FromDictMixin):
     """
-    A serial (Pandas-driven) implementation of calculating long-term gross energy
-    for each turbine in a wind farm. This module collects standard processing and
-    analysis methods for estimating this metric.
+    Calculates long-term gross energy for each turbine in a wind farm using methods implemented in
+    the utils subpackage for data processing and analysis.
 
     The method proceeds as follows:
 
         1. Filter turbine data for normal operation
-
         2. Calculate daily means of wind speed, wind direction, and air density from reanalysis products
-
         3. Calculate daily sums of energy from each turbine
-
         4. Fit daily data (features are atmospheric variables, response is turbine power) using a
            generalized additive model (GAM)
-
         5. Apply model results to long-term atmospheric varaibles to calculate long term
            gross energy for each turbine
 
-    A Monte Carlo approach is implemented to repeat the procedure multiple times
-    to get a distribution of results, from which deriving uncertainty quantification
-    for the long-term gross energy estimate.
-
-    The end result is a table of long-term gross energy values for each turbine in the wind farm. Note
-    that this gross energy metric does not back out losses associated with waking or turbine performance.
-    Rather, gross energy in this context is what turbine would have produced under normal operation
-    (i.e. excluding downtime and underperformance).
+    A Monte Carlo approach is implemented to obtain distribution of results, from which uncertainty
+    can be quantified for the long-term gross energy estimate. A pandas DataFrame of long-term gross
+    energy values is produced, containing each turbine in the wind farm. Note that this gross energy
+    metric does not back out losses associated with waking or turbine performance. Rather, gross
+    energy in this context is what turbine would have produced under normal operation (i.e.
+    excluding downtime and underperformance).
 
     Required schema of PlantData:
 
@@ -54,8 +62,33 @@ class TurbineLongTermGrossEnergy(object):
         - scada with columns: ['time', 'id', 'wmet_wdspd_avg', 'wtur_W_avg', 'energy_kwh']
     """
 
+    plant: PlantData = field(validator=attrs.validators.instance_of(PlantData))
+    UQ: bool = field(default=False, converter=bool)
+    num_sim: int = field(default=20000, converter=int)
+
+    # Internally created attributes need to be given a type before usage
+    start_por: pd.Timestamp = field(init=False)
+    end_por: pd.Timestamp = field(init=False)
+
+    scada_dict: dict = field(factory=dict)
+    daily_reanal_dict: dict = field(factory=dict)
+    model_dict: dict = field(factory=dict)
+    model_results: dict = field(factory=dict)
+    turb_lt_gross: dict = field(factory=dict)
+    scada_daily_valid: pd.DataFrame = field(default=pd.DataFrame())
+
+    @plant.validator
+    def validate_plant_ready_for_anylsis(
+        self, attribute: attrs.Attribute, value: PlantData
+    ) -> None:
+        """Validates that the value has been validated for a turbine long term gross energy analysis."""
+        if set(("TurbineLongTermGrossEnergy", "all")).intersection(value.analysis_type) == set():
+            raise TypeError(
+                "The input to 'plant' must be validated for at least the 'TurbineLongTermGrossEnergy'"
+            )
+
     @logged_method_call
-    def __init__(self, plant, UQ=True, num_sim=2000):
+    def __attrs_post_init__(self, plant, UQ=True, num_sim=2000):
 
         """
         Initialize turbine long-term gross energy analysis with data and parameters.
@@ -68,36 +101,16 @@ class TurbineLongTermGrossEnergy(object):
         logger.info("Initializing TurbineLongTermGrossEnergy Object")
 
         # Check that selected UQ is allowed
-        if UQ:
+        if self.UQ:
             logger.info("Note: uncertainty quantification will be performed in the calculation")
-            self.num_sim = num_sim
-        elif not UQ:
-            logger.info("Note: uncertainty quantification will NOT be performed in the calculation")
-            self.num_sim = None
         else:
-            raise ValueError(
-                "UQ has to either be True (uncertainty quantification performed, default) or False (uncertainty quantification NOT performed)"
-            )
-        self.UQ = UQ
-
-        self.plant = plant  # Set plant as attribute of analysis object
-        self._turbs = self.plant._scada.df["id"].unique()  # Store turbine names
+            logger.info("Note: uncertainty quantification will NOT be performed in the calculation")
+            self.num_sim = 1
+        self.turbine_ids = self.plant.turbine_ids
 
         # Get start and end of POR days in SCADA
-        self._por_start = format(plant._scada.df.index.min(), "%Y-%m-%d")
-        self._por_end = format(plant._scada.df.index.max(), "%Y-%m-%d")
-        self._full_por = pd.date_range(self._por_start, self._por_end, freq="D")
-
-        # Define several dictionaries and data frames to be populated within this method
-        self._scada_dict = {}
-        self._daily_reanal_dict = {}
-        self._model_dict = {}
-        self._model_results = {}
-        self._turb_lt_gross = {}
-        self._scada_daily_valid = pd.DataFrame()
-
-        # Set number of 'valid' counts required when summing data to daily values
-        self._num_valid_daily = 60.0 / (pd.to_timedelta(self.plant._scada_freq).seconds / 60) * 24
+        self.por_start = plant._scada.df.index.min()
+        self.por_end = plant._scada.df.index.max()
 
         # Initially sort the different turbine data into dictionary entries
         logger.info("Processing SCADA data into dictionaries by turbine (this can take a while)")
@@ -364,7 +377,7 @@ class TurbineLongTermGrossEnergy(object):
             return
 
         reanal = self.plant._reanalysis._product[self._run.reanalysis_product].df
-        reanal["u_ms"], reanal["v_ms"] = met_data_processing.compute_u_v_components(
+        reanal["u_ms"], reanal["v_ms"] = met.compute_u_v_components(
             reanal["windspeed_ms"], reanal["winddirection_deg"]
         )
         df_daily = reanal.resample("D")[
@@ -372,7 +385,7 @@ class TurbineLongTermGrossEnergy(object):
         ].mean()  # Get daily means
 
         # Recalculate daily average wind direction
-        df_daily["winddirection_deg"] = met_data_processing.compute_wind_direction(
+        df_daily["winddirection_deg"] = met.compute_wind_direction(
             u=df_daily["u_ms"], v=df_daily["v_ms"]
         )
         self._daily_reanal_dict = df_daily
@@ -395,11 +408,16 @@ class TurbineLongTermGrossEnergy(object):
         """
 
         scada = self._scada_dict
+        expected_count = (
+            HOURS_PER_DAY
+            * MINUTES_PER_HOUR
+            / (ts.offset_to_seconds(self.plant.metadata.scada.frequency) / 60)
+        )
 
         # Monte Carlo sample _correction_threshold
         self._correction_threshold = self._run.correction_threshold
         num_thres = (
-            self._correction_threshold * self._num_valid_daily
+            self._correction_threshold * expected_count
         )  # Number of permissible reported timesteps
 
         self._scada_daily_valid = pd.DataFrame()
@@ -414,19 +432,19 @@ class TurbineLongTermGrossEnergy(object):
                 "energy_kwh"
             ].count()  # Count number of entries in sum
             scada_daily["perc_nan"] = scada_filt.resample("D")["energy_kwh"].apply(
-                timeseries.percent_nan
+                ts.percent_nan
             )  # Count number of entries in sum
 
             # Correct energy for missing data
             scada_daily["energy_kwh_corr"] = (
-                scada_daily["energy_kwh"] * self._num_valid_daily / scada_daily["data_count"]
+                scada_daily["energy_kwh"] * expected_count / scada_daily["data_count"]
             )
 
             # Discard daily sums if less than 140 data counts (90% reported data)
             scada_daily = scada_daily.loc[scada_daily["data_count"] >= num_thres]
 
             # Create temporary data frame that is gap filled and to be used for imputing
-            temp_df = pd.DataFrame(index=self._full_por)
+            temp_df = pd.DataFrame(index=pd.date_range(self.por_start, self.por_end, freq="D"))
             temp_df["energy_kwh_corr"] = scada_daily["energy_kwh_corr"]  # Corrected energy data
             temp_df["perc_nan"] = scada_daily["perc_nan"]  # Corrected energy data
             temp_df["id"] = np.repeat(t, temp_df.shape[0])  # Index
