@@ -895,8 +895,9 @@ def plot_windfarm(
         else:
             asset_df["auto_line_color"] = "black"
 
-    # Create the bokeh data source
-    source = ColumnDataSource(asset_df)
+    # Create the bokeh data source (removing the geometry column because of issues with
+    # shapely.geometry.point.Point columns in bokeh plot)
+    source = ColumnDataSource(asset_df[[col for col in asset_df.columns if col != "geometry"]])
 
     # Create a bokeh figure with tiles
     plot_map = figure(

@@ -5,7 +5,6 @@ import itertools
 from copy import deepcopy
 from typing import Callable, Optional, Sequence
 from pathlib import Path
-from functools import cached_property
 
 import yaml
 import attrs
@@ -383,6 +382,23 @@ def rename_columns(df: pd.DataFrame, col_map: dict, reverse: bool = True) -> pd.
     if reverse:
         col_map = {v: k for k, v in col_map.items()}
     return df.rename(columns=col_map)
+
+
+def wrap_180(x: float | np.ndarray):
+    """
+    Converts an angle or array of angles in degrees to the range -180 to +180 degrees.
+    TODO: Would this be better in a separate utils module?
+
+    Args:
+        x (float | np.ndarray): Input angle(s) (degrees)
+    Returns:
+        float | np.ndarray: The input angle(s) converted to the range -180 to +180 degrees (degrees)
+    """
+    input_type = type(x)
+
+    x = x % 360.0  # convert to range 0 to 360 degrees
+    x = np.where(x > 180.0, x - 360.0, x)
+    return x if input_type == np.ndarray else float(x)
 
 
 # ***************************************
@@ -1673,19 +1689,29 @@ class PlantData:
 
     # NOTE: v2 AssetData methods
 
-    @cached_property
-    def asset_distance_matrix(self) -> pd.DataFrame:
+    @property
+    def asset_distance_matrix(self, asset_type: str = None) -> pd.DataFrame:
         """Calculates the distance between all assets on the site with `np.inf` for the distance
         between an asset and itself.
+
+        Args:
+            asset_type (str, optional): Optional asset type to calculate distances for
+                ("turbine" or "tower"). If None, all assets are included. Defaults to None.
+        Returns:
+            pd.DataFrame: Dataframe containing distances between each pair of assets
         """
-        ix = self.asset.index.values
+        if asset_type is None:
+            ix = self.asset.index.values
+        else:
+            ix = self.asset.loc[self.asset["type"] == asset_type].index.values
+
         distance = (
             pd.DataFrame(
                 [i, j, self.asset.loc[i, "geometry"].distance(self.asset.loc[j, "geometry"])]
                 for i, j in itertools.combinations(ix, 2)
             )
             .pivot(index=0, columns=1, values=2)
-            .reset_index()
+            .rename_axis(index={0: None}, columns={1: None})
             .fillna(0)
             .loc[ix[:-1], ix[1:]]
         )
@@ -1694,14 +1720,125 @@ class PlantData:
         distance.insert(0, ix[0], 0.0)
         distance.loc[ix[-1]] = 0
 
-        # Unset the index and columns property names
-        distance.index.name = None
-        distance.columns.name = None
-
         # Maintain v2 compatibility of np.inf for the diagonal
         distance = distance + distance.values.T - np.diag(np.diag(distance.values))
         np.fill_diagonal(distance.values, np.inf)
         return distance
+
+    @property
+    def asset_direction_matrix(self, asset_type: str = None) -> pd.DataFrame:
+        """Calculates the direction between all assets on the site with `np.inf` for the direction
+        between an asset and itself, for all assets or a specific asset type.
+
+        Args:
+            asset_type (str, optional): Optional asset type to calculate directions for
+                ("turbine" or "tower"). If None, all assets are included. Defaults to None.
+        Returns:
+            pd.DataFrame: Dataframe containing directions between each pair of assets (defined as the direction
+                from the asset given by the row index to the asset given by the column index, relative to north)
+        """
+        if asset_type is None:
+            ix = self.asset.index.values
+        else:
+            ix = self.asset.loc[self.asset["type"] == asset_type].index.values
+
+        direction = (
+            pd.DataFrame(
+                [
+                    i,
+                    j,
+                    np.degrees(
+                        np.arctan2(
+                            self.asset.loc[j, "geometry"].x - self.asset.loc[i, "geometry"].x,
+                            self.asset.loc[j, "geometry"].y - self.asset.loc[i, "geometry"].y,
+                        )
+                    )
+                    % 360.0,
+                ]
+                for i, j in itertools.combinations(ix, 2)
+            )
+            .pivot(index=0, columns=1, values=2)
+            .rename_axis(index={0: None}, columns={1: None})
+            .fillna(0)
+            .loc[ix[:-1], ix[1:]]
+        )
+
+        # Insert the first column and last row because the self-self combinations are not produced in the above
+        direction.insert(0, ix[0], 0.0)
+        direction.loc[ix[-1]] = 0
+
+        # Maintain v2 compatibility of np.inf for the diagonal
+        direction = (
+            direction
+            + np.triu((direction.values - 180.0) % 360.0, 1).T
+            - np.diag(np.diag(direction.values))
+        )
+        np.fill_diagonal(direction.values, np.inf)
+        return direction
+
+    def get_freestream_turbines(
+        self, wd: float, freestream_method: str = "sector", sector_width: float = 90.0
+    ):
+        """
+        Returns a list of freestream (unwaked) turbines for a given wind direction. Freestream turbines can be
+        identified using different methods ("sector" or "IEC" methods). For the sector method, if there are any
+        turbines upstream of a turbine within a fixed wind direction sector centered on the wind direction of interest,
+        defined by the sector_width argument, the turbine is condiered waked. The IEC method uses the freestream
+        definition provided in Annex A of IEC 61400-12-1 (2005).
+
+        Args:
+            wd (float): Wind direction to identify freestream turbines for (degrees)
+            freestream_method (str, optional): Method used to identify freestream turbines
+                ("sector" or "IEC"). Defaults to "sector".
+            sector_width (float, optional): Width of wind direction sector centered on the wind direction of
+                interest used to determine whether a turbine is waked for the "sector" method (degrees). For a given
+                turbine, if any other upstream turbines are located within the sector, then the turbine is considered
+                waked. Defaults to 90 degrees.
+        Returns:
+            list: List of freestream turbine asset IDs
+        """
+        turbine_direction_matrix = self.asset_direction_matrix(asset_type="turbine")
+
+        if freestream_method == "sector":
+            # find turbines for which no other upstream turbines are within half of the sector width of the specified
+            # wind direction
+            freestream_indices = np.all(
+                (np.abs(wrap_180(wd - turbine_direction_matrix.values)) > 0.5 * sector_width)
+                | np.diag(np.ones(len(turbine_direction_matrix), dtype=bool)),
+                axis=1,
+            )
+        elif freestream_method == "IEC":
+            # find freestream turbines according to the definition in Annex A of IEC 61400-12-1 (2005)
+            turbine_distance_matrix = self.distance_matrix(asset_type="turbine")
+
+            # normalize distances by rotor diameters of upstream turbines
+            rotor_diameters = np.ones((len(turbine_direction_matrix), 1)) * np.array(
+                self.asset.loc[self.asset["type"] == "turbine", "rotor_diameter"]
+            )
+            turbine_distance_matrix /= rotor_diameters
+
+            freestream_indices = np.all(
+                (
+                    (turbine_distance_matrix.values > 2)
+                    & (
+                        np.abs(wrap_180(wd - turbine_direction_matrix.values))
+                        > 0.5
+                        * (
+                            1.3 * np.degrees(np.arctan(2.5 / turbine_distance_matrix.values + 0.15))
+                            + 10
+                        )
+                    )
+                )
+                | (turbine_distance_matrix.values > 20)
+                | (turbine_distance_matrix.values < 0),
+                axis=1,
+            )
+        else:
+            raise ValueError(
+                'Invalid freestream method. Currently, "sector" and "IEC" are supported.'
+            )
+
+        return list(self.asset.index[freestream_indices])
 
     def calculate_nearest_neighbor(
         self, turbine_ids: list | np.ndarray = None, tower_ids: list | np.ndarray = None
