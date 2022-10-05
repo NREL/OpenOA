@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 from attrs import field, define
 
+import openoa.utils.timeseries as ts
 from openoa import logging, logged_method_call
 from openoa.plant import PlantData, FromDictMixin
 from openoa.utils.pandas_plotting import set_styling
@@ -205,7 +206,7 @@ class ElectricalLosses(FromDictMixin):
         expected_count = (
             HOURS_PER_DAY
             * MINUTES_PER_HOUR
-            / (pd.to_timedelta(self.plant.metadata.scada.frequency).total_seconds() / 60)
+            / (ts.offset_to_seconds(self.plant.metadata.scada.frequency) / 60)
             * self.plant.n_turbines
         )
 
@@ -235,7 +236,7 @@ class ElectricalLosses(FromDictMixin):
         expected_count = (
             HOURS_PER_DAY
             * MINUTES_PER_HOUR
-            / (pd.to_timedelta(self.plant.metadata.meter.frequency).total_seconds() / 60)
+            / (ts.offset_to_seconds(self.plant.metadata.scada.frequency) / 60)
         )
 
         # Keep only data with all turbines reporting for every time step during the day
