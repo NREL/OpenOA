@@ -1,12 +1,16 @@
-# This class defines key analytical routines for performing a 'gap-analysis'
-# on EYA-estimated annual energy production (AEP) and that from operational data.
-# Categories considered are availability, electrical losses, and long-term
-# gross energy. The main output is a 'waterfall' plot linking the EYA-
-# estimated and operational-estimated AEP values.
+"""
+This class defines key analytical routines for performing a 'gap-analysis' on EYA-estimated annual
+energy production (AEP) and that from operational data. Categories considered are availability,
+electrical losses, and long-term gross energy. The main output is a 'waterfall' plot linking the EYA-
+estimated and operational-estimated AEP values.
+"""
+
+from __future__ import annotations
 
 import attrs
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 from attrs import field, define
 
 from openoa import logging, logged_method_call
@@ -24,6 +28,7 @@ def validate_range_0_1(instance, attribute: attrs.Attribute, value: float):
         raise ValueError(f"The input to '{attribute.name}' must be in the range (0, 1).")
 
 
+@define(auto_attribs=True)
 class EYAEstimate(FromDictMixin):
     """Dataclass for catalogging and validating the consultant-produced Energy Yield Assessment
     (EYA) data.
@@ -60,6 +65,7 @@ class EYAEstimate(FromDictMixin):
             raise ValueError(f"The input to '{attribute.name}' must be in the range (0, 1).")
 
 
+@define(auto_attribs=True)
 class OAResults(FromDictMixin):
     """Dataclass for catalogging and validating the analysis-produced operation analysis (OA) data.
 
@@ -89,28 +95,25 @@ class OAResults(FromDictMixin):
 @define(auto_attribs=True)
 class EYAGapAnalysis(FromDictMixin):
     """
-    A serial (Pandas-driven) implementation of performing a gap analysis between the estimated
-    annual energy production (AEP) from an energy yield estimate (EYA) and the actual AEP as
-    measured from an operational assessment (OA)
+    Performs a gap analysis between the estimated annual energy production (AEP) from an energy
+    yield estimate (EYA) and the actual AEP as measured from an operational assessment (OA).
 
-    The gap analysis is based on comparing the following three key metrics
+    The gap analysis is based on comparing the following three key metrics:
 
         1. Availability loss
         2. Electrical loss
         3. Sum of turbine ideal energy
 
-    Here turbine ideal energy is defined as the energy produced during 'normal' or 'ideal' turbine operation,
-    i.e., no downtime or considerable underperformance events. This value encompasses several different aspects
-    of an EYA (wind resource estimate, wake losses,turbine performance, and blade degradation) and in most cases
-    should have the largest impact in a gap analysis relative to the first two metrics.
+    Here turbine ideal energy is defined as the energy produced during 'normal' or 'ideal' turbine
+    operation, i.e., no downtime or considerable underperformance events. This value encompasses
+    several different aspects of an EYA (wind resource estimate, wake losses,turbine performance,
+    and blade degradation) and in most cases should have the largest impact in a gap analysis
+    relative to the first two metrics.
 
-    This gap analysis method is fairly straighforward. Relevant EYA and OA metrics are passed in when defining
-    the class, differences in EYA estimates and OA results are calculated, and then a 'waterfall' plot is created
-    showing the differences between the EYA and OA-estimated AEP values and how they are linked from differences in
-    the three key metrics.
-
-    Waterfall plot code was taken and modified from the following post: https://pbpython.com/waterfall-chart.html
-
+    This gap analysis method is fairly straighforward. Relevant EYA and OA metrics are passed in
+    when defining the class, differences in EYA estimates and OA results are calculated, and then a
+    'waterfall' plot is created showing the differences between the EYA and OA-estimated AEP values
+    and how they are linked from differences in the three key metrics.
     """
 
     eya_estimates: EYAEstimate = field(converter=EYAEstimate.from_dict)
@@ -122,9 +125,6 @@ class EYAGapAnalysis(FromDictMixin):
     # Internally produced attributes
     data: list = field(factory=list)
     compiled_data: list = field(factory=list)
-    plot_index: list = field(
-        default=["eya_aep", "ideal_energy", "avail_loss", "elec_loss", "unexplained/uncertain"]
-    )
 
     @logged_method_call
     def __attrs_post_init__(self):
@@ -184,7 +184,7 @@ class EYAGapAnalysis(FromDictMixin):
             (None)
         """
 
-        self._ompiled_data = self.compile_data()  # Compile EYA and OA data
+        self.compiled_data = self.compile_data()  # Compile EYA and OA data
 
         # if self._makefig:
         #     self.waterfall_plot(
@@ -195,13 +195,11 @@ class EYAGapAnalysis(FromDictMixin):
 
     def compile_data(self):
         """
-        Compile EYA and OA metrics, compute differences, and return data needed for waterfall plot.
-
-        Args:
-            (None)
+        Compiles the EYA and OA metrics, and computes the differences.
 
         Returns:
-            (None)
+            :obj:`list[float]`: The list of EYA AEP, and differences in turbine gross energy,
+                availability losses, electrical losses, and unaccounted losses.
         """
 
         # Calculate EYA ideal turbine energy
@@ -212,44 +210,61 @@ class EYAGapAnalysis(FromDictMixin):
             * (1 - self.eya_estimates.blade_degradation_losses)
         )
 
-        # Get required gap analysis values from EYA
-        eya_aep = self.eya_estimates.aep
-        eya_avail = self.eya_estimates.availability_losses
-        eya_elec = self.eya_estimates.electrical_losses
-
-        # Get required gap analysis values from OA
-        oa_turb_ideal = self.oa_results.turbine_ideal_energy
-        oa_aep = self.oa_results.aep
-        oa_avail = self.oa_results.availability_losses
-        oa_elec = self.oa_results.electrical_losses
-
         # Calculate EYA-OA differences, determine the residual or unaccounted value
-        turb_gross_diff = oa_turb_ideal - eya_turbine_ideal_energy
-        avail_diff = (eya_avail - oa_avail) * eya_turbine_ideal_energy
-        elec_diff = (eya_elec - oa_elec) * eya_turbine_ideal_energy
-        unaccounted = -(eya_aep + turb_gross_diff + avail_diff + elec_diff) + oa_aep
+        turb_gross_diff = self.oa_results.turbine_ideal_energy - eya_turbine_ideal_energy
+        avail_diff = (
+            self.eya_estimates.availability_losses - self.oa_results.availability_losses
+        ) * eya_turbine_ideal_energy
+        elec_diff = (
+            self.eya_estimates.electrical_losses - self.oa_results.electrical_losses
+        ) * eya_turbine_ideal_energy
+        unaccounted = (
+            -(self.eya_estimates.aep + turb_gross_diff + avail_diff + elec_diff)
+            + self.oa_results.aep
+        )
 
         # Combine calculations into array and return
-        data = [eya_aep, turb_gross_diff, avail_diff, elec_diff, unaccounted]
-        self._data = data
-        return data
+        return [self.eya_estimates.aep, turb_gross_diff, avail_diff, elec_diff, unaccounted]
 
-    def waterfall_plot(self, data, index, save_fig_path):
+    def plot_waterfall(
+        self,
+        data: list[float] = None,
+        index: list[str] = [
+            "eya_aep",
+            "ideal_energy",
+            "avail_loss",
+            "elec_loss",
+            "unexplained/uncertain",
+        ],
+        return_fig: bool = False,
+        plot_kwargs: dict = {},
+        figure_kwargs: dict = {},
+    ) -> None | tuple:
         """
         Produce a waterfall plot showing the progression from the EYA to OA estimates of AEP.
 
         Args:
-            data(:obj:`numpy array`): data to be used to create waterfall plot
-            index(:obj:`list`): List of string values to be used for x-axis labels
-            path(:obj:`string`): Location to save waterfall plot
+            data(array-like): data to be used to create waterfall plot, if not using
+                :py:attr:`compiled_data`. Defaults to None.
+            index(:obj:`list`): List of string values to be used for x-axis labels.
+            return_fig(:obj:`bool`, optional): Set to True to return the figure and axes objects,
+                otherwise set to False. Defaults to False.
+            figure_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be
+                passed to `plt.figure`. Defaults to {}.
+            plot_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be
+                passed to `ax.plot`. Defaults to {}.
+            legend_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be
+                passed to `ax.legend`. Defaults to {}.
 
         Returns:
-            (None)
+            None | tuple[plt.Figure, plt.Axes]: If :py:attr:`return_fig`, then return the figure
+                and axes objects in addition to showing the plot.
         """
 
         # Store data and create a blank series to use for the waterfall
-        trans = pd.DataFrame(data={"amount": data}, index=index)  # Assign gaps to data frame
-        blank = trans.amount.cumsum().shift(1).fillna(0)  # Perform cumulative sum on gap values
+        data = data if data is not None else self.compiled_data
+        trans = pd.DataFrame(data={"amount": data}, index=index)
+        blank = trans.amount.cumsum().shift(1).fillna(0)
 
         # Get the net total number for the final element in the waterfall
         total = trans.sum().amount
@@ -304,9 +319,9 @@ class EYAGapAnalysis(FromDictMixin):
         my_plot.set_xticklabels(trans.index, rotation=0)
 
         # Save figure
-        if save_fig_path:
-            my_plot.get_figure().savefig(
-                save_fig_path + "/waterfall.png", dpi=200, bbox_inches="tight"
-            )
+        # if save_fig_path:
+        #     my_plot.get_figure().savefig(
+        #         save_fig_path + "/waterfall.png", dpi=200, bbox_inches="tight"
+        #     )
 
         return my_plot
