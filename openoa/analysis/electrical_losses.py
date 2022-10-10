@@ -19,6 +19,7 @@ import openoa.utils.timeseries as ts
 from openoa import logging, logged_method_call
 from openoa.plant import PlantData, FromDictMixin
 from openoa.utils.pandas_plotting import set_styling
+from openoa.analysis._analysis_validators import validate_UQ_input, validate_open_range_0_1
 
 
 logger = logging.getLogger(__name__)
@@ -72,9 +73,11 @@ class ElectricalLosses(FromDictMixin):
     plant: PlantData = field(validator=attrs.validators.instance_of(PlantData))
     UQ: bool = field(default=False, converter=bool)
     num_sim: int = field(default=20000, converter=int)
-    uncertainty_correction_threshold: NDArrayFloat = field(default=0.95)
-    uncertainty_meter: NDArrayFloat = field(default=0.005, converter=float)
-    uncertainty_scada: NDArrayFloat = field(default=0.005, converter=float)
+    uncertainty_correction_threshold: NDArrayFloat = field(
+        default=0.95, validator=(validate_UQ_input, validate_open_range_0_1)
+    )
+    uncertainty_meter: NDArrayFloat = field(default=0.005, validator=validate_open_range_0_1)
+    uncertainty_scada: NDArrayFloat = field(default=0.005, validator=validate_open_range_0_1)
 
     # Internally created attributes need to be given a type before usage
     monthly_meter: bool = field(default=False, init=False)
@@ -97,29 +100,6 @@ class ElectricalLosses(FromDictMixin):
             raise TypeError(
                 "The input to 'plant' must be validated for at least the 'ElectricalLosses'"
             )
-
-    @uncertainty_correction_threshold.validator
-    def validate_threshold_input(self, attribute: attrs.Attribute, value: tuple | float) -> None:
-        if self.UQ:
-            if not isinstance(value, tuple):
-                raise ValueError(f"When UQ is True, {attribute.name} must be a tuple of length 2.")
-            if len(value) != 2:
-                raise ValueError(f"When UQ is True, {attribute.name} must be a tuple of length 2.")
-        else:
-            if not isinstance(value, float):
-                raise ValueError(f"When UQ is True, {attribute.name} must be a float")
-
-    @uncertainty_correction_threshold.validator
-    @uncertainty_meter.validator
-    @uncertainty_scada.validator
-    def validate_decimal_range(self, attribute: attrs.Attribute, value: float | tuple) -> None:
-        """Validates that the value is in the range of (0, 1)."""
-        if isinstance(value, float):
-            if not 0.0 < value < 1.0:
-                raise ValueError(f"'{attribute.name}' must be in the range (0, 1).")
-        else:
-            if not all(0.0 < x < 1.0 for x in value):
-                raise ValueError(f"Each value of '{attribute.name}' must be in the range (0, 1).")
 
     @logged_method_call
     def __attrs_post_init__(self):
