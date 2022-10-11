@@ -1539,10 +1539,11 @@ def _generate_swarm_values(y, n_bins=None, width: float = 0.5):
     return x
 
 
-def plot_aep_boxplot(
-    aep: pd.Series,
-    parameter: pd.Series,
-    label: str,
+def plot_boxplot(
+    x: pd.Series,
+    y: pd.Series,
+    xlabel: str,
+    ylabel: str,
     ylim: tuple[float, float] = (None, None),
     with_points: bool = False,
     return_fig: bool = False,
@@ -1554,20 +1555,21 @@ def plot_aep_boxplot(
     """Plot box plots of AEP results sliced by a specified Monte Carlo parameter
 
     Args:
-        aep (:obj:`pandas.Series`): The resulting AEP, in GWh, from a MonteCarloAEP analysis.
-        parameter (:obj:`pandas.Series`): A pandas `Series` of the data to split the AEP results.
-        label (:obj:`str`): The name of the parameter, which will also be used as the x-axis label.
-        ylim (:obj:`tuple[float, float]`, optional): A tuple of the y-axis plotting display limits.
+        x(:obj:`pandas.Series`): The data that splits the results in y.
+        y(:obj:`pandas.Series`): The resulting data to be splity by x.
+        xlabel(:obj:`str`): The x-axis label.
+        ylabel(:obj:`str`): The y-axis label.
+        ylim(:obj:`tuple[float, float]`, optional): A tuple of the y-axis plotting display limits.
             Defaults to None.
-        with_points (:obj:`bool`, optional): Flag to plot the individual points like a seaborn `swarmplot`. Defaults to False.
-        return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
-        figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
+        with_points(:obj:`bool`, optional): Flag to plot the individual points like a seaborn `swarmplot`. Defaults to False.
+        return_fig(:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
+        figure_kwargs(:obj:`dict`, optional): Additional figure instantiation keyword arguments
             that are passed to `plt.figure()`. Defaults to {}.
-        plot_kwargs_box (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
+        plot_kwargs_box(:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
             `ax.boxplot()`. Defaults to {}.
-        plot_kwargs_points (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
+        plot_kwargs_points(:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
             `ax.boxplot()`. Defaults to {}.
-        legend_kwargs (:obj:`dict`, optional): Additional legend keyword arguments that are passed to
+        legend_kwargs(:obj:`dict`, optional): Additional legend keyword arguments that are passed to
             `ax.legend()`. Defaults to {}.
 
     Returns:
@@ -1575,15 +1577,15 @@ def plot_aep_boxplot(
             True, then the figure object, axes object, and a dictionary of the boxplot objects are
             returned for further tinkering/saving.
     """
-    df = pd.DataFrame(data={"aep": aep, label: parameter})
+    df = pd.DataFrame(data={"x": x, "y": y})
     figure_kwargs.setdefault("figsize", (8, 6))
 
     fig = plt.figure(**figure_kwargs)
     ax = fig.add_subplot(111)
 
-    parameters = parameter.unique()
+    parameters = x.unique()
     parameters.sort()
-    y_groups = [df.loc[df[label] == el, "aep"] for el in parameters]
+    y_groups = [df.loc[df["x"] == el, "y"] for el in parameters]
 
     plot_kwargs_box.setdefault("labels", parameters)
     box_data = ax.boxplot(y_groups, **plot_kwargs_box)
@@ -1594,10 +1596,10 @@ def plot_aep_boxplot(
         plot_kwargs_points.setdefault("facecolor", "none")
         plot_kwargs_points.setdefault("edgecolor", "green")
         plot_kwargs_points.setdefault("alpha", 0.5)
-        for x_start, (y, width) in enumerate(zip(y_groups, widths)):
-            x = _generate_swarm_values(y, width=width * 0.9) + x_start + 1
+        for x_start, (_y, width) in enumerate(zip(y_groups, widths)):
+            _x = _generate_swarm_values(_y, width=width * 0.9) + x_start + 1
             label = "Individual AEP Points" if x_start == width.size - 1 else None
-            ax.scatter(x, y, zorder=0, label=label, **plot_kwargs_points)
+            ax.scatter(_x, _y, zorder=0, label=label, **plot_kwargs_points)
 
     ax.grid()
     ax.set_axisbelow(True)
@@ -1608,12 +1610,13 @@ def plot_aep_boxplot(
     labels.extend(_labels)
     ax.legend(handles, labels, **legend_kwargs)
 
-    ax.set_ylabel("AEP (GWh/yr)")
-    ax.set_xlabel(label)
+    ax.set_ylabel(ylabel)
+    ax.set_xlabel(xlabel)
 
     ax.set_ylim(ylim)
 
-    if return_fig:
-        return fig, ax, box_data
     fig.tight_layout()
     plt.show()
+
+    if return_fig:
+        return fig, ax, box_data

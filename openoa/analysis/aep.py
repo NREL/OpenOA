@@ -1113,8 +1113,8 @@ class MonteCarloAEP(object):
     # )
     def plot_aep_boxplot(
         self,
-        parameter: pd.Series,
-        label: str,
+        x: pd.Series,
+        xlabel: str,
         ylim: tuple[float, float] = (None, None),
         with_points: bool = False,
         return_fig: bool = False,
@@ -1126,8 +1126,8 @@ class MonteCarloAEP(object):
         """Plot box plots of AEP results sliced by a specified Monte Carlo parameter
 
         Args:
-            parameter (:obj:`pandas.Series`): A pandas `Series` of the data to split the AEP results.
-            label (:obj:`str`): The name of the parameter, which will also be used as the x-axis label.
+            x(:obj:`pandas.Series`): The data that splits the results in y.
+            xlabel(:obj:`str`): The x-axis label.
             ylim (:obj:`tuple[float, float]`, optional): A tuple of the y-axis plotting display limits.
                 Defaults to None.
             with_points (:obj:`bool`, optional): Flag to plot the individual points like a seaborn `swarmplot`. Defaults to False.
@@ -1135,7 +1135,7 @@ class MonteCarloAEP(object):
             figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
                 that are passed to `plt.figure()`. Defaults to {}.
             plot_kwargs_box (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
-                `ax.boxplot()`. Defaults to {}.
+                `ax.boxplot()`. Defahults to {}.
             plot_kwargs_points (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
                 `ax.boxplot()`. Defaults to {}.
             legend_kwargs (:obj:`dict`, optional): Additional legend keyword arguments that are passed to
@@ -1146,10 +1146,11 @@ class MonteCarloAEP(object):
                 True, then the figure object, axes object, and a dictionary of the boxplot objects are
                 returned for further tinkering/saving.
         """
-        return plot.plot_aep_boxplot(
-            aep=self.results.aep_GWh,
-            parameter=parameter,
-            label=label,
+        return plot.plot_boxplot(
+            x=x,
+            xlabel=xlabel,
+            y=self.results.aep_GWh,
+            ylabel="AEP (GWh/yr)",
             ylim=ylim,
             with_points=with_points,
             return_fig=return_fig,
