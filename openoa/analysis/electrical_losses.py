@@ -73,11 +73,15 @@ class ElectricalLosses(FromDictMixin):
     plant: PlantData = field(validator=attrs.validators.instance_of(PlantData))
     UQ: bool = field(default=False, converter=bool)
     num_sim: int = field(default=20000, converter=int)
-    uncertainty_correction_threshold: NDArrayFloat = field(
+    uncertainty_correction_threshold: NDArrayFloat | tuple[float, float] | float = field(
         default=0.95, validator=(validate_UQ_input, validate_open_range_0_1)
     )
-    uncertainty_meter: NDArrayFloat = field(default=0.005, validator=validate_open_range_0_1)
-    uncertainty_scada: NDArrayFloat = field(default=0.005, validator=validate_open_range_0_1)
+    uncertainty_meter: NDArrayFloat | tuple[float, float] | float = field(
+        default=0.005, validator=validate_open_range_0_1
+    )
+    uncertainty_scada: NDArrayFloat | tuple[float, float] | float = field(
+        default=0.005, validator=validate_open_range_0_1
+    )
 
     # Internally created attributes need to be given a type before usage
     monthly_meter: bool = field(default=False, init=False)

@@ -14,6 +14,7 @@ import attrs
 import numpy as np
 import pandas as pd
 import numpy.typing as npt
+import matplotlib.pyplot as plt
 from tqdm import tqdm
 from attrs import field, define
 
@@ -105,7 +106,6 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
     daily_reanal_dict: dict = field(factory=dict, init=False)
     model_dict: dict = field(factory=dict, init=False)
     model_results: dict = field(factory=dict, init=False)
-    turb_lt_gross: dict = field(factory=dict, init=False)
     scada_daily_valid: pd.DataFrame = field(default=pd.DataFrame(), init=False)
     reanalysis_subset: list[str] = field(init=False)
     reanalysis_memo: dict[str, pd.DataFrame] = field(factory=dict, init=False)
@@ -113,10 +113,11 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
     _run: pd.DataFrame = field(init=False)
     _inputs: pd.DataFrame = field(init=False)
     scada_valid: pd.DataFrame = field(init=False)
-    turbine_model_dict: dict[str, pd.DataFrame] = field(init=False)
-    _model_results: dict[str, Callable] = field(init=False)
-    _turb_lt_gross: pd.DataFrame = field(init=False)
-    _plant_gross: dict[int, pd.DataFrame] = field(init=False)
+    turbine_model_dict: dict[str, pd.DataFrame] = field(factory=dict, init=False)
+    _model_results: dict[str, Callable] = field(factory=dict, init=False)
+    turb_lt_gross: pd.DataFrame = field(default=pd.DataFrame(), init=False)
+    summary_results: pd.DataFrame = field(init=False)
+    plant_gross: dict[int, pd.DataFrame] = field(factory=dict, init=False)
 
     @plant.validator
     def validate_plant_ready_for_anylsis(
@@ -156,55 +157,30 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
     def run(
         self,
         reanalysis_subset=["erai", "ncep2", "merra2"],
-        enable_plotting=False,
-        plot_dir=None,
     ) -> None:
         """
-        Perform pre-processing of data into an internal representation for which the analysis can run more quickly.
+        Pre-process the run-specific data settings for each simulation, then fit and apply the
+        model for each simualtion.
 
         Args:
-         reanalysis_subset(:obj:`list`): Which reanalysis products to use for long-term correction
-         enable_plotting(:obj:`boolean`): Indicate whether to output plots
-         plot_dir(:obj:`string`): Location to save figures
+            reanalysis_subset(:obj:`list`): The reanalysis products to use for long-term correction.
         """
         self.reanalysis_subset = reanalysis_subset  # Reanalysis data to consider in fitting
 
         self.setup_inputs()
+        logger.info("Running the long term gross energy analysis")
 
         # Loop through number of simulations, store TIE results
         for i in tqdm(np.arange(self.num_sim)):
 
             self._run = self._inputs.loc[i]
 
-            # MC-sampled parameter in this function!
-            logger.info("Filtering turbine data")
             self.filter_turbine_data()  # Filter turbine data
-
-            # if self.enable_plotting:
-            #     logger.info("Plotting filtered power curves")
-            #     self.plot_filtered_power_curves(plot_dir)
-
-            # MC-sampled parameter in this function!
-            logger.info("Processing reanalysis data to daily averages")
             self.setup_daily_reanalysis_data()  # Setup daily reanalysis products
-
-            # MC-sampled parameter in this function!
-            logger.info("Processing scada data to daily sums")
             self.filter_sum_impute_scada()  # Setup daily scada data
-
-            logger.info("Setting up daily data for model fitting")
             self.setupturbine_model_dict()  # Setup daily data to be fit using the GAM
-
-            # MC-sampled parameter in this function!
-            logger.info("Fitting model data")
             self.fit_model()  # Fit daily turbine energy to atmospheric data
-
-            logger.info("Applying fitting results to calculate long-term gross energy")
-            self.apply_model_to_lt(i)  # Apply fitting result to long-term reanalysis data
-
-            # if enable_plotting:
-            #     logger.info("Plotting daily fitted power curves")
-            #     self.plot_daily_fitting_result(plot_dir)  # Setup daily reanalysis products
+            self.apply_model(i)  # Apply fitting result to long-term reanalysis data
 
         # Log the completion of the run
         logger.info("Run completed")
@@ -240,7 +216,7 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
                 )
                 / 100.0,
             }
-            self._plant_gross = np.empty([self.num_sim, 1])
+            self.plant_gross = np.empty([self.num_sim, 1])
 
         if not self.UQ:
             inputs = {
@@ -250,7 +226,7 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
                 "max_power_filter": self.max_power_filter,
                 "correction_threshold": self.correction_threshold,
             }
-            self._plant_gross = np.empty([len(self.reanalysis_subset), 1])
+            self.plant_gross = np.empty([len(self.reanalysis_subset), 1])
             self.num_sim = len(self.reanalysis_subset)
 
         self._inputs = pd.DataFrame(inputs)
@@ -374,17 +350,15 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
             )
 
             # Set negative turbine data to zero
-            dic[t].loc[dic[t]["flag_neg"], "wtur_W_avg"] = 0
+            dic[t].loc[dic[t]["flag_neg"], "power"] = 0
 
     def setup_daily_reanalysis_data(self) -> None:
         """
         Process reanalysis data to daily means for later use in the GAM model.
         """
         # Memoize the function so you don't have to recompute the same reanalysis product twice
-        if not hasattr(self, "reanalysis_memo"):
-            self.reanalysis_memo = {}
-        if self._run.reanalysis_product in self.reanalysis_memo.keys():
-            self.daily_reanalysis = self.reanalysis_memo[self._run.reanalysis_product]
+        if (df_daily := self.reanalysis_memo.get(self._run.reanalysis_product, None)) is not None:
+            self.daily_reanalysis = df_daily.copy()
             return
 
         # Capture the runs reanalysis data set and ensure the U/V components exist
@@ -395,15 +369,11 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
             )
 
         # Resample at a daily resolution and recalculate daily average wind direction
-        # df_daily = reanalysis_df.resample("D")[
-        #     "windspeed_u", "windspeed_v", "windspeed", "density"
-        # ].mean()  # Get daily means
         df_daily = reanalysis_df.groupby([pd.Grouper(freq="D", level="time")])[
-            "windspeed_u", "windspeed_v", "windspeed", "density"
+            ["windspeed_u", "windspeed_v", "windspeed", "density"]
         ].mean()
-        df_daily["wind_direction"] = met.compute_wind_direction(
-            u=df_daily["windspeed_u"], v=df_daily["windspeed_v"]
-        )
+        wd = met.compute_wind_direction(u="windspeed_u", v="windspeed_v", data=df_daily)
+        df_daily = df_daily.assign(wind_direction=wd.values)
         self.daily_reanalysis = df_daily
 
         # Store the results for re-use
@@ -430,9 +400,7 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
         # Loop through turbines
         for t in self.turbine_ids:
             scada_filt = scada[t].loc[~scada[t]["flag_final"]]  # Filter for valid data
-            # scada_daily = (
-            #     scada_filt.resample("D")["energy"].sum().to_frame()
-            # )  # Calculate daily energy sum
+            # Calculate daily energy sum
             scada_daily = (
                 scada_filt.groupby([pd.Grouper(freq="D", level="time")])["energy"].sum().to_frame()
             )
@@ -448,8 +416,6 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
                 .apply(ts.percent_nan)
                 .to_frame()
             )
-            # scada_daily["data_count"] = scada_filt.resample("D")["energy"].count()
-            # scada_daily["percent_nan"] = scada_filt.resample("D")["energy"].apply(ts.percent_nan)
 
             # Correct energy for missing data
             scada_daily["energy_corrected"] = (
@@ -460,7 +426,9 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
             scada_daily = scada_daily.loc[scada_daily["data_count"] >= num_thres]
 
             # Create temporary data frame that is gap filled and to be used for imputing
-            temp_df = pd.DataFrame(index=pd.date_range(self.por_start, self.por_end, freq="D"))
+            temp_df = pd.DataFrame(
+                index=pd.date_range(self.por_start, self.por_end, freq="D", name="time")
+            )
             temp_df["energy_corrected"] = scada_daily["energy_corrected"]
             temp_df["percent_nan"] = scada_daily["percent_nan"]
             temp_df["id"] = np.repeat(t, temp_df.shape[0])
@@ -470,15 +438,13 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
             self.scada_valid = self.scada_valid.append(temp_df)
 
         # Reset index after all turbines has been combined
-        self.scada_valid.reset_index(inplace=True)
+        self.scada_valid = self.scada_valid.set_index("id", append=True)
 
         # Impute missing days for each turbine - provides progress bar
         self.scada_valid["energy_imputed"] = imputing.impute_all_assets_by_correlation(
             self.scada_valid,
             impute_col="energy_corrected",
             reference_col="energy_corrected",
-            # align_col="day",
-            # id_col="id",
         )
 
         # Drop data that could not be imputed
@@ -492,7 +458,7 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
                 self.scada_valid.loc[self.scada_valid.index.get_level_values("id") == t]
                 .set_index("day")
                 .join(reanalysis)
-                .dropna(subset=["energy_imputed", "windspeed_ms"])
+                .dropna(subset=["energy_imputed", "windspeed"])
             )
 
     def fit_model(self) -> None:
@@ -511,9 +477,9 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
 
             # Consider wind speed, wind direction, and air density as features
             mod_results[t] = functions.gam_3param(
-                windspeed_col="windspeed_ms",
-                wind_direction_col="winddirection_deg",
-                air_density_col="rho_kgm-3",
+                windspeed_col="windspeed",
+                wind_direction_col="wind_direction",
+                air_density_col="density",
                 power_col="energy_imputed",
                 data=df,
             )
@@ -526,11 +492,11 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
         Args:
             i(:obj:`int`): The Monte Carlo iteration number.
         """
-        turb_gross = self._turb_lt_gross
+        turb_gross = self.turb_lt_gross
         mod_results = self._model_results
 
         # Create a data frame to store final results
-        self._summary_results = pd.DataFrame(index=self.reanalysis_subset, columns=self.turbine_ids)
+        self.summary_results = pd.DataFrame(index=self.reanalysis_subset, columns=self.turbine_ids)
 
         daily_reanalysis = self.daily_reanalysis
         turb_gross = pd.DataFrame(index=daily_reanalysis.index)
@@ -552,8 +518,8 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
         turb_mo_avg = turb_mo.groupby(turb_mo.index.month).mean()
 
         # Store sum of turbine gross energy
-        self._plant_gross[i] = turb_mo_avg.sum(axis=1).sum(axis=0)
-        self._turb_lt_gross = turb_gross
+        self.plant_gross[i] = turb_mo_avg.sum(axis=1).sum(axis=0)
+        self.turb_lt_gross = turb_gross
 
     def plot_filtered_power_curves(self, save_folder, output_to_terminal=False):
         """
@@ -566,7 +532,8 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
         Returns:
             (None)
         """
-        import matplotlib.pyplot as plt
+
+        # TODO: NEED PLOTTING TO BE MERGED FIRST
 
         dic = self.scada_dict
 
@@ -575,9 +542,9 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
             filt_df = dic[t].loc[dic[t]["flag_final"]]  # Filter only for valid data
 
             plt.figure(figsize=(6, 5))
-            plt.scatter(dic[t].wmet_wdspd_avg, dic[t].wtur_W_avg, s=1, label="Raw")  # Plot all data
+            plt.scatter(dic[t].windspeed, dic[t].power, s=1, label="Raw")  # Plot all data
             plt.scatter(
-                filt_df["wmet_wdspd_avg"], filt_df["wtur_W_avg"], s=1, label="Flagged"
+                filt_df["windspeed"], filt_df["power"], s=1, label="Flagged"
             )  # Plot flagged data
             plt.xlim(0, 30)
             plt.xlabel("Wind speed (m/s)")
@@ -610,7 +577,8 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
         Returns:
             (None)
         """
-        import matplotlib.pyplot as plt
+
+        # TODO: NEED PLOTTING TO BE MERGED FIRST
 
         mod_input = self.turbine_model_dict
 
@@ -618,14 +586,14 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
         for t in self.turbine_ids:
             df = mod_input[(t)]
             daily_reanalysis = self.daily_reanalysis
-            ws_daily = daily_reanalysis["windspeed_ms"]
+            ws_daily = daily_reanalysis["windspeed"]
 
             df_imputed = df.loc[df["energy_corrected"] != df["energy_imputed"]]
 
             plt.figure(figsize=(6, 5))
-            plt.plot(ws_daily, self._turb_lt_gross[t], "r.", alpha=0.1, label="Modeled")
-            plt.plot(df["windspeed_ms"], df["energy_imputed"], ".", label="Input")
-            plt.plot(df_imputed["windspeed_ms"], df_imputed["energy_imputed"], ".", label="Imputed")
+            plt.plot(ws_daily, self.turb_lt_gross[t], "r.", alpha=0.1, label="Modeled")
+            plt.plot(df["windspeed"], df["energy_imputed"], ".", label="Input")
+            plt.plot(df_imputed["windspeed"], df_imputed["energy_imputed"], ".", label="Imputed")
             plt.xlabel("Wind speed (m/s)")
             plt.ylabel("Daily Energy (kWh)")
             plt.title("Daily SCADA Energy Fitting, Turbine %s" % t)
