@@ -1107,8 +1107,11 @@ def plot_power_curve(
     fig.tight_layout()
 
 
-def plot_normalized_monthly_reanalysis_windspeed(
-    aep: MonteCarloAEP,
+def plot_monthly_reanalysis_windspeed(
+    data: dict[str, pd.DataFrame],
+    windspeed_col: str,
+    plant_por: tuple[datetime.datetime, datetime.datetime],
+    normalize: bool = True,
     xlim: tuple[datetime.datetime, datetime.datetime] = (None, None),
     ylim: tuple[float, float] = (None, None),
     return_fig: bool = False,
@@ -1120,7 +1123,12 @@ def plot_normalized_monthly_reanalysis_windspeed(
     trends for each, and highlighting the period of record for the plant data.
 
     Args:
-        aep (:obj:`openoa.analysis.MonteCarloAEP`): An initialized MonteCarloAEP object.
+        data(:obj:`dict[pandas.DataFrame]`): The dictionary of reanalysis dataframes.
+        windspeed_col(:obj:`str`): The name of the column for the windspeed data to be plot.
+        plot_por(:obj:`tuple[datetime.datetime, datetime.datetime]`): The start and end datetimes
+            for a plant's period of record (POR).
+        normalize(:obj:`bool`): Indicator of if the windspeeds shoudld be normalized (True), or not
+            (False). Defaults to True.
         xlim (:obj:`tuple[datetime.datetime, datetime.datetime]`, optional): A tuple of datetimes
             representing the x-axis plotting display limits. Defaults to (None, None).
         ylim (:obj:`tuple[float, float]`, optional): A tuple of the y-axis plotting display limits.
@@ -1138,25 +1146,24 @@ def plot_normalized_monthly_reanalysis_windspeed(
             the figure and axes objects are returned for further tinkering/saving.
     """
     # Define parameters needed for plotting
-    min_val, max_val = (np.inf, -np.inf) if ylim is None else ylim
-    por_start = aep._aggregate.index[0]
-    por_end = aep._aggregate.index[-1]
+    min_val, max_val = (np.inf, -np.inf) if ylim == (None, None) else ylim
 
     figure_kwargs.setdefault("figsize", (14, 6))
     figure_kwargs.setdefault("dpi", 200)
     fig = plt.figure(**figure_kwargs)
     ax = fig.add_subplot(111)
 
-    for name, df in aep._plant.reanalysis.items():
+    for name, df in data.items():
         # Compute the rolling mean and normalize it over a 12 month average
-        ws = df.resample("MS")["ws_dens_corr"].mean().to_frame().rolling(12).mean()
-        ws_norm = ws["ws_dens_corr"] / ws["ws_dens_corr"].mean()
+        ws = df.resample("MS")[windspeed_col].mean().to_frame().rolling(12).mean()
+        if normalize:
+            ws = ws[windspeed_col] / ws[windspeed_col].mean()
 
         # Update the min and max values
-        min_val = min(min_val, ws_norm.min())
-        max_val = max(max_val, ws_norm.max())
+        min_val = min(min_val, ws.min())
+        max_val = max(max_val, ws.max())
 
-        ax.plot(ws_norm, label=name, **plot_kwargs)
+        ax.plot(ws, label=name, **plot_kwargs)
 
     # Plot a vertical line at y = 1
     _xlims = (ws.index[0], ws.index[-1]) if xlim is None else xlim
@@ -1164,7 +1171,7 @@ def plot_normalized_monthly_reanalysis_windspeed(
 
     # Fill in the period of record
     ax.fill_between(
-        [por_start, por_end],
+        plant_por,
         [min_val, min_val],
         [max_val, max_val],
         alpha=0.1,

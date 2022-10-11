@@ -1093,11 +1093,47 @@ class MonteCarloAEP(object):
 
     # Plotting Routines
 
-    # setattr(
-    #     MonteCarloAEP,
-    #     "plot_normalized_monthly_reanalysis_windspeed",
-    #     plot.plot_normalized_monthly_reanalysis_windspeed,
-    # )
+    def plot_normalized_monthly_reanalysis_windspeed(
+        self,
+        xlim: tuple[datetime.datetime, datetime.datetime] = (None, None),
+        ylim: tuple[float, float] = (None, None),
+        return_fig: bool = False,
+        figure_kwargs: dict = {},
+        plot_kwargs: dict = {},
+        legend_kwargs: dict = {},
+    ) -> None | tuple[plt.Figure, plt.Axes]:
+        """Make a plot of the normalized annual average wind speeds from reanalysis data to show general
+        trends for each, and highlighting the period of record for the plant data.
+
+        Args:
+            aep (:obj:`openoa.analysis.MonteCarloAEP`): An initialized MonteCarloAEP object.
+            xlim (:obj:`tuple[datetime.datetime, datetime.datetime]`, optional): A tuple of datetimes
+                representing the x-axis plotting display limits. Defaults to (None, None).
+            ylim (:obj:`tuple[float, float]`, optional): A tuple of the y-axis plotting display limits.
+                Defaults to (None, None).
+            return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
+            figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
+                that are passed to `plt.figure()`. Defaults to {}.
+            plot_kwargs (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
+                `ax.plot()`. Defaults to {}.
+            legend_kwargs (:obj:`dict`, optional): Additional legend keyword arguments that are passed to
+                `ax.legend()`. Defaults to {}.
+
+        Returns:
+            None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes]: If `return_fig` is True, then
+                the figure and axes objects are returned for further tinkering/saving.
+        """
+        return plot.plot_monthly_reanalysis_windspeed(
+            data=self._plant.reanalysis,
+            windspeed_col="ws_dens_corr",
+            plant_por=(self._aggregate.index[0], self._aggregate.index[-1]),
+            xlim=xlim,
+            ylim=ylim,
+            return_fig=return_fig,
+            figure_kwargs=figure_kwargs,
+            plot_kwargs=plot_kwargs,
+            legend_kwargs=legend_kwargs,
+        )
 
     def plot_reanalysis_gross_energy_data(
         self,
