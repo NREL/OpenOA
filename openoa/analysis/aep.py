@@ -15,6 +15,7 @@ import statsmodels.api as sm
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from sklearn.metrics import r2_score, mean_squared_error
+from matplotlib.markers import MarkerStyle
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import KFold
 
@@ -1097,11 +1098,130 @@ class MonteCarloAEP(object):
     #     "plot_normalized_monthly_reanalysis_windspeed",
     #     plot.plot_normalized_monthly_reanalysis_windspeed,
     # )
-    # setattr(
-    #     MonteCarloAEP,
-    #     "plot_reanalysis_gross_energy_data",
-    #     plot.plot_reanalysis_gross_energy_data,
-    # )
+
+    def plot_reanalysis_gross_energy_data(
+        self,
+        outlier_threshold: int,
+        xlim: tuple[float, float] = (None, None),
+        ylim: tuple[float, float] = (None, None),
+        return_fig: bool = False,
+        figure_kwargs: dict = {},
+        plot_kwargs: dict = {},
+        legend_kwargs: dict = {},
+    ) -> None | tuple[plt.Figure, plt.Axes]:
+        """
+        Makes a plot of the gross energy vs wind speed for each reanalysis product, with outliers
+        highlighted in a contrasting color and separate marker. For
+
+        Args:
+            reanalysis (:obj:`dict[str, pandas.DataFrame]`): `PlantData.reanalysis` dictionary of reanalysis
+                `DataFrame`s.
+            outlier_thres (:obj:`float`): outlier threshold (typical range of 1 to 4) which adjusts
+                outlier sensitivity detection.
+            xlim (:obj:`tuple[float, float]`, optional): A tuple of datetimes
+                representing the x-axis plotting display limits. Defaults to (None, None).
+            ylim (:obj:`tuple[float, float]`, optional): A tuple of the y-axis plotting display limits.
+                Defaults to (None, None).
+            return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
+            figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
+                that are passed to `plt.figure()`. Defaults to {}.
+            plot_kwargs (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
+                `ax.scatter()`. Defaults to {}.
+            legend_kwargs (:obj:`dict`, optional): Additional legend keyword arguments that are passed to
+                `ax.legend()`. Defaults to {}.
+
+        Returns:
+            None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes]: If `return_fig` is True, then
+                the figure and axes objects are returned for further tinkering/saving.
+        """
+
+        figure_kwargs.setdefault("figsize", (9, 9))
+        figure_kwargs.setdefault("dpi", 200)
+        fig = plt.figure(**figure_kwargs)
+        ax = fig.add_subplot(111)
+        ax.set_prop_cycle(
+            color=[
+                "tab:blue",
+                "tab:orange",
+                "tab:green",
+                "tab:red",
+                "tab:brown",
+                "tab:pink",
+                "tab:gray",
+                "tab:olive",
+            ]
+        )
+
+        valid_aggregate = self._aggregate
+
+        # Monthly case: apply robust linear regression for outliers detection
+        if self.time_resolution == "M":
+            for name, df in self._plant.reanalysis.items():
+                x = sm.add_constant(valid_aggregate[name])
+                y = valid_aggregate["gross_energy_gwh"] * 30 / valid_aggregate["num_days_expected"]
+                rlm = sm.RLM(y, x, M=sm.robust.norms.HuberT(t=outlier_threshold))
+                rlm_results = rlm.fit()
+                ix_outlier = rlm_results.weights != 1
+                r2 = np.corrcoef(x.loc[~ix_outlier, name], y[~ix_outlier])[0, 1]
+                ax.scatter(
+                    x.loc[~ix_outlier, name],
+                    y[~ix_outlier],
+                    marker=MarkerStyle(marker="o", fillstyle="none"),
+                    label=f"Valid {name} Data (R2={r2:.3f})",
+                    **plot_kwargs,
+                )
+                ax.scatter(
+                    x.loc[ix_outlier, name],
+                    y[ix_outlier],
+                    marker="x",
+                    label=f"{name} Outlier",
+                    **plot_kwargs,
+                )
+
+            ax.set_ylabel("30-day normalized gross energy (GWh)")
+
+        # Daily/hourly case: apply bin filter for outliers detection
+        else:
+            for name, df in self._plant.reanalysis.items():
+                x = valid_aggregate[name]
+                y = valid_aggregate["gross_energy_gwh"]
+                plant_capac = self._plant.metadata.capacity / 1000.0 * self._hours_in_res
+
+                # Apply bin filter
+                flag = filters.bin_filter(
+                    bin_col=y,
+                    value_col=x,
+                    bin_width=0.06 * plant_capac,
+                    threshold=outlier_threshold,  # wind bin threshold (stdev outside the median)
+                    center_type="median",
+                    bin_min=0.01 * plant_capac,
+                    bin_max=0.85 * plant_capac,
+                    threshold_type="std",
+                    direction="all",  # both left and right (from the median)
+                )
+
+                # Continue plotting
+                ax.scatter(x.loc[flag], y[flag], "x", label=f"{name} Outlier", **plot_kwargs)
+                ax.scatter(x.loc[~flag], y[~flag], ".", label=f"Valid {name} data", **plot_kwargs)
+
+            if self.time_resolution == "D":
+                ax.set_ylabel("Daily gross energy (GWh)")
+            elif self.time_resolution == "H":
+                ax.set_ylabel("Hourly gross energy (GWh)")
+
+        ax.grid()
+        ax.set_axisbelow(True)
+        ax.legend(**legend_kwargs)
+        ax.set_xlabel("Wind speed (m/s)")
+
+        ax.set_xlim(xlim)
+        ax.set_ylim(ylim)
+
+        fig.tight_layout()
+        plt.show()
+
+        if return_fig:
+            return fig, ax
 
     def plot_aggregate_plant_data_timeseries(
         self,
