@@ -1181,10 +1181,11 @@ def plot_normalized_monthly_reanalysis_windspeed(
     ax.set_ylabel("Normalized wind speed")
     ax.legend(**legend_kwargs)
 
+    fig.tight_layout()
+    plt.show()
+
     if return_fig:
         return fig, ax
-
-    fig.tight_layout()
 
 
 def plot_reanalysis_gross_energy_data(
@@ -1305,9 +1306,11 @@ def plot_reanalysis_gross_energy_data(
     ax.set_xlim(xlim)
     ax.set_ylim(ylim)
 
+    fig.tight_layout()
+    plt.show()
+
     if return_fig:
         return fig, ax
-    fig.tight_layout()
 
 
 def plot_aggregate_plant_data_timeseries(
@@ -1373,19 +1376,19 @@ def plot_aggregate_plant_data_timeseries(
     ax1.set_ylim(ylim_energy)
     ax2.set_ylim(ylim_loss)
 
+    fig.tight_layout()
+    plt.show()
+
     if return_fig:
         return fig, axes
-    fig.tight_layout()
 
 
-def plot_result_aep_distributions(
-    aep,
-    xlim_aep: tuple[float, float] = (None, None),
-    xlim_availability: tuple[float, float] = (None, None),
-    xlim_curtail: tuple[float, float] = (None, None),
-    ylim_aep: tuple[float, float] = (None, None),
-    ylim_availability: tuple[float, float] = (None, None),
-    ylim_curtail: tuple[float, float] = (None, None),
+def plot_distributions(
+    data: pd.DataFrame,
+    which: list[str],
+    xlabels: list[str],
+    xlim: tuple[tuple[float, float], ...] = None,
+    ylim: tuple[tuple[float, float], ...] = None,
     return_fig: bool = False,
     figure_kwargs: dict = {},
     plot_kwargs: dict = {},
@@ -1395,19 +1398,15 @@ def plot_result_aep_distributions(
     Plot a distribution of AEP values from the Monte-Carlo OA method
 
     Args:
-        aep (:obj:`openoa.analysis.MonteCarloAEP`): The `MonteCarloAEP` object.
-        xlim_aep (:obj:`tuple[float, float]`, optional): A tuple of floats representing the x-axis plotting display
-            limits for the AEP subplot. Defaults to (None, None).
-        xlim_availability (:obj:`tuple[float, float]`, optional): A tuple of floats representing the x-axis plotting
-            display limits for the availability subplot. Defaults to (None, None).
-        xlim_curtail (:obj:`tuple[float, float]`, optional): A tuple of floats representing the
-            x-axis plotting display limits for the curtailment subplot. Defaults to (None, None).
-        ylim_aep (:obj:`tuple[float, float]`, optional): A tuple of floats representing the y-axis plotting display
-            limits for the AEP subplot. Defaults to (None, None).
-        ylim_availability (:obj:`tuple[float, float]`, optional): A tuple of floats representing the y-axis plotting
-            display limits for the availability subplot. Defaults to (None, None).
-        ylim_curtail (:obj:`tuple[float, float]`, optional): A tuple of floats representing the
-            y-axis plotting display limits for the curtailment subplot. Defaults to (None, None).
+        aep(:obj:`pandas.DataFrame`): The pandas DataFrame of results data.
+        which:(:obj:`list[str]`): The list of columns in data that should have their distributions plot.
+        xlabels:(obj:`list[str]`): The list of x-axis labels
+        xlim(:obj:`tuple[tuple[float, float], ...]`, optional): A tuple of tuples (or None)
+            corresponding to each of elements of :py:attr:`which` that get passed to ax.set_xlim().
+            Defaults to None.
+        ylim(:obj:`tuple[tuple[float, float], ...]`, optional): A tuple of tuples (or None)
+            corresponding to each of elements of :py:attr:`which` that get passed to ax.set_ylim().
+            Defaults to None.
         return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
         figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
             that are passed to `plt.figure()`. Defaults to {}.
@@ -1420,7 +1419,15 @@ def plot_result_aep_distributions(
         None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes]: If `return_fig` is True, then
             the figure and axes objects are returned for further tinkering/saving.
     """
-    sim_results = aep.results
+    if xlim is None:
+        xlim = tuple([(None, None) for _ in range(len(which))])
+    if ylim is None:
+        ylim = tuple([(None, None) for _ in range(len(which))])
+
+    if len(which) != len(xlabels) != len(xlim) != len(ylim):
+        raise ValueError(
+            "The inputs to `which`, `xlabels`, `xlim`, and `ylim` must be the same length."
+        )
 
     annotate_kwargs.setdefault("fontsize", 12)
 
@@ -1428,62 +1435,48 @@ def plot_result_aep_distributions(
     figure_kwargs.setdefault("dpi", 200)
     fig = plt.figure(**figure_kwargs)
     axes = fig.subplots(2, 2, gridspec_kw=dict(wspace=0.1, hspace=0.2))
-    (ax1, ax2), (ax3, *_) = axes
 
-    for ax in (ax1, ax2, ax3):
+    for ax in axes.flatten():
         ax.grid()
         ax.set_axisbelow(True)
 
-    # Plot the AEP results
-    ax1.hist(sim_results["aep_GWh"], 40, density=1, **plot_kwargs)
-    ax1.annotate(
-        f"AEP Mean = {sim_results['aep_GWh'].mean():.1f} GWh/yr",
-        (0.05, 0.9),
-        xycoords="axes fraction",
-        **annotate_kwargs,
-    )
-    ax1.annotate(
-        f"AEP Unc = {sim_results['aep_GWh'].std() / sim_results['aep_GWh'].mean():.1f}",
-        (0.05, 0.85),
-        xycoords="axes fraction",
-        **annotate_kwargs,
-    )
-    ax1.set_xlabel("AEP (GWh/yr)")
-
-    # Plot the availability results
-    ax2.hist(sim_results["avail_pct"] * 100, 40, density=1, **plot_kwargs)
-    ax2.annotate(
-        f"Mean Availability = {sim_results['avail_pct'].mean():.1%}",
-        (0.05, 0.9),
-        xycoords="axes fraction",
-        **annotate_kwargs,
-    )
-    ax2.set_xlabel("Availability Loss (%)")
-
-    # Plot the curtailment results
-    ax3.hist(sim_results["curt_pct"] * 100, 40, density=1, **plot_kwargs)
-    ax3.annotate(
-        f"Mean Curtailment = {sim_results['curt_pct'].mean():.1%}",
-        (0.05, 0.9),
-        xycoords="axes fraction",
-        **annotate_kwargs,
-    )
-    ax3.set_xlabel("Curtailment Loss (%)")
+    for ax, col, label, _xlim, _ylim in zip(axes.flatten(), which, xlabels, xlim, ylim):
+        vals = data[col].values
+        ax.hist(vals, 40, density=1, **plot_kwargs)
+        ax.annotate(
+            f"Mean = {vals.mean():.1f}",
+            (0.05, 0.9),
+            xycoords="axes fraction",
+            **annotate_kwargs,
+        )
+        ax.annotate(
+            f"Uncentainty = {vals.std() / vals.mean():.1f}",
+            (0.05, 0.85),
+            xycoords="axes fraction",
+            **annotate_kwargs,
+        )
+        ax.set_xlabel(label)
+        ax.set_xlim(_xlim)
+        ax.set_ylim(_ylim)
 
     # Delete the extra axes
-    fig.delaxes(axes.flatten()[3])
+    if (n_delete := len(axes.flatten()) - len(which)) > 0:
+        n = len(axes.flatten())
+        for i in range(1, n_delete + 1):
+            fig.delaxes(axes.flatten()[n - i])
 
-    ax1.set_xlim(xlim_aep)
-    ax2.set_xlim(xlim_availability)
-    ax3.set_xlim(xlim_curtail)
+    # ax1.set_xlim(xlim_aep)
+    # ax2.set_xlim(xlim_availability)
+    # ax3.set_xlim(xlim_curtail)
 
-    ax1.set_ylim(ylim_aep)
-    ax2.set_ylim(ylim_availability)
-    ax3.set_ylim(ylim_curtail)
+    # ax1.set_ylim(ylim_aep)
+    # ax2.set_ylim(ylim_availability)
+    # ax3.set_ylim(ylim_curtail)
+
+    plt.show()
 
     if return_fig:
         return fig, axes
-    plt.show()
 
 
 def _generate_swarm_values(y, n_bins=None, width: float = 0.5):

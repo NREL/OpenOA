@@ -1106,11 +1106,62 @@ class MonteCarloAEP(object):
     #     "plot_aggregate_plant_data_timeseries",
     #     plot.plot_aggregate_plant_data_timeseries,
     # )
-    # setattr(
-    #     MonteCarloAEP,
-    #     "plot_result_aep_distributions",
-    #     plot.plot_result_aep_distributions,
-    # )
+    def plot_result_aep_distributions(
+        self,
+        xlim_aep: tuple[float, float] = (None, None),
+        xlim_availability: tuple[float, float] = (None, None),
+        xlim_curtail: tuple[float, float] = (None, None),
+        ylim_aep: tuple[float, float] = (None, None),
+        ylim_availability: tuple[float, float] = (None, None),
+        ylim_curtail: tuple[float, float] = (None, None),
+        return_fig: bool = False,
+        figure_kwargs: dict = {},
+        plot_kwargs: dict = {},
+        annotate_kwargs: dict = {},
+    ) -> None | tuple[plt.Figure, plt.Axes]:
+        """
+        Plot a distribution of AEP values from the Monte-Carlo OA method
+
+        Args:
+            aep (:obj:`openoa.analysis.MonteCarloAEP`): The `MonteCarloAEP` object.
+            xlim_aep (:obj:`tuple[float, float]`, optional): A tuple of floats representing the x-axis plotting display
+                limits for the AEP subplot. Defaults to (None, None).
+            xlim_availability (:obj:`tuple[float, float]`, optional): A tuple of floats representing the x-axis plotting
+                display limits for the availability subplot. Defaults to (None, None).
+            xlim_curtail (:obj:`tuple[float, float]`, optional): A tuple of floats representing the
+                x-axis plotting display limits for the curtailment subplot. Defaults to (None, None).
+            ylim_aep (:obj:`tuple[float, float]`, optional): A tuple of floats representing the y-axis plotting display
+                limits for the AEP subplot. Defaults to (None, None).
+            ylim_availability (:obj:`tuple[float, float]`, optional): A tuple of floats representing the y-axis plotting
+                display limits for the availability subplot. Defaults to (None, None).
+            ylim_curtail (:obj:`tuple[float, float]`, optional): A tuple of floats representing the
+                y-axis plotting display limits for the curtailment subplot. Defaults to (None, None).
+            return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
+            figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
+                that are passed to `plt.figure()`. Defaults to {}.
+            plot_kwargs (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
+                `ax.hist()`. Defaults to {}.
+            annotate_kwargs (:obj:`dict`, optional): Additional annotation keyword arguments that are
+                passed to `ax.annotate()`. Defaults to {}.
+
+        Returns:
+            None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes]: If `return_fig` is True, then
+                the figure and axes objects are returned for further tinkering/saving.
+        """
+        plot_results = self.results.copy()
+        plot_results[["avail_pct", "curt_pct"]] = plot_results[["avail_pct", "curt_pct"]] * 100
+        return plot.plot_distributions(
+            data=plot_results,
+            which=["aep_GWh", "avail_pct", "curt_pct"],
+            xlabels=["AEP (GWh/yr)", "Availability Loss (%)", "Curtailment Loss (%)"],
+            xlim=(xlim_aep, xlim_availability, xlim_curtail),
+            ylim=(ylim_aep, ylim_availability, ylim_curtail),
+            return_fig=return_fig,
+            figure_kwargs=figure_kwargs,
+            plot_kwargs=plot_kwargs,
+            annotate_kwargs=annotate_kwargs,
+        )
+
     def plot_aep_boxplot(
         self,
         x: pd.Series,
