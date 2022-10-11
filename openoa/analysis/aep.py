@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import random
+import datetime
 
 import numpy as np
 import pandas as pd
@@ -1101,11 +1102,60 @@ class MonteCarloAEP(object):
     #     "plot_reanalysis_gross_energy_data",
     #     plot.plot_reanalysis_gross_energy_data,
     # )
-    # setattr(
-    #     MonteCarloAEP,
-    #     "plot_aggregate_plant_data_timeseries",
-    #     plot.plot_aggregate_plant_data_timeseries,
-    # )
+
+    def plot_aggregate_plant_data_timeseries(
+        self,
+        xlim: tuple[datetime.datetime, datetime.datetime] = (None, None),
+        ylim_energy: tuple[float, float] = (None, None),
+        ylim_loss: tuple[float, float] = (None, None),
+        return_fig: bool = False,
+        figure_kwargs: dict = {},
+        plot_kwargs: dict = {},
+        legend_kwargs: dict = {},
+    ):
+        """
+        Plot timeseries of monthly/daily gross energy, availability and curtailment.
+
+        Args:
+            data(:obj:`pandas.DataFrame`): A pandas DataFrame containing energy production and losses.
+            energy_col(:obj:`str`): The name of the column in :py:attr:`data` containing the energy production.
+            loss_cols(:obj:`list[str]`): The name(s) of the column(s) in :py:attr:`data` containing the loss data.
+            energy_label(:obj:`str`): The legend label and y-axis label for the energy plot.
+            loss_labels(:obj:`list[str]`): The legend labels losses plot.
+            xlim (:obj:`tuple[datetime.datetime, datetime.datetime]`, optional): A tuple of datetimes
+                representing the x-axis plotting display limits. Defaults to None.
+            ylim_energy (:obj:`tuple[float, float]`, optional): A tuple of the y-axis plotting display
+                limits for the gross energy plot (top figure). Defaults to None.
+            ylim_loss (:obj:`tuple[float, float]`, optional): A tuple of the y-axis plotting display
+                limits for the loss plot (bottom figure). Defaults to (None, None).
+            return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
+            figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
+                that are passed to `plt.figure()`. Defaults to {}.
+            plot_kwargs (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
+                `ax.scatter()`. Defaults to {}.
+            legend_kwargs (:obj:`dict`, optional): Additional legend keyword arguments that are passed to
+                `ax.legend()`. Defaults to {}.
+
+        Returns:
+            None | tuple[matplotlib.pyplot.Figure, tuple[matplotlib.pyplot.Axes, matplotlib.pyplot.Axes]]:
+                If `return_fig` is True, then the figure and axes objects are returned for further
+                tinkering/saving.
+        """
+        return plot.plot_plant_energy_losses_timeseries(
+            data=self._aggregate,
+            energy_col="gross_energy_gwh",
+            loss_cols=["availability_pct", "curtailment_pct"],
+            energy_label="Gross Energy (GWh/yr)",
+            loss_labels=["Availability", "Curtailment"],
+            xlim=xlim,
+            ylim_energy=ylim_energy,
+            ylim_loss=ylim_loss,
+            return_fig=return_fig,
+            figure_kwargs=figure_kwargs,
+            plot_kwargs=plot_kwargs,
+            legend_kwargs=legend_kwargs,
+        )
+
     def plot_result_aep_distributions(
         self,
         xlim_aep: tuple[float, float] = (None, None),
@@ -1123,7 +1173,6 @@ class MonteCarloAEP(object):
         Plot a distribution of AEP values from the Monte-Carlo OA method
 
         Args:
-            aep (:obj:`openoa.analysis.MonteCarloAEP`): The `MonteCarloAEP` object.
             xlim_aep (:obj:`tuple[float, float]`, optional): A tuple of floats representing the x-axis plotting display
                 limits for the AEP subplot. Defaults to (None, None).
             xlim_availability (:obj:`tuple[float, float]`, optional): A tuple of floats representing the x-axis plotting

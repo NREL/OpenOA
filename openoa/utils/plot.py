@@ -1313,8 +1313,12 @@ def plot_reanalysis_gross_energy_data(
         return fig, ax
 
 
-def plot_aggregate_plant_data_timeseries(
-    aep,
+def plot_plant_energy_losses_timeseries(
+    data: pd.DataFrame,
+    energy_col: str,
+    loss_cols: list[str],
+    energy_label: str,
+    loss_labels: list[str],
     xlim: tuple[datetime.datetime, datetime.datetime] = (None, None),
     ylim_energy: tuple[float, float] = (None, None),
     ylim_loss: tuple[float, float] = (None, None),
@@ -1324,11 +1328,14 @@ def plot_aggregate_plant_data_timeseries(
     legend_kwargs: dict = {},
 ):
     """
-    Plot timeseries of monthly/daily gross energy, availability and curtailment
+    Plot timeseries of energy, and the loss categories of interest.
 
     Args:
-        reanalysis (:obj:`dict[str, pandas.DataFrame]`): `PlantData.reanalysis` dictionary of reanalysis
-            `DataFrame`s.
+        data(:obj:`pandas.DataFrame`): A pandas DataFrame containing energy production and losses.
+        energy_col(:obj:`str`): The name of the column in :py:attr:`data` containing the energy production.
+        loss_cols(:obj:`list[str]`): The name(s) of the column(s) in :py:attr:`data` containing the loss data.
+        energy_label(:obj:`str`): The legend label and y-axis label for the energy plot.
+        loss_labels(:obj:`list[str]`): The legend labels losses plot.
         xlim (:obj:`tuple[datetime.datetime, datetime.datetime]`, optional): A tuple of datetimes
             representing the x-axis plotting display limits. Defaults to None.
         ylim_energy (:obj:`tuple[float, float]`, optional): A tuple of the y-axis plotting display
@@ -1348,7 +1355,6 @@ def plot_aggregate_plant_data_timeseries(
             If `return_fig` is True, then the figure and axes objects are returned for further
             tinkering/saving.
     """
-    valid_aggregate = aep._aggregate
     figure_kwargs.setdefault("figsize", (12, 9))
     figure_kwargs.setdefault("dpi", 200)
     fig = plt.figure(**figure_kwargs)
@@ -1357,13 +1363,13 @@ def plot_aggregate_plant_data_timeseries(
     axes = (ax1, ax2)
 
     # Plot the gross energy production
-    ax1.plot(valid_aggregate["gross_energy_gwh"], ".-", label="Gross Energy (GWh)", **plot_kwargs)
+    ax1.plot(data[energy_col], ".-", label=energy_label, **plot_kwargs)
     ax1.set_xlabel("Year")
-    ax1.set_ylabel("Gross energy (GWh)")
+    ax1.set_ylabel(energy_label)
 
     # Joint availability and curtailment plot
-    ax2.plot(valid_aggregate.availability_pct * 100, ".-", label="Availability", **plot_kwargs)
-    ax2.plot(valid_aggregate.curtailment_pct * 100, ".-", label="Curtailment", **plot_kwargs)
+    for col, label in zip(loss_cols, loss_labels):
+        ax2.plot(data[col] * 100, ".-", label=label, **plot_kwargs)
     ax2.set_xlabel("Year")
     ax2.set_ylabel("Loss (%)")
 
@@ -1464,14 +1470,6 @@ def plot_distributions(
         n = len(axes.flatten())
         for i in range(1, n_delete + 1):
             fig.delaxes(axes.flatten()[n - i])
-
-    # ax1.set_xlim(xlim_aep)
-    # ax2.set_xlim(xlim_availability)
-    # ax3.set_xlim(xlim_curtail)
-
-    # ax1.set_ylim(ylim_aep)
-    # ax2.set_ylim(ylim_availability)
-    # ax3.set_ylim(ylim_curtail)
 
     plt.show()
 
