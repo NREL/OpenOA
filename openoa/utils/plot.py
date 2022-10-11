@@ -1540,7 +1540,7 @@ def _generate_swarm_values(y, n_bins=None, width: float = 0.5):
 
 
 def plot_aep_boxplot(
-    aep: MonteCarloAEP,
+    aep: pd.Series,
     parameter: pd.Series,
     label: str,
     ylim: tuple[float, float] = (None, None),
@@ -1554,8 +1554,7 @@ def plot_aep_boxplot(
     """Plot box plots of AEP results sliced by a specified Monte Carlo parameter
 
     Args:
-        aep (:obj:`openoa.analysis.MonteCarloAEP`): An initialized and run MonteCarloAEP
-            object.
+        aep (:obj:`pandas.Series`): The resulting AEP, in GWh, from a MonteCarloAEP analysis.
         parameter (:obj:`pandas.Series`): A pandas `Series` of the data to split the AEP results.
         label (:obj:`str`): The name of the parameter, which will also be used as the x-axis label.
         ylim (:obj:`tuple[float, float]`, optional): A tuple of the y-axis plotting display limits.
@@ -1576,7 +1575,7 @@ def plot_aep_boxplot(
             True, then the figure object, axes object, and a dictionary of the boxplot objects are
             returned for further tinkering/saving.
     """
-    df = pd.DataFrame(data={"aep": aep.results.aep_GWh, label: parameter})
+    df = pd.DataFrame(data={"aep": aep, label: parameter})
     figure_kwargs.setdefault("figsize", (8, 6))
 
     fig = plt.figure(**figure_kwargs)
@@ -1618,98 +1617,3 @@ def plot_aep_boxplot(
         return fig, ax, box_data
     fig.tight_layout()
     plt.show()
-
-
-# TODO: Turbine Long Term Gross Energy
-
-
-def plot_filtered_power_curves(self, save_folder, output_to_terminal=False):
-    """
-    Plot the raw and flagged power curve data and save to file.
-
-    Args:
-        save_folder('obj':'str'): The pathname to where figure files should be saved
-        output_to_terminal('obj':'boolean'): Indicate whether or not to output figures to terminal
-
-    Returns:
-        (None)
-    """
-    import matplotlib.pyplot as plt
-
-    dic = self._scada_dict
-
-    # Loop through turbines
-    for t in self._turbs:
-        filt_df = dic[t].loc[dic[t]["flag_final"]]  # Filter only for valid data
-
-        plt.figure(figsize=(6, 5))
-        plt.scatter(dic[t].wmet_wdspd_avg, dic[t].wtur_W_avg, s=1, label="Raw")  # Plot all data
-        plt.scatter(
-            filt_df["wmet_wdspd_avg"], filt_df["wtur_W_avg"], s=1, label="Flagged"
-        )  # Plot flagged data
-        plt.xlim(0, 30)
-        plt.xlabel("Wind speed (m/s)")
-        plt.ylabel("Power (W)")
-        plt.title("Filtered power curve for Turbine %s" % t)
-        plt.legend(loc="lower right")
-        plt.savefig(
-            "%s/filtered_power_curve_%s.png"
-            % (
-                save_folder,
-                t,
-            ),
-            dpi=200,
-        )  # Save file
-
-        # Output figure to terminal if desired
-        if output_to_terminal:
-            plt.show()
-
-        plt.close()
-
-
-def plot_daily_fitting_result(self, save_folder, output_to_terminal=False):
-    """
-    Plot the raw and flagged power curve data and save to file.
-
-    Args:
-        save_folder('obj':'str'): The pathname to where figure files should be saved
-        output_to_terminal('obj':'boolean'): Indicate whether or not to output figures to terminal
-
-    Returns:
-        (None)
-    """
-    import matplotlib.pyplot as plt
-
-    mod_input = self._model_dict
-
-    # Loop through turbines
-    for t in self._turbs:
-        df = mod_input[(t)]
-        daily_reanal = self._daily_reanal_dict
-        ws_daily = daily_reanal["windspeed_ms"]
-
-        df_imputed = df.loc[df["energy_kwh_corr"] != df["energy_imputed"]]
-
-        plt.figure(figsize=(6, 5))
-        plt.plot(ws_daily, self._turb_lt_gross[t], "r.", alpha=0.1, label="Modeled")
-        plt.plot(df["windspeed_ms"], df["energy_imputed"], ".", label="Input")
-        plt.plot(df_imputed["windspeed_ms"], df_imputed["energy_imputed"], ".", label="Imputed")
-        plt.xlabel("Wind speed (m/s)")
-        plt.ylabel("Daily Energy (kWh)")
-        plt.title("Daily SCADA Energy Fitting, Turbine %s" % t)
-        plt.legend(loc="lower right")
-        plt.savefig(
-            "%s/daily_power_curve_%s.png"
-            % (
-                save_folder,
-                t,
-            ),
-            dpi=200,
-        )  # Save file
-
-        # Output figure to terminal if desired
-        if output_to_terminal:
-            plt.show()
-
-        plt.close()

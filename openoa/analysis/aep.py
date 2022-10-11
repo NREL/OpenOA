@@ -11,15 +11,15 @@ import random
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
+import matplotlib.pyplot as plt
 from tqdm import tqdm
 from sklearn.metrics import r2_score, mean_squared_error
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import KFold
 
 from openoa import PlantData, logging, logged_method_call
-from openoa.utils import filters
+from openoa.utils import plot, filters
 from openoa.utils import timeseries as tm
-from openoa.utils import pandas_plotting
 from openoa.utils import unit_conversion as un
 from openoa.utils import met_data_processing as mt
 from openoa.utils.machine_learning_setup import MachineLearningSetup
@@ -1089,31 +1089,72 @@ class MonteCarloAEP(object):
         # Return long-term availabilty and curtailment
         return mc_avail_lt, mc_curt_lt
 
+    # Plotting Routines
 
-# Attach external methods
+    # setattr(
+    #     MonteCarloAEP,
+    #     "plot_normalized_monthly_reanalysis_windspeed",
+    #     plot.plot_normalized_monthly_reanalysis_windspeed,
+    # )
+    # setattr(
+    #     MonteCarloAEP,
+    #     "plot_reanalysis_gross_energy_data",
+    #     plot.plot_reanalysis_gross_energy_data,
+    # )
+    # setattr(
+    #     MonteCarloAEP,
+    #     "plot_aggregate_plant_data_timeseries",
+    #     plot.plot_aggregate_plant_data_timeseries,
+    # )
+    # setattr(
+    #     MonteCarloAEP,
+    #     "plot_result_aep_distributions",
+    #     plot.plot_result_aep_distributions,
+    # )
+    def plot_aep_boxplot(
+        self,
+        parameter: pd.Series,
+        label: str,
+        ylim: tuple[float, float] = (None, None),
+        with_points: bool = False,
+        return_fig: bool = False,
+        figure_kwargs: dict = {},
+        plot_kwargs_box: dict = {},
+        plot_kwargs_points: dict = {},
+        legend_kwargs: dict = {},
+    ) -> None | tuple[plt.Figure, plt.Axes]:
+        """Plot box plots of AEP results sliced by a specified Monte Carlo parameter
 
-setattr(
-    MonteCarloAEP,
-    "plot_normalized_monthly_reanalysis_windspeed",
-    pandas_plotting.plot_normalized_monthly_reanalysis_windspeed,
-)
-setattr(
-    MonteCarloAEP,
-    "plot_reanalysis_gross_energy_data",
-    pandas_plotting.plot_reanalysis_gross_energy_data,
-)
-setattr(
-    MonteCarloAEP,
-    "plot_aggregate_plant_data_timeseries",
-    pandas_plotting.plot_aggregate_plant_data_timeseries,
-)
-setattr(
-    MonteCarloAEP,
-    "plot_result_aep_distributions",
-    pandas_plotting.plot_result_aep_distributions,
-)
-setattr(
-    MonteCarloAEP,
-    "plot_aep_boxplot",
-    pandas_plotting.plot_aep_boxplot,
-)
+        Args:
+            parameter (:obj:`pandas.Series`): A pandas `Series` of the data to split the AEP results.
+            label (:obj:`str`): The name of the parameter, which will also be used as the x-axis label.
+            ylim (:obj:`tuple[float, float]`, optional): A tuple of the y-axis plotting display limits.
+                Defaults to None.
+            with_points (:obj:`bool`, optional): Flag to plot the individual points like a seaborn `swarmplot`. Defaults to False.
+            return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
+            figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
+                that are passed to `plt.figure()`. Defaults to {}.
+            plot_kwargs_box (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
+                `ax.boxplot()`. Defaults to {}.
+            plot_kwargs_points (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
+                `ax.boxplot()`. Defaults to {}.
+            legend_kwargs (:obj:`dict`, optional): Additional legend keyword arguments that are passed to
+                `ax.legend()`. Defaults to {}.
+
+        Returns:
+            None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes, dict]: If `return_fig` is
+                True, then the figure object, axes object, and a dictionary of the boxplot objects are
+                returned for further tinkering/saving.
+        """
+        return plot.plot_aep_boxplot(
+            aep=self.results.aep_GWh,
+            parameter=parameter,
+            label=label,
+            ylim=ylim,
+            with_points=with_points,
+            return_fig=return_fig,
+            figure_kwargs=figure_kwargs,
+            plot_kwargs_box=plot_kwargs_box,
+            plot_kwargs_points=plot_kwargs_points,
+            legend_kwargs=legend_kwargs,
+        )
