@@ -7,17 +7,17 @@ from typing import Callable, Optional, Sequence
 from pathlib import Path
 from functools import cached_property
 
-import attr
 import yaml
 import attrs
 import numpy as np
 import pandas as pd
 import pyspark as spark
-from attrs import define
+from attrs import field, define
 from pyproj import Transformer
 from shapely.geometry import Point
 
 import openoa.utils.met_data_processing as met
+from openoa.utils.metadata_fetch import attach_eia_data
 
 
 # *************************************************************************
@@ -111,7 +111,7 @@ class FromDictMixin:
         required_inputs = [
             a.name
             for a in cls.__attrs_attrs__  # type: ignore
-            if a.init and isinstance(a.default, attr._make._Nothing)  # type: ignore
+            if a.init and isinstance(a.default, type(attrs.NOTHING))  # type: ignore
         ]
         undefined = sorted(set(required_inputs) - set(kwargs))
         if undefined:
@@ -424,23 +424,23 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
     """
 
     # DataFrame columns
-    time: str = attr.ib(default="time")
-    id: str = attr.ib(default="id")
-    power: str = attr.ib(default="power")
-    windspeed: str = attr.ib(default="windspeed")
-    wind_direction: str = attr.ib(default="wind_direction")
-    status: str = attr.ib(default="status")
-    pitch: str = attr.ib(default="pitch")
-    temperature: str = attr.ib(default="temperature")
+    time: str = field(default="time")
+    id: str = field(default="id")
+    power: str = field(default="power")
+    windspeed: str = field(default="windspeed")
+    wind_direction: str = field(default="wind_direction")
+    status: str = field(default="status")
+    pitch: str = field(default="pitch")
+    temperature: str = field(default="temperature")
 
     # Data about the columns
-    frequency: str = attr.ib(default="10T")
+    frequency: str = field(default="10T")
 
     # Parameterizations that should not be changed
     # Prescribed mappings, datatypes, and units for in-code reference.
-    name: str = attr.ib(default="scada", init=False)
-    col_map: dict = attr.ib(init=False)
-    dtypes: dict = attr.ib(
+    name: str = field(default="scada", init=False)
+    col_map: dict = field(init=False)
+    dtypes: dict = field(
         default=dict(
             time=np.datetime64,
             id=str,
@@ -453,7 +453,7 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
         ),
         init=False,  # don't allow for user input
     )
-    units: dict = attr.ib(
+    units: dict = field(
         default=dict(
             time="datetim64[ns]",
             id=None,
@@ -504,18 +504,18 @@ class MeterMetaData(FromDictMixin):  # noqa: F821
     """
 
     # DataFrame columns
-    time: str = attr.ib(default="time")
-    power: str = attr.ib(default="power")
-    energy: str = attr.ib(default="energy")
+    time: str = field(default="time")
+    power: str = field(default="power")
+    energy: str = field(default="energy")
 
     # Data about the columns
-    frequency: str = attr.ib(default="10T")
+    frequency: str = field(default="10T")
 
     # Parameterizations that should not be changed
     # Prescribed mappings, datatypes, and units for in-code reference.
-    name: str = attr.ib(default="meter", init=False)
-    col_map: dict = attr.ib(init=False)
-    dtypes: dict = attr.ib(
+    name: str = field(default="meter", init=False)
+    col_map: dict = field(init=False)
+    dtypes: dict = field(
         default=dict(
             time=np.datetime64,
             power=float,
@@ -523,7 +523,7 @@ class MeterMetaData(FromDictMixin):  # noqa: F821
         ),
         init=False,  # don't allow for user input
     )
-    units: dict = attr.ib(
+    units: dict = field(
         default=dict(
             time="datetim64[ns]",
             power="kW",
@@ -561,24 +561,24 @@ class TowerMetaData(FromDictMixin):  # noqa: F821
     """
 
     # DataFrame columns
-    time: str = attr.ib(default="time")
-    id: str = attr.ib(default="id")
+    time: str = field(default="time")
+    id: str = field(default="id")
 
     # Data about the columns
-    frequency: str = attr.ib(default="10T")
+    frequency: str = field(default="10T")
 
     # Parameterizations that should not be changed
     # Prescribed mappings, datatypes, and units for in-code reference.
-    name: str = attr.ib(default="tower", init=False)
-    col_map: dict = attr.ib(init=False)
-    dtypes: dict = attr.ib(
+    name: str = field(default="tower", init=False)
+    col_map: dict = field(init=False)
+    dtypes: dict = field(
         default=dict(
             time=np.datetime64,
             id=str,
         ),
         init=False,  # don't allow for user input
     )
-    units: dict = attr.ib(
+    units: dict = field(
         default=dict(
             time="datetim64[ns]",
             id=None,
@@ -620,20 +620,20 @@ class StatusMetaData(FromDictMixin):  # noqa: F821
     """
 
     # DataFrame columns
-    time: str = attr.ib(default="time")
-    id: str = attr.ib(default="id")
-    status_id: str = attr.ib(default="status_id")
-    status_code: str = attr.ib(default="status_code")
-    status_text: str = attr.ib(default="status_text")
+    time: str = field(default="time")
+    id: str = field(default="id")
+    status_id: str = field(default="status_id")
+    status_code: str = field(default="status_code")
+    status_text: str = field(default="status_text")
 
     # Data about the columns
-    frequency: str = attr.ib(default="10T")
+    frequency: str = field(default="10T")
 
     # Parameterizations that should not be changed
     # Prescribed mappings, datatypes, and units for in-code reference.
-    name: str = attr.ib(default="status", init=False)
-    col_map: dict = attr.ib(init=False)
-    dtypes: dict = attr.ib(
+    name: str = field(default="status", init=False)
+    col_map: dict = field(init=False)
+    dtypes: dict = field(
         default=dict(
             time=np.datetime64,
             id=str,
@@ -643,7 +643,7 @@ class StatusMetaData(FromDictMixin):  # noqa: F821
         ),
         init=False,  # don't allow for user input
     )
-    units: dict = attr.ib(
+    units: dict = field(
         default=dict(
             time="datetim64[ns]",
             id=None,
@@ -687,18 +687,18 @@ class CurtailMetaData(FromDictMixin):  # noqa: F821
     """
 
     # DataFrame columns
-    time: str = attr.ib(default="time")
-    curtailment: str = attr.ib(default="curtailment")
-    availability: str = attr.ib(default="availability")
+    time: str = field(default="time")
+    curtailment: str = field(default="curtailment")
+    availability: str = field(default="availability")
 
     # Data about the columns
-    frequency: str = attr.ib(default="10T")
+    frequency: str = field(default="10T")
 
     # Parameterizations that should not be changed
     # Prescribed mappings, datatypes, and units for in-code reference.
-    name: str = attr.ib(default="curtail", init=False)
-    col_map: dict = attr.ib(init=False)
-    dtypes: dict = attr.ib(
+    name: str = field(default="curtail", init=False)
+    col_map: dict = field(init=False)
+    dtypes: dict = field(
         default=dict(
             time=np.datetime64,
             curtailment=float,
@@ -706,7 +706,7 @@ class CurtailMetaData(FromDictMixin):  # noqa: F821
         ),
         init=False,  # don't allow for user input
     )
-    units: dict = attr.ib(
+    units: dict = field(
         default=dict(
             time="datetim64[ns]",
             curtailment=float,
@@ -747,20 +747,20 @@ class AssetMetaData(FromDictMixin):  # noqa: F821
     """
 
     # DataFrame columns
-    id: str = attr.ib(default="id")
-    latitude: str = attr.ib(default="latitude")
-    longitude: str = attr.ib(default="longitude")
-    rated_power: str = attr.ib(default="rated_power")
-    hub_height: str = attr.ib(default="hub_height")
-    rotor_diameter: str = attr.ib(default="rotor_diameter")
-    elevation: str = attr.ib(default="elevation")
-    type: str = attr.ib(default="type")
+    id: str = field(default="id")
+    latitude: str = field(default="latitude")
+    longitude: str = field(default="longitude")
+    rated_power: str = field(default="rated_power")
+    hub_height: str = field(default="hub_height")
+    rotor_diameter: str = field(default="rotor_diameter")
+    elevation: str = field(default="elevation")
+    type: str = field(default="type")
 
     # Parameterizations that should not be changed
     # Prescribed mappings, datatypes, and units for in-code reference.
-    name: str = attr.ib(default="asset", init=False)
-    col_map: dict = attr.ib(init=False)
-    dtypes: dict = attr.ib(
+    name: str = field(default="asset", init=False)
+    col_map: dict = field(init=False)
+    dtypes: dict = field(
         default=dict(
             id=str,
             latitude=float,
@@ -773,7 +773,7 @@ class AssetMetaData(FromDictMixin):  # noqa: F821
         ),
         init=False,  # don't allow for user input
     )
-    units: dict = attr.ib(
+    units: dict = field(
         default=dict(
             id=None,
             latitude="WGS84",
@@ -803,23 +803,23 @@ class AssetMetaData(FromDictMixin):  # noqa: F821
 @define(auto_attribs=True)
 class ReanalysisMetaData(FromDictMixin):  # noqa: F821
     # DataFrame columns
-    time: str = attr.ib(default="time")
-    windspeed: str = attr.ib(default="windspeed")
-    windspeed_u: str = attr.ib(default="windspeed_u")
-    windspeed_v: str = attr.ib(default="windspeed_v")
-    wind_direction: str = attr.ib(default="wind_direction")
-    temperature: str = attr.ib(default="temperature")
-    density: str = attr.ib(default="density")
-    surface_pressure: str = attr.ib(default="surface_pressure")
+    time: str = field(default="time")
+    windspeed: str = field(default="windspeed")
+    windspeed_u: str = field(default="windspeed_u")
+    windspeed_v: str = field(default="windspeed_v")
+    wind_direction: str = field(default="wind_direction")
+    temperature: str = field(default="temperature")
+    density: str = field(default="density")
+    surface_pressure: str = field(default="surface_pressure")
 
     # Data about the columns
-    frequency: str = attr.ib(default="10T")
+    frequency: str = field(default="10T")
 
     # Parameterizations that should not be changed
     # Prescribed mappings, datatypes, and units for in-code reference.
-    name: str = attr.ib(default="reanalysis", init=False)
-    col_map: dict = attr.ib(init=False)
-    dtypes: dict = attr.ib(
+    name: str = field(default="reanalysis", init=False)
+    col_map: dict = field(init=False)
+    dtypes: dict = field(
         default=dict(
             time=np.datetime64,
             windspeed=float,
@@ -832,7 +832,7 @@ class ReanalysisMetaData(FromDictMixin):  # noqa: F821
         ),
         init=False,  # don't allow for user input
     )
-    units: dict = attr.ib(
+    units: dict = field(
         default=dict(
             time="datetim64[ns]",
             windspeed="m/s",
@@ -886,16 +886,16 @@ class PlantMetaData(FromDictMixin):  # noqa: F821
             provided. See `ReanalysisMetaData` for more details.
     """
 
-    latitude: float = attr.ib(default=0, converter=float)
-    longitude: float = attr.ib(default=0, converter=float)
-    capacity: float = attr.ib(default=0, converter=float)
-    scada: SCADAMetaData = attr.ib(default={}, converter=SCADAMetaData.from_dict)
-    meter: MeterMetaData = attr.ib(default={}, converter=MeterMetaData.from_dict)
-    tower: TowerMetaData = attr.ib(default={}, converter=TowerMetaData.from_dict)
-    status: StatusMetaData = attr.ib(default={}, converter=StatusMetaData.from_dict)
-    curtail: CurtailMetaData = attr.ib(default={}, converter=CurtailMetaData.from_dict)
-    asset: AssetMetaData = attr.ib(default={}, converter=AssetMetaData.from_dict)
-    reanalysis: dict[str, ReanalysisMetaData] = attr.ib(
+    latitude: float = field(default=0, converter=float)
+    longitude: float = field(default=0, converter=float)
+    capacity: float = field(default=0, converter=float)
+    scada: SCADAMetaData = field(default={}, converter=SCADAMetaData.from_dict)
+    meter: MeterMetaData = field(default={}, converter=MeterMetaData.from_dict)
+    tower: TowerMetaData = field(default={}, converter=TowerMetaData.from_dict)
+    status: StatusMetaData = field(default={}, converter=StatusMetaData.from_dict)
+    curtail: CurtailMetaData = field(default={}, converter=CurtailMetaData.from_dict)
+    asset: AssetMetaData = field(default={}, converter=AssetMetaData.from_dict)
+    reanalysis: dict[str, ReanalysisMetaData] = field(
         default={}, converter=convert_reanalysis  # noqa: F821
     )  # noqa: F821
 
@@ -1125,33 +1125,35 @@ class PlantData:
             error message highlighting the appropriate issues.
     """
 
-    metadata: PlantMetaData = attr.ib(
-        default={}, converter=PlantMetaData.load, on_setattr=[attr.converters, attr.validators]
+    metadata: PlantMetaData = field(
+        default={}, converter=PlantMetaData.load, on_setattr=[attrs.converters, attrs.validators]
     )
-    analysis_type: list[str] | None = attr.ib(
+    analysis_type: list[str] | None = field(
         default=None,
         converter=convert_to_list,  # noqa: F821
         validator=attrs.validators.deep_iterable(
             iterable_validator=attrs.validators.instance_of(list),
             member_validator=attrs.validators.in_([*ANALYSIS_REQUIREMENTS] + ["all", None]),
         ),
-        on_setattr=[attr.setters.convert, attr.setters.validate],
+        on_setattr=[attrs.setters.convert, attrs.setters.validate],
     )
-    scada: pd.DataFrame | None = attr.ib(default=None, converter=load_to_pandas)  # noqa: F821
-    meter: pd.DataFrame | None = attr.ib(default=None, converter=load_to_pandas)  # noqa: F821
-    tower: pd.DataFrame | None = attr.ib(default=None, converter=load_to_pandas)  # noqa: F821
-    status: pd.DataFrame | None = attr.ib(default=None, converter=load_to_pandas)  # noqa: F821
-    curtail: pd.DataFrame | None = attr.ib(default=None, converter=load_to_pandas)  # noqa: F821
-    asset: pd.DataFrame | None = attr.ib(default=None, converter=load_to_pandas)  # noqa: F821
-    reanalysis: dict[str, pd.DataFrame] | None = attr.ib(
+    scada: pd.DataFrame | None = field(default=None, converter=load_to_pandas)  # noqa: F821
+    meter: pd.DataFrame | None = field(default=None, converter=load_to_pandas)  # noqa: F821
+    tower: pd.DataFrame | None = field(default=None, converter=load_to_pandas)  # noqa: F821
+    status: pd.DataFrame | None = field(default=None, converter=load_to_pandas)  # noqa: F821
+    curtail: pd.DataFrame | None = field(default=None, converter=load_to_pandas)  # noqa: F821
+    asset: pd.DataFrame | None = field(default=None, converter=load_to_pandas)  # noqa: F821
+    reanalysis: dict[str, pd.DataFrame] | None = field(
         default=None, converter=load_to_pandas_dict  # noqa: F821
     )
-    preprocess: Callable | None = attr.ib(default=None)
+    preprocess: Callable | None = field(default=None)  # Not currently in use
 
+    # No user initialization required for attributes defined below here
     # Error catching in validation
-    _errors: dict[str, list[str]] = attr.ib(
+    _errors: dict[str, list[str]] = field(
         default={"missing": {}, "dtype": {}, "frequency": {}, "attributes": []}, init=False
-    )  # No user initialization required
+    )
+    eia: dict = field(default={}, init=False)
 
     def __attrs_post_init__(self):
         self._calculate_reanalysis_columns()
@@ -1184,7 +1186,7 @@ class PlantData:
     @asset.validator
     @reanalysis.validator
     def data_validator(
-        self, instance: attr.Attribute, value: pd.DataFrame | dict[pd.DataFrame] | None
+        self, instance: attrs.Attribute, value: pd.DataFrame | dict[pd.DataFrame] | None
     ) -> None:
         """Validator function for each of the data buckets in `PlantData` that checks
         that the appropriate columns exist for each dataframe, each column is of the
@@ -1192,7 +1194,7 @@ class PlantData:
         `analysis_type`.
 
         Args:
-            instance (attr.Attribute): The `attr` attribute details
+            instance (attrs.Attribute): The `attr` attribute details
             value (pd.DataFrame | dict[pd.DataFrame] | None): The attribute's
                 user-provided value. A dictionary of dataframes is expected for
                 reanalysis data only.
@@ -1831,3 +1833,4 @@ def from_entr(
 
 
 setattr(PlantData, "from_entr", classmethod(from_entr))
+setattr(PlantData, "attach_eia_data", attach_eia_data)

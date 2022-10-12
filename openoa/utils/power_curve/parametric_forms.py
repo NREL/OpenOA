@@ -1,6 +1,3 @@
-import numpy as np
-
-
 """
 Power Curves
 
@@ -16,26 +13,44 @@ ref: https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimiz
 
 """
 
+from __future__ import annotations
 
-def _power_curve(x, a, b, c, d, g):
-    """Applies the power curve function at each point in x."""
-    return [d + (a - d) / (1 + (xx / c) ** b) ** g for xx in x]
+import numpy as np
+import pandas as pd
 
 
-def logistic5param(x, a, b, c, d, g):
+def _power_curve(x: np.ndarray | pd.Series, a: float, b: float, c: float, d: float, g: float):
+    """The actual power curve implementation.
+
+    Args:
+        x(:obj:`numpy.ndarray` | `pandas.Series`): input data
+        a(:obj:`float`): the minimum value asymptote
+        b(:obj:`float`): steepness of the curve
+        c(:obj:`float`): the point of inflection
+        d(:obj:`float`): the maximum value asymptote
+        g(:obj:`float`): asymmetry of the curve
+
+    Returns:
+        (:obj:`numpy.ndarray`): The converted power data.
+    """
+    if isinstance(x, pd.Series):
+        x = x.values
+    return d + (a - d) / (1 + (x / c) ** b) ** g
+
+
+def logistic5param(x: np.ndarray | pd.Series, a: float, b: float, c: float, d: float, g: float):
     """Create and return a 5 parameter logistic function
 
     Args:
-        x(numpy.array): input data
-        a(float): the minimum value asymptote
-        b(float): steepness of the curve
-        c(float): the point of inflection
-        d(float): the maximum value asymptote
-        g(float): asymmetry of the curve
+        x(:obj:`numpy.ndarray` | `pandas.Series`): Input data.
+        a(:obj:`float`): The minimum value asymptote.
+        b(:obj:`float`): Steepness of the curve.
+        c(:obj:`float`): The point of inflection.
+        d(:obj:`float`): The maximum value asymptote.
+        g(:obj:`float`): Asymmetry of the curve.
 
     Returns:
         Function[numpy.ndarray[real]] -> numpy.ndarray[real]
-        Function[pandas.Series[real]] -> pandas.Series[real]
 
     """
 
@@ -53,22 +68,30 @@ def logistic5param(x, a, b, c, d, g):
     return res
 
 
-def logistic5param_capped(x, a, b, c, d, g, lower, upper):
+def logistic5param_capped(
+    x: np.ndarray | pd.Series,
+    a: float,
+    b: float,
+    c: float,
+    d: float,
+    g: float,
+    lower: float,
+    upper: float,
+):
     """Create and return a capped 5 parameter logistic function whose output is capped by lower and upper bounds.
 
     Args:
-        x(numpy.array): input data
-        a(float): the minimum value asymptote
-        b(float): steepness of the curve
-        c(float): the point of inflection
-        d(float): the maximum value asymptote
-        g(float): asymmetry of the curve
-        lower(Number): Input values below this number are set to this number.
-        upper(Number): Input values above this number are set to this number.
+        x(:obj:`numpy.ndarray` | `pandas.Series`): Input data.
+        a(:obj:`float`): The minimum value asymptote.
+        b(:obj:`float`): Steepness of the curve.
+        c(:obj:`float`): The point of inflection.
+        d(:obj:`float`): The maximum value asymptote.
+        g(:obj:`float`): Asymmetry of the curve.
+        lower(:obj:`float`): Input values below this number are set to this number.
+        upper(:obj:`float`): Input values above this number are set to this number.
 
     Returns:
         Function[numpy.ndarray[real]] -> numpy.ndarray[real]
-        Function[pandas.Series[real]] -> pandas.Series[real]
 
     """
     return _cap(logistic5param(x, a, b, c, d, g), lower, upper)
@@ -81,9 +104,9 @@ Helpers for Power Curve
 
 def _cap(y, lower, upper):
     if type(y) is np.ndarray:
-        y[y < lower] = lower
-        y[y > upper] = upper
+        y = np.where(y < lower, lower, y)
+        y = np.where(y > upper, upper, y)
     else:
-        y.loc[y < lower] = lower
-        y.loc[y > upper] = upper
+        y = y.where(y > lower, lower)
+        y = y.where(y < upper, upper)
     return y

@@ -1103,7 +1103,7 @@ class MonteCarloAEP(object):
             return reg
         # Machine learning models
         else:
-            ml = MachineLearningSetup(self.reg_model, **self.ml_setup_kwargs)
+            ml = MachineLearningSetup(algorithm=self.reg_model, **self.ml_setup_kwargs)
             # Memoized approach for optimized hyperparameters
             if self._run.reanalysis_product in self.opt_model:
                 self.opt_model[(self._run.reanalysis_product)].fit(

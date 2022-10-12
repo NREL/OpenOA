@@ -3,73 +3,107 @@ This module provides basic methods for unit conversion and calculation of basic 
 """
 
 
-def convert_power_to_energy(power_col, sample_rate_min="10T"):
+from __future__ import annotations
+
+from multiprocessing.sharedctypes import Value
+
+import numpy as np
+import pandas as pd
+
+from openoa.utils._converters import series_method
+
+
+@series_method(data_cols=["power_col"])
+def convert_power_to_energy(
+    power_col: str | pd.Series, sample_rate_min="10T", data: pd.DataFrame = None
+) -> pd.Series:
     """
     Compute energy [kWh] from power [kw] and return the data column
 
     Args:
-        df(:obj:`pandas.DataFrame`): the existing data frame to append to
-        col(:obj:`string`): Power column to use if not power_kw
-        sample_rate_min(:obj:`float`): Sampling rate in minutes to use for conversion, if not ten minutes
+        power_col(:obj:`str` | `pandas.Series`): The power data, in kW, or the name of the column
+            in :py:attr:`data`.
+        sample_rate_min(:obj:`float`): Sampling rate as a pandas offset alias, in minutes, to use
+            for conversion. Defaults to "10T.
+        data(:obj:`pandas.DataFrame`): The pandas DataFrame containing the col :py:attr:`power_col`.
 
     Returns:
         :obj:`pandas.Series`: Energy in kWh that matches the length of the input data frame 'df'
 
     """
-    time_conversion = {"1T": 1.0, "5T": 5.0, "10T": 10.0, "30T": 30.0, "1H": 60.0}
-    energy_kwh = power_col * time_conversion[sample_rate_min] / 60.0
-    return energy_kwh
+    # Get the number of minutes in the sample_rate_min
+    _dt_range = pd.date_range(start="09/30/2022", periods=2, freq=sample_rate_min)
+    _diff = _dt_range[1] - _dt_range[0]
+    hours = _diff.days * 24 + _diff.seconds / 60 / 60
+
+    # Convert the power, in kW, to energy, in kWh
+    return power_col * hours
 
 
+@series_method(data_cols=["net_energy", "availability", "curtailment"])
 def compute_gross_energy(
-    net_energy, avail_losses, curt_losses, avail_type="frac", curt_type="frac"
+    net_energy: str | pd.Series,
+    availability: str | pd.Series,
+    curtailment: str | pd.Series,
+    availability_type: str = "frac",
+    curtailment_type: str = "frac",
+    data: str | pd.DataFrame = None,
 ):
     """
-    This function computes gross energy for a wind plant or turbine by adding reported availability and
-    curtailment losses to reported net energy. Account is made of whether availabilty or curtailment loss data
-    is reported in energy ('energy') or fractional units ('frac'). If in energy units, this function assumes that net
-    energy, availability loss, and curtailment loss are all reported in the same units
+    Computes gross energy for a wind plant or turbine by adding reported :py:attr:`availability` and
+    :py:attr:`curtailment` losses to reported net energy.
 
     Args:
-        net energy (numpy array of Pandas series): reported net energy for wind plant or turbine
-        avail (numpy array of Pandas series): reported availability losses for wind plant or turbine
-        curt (numpy array of Pandas series): reported curtailment losses for wind plant or turbine
+        net_energy(:obj:`str` | `pandas.Series`): A pandas Series, the name of the columnn in
+            :py:attr:`data` corresponding to the reported net energy for wind plant or turbine.
+        availability(:obj:`str` | `pandas.Series`): A pandas Series, the name of the columnn in
+            :py:attr:`data` corresponding to the reported availability losses for wind plant or turbine
+        curtailment(:obj:`str` | `pandas.Series`): A pandas Series, the name of the columnn in
+            :py:attr:`data` corresponding to the reported curtailment losses for wind plant or turbine
+        availability_type(:obj:`str`): Either one of "frac" or "energy" corresponding to if the data
+            provided in :py:attr:`availability` is in the range of [0, 1], or representing the energy
+            lost.
+        curtailment_type(:obj:`str`): Either one of "frac" or "energy" corresponding to if the data
+            provided in :py:attr:`curtailment` is in the range of [0, 1], or representing the energy
+            lost.
+        data(:obj:`pd.DataFrame`, optional): The pandas DataFrame containing the net_energy,
+            availability, and curtailment columns.
 
     Returns:
-        gross (numpy array of Pandas series): calculated gross energy for wind plant or turbine
+        gross(:obj:`pandas.Series`): Calculated gross energy for wind plant or turbine
     """
-
-    if (avail_type == "frac") & (curt_type == "frac"):
-        gross = net_energy / (1 - avail_losses - curt_losses)
-    elif (avail_type == "frac") & (curt_type == "energy"):
-        gross = net_energy / (1 - avail_losses) + curt_losses
-    elif (avail_type == "energy") & (curt_type == "frac"):
-        gross = net_energy / (1 - curt_losses) + avail_losses
-    elif (avail_type == "energy") & (curt_type == "energy"):
-        gross = net_energy + curt_losses + avail_losses
-
-    if len(gross[gross < net_energy]) > 0:
-        raise Exception("Gross energy cannot be less than net energy. Check your input values")
-    if (len(avail_losses[avail_losses < 0]) > 0) | (len(curt_losses[curt_losses < 0]) > 0):
-        raise Exception(
+    if np.any(availability < 0) | np.any(curtailment < 0):
+        raise ValueError(
             "Cannot have negative availability or curtailment input values. Check your data"
         )
+
+    if (availability_type == "frac") & (curtailment_type == "frac"):
+        gross = net_energy / (1 - availability - curtailment)
+    elif (availability_type == "frac") & (curtailment_type == "energy"):
+        gross = net_energy / (1 - availability) + curtailment
+    elif (availability_type == "energy") & (curtailment_type == "frac"):
+        gross = net_energy / (1 - curtailment) + availability
+    elif (availability_type == "energy") & (curtailment_type == "energy"):
+        gross = net_energy + curtailment + availability
+
+    if np.any(gross < net_energy):
+        raise ValueError("Gross energy cannot be less than net energy. Check your input values")
 
     return gross
 
 
-def convert_feet_to_meter(variable):
+@series_method(data_cols=["variable"])
+def convert_feet_to_meter(variable: str | pd.Series, data: pd.DataFrame = None):
     """
     Compute variable in [meter] from [feet] and return the data column
 
     Args:
-        df(:obj:`pandas.Series`): the existing data frame to append to
+        variable(:obj:`str` | `pandas.Series`): A pandas Series, the name of the columnn in
+            :py:attr:`data` corresponding to the data needing to be converted to meters.
+        data(:obj:`pandas.DataFrame`): The pandas DataFrame containing the column :py:attr:`variable`.
         variable(:obj:`string`): variable in feet
 
     Returns:
-        :obj:`pandas.Series`: variable in meters of the input data frame 'df'
+        :obj:`pandas.Series`: :py:attr:`variable` in meters
     """
-
-    out = variable * 0.3048
-
-    return out
+    return variable * 0.3048
