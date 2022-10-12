@@ -151,6 +151,10 @@ data's column names in their turbine status data, plus the "freq" field. Users j
 that the columns are already using the specified units, and that each column is already using the
 listed data type or can be converted to that type.
 
+.. note::
+    This section does not get used by OpenOA internally, though it is expected to be used in the future.
+
+
 ==================== ===================================   ==============================
  Field Name           Data Type (StatusMetaData.dtypes)     Units (StatusMetaData.units)
 ==================== ===================================   ==============================
