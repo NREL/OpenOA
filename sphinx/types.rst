@@ -76,9 +76,9 @@ data type or can be converted to that type.
 
 .. literalinclude:: ../examples/data/plant_meta.yml
     :language: yaml
-    :lines: 36-44
+    :lines: 35-43
     :linenos:
-    :lineno-start: 36
+    :lineno-start: 35
 
 Meter
 =====
@@ -99,9 +99,9 @@ data type or can be converted to that type.
 
 .. literalinclude:: ../examples/data/plant_meta.yml
     :language: yaml
-    :lines: 18-20
+    :lines: 17-19
     :linenos:
-    :lineno-start: 18
+    :lineno-start: 17
 
 Tower
 =====
@@ -134,12 +134,11 @@ data type or can be converted to that type.
  time                 datetime64[ns]                         datetime64[ns]
  curtailment          float                                  percent
  availability         float                                  percent
- net_energy           float                                  kW
 ==================== ====================================   ===============================
 
 .. literalinclude:: ../examples/data/plant_meta.yml
     :language: yaml
-    :lines: 9-14
+    :lines: 9-13
     :linenos:
     :lineno-start: 9
 
@@ -255,9 +254,9 @@ data provided in this dataset using the hypsometric equation.
 
 .. literalinclude:: ../examples/data/plant_meta.yml
     :language: yaml
-    :lines: 21-35
+    :lines: 20-34
     :linenos:
-    :lineno-start: 21
+    :lineno-start: 20
 
 PlantData API
 *************
