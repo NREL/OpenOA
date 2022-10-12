@@ -62,9 +62,10 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.todo",
     "sphinx_design",
-    "m2r2",
+    # "m2r2",
     "nbsphinx",
     "bokeh.sphinxext.bokeh_plot",
+    "myst_parser",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -74,7 +75,12 @@ templates_path = ["_templates"]
 # You can specify multiple suffix as a list of string:
 #
 # source_suffix = '.rst'
-source_suffix = [".rst", ".md"]
+# source_suffix = [".rst", ".md"]
+source_suffix = {
+    ".rst": "restructuredtext",
+    ".txt": "markdown",
+    ".md": "markdown",
+}
 
 # The master toctree document.
 master_doc = "index"

@@ -40,6 +40,7 @@ EXTRAS = {
         "nbmerge==0.0.4",
         "nbsphinx==0.8.*",
         "sphinx_design==0.3.*",
+        "myst-parser",
     ],
     "entr": ["pyhive"],
     "wtk": ["h5pyd"],

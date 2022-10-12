@@ -54,10 +54,9 @@ Table of Contents
 .. toctree::
    :maxdepth: 2
 
-   install
+   getting_started/index
    examples/index
    api/index
-   contributing
    credit
 
 
