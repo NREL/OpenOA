@@ -132,8 +132,8 @@ data type or can be converted to that type.
  Field Name           Data Type (CurtailMetaData.dtypes)     Units (CurtailMetaData.units)
 ==================== ====================================   ===============================
  time                 datetime64[ns]                         datetime64[ns]
- curtailment          float                                  percent
- availability         float                                  percent
+ curtailment          float                                  GWh
+ availability         float                                  GWh
 ==================== ====================================   ===============================
 
 .. literalinclude:: ../examples/data/plant_meta.yml
