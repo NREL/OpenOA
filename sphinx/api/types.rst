@@ -32,11 +32,11 @@ SCADA data mapping used in "examples/data/plant_meta.yml", where the keys are th
 and the values are the La Haute Borne data naming conventions. This mapping can be repeated for each
 of the other metadata types.
 
-.. literalinclude:: ../examples/data/plant_meta.yml
+.. literalinclude:: ../../examples/data/plant_meta.yml
     :language: yaml
-    :lines: 36-44
+    :lines: 35-43
     :linenos:
-    :lineno-start: 36
+    :lineno-start: 35
 
 
 
@@ -74,7 +74,7 @@ data type or can be converted to that type.
  temp                 float                                Celsius
 ==================== ==================================   =============================
 
-.. literalinclude:: ../examples/data/plant_meta.yml
+.. literalinclude:: ../../examples/data/plant_meta.yml
     :language: yaml
     :lines: 35-43
     :linenos:
@@ -97,7 +97,7 @@ data type or can be converted to that type.
  energy               float                                kWh
 ==================== ==================================   =============================
 
-.. literalinclude:: ../examples/data/plant_meta.yml
+.. literalinclude:: ../../examples/data/plant_meta.yml
     :language: yaml
     :lines: 17-19
     :linenos:
@@ -136,7 +136,7 @@ data type or can be converted to that type.
  availability         float                                  GWh
 ==================== ====================================   ===============================
 
-.. literalinclude:: ../examples/data/plant_meta.yml
+.. literalinclude:: ../../examples/data/plant_meta.yml
     :language: yaml
     :lines: 9-13
     :linenos:
@@ -187,7 +187,7 @@ type or can be converted to that type.
  type                 string                               None
 ==================== ==================================   =============================
 
-.. literalinclude:: ../examples/data/plant_meta.yml
+.. literalinclude:: ../../examples/data/plant_meta.yml
     :language: yaml
     :lines: 1-9
     :linenos:
@@ -256,7 +256,7 @@ data provided in this dataset using the hypsometric equation.
  surface_pressure     float                                     Pa
 ==================== =======================================   ==================================
 
-.. literalinclude:: ../examples/data/plant_meta.yml
+.. literalinclude:: ../../examples/data/plant_meta.yml
     :language: yaml
     :lines: 20-34
     :linenos:

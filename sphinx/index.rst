@@ -52,15 +52,13 @@ Table of Contents
 *****************
 
 .. toctree::
-    :maxdepth: 2
+   :maxdepth: 2
 
-    install
-    examplesout
-    toolkits
-    analysis
-    types.rst
-    contributing
-    credit
+   install
+   examples/index
+   api/index
+   contributing
+   credit
 
 
 .. |Binder Badge| image:: https://mybinder.org/badge_logo.svg

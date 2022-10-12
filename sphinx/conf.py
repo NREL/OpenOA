@@ -29,7 +29,7 @@ import nbmerge
 new_nb = nbmerge.merge_notebooks(
     "./",
     (
-        "./examples.ipynb",
+        "./examples/examples.ipynb",
         "../examples/00_intro_to_plant_data.ipynb",
         # TODO: uncomment when the examples are updated and reincorporated
         # "../examples/01_utils_examples.ipynb",
@@ -40,7 +40,7 @@ new_nb = nbmerge.merge_notebooks(
         # "../examples/05_eya_gap_analysis.ipynb",
     ),
 )
-nbmerge.write_notebook(new_nb, "./examplesout.ipynb")
+nbmerge.write_notebook(new_nb, "./examples/examplesout.ipynb")
 
 sys.path.insert(0, os.path.abspath(".."))
 
@@ -168,6 +168,16 @@ html_logo = str(
 
 # Output file base name for HTML help builder.
 # htmlhelp_basename = "OpenOAdoc"
+
+
+# -- Options for autodoc --------------------------------------------------
+
+autodoc_typehints = "both"
+autodoc_default_options = {
+    "autoclass_content": "class",
+    "member-order": "bysource",
+    "members": True,
+}
 
 
 # -- Options for LaTeX output ---------------------------------------------

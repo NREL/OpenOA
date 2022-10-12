@@ -5,7 +5,7 @@ Utils
 
 The utils subpackage provides module-level methods that operate on Pandas `DataFrame`s and
 `Series`. These modules and their methods are used throughout the OpenOA codebase, and can
-be imported and used individually into your own scripts. 
+be imported and used individually into your own scripts.
 
 Quality Assurance
 *****************
