@@ -3,22 +3,21 @@
 Plant Data
 ##########
 
-This is the core data class used to contain all data relevant to a wind plant and is used throughout OpenOA.
-The PlantData holds multiple Pandas Data Frames, each with a specified schema.
-You can take advantage of the data structures in the :py:mod:`plant` module by instantiating it using one of the available constructors.
+This is the core data class used to contain all data relevant to a wind plant and is used throughout
+OpenOA. The :py:class:`openoa.plant.PlantData` holds multiple Pandas Data Frames, each with a
+specified schema. You can take advantage of the data structures in the :py:mod:`plant` module by
+creating it using one of the available constructors.
 
-:py:class:`openoa.plant.PlantData` is an attrs
-dataclass, and each of the core representations are Pandas :py:class:`DataFrame`s, e.g., :py:attr:`openoa.plant.PlantData.scada`,
-:py:attr:`openoa.plant.PlantData.reanalysis`, etc.
-
-The benefit of adopting attrs for the core structure is many data checks can happen automatically
-at initialization, so many of the :py:meth:`openoa.plant.PlantData.prepare` steps a user might implement, will already be addressed.
-Specifically, using the new :py:class:`openoa.plant.PlantMetaData` structure, a user can map the column names already present
+Additionally, :py:class:`openoa.plant.PlantData` requires a metadata specification, as provided
+through the :py:class:`openoa.plant.PlantMetaData` class, which enable a series of data validations
+that run at initialization. Optionally, this can be re-run later using
+:py:class:`openoa.plant.PlantData.validate()`. Specifically, using the new
+:py:class:`openoa.plant.PlantMetaData` structure, a user can map the column names already present
 in their data to those that OpenOA will use internally, set the expected frequency of the their
 time-dependent data, and check the expected units and datatypes that the data should use. These
-configurations can be set in either a JSON or YAML data format, whichever is preferable to the user.
-In the examples, the file "examples/data/plant_meta.yml" or "examples/data/plant_meta.json" are used
-interchangeably.
+configurations can be set in either a dictionary, or a metadata file using a JSON or YAML data
+format, whichever is preferable to the user. In the examples, the file "examples/data/plant_meta.yml"
+or "examples/data/plant_meta.json" are used interchangeably, and can be used as a guide.
 
 The following sections will show how each of the data should be configured, and where to check for
 these settings in the code itself. It should be noted that neither the :py:attr:`XMetaData.dtypes`, nor the
