@@ -678,8 +678,6 @@ class CurtailMetaData(FromDictMixin):  # noqa: F821
             "curtailment". This data should be of type: `float`.
         availability (str): The availability percentage column in the curtailment data, by default
             "availability". This data should be of type: `float`.
-        net_energy (str): The net energy produced, in kW, column in the curtailment data, by default
-            "net_energy". This data should be of type: `float`.
         frequency (str): The frequency of `time` in the met tower data, by default "10T". The input
             should align with the `Pandas frequency offset aliases`_.
 
@@ -692,7 +690,6 @@ class CurtailMetaData(FromDictMixin):  # noqa: F821
     time: str = attr.ib(default="time")
     curtailment: str = attr.ib(default="curtailment")
     availability: str = attr.ib(default="availability")
-    net_energy: str = attr.ib(default="net_energy")
 
     # Data about the columns
     frequency: str = attr.ib(default="10T")
@@ -706,7 +703,6 @@ class CurtailMetaData(FromDictMixin):  # noqa: F821
             time=np.datetime64,
             curtailment=float,
             availability=float,
-            net_energy=float,
         ),
         init=False,  # don't allow for user input
     )
@@ -715,7 +711,6 @@ class CurtailMetaData(FromDictMixin):  # noqa: F821
             time="datetim64[ns]",
             curtailment=float,
             availability=float,
-            net_energy="kW",
         ),
         init=False,  # don't allow for user input
     )
@@ -725,7 +720,6 @@ class CurtailMetaData(FromDictMixin):  # noqa: F821
             time=self.time,
             curtailment=self.curtailment,
             availability=self.availability,
-            net_energy=self.net_energy,
         )
 
 

@@ -27,10 +27,30 @@ Each of the :py:class:`XMetaData` classes accept the inputs of the elements unde
 the following subsections, in addition to the frequency (:py:attr:`freq`) for time-dependent inputs. All
 other attributes of the metadata classes for user reference, and therefore immutable. After setting
 each of the inputs, users can access the dictionary elements :py:attr:`col_map`, :py:attr:`dtypes`, and :py:attr:`units` to
-work with the various mappings.
+work with the various mappings. Below, is a demonstration of this mapping in practice, showing the
+SCADA data mapping used in "examples/data/plant_meta.yml", where the keys are the OpenOA column names,
+and the values are the La Haute Borne data naming conventions. This mapping can be repeated for each
+of the other metadata types.
+
+.. literalinclude:: ../examples/data/plant_meta.yml
+    :language: yaml
+    :lines: 36-44
+    :linenos:
+    :lineno-start: 36
+
+
 
 Data Schema User Guide
 **********************
+
+The following subsections will demonstrate the required data mapping schemas to enable
+:py:class:`openoa.plant.PlantData` to validate and and convert user-specified data to a validated
+OpenOA schema for use throughout the codebase. The data columns and their associated units and
+datatypes will be shown in a table, followed by a demonstration of how this is used in the La Haute
+Borne example data used for all of the example analysis workflows. It should be noted that the
+column "Field Name" is the internal naming convention, and should be the dictionary or JSON/YAML
+key with the actual column naming as its associated value (as is seen in the YAML snippets for each
+section).
 
 SCADA
 =====
@@ -54,8 +74,14 @@ data type or can be converted to that type.
  temp                 float                                Celsius
 ==================== ==================================   =============================
 
+.. literalinclude:: ../examples/data/plant_meta.yml
+    :language: yaml
+    :lines: 36-44
+    :linenos:
+    :lineno-start: 36
+
 Meter
-^^^^^
+=====
 
 :py:attr:`PlantData.meter` is configured by the :py:class:`openoa.plant.MeterMetaData` class, which is set in the configuration
 data with the "meter" key. Users can set each of the following "Field Name" keys with their own
@@ -70,6 +96,12 @@ data type or can be converted to that type.
  power                float                                kW
  energy               float                                kWh
 ==================== ==================================   =============================
+
+.. literalinclude:: ../examples/data/plant_meta.yml
+    :language: yaml
+    :lines: 18-20
+    :linenos:
+    :lineno-start: 18
 
 Tower
 =====
@@ -104,6 +136,12 @@ data type or can be converted to that type.
  availability         float                                  percent
  net_energy           float                                  kW
 ==================== ====================================   ===============================
+
+.. literalinclude:: ../examples/data/plant_meta.yml
+    :language: yaml
+    :lines: 9-14
+    :linenos:
+    :lineno-start: 9
 
 Status
 ======
@@ -145,6 +183,12 @@ type or can be converted to that type.
  elevation            float                                m
  type                 string                               None
 ==================== ==================================   =============================
+
+.. literalinclude:: ../examples/data/plant_meta.yml
+    :language: yaml
+    :lines: 1-9
+    :linenos:
+    :lineno-start: 1
 
 
 Reanalysis
@@ -208,6 +252,12 @@ data provided in this dataset using the hypsometric equation.
  density              float                                     kg/m^3
  surface_pressure     float                                     Pa
 ==================== =======================================   ==================================
+
+.. literalinclude:: ../examples/data/plant_meta.yml
+    :language: yaml
+    :lines: 21-35
+    :linenos:
+    :lineno-start: 21
 
 PlantData API
 *************
