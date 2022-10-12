@@ -3,7 +3,11 @@ This module provides helpful functions for creating various plots
 
 """
 
-# Import required packages
+from __future__ import annotations
+
+import datetime
+from typing import TYPE_CHECKING
+
 import numpy as np
 import pandas as pd
 import matplotlib as mpl
@@ -12,6 +16,13 @@ from pyproj import Transformer
 from bokeh.models import WMTSTileSource, ColumnDataSource
 from bokeh.palettes import Category10, viridis
 from bokeh.plotting import figure
+from matplotlib.markers import MarkerStyle
+
+from openoa.utils import filters
+
+
+if TYPE_CHECKING:
+    from openoa.analysis import MonteCarloAEP
 
 
 plt.close("all")
@@ -999,7 +1010,7 @@ def plot_by_id(
         return fig, axes_list
 
 
-def column_histograms(df: pd.DataFrame, return_fig: bool = False):
+def column_histograms(df: pd.DataFrame, columns: list = None, return_fig: bool = False):
     """Produces a histogram plot for each numeric column in `df`s.
 
     Args:
@@ -1011,8 +1022,8 @@ def column_histograms(df: pd.DataFrame, return_fig: bool = False):
         (None)
     """
     df = df.select_dtypes((int, float)).copy()
-    columns = df.columns.values
-    num_cols = columns.size
+    columns = df.columns.tolist() if columns is None else columns
+    num_cols = len(columns)
     max_cols = 3
     num_rows = int(np.ceil(num_cols / max_cols))
 
@@ -1040,3 +1051,454 @@ def column_histograms(df: pd.DataFrame, return_fig: bool = False):
     plt.show()
     if return_fig:
         return fig, axes_list
+
+
+def plot_power_curve(
+    wind_speed: pd.Series,
+    power: pd.Series,
+    flag: np.ndarray | pd.Series,
+    flag_labels: tuple[str, str] = None,
+    xlim: tuple[float, float] = (None, None),
+    ylim: tuple[float, float] = (None, None),
+    legend: bool = False,
+    return_fig: bool = False,
+    figure_kwargs: dict = {},
+    legend_kwargs: dict = {},
+    scatter_kwargs: dict = {},
+) -> None | tuple[plt.Figure, plt.Axes]:
+    """Plots the individual points on a power curve, with an optional `flag` filtering for singling
+    out readings in the figure. If `flag` is all false values then no overlaid flagged scatter points
+    will be created.
+
+    Args:
+        wind_speed (:obj: `pandas.Series`): A pandas Series or numpy array of the recorded wind speeds, in m/s.
+        power (:obj: `pandas.Series` | `np.ndarray`): A pandas Series or numpy array of the recorded power, in kW.
+        flag (:obj: `np.ndarray` | `pd.Series`): A pandas Series or numpy array of booleans for which points to flag in the windspeed and power data.
+        flag_labels (:obj: `tuple[str, str]`, optional): The labels to give to the scatter points, where the 0th entry is the flagged points, and the second entry correpsponds to the standard power curve. Defaults to None.
+        xlim (:obj: `tuple[float, float]`, optional): A tuple of the x-axis (min, max) values. Defaults to (None, None).
+        ylim (:obj: `tuple[float, float]`, optional): A tuple of the y-axis (min, max) values. Defaults to (None, None).
+        legend (:obj:`bool`, optional): Set to True to place a legend in the figure, otherwise set to False. Defaults to False.
+        return_fig (:obj:`bool`, optional): Set to True to return the figure and axes objects, otherwise set to False. Defaults to False.
+        figure_kwargs (:obj:`dict`, optional): Additional keyword arguments that should be passed to `plt.figure`. Defaults to {}.
+        scatter_kwargs (:obj:`dict`, optional): Additional keyword arguments that should be passed to `ax.scatter`. Defaults to {}.
+        legend_kwargs (:obj:`dict`, optional): Additional keyword arguments that should be passed to `ax.legend`. Defaults to {}.
+
+    Returns:
+        None | tuple[plt.Figure, plt.Axes]: _description_
+    """
+    figure_kwargs.setdefault("dpi", 200)
+    fig = plt.figure(**figure_kwargs)
+    ax = fig.add_subplot(111)
+
+    if ~np.all(flag):
+        pc_label = "Power Curve" if flag_labels is None else flag_labels[1]
+        ax.scatter(wind_speed, power, label=pc_label, **scatter_kwargs)
+    else:
+        pc_label = "Power Curve" if flag_labels is None else flag_labels[1]
+        flagged_label = "Flagged Readings" if flag_labels is None else flag_labels[0]
+        ax.scatter(wind_speed, power, label=pc_label, **scatter_kwargs)
+        ax.scatter(wind_speed[flag], power[flag], label=flagged_label, **scatter_kwargs)
+
+    if legend:
+        ax.legend(**legend_kwargs)
+
+    ax.grid()
+    ax.set_axisbelow(True)
+
+    ax.set_xlabel("Wind Speed (m/s)")
+    ax.set_ylabel("Power (kW)")
+
+    ax.set_xlim(xlim)
+    ax.set_ylim(ylim)
+
+    if return_fig:
+        return fig, ax
+    fig.tight_layout()
+
+
+def plot_monthly_reanalysis_windspeed(
+    data: dict[str, pd.DataFrame],
+    windspeed_col: str,
+    plant_por: tuple[datetime.datetime, datetime.datetime],
+    normalize: bool = True,
+    xlim: tuple[datetime.datetime, datetime.datetime] = (None, None),
+    ylim: tuple[float, float] = (None, None),
+    return_fig: bool = False,
+    figure_kwargs: dict = {},
+    plot_kwargs: dict = {},
+    legend_kwargs: dict = {},
+) -> None | tuple[plt.Figure, plt.Axes]:
+    """Make a plot of the normalized annual average wind speeds from reanalysis data to show general
+    trends for each, and highlighting the period of record for the plant data.
+
+    Args:
+        data(:obj:`dict[pandas.DataFrame]`): The dictionary of reanalysis dataframes.
+        windspeed_col(:obj:`str`): The name of the column for the windspeed data to be plot.
+        plot_por(:obj:`tuple[datetime.datetime, datetime.datetime]`): The start and end datetimes
+            for a plant's period of record (POR).
+        normalize(:obj:`bool`): Indicator of if the windspeeds shoudld be normalized (True), or not
+            (False). Defaults to True.
+        xlim (:obj:`tuple[datetime.datetime, datetime.datetime]`, optional): A tuple of datetimes
+            representing the x-axis plotting display limits. Defaults to (None, None).
+        ylim (:obj:`tuple[float, float]`, optional): A tuple of the y-axis plotting display limits.
+            Defaults to (None, None).
+        return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
+        figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
+            that are passed to `plt.figure()`. Defaults to {}.
+        plot_kwargs (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
+            `ax.plot()`. Defaults to {}.
+        legend_kwargs (:obj:`dict`, optional): Additional legend keyword arguments that are passed to
+            `ax.legend()`. Defaults to {}.
+
+    Returns:
+        None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes]: If `return_fig` is True, then
+            the figure and axes objects are returned for further tinkering/saving.
+    """
+    # Define parameters needed for plotting
+    min_val, max_val = (np.inf, -np.inf) if ylim == (None, None) else ylim
+
+    figure_kwargs.setdefault("figsize", (14, 6))
+    figure_kwargs.setdefault("dpi", 200)
+    fig = plt.figure(**figure_kwargs)
+    ax = fig.add_subplot(111)
+
+    for name, df in data.items():
+        # Compute the rolling mean and normalize it over a 12 month average
+        ws = df.resample("MS")[windspeed_col].mean().to_frame().rolling(12).mean()
+        if normalize:
+            ws = ws[windspeed_col] / ws[windspeed_col].mean()
+
+        # Update the min and max values
+        min_val = min(min_val, ws.min())
+        max_val = max(max_val, ws.max())
+
+        ax.plot(ws, label=name, **plot_kwargs)
+
+    # Plot a vertical line at y = 1
+    _xlims = (ws.index[0], ws.index[-1]) if xlim is None else xlim
+    ax.hlines(1, *_xlims, colors="k", linestyles="--")
+
+    # Fill in the period of record
+    ax.fill_between(
+        plant_por,
+        [min_val, min_val],
+        [max_val, max_val],
+        alpha=0.1,
+        label="Plant POR",
+    )
+
+    ax.grid()
+    ax.set_axisbelow(True)
+
+    ax.set_xlim(xlim)
+    ax.set_ylim(ylim)
+
+    ax.set_xlabel("Year")
+    ax.set_ylabel("Normalized wind speed")
+    ax.legend(**legend_kwargs)
+
+    fig.tight_layout()
+    plt.show()
+
+    if return_fig:
+        return fig, ax
+
+
+def plot_plant_energy_losses_timeseries(
+    data: pd.DataFrame,
+    energy_col: str,
+    loss_cols: list[str],
+    energy_label: str,
+    loss_labels: list[str],
+    xlim: tuple[datetime.datetime, datetime.datetime] = (None, None),
+    ylim_energy: tuple[float, float] = (None, None),
+    ylim_loss: tuple[float, float] = (None, None),
+    return_fig: bool = False,
+    figure_kwargs: dict = {},
+    plot_kwargs: dict = {},
+    legend_kwargs: dict = {},
+):
+    """
+    Plot timeseries of energy, and the loss categories of interest.
+
+    Args:
+        data(:obj:`pandas.DataFrame`): A pandas DataFrame containing energy production and losses.
+        energy_col(:obj:`str`): The name of the column in :py:attr:`data` containing the energy production.
+        loss_cols(:obj:`list[str]`): The name(s) of the column(s) in :py:attr:`data` containing the loss data.
+        energy_label(:obj:`str`): The legend label and y-axis label for the energy plot.
+        loss_labels(:obj:`list[str]`): The legend labels losses plot.
+        xlim (:obj:`tuple[datetime.datetime, datetime.datetime]`, optional): A tuple of datetimes
+            representing the x-axis plotting display limits. Defaults to None.
+        ylim_energy (:obj:`tuple[float, float]`, optional): A tuple of the y-axis plotting display
+            limits for the gross energy plot (top figure). Defaults to None.
+        ylim_loss (:obj:`tuple[float, float]`, optional): A tuple of the y-axis plotting display
+            limits for the loss plot (bottom figure). Defaults to (None, None).
+        return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
+        figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
+            that are passed to `plt.figure()`. Defaults to {}.
+        plot_kwargs (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
+            `ax.scatter()`. Defaults to {}.
+        legend_kwargs (:obj:`dict`, optional): Additional legend keyword arguments that are passed to
+            `ax.legend()`. Defaults to {}.
+
+    Returns:
+        None | tuple[matplotlib.pyplot.Figure, tuple[matplotlib.pyplot.Axes, matplotlib.pyplot.Axes]]:
+            If `return_fig` is True, then the figure and axes objects are returned for further
+            tinkering/saving.
+    """
+    figure_kwargs.setdefault("figsize", (12, 9))
+    figure_kwargs.setdefault("dpi", 200)
+    fig = plt.figure(**figure_kwargs)
+    ax1 = fig.add_subplot(211)
+    ax2 = fig.add_subplot(212, sharex=ax1)
+    axes = (ax1, ax2)
+
+    # Plot the gross energy production
+    ax1.plot(data[energy_col], ".-", label=energy_label, **plot_kwargs)
+    ax1.set_xlabel("Year")
+    ax1.set_ylabel(energy_label)
+
+    # Joint availability and curtailment plot
+    for col, label in zip(loss_cols, loss_labels):
+        ax2.plot(data[col] * 100, ".-", label=label, **plot_kwargs)
+    ax2.set_xlabel("Year")
+    ax2.set_ylabel("Loss (%)")
+
+    for ax in axes:
+        ax.grid()
+        ax.set_axisbelow(True)
+        ax.legend(**legend_kwargs)
+
+    ax1.set_xlim(xlim)
+    ax1.set_ylim(ylim_energy)
+    ax2.set_ylim(ylim_loss)
+
+    fig.tight_layout()
+    plt.show()
+
+    if return_fig:
+        return fig, axes
+
+
+def plot_distributions(
+    data: pd.DataFrame,
+    which: list[str],
+    xlabels: list[str],
+    xlim: tuple[tuple[float, float], ...] = None,
+    ylim: tuple[tuple[float, float], ...] = None,
+    return_fig: bool = False,
+    figure_kwargs: dict = {},
+    plot_kwargs: dict = {},
+    annotate_kwargs: dict = {},
+) -> None | tuple[plt.Figure, plt.Axes]:
+    """
+    Plot a distribution of AEP values from the Monte-Carlo OA method
+
+    Args:
+        aep(:obj:`pandas.DataFrame`): The pandas DataFrame of results data.
+        which:(:obj:`list[str]`): The list of columns in data that should have their distributions plot.
+        xlabels:(obj:`list[str]`): The list of x-axis labels
+        xlim(:obj:`tuple[tuple[float, float], ...]`, optional): A tuple of tuples (or None)
+            corresponding to each of elements of :py:attr:`which` that get passed to ax.set_xlim().
+            Defaults to None.
+        ylim(:obj:`tuple[tuple[float, float], ...]`, optional): A tuple of tuples (or None)
+            corresponding to each of elements of :py:attr:`which` that get passed to ax.set_ylim().
+            Defaults to None.
+        return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
+        figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
+            that are passed to `plt.figure()`. Defaults to {}.
+        plot_kwargs (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
+            `ax.hist()`. Defaults to {}.
+        annotate_kwargs (:obj:`dict`, optional): Additional annotation keyword arguments that are
+            passed to `ax.annotate()`. Defaults to {}.
+
+    Returns:
+        None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes]: If `return_fig` is True, then
+            the figure and axes objects are returned for further tinkering/saving.
+    """
+    if xlim is None:
+        xlim = tuple([(None, None) for _ in range(len(which))])
+    if ylim is None:
+        ylim = tuple([(None, None) for _ in range(len(which))])
+
+    if len(which) != len(xlabels) != len(xlim) != len(ylim):
+        raise ValueError(
+            "The inputs to `which`, `xlabels`, `xlim`, and `ylim` must be the same length."
+        )
+
+    annotate_kwargs.setdefault("fontsize", 12)
+
+    figure_kwargs.setdefault("figsize", (14, 12))
+    figure_kwargs.setdefault("dpi", 200)
+    fig = plt.figure(**figure_kwargs)
+    axes = fig.subplots(2, 2, gridspec_kw=dict(wspace=0.1, hspace=0.2))
+
+    for ax in axes.flatten():
+        ax.grid()
+        ax.set_axisbelow(True)
+
+    for ax, col, label, _xlim, _ylim in zip(axes.flatten(), which, xlabels, xlim, ylim):
+        vals = data[col].values
+        ax.hist(vals, 40, density=1, **plot_kwargs)
+        ax.annotate(
+            f"Mean = {vals.mean():.1f}",
+            (0.05, 0.9),
+            xycoords="axes fraction",
+            **annotate_kwargs,
+        )
+        ax.annotate(
+            f"Uncentainty = {vals.std() / vals.mean():.1f}",
+            (0.05, 0.85),
+            xycoords="axes fraction",
+            **annotate_kwargs,
+        )
+        ax.set_xlabel(label)
+        ax.set_xlim(_xlim)
+        ax.set_ylim(_ylim)
+
+    # Delete the extra axes
+    if (n_delete := len(axes.flatten()) - len(which)) > 0:
+        n = len(axes.flatten())
+        for i in range(1, n_delete + 1):
+            fig.delaxes(axes.flatten()[n - i])
+
+    plt.show()
+
+    if return_fig:
+        return fig, axes
+
+
+def _generate_swarm_values(y, n_bins=None, width: float = 0.5):
+    """Create the x-coordiantes for `y` so that plotting each value in the distribution of `y` appears
+    like that of a `seaborn.swarmplot` without requiring an additional dependency.
+
+    Args:
+        y (:obj:`pandas.Series`): The values to generate a matching x-value for a non-overlapping
+            scatter plot of all the points in the distribution.
+        n_bins (:obj:`int`, optional): The number of bins to use to generate the x-coordinates. If
+            `None`, then it is `y.size // 6`. Defaults to None.
+        width (:obj:`float`, optional): The maximum width of the x data in either
+            direction. Defaults to 0.5.
+
+    Returns:
+        :obj:`numpy.ndarray` An array of x-coordinates to plot as a scatter against `y`.
+    """
+    if n_bins is None:
+        n_bins = y.size // 6
+
+    # Get the upper bound of each bin
+    x = np.zeros_like(y)
+    y_min, y_max = y.min(), y.max()
+    dy = (y_max - y_min) / n_bins
+    y_bins = np.linspace(y_min + dy, y_max - dy, n_bins - 1)
+
+    # Divide the indices into their appropriate bins
+    i = np.arange(y.size)
+    ix_bin_groups = [0] * n_bins
+    y_bin_groups = [0] * n_bins
+    n_max = 0
+    for j, y_bin in enumerate(y_bins):
+        ix_bin = y <= y_bin
+        ix_bin_groups[j], y_bin_groups[j] = i[ix_bin], y[ix_bin]
+        n_max = max(n_max, len(ix_bin_groups[j]))
+        i, y = i[~ix_bin], y[~ix_bin]
+
+    # Fill in the last bin grouping values
+    ix_bin_groups[-1], y_bin_groups[-1] = i, y
+    n_max = max(n_max, len(ix_bin_groups[-1]))
+
+    # Assign the x indices in alternating fashion for each bin to ensure the x values are roughly symmetric
+    dx = 1 / (n_max // 2)
+    for i, vals in zip(ix_bin_groups, y_bin_groups):
+        if len(i) > 1:
+            j = len(i) % 2
+            i = i[np.argsort(vals)]
+            a = i[j::2]
+            b = i[j + 1 :: 2]
+            x[a] = (0.5 + j / 3 + np.arange(len(b))) * dx * width
+            x[b] = (0.5 + j / 3 + np.arange(len(b))) * -dx * width
+
+    return x
+
+
+def plot_boxplot(
+    x: pd.Series,
+    y: pd.Series,
+    xlabel: str,
+    ylabel: str,
+    ylim: tuple[float, float] = (None, None),
+    with_points: bool = False,
+    return_fig: bool = False,
+    figure_kwargs: dict = {},
+    plot_kwargs_box: dict = {},
+    plot_kwargs_points: dict = {},
+    legend_kwargs: dict = {},
+) -> None | tuple[plt.Figure, plt.Axes]:
+    """Plot box plots of AEP results sliced by a specified Monte Carlo parameter
+
+    Args:
+        x(:obj:`pandas.Series`): The data that splits the results in y.
+        y(:obj:`pandas.Series`): The resulting data to be splity by x.
+        xlabel(:obj:`str`): The x-axis label.
+        ylabel(:obj:`str`): The y-axis label.
+        ylim(:obj:`tuple[float, float]`, optional): A tuple of the y-axis plotting display limits.
+            Defaults to None.
+        with_points(:obj:`bool`, optional): Flag to plot the individual points like a seaborn `swarmplot`. Defaults to False.
+        return_fig(:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
+        figure_kwargs(:obj:`dict`, optional): Additional figure instantiation keyword arguments
+            that are passed to `plt.figure()`. Defaults to {}.
+        plot_kwargs_box(:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
+            `ax.boxplot()`. Defaults to {}.
+        plot_kwargs_points(:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
+            `ax.boxplot()`. Defaults to {}.
+        legend_kwargs(:obj:`dict`, optional): Additional legend keyword arguments that are passed to
+            `ax.legend()`. Defaults to {}.
+
+    Returns:
+        None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes, dict]: If `return_fig` is
+            True, then the figure object, axes object, and a dictionary of the boxplot objects are
+            returned for further tinkering/saving.
+    """
+    df = pd.DataFrame(data={"x": x, "y": y})
+    figure_kwargs.setdefault("figsize", (8, 6))
+
+    fig = plt.figure(**figure_kwargs)
+    ax = fig.add_subplot(111)
+
+    parameters = x.unique()
+    parameters.sort()
+    y_groups = [df.loc[df["x"] == el, "y"] for el in parameters]
+
+    plot_kwargs_box.setdefault("labels", parameters)
+    box_data = ax.boxplot(y_groups, **plot_kwargs_box)
+
+    if with_points:
+        widths = plot_kwargs_box.get("widths", np.full(len(y_groups), 0.5))
+        plot_kwargs_points.setdefault("marker", "o")
+        plot_kwargs_points.setdefault("facecolor", "none")
+        plot_kwargs_points.setdefault("edgecolor", "green")
+        plot_kwargs_points.setdefault("alpha", 0.5)
+        for x_start, (_y, width) in enumerate(zip(y_groups, widths)):
+            _x = _generate_swarm_values(_y, width=width * 0.9) + x_start + 1
+            label = "Individual AEP Points" if x_start == width.size - 1 else None
+            ax.scatter(_x, _y, zorder=0, label=label, **plot_kwargs_points)
+
+    ax.grid()
+    ax.set_axisbelow(True)
+
+    handles, labels = [box_data["fliers"][0]], ["Outliers"]
+    _handles, _labels = ax.get_legend_handles_labels()
+    handles.extend(_handles)
+    labels.extend(_labels)
+    ax.legend(handles, labels, **legend_kwargs)
+
+    ax.set_ylabel(ylabel)
+    ax.set_xlabel(xlabel)
+
+    ax.set_ylim(ylim)
+
+    fig.tight_layout()
+    plt.show()
+
+    if return_fig:
+        return fig, ax, box_data
