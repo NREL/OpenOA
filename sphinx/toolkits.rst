@@ -75,7 +75,7 @@ Unit Conversion
 Plotting
 ---------------------
 
-.. automodule:: openoa.toolkits.pandas_plotting
+.. automodule:: openoa.toolkits.plot
     :members:
     :undoc-members:
     :show-inheritance:

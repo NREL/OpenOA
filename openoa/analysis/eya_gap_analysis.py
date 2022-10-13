@@ -15,7 +15,7 @@ from attrs import field, define
 
 from openoa import logging, logged_method_call
 from openoa.plant import PlantData, FromDictMixin
-from openoa.utils.pandas_plotting import set_styling
+from openoa.utils.plot import set_styling
 
 
 logger = logging.getLogger(__name__)
@@ -230,18 +230,20 @@ class EYAGapAnalysis(FromDictMixin):
         self,
         data: list[float] = None,
         index: list[str] = [
-            "eya_aep",
+            "self_aep",
             "ideal_energy",
             "avail_loss",
             "elec_loss",
             "unexplained/uncertain",
+            "oa_aep",
         ],
+        ylim: tuple[float, float] = (None, None),
         return_fig: bool = False,
         plot_kwargs: dict = {},
         figure_kwargs: dict = {},
     ) -> None | tuple:
         """
-        Produce a waterfall plot showing the progression from the EYA to OA estimates of AEP.
+        Produce a waterfall plot showing the progression from the self to OA estimates of AEP.
 
         Args:
             data(array-like): data to be used to create waterfall plot, if not using
@@ -263,13 +265,14 @@ class EYAGapAnalysis(FromDictMixin):
 
         # Store data and create a blank series to use for the waterfall
         data = data if data is not None else self.compiled_data
-        trans = pd.DataFrame(data={"amount": data}, index=index)
-        blank = trans.amount.cumsum().shift(1).fillna(0)
+        plot_data = pd.DataFrame(data={"amount": data}, index=index[:-1])
+        blank = plot_data.amount.cumsum().shift(1).fillna(0)
 
         # Get the net total number for the final element in the waterfall
-        total = trans.sum().amount
-        trans.loc["oa_aep"] = total  # Add new field to gaps data frame
-        blank.loc["oa_aep"] = total  # Add new field to cumulative sum data frame
+        total = plot_data.sum().amount
+        final_name = index[-1]
+        plot_data.loc[final_name] = total  # Add new field to gaps data frame
+        blank.loc[final_name] = total  # Add new field to cumulative sum data frame
 
         # The steps graphically show the levels as well as used for label placement
         step = blank.reset_index(drop=True).repeat(3).shift(-1)
@@ -277,51 +280,43 @@ class EYAGapAnalysis(FromDictMixin):
 
         # When plotting the last element, we want to show the full bar,
         # Set the blank to 0
-        blank.loc["oa_aep"] = 0
+        blank.loc[final_name] = 0
 
         # Plot and label
-        my_plot = trans.plot(kind="bar", stacked=True, bottom=blank, legend=None, figsize=(12, 6))
-        my_plot.plot(step.index, step.values, "k")
-        my_plot.set_ylabel("Energy (GWh/yr)")
-        my_plot.set_title(self.plant)
+        figure_kwargs.setdefault("figsize", (12, 6))
+        plot_kwargs.setdefault("width", 0.8)
+        width = plot_kwargs["width"]
 
-        # Get the y-axis position for the labels
-        y_height = trans.amount.cumsum().shift(1).fillna(0)
+        fig = plt.figure(**figure_kwargs)
+        ax = fig.add_subplot(111)
 
-        # Get an offset so labels don't sit right on top of the bar
-        mx = trans.max()  # Max value in gap analysis values
-        neg_offset = mx / 25
-        pos_offset = mx / 50
+        x = np.arange(plot_data.shape[0])
+        ax.bar(x, plot_data.amount, bottom=blank, **plot_kwargs)
+        ax.hlines(
+            blank[1:-1].tolist() + [total],
+            xmin=x[:-1] - width / 2.0,
+            xmax=x[:-1] + 1 + width / 2.0,
+            colors="tab:orange",
+        )
 
-        # Add labels to each bar
-        loop = 0
-        for index, row in trans.iterrows():
-            # For the last item in the list, we don't want to double count
-            if row["amount"] == total:
-                y = y_height[loop]
+        offset_pos = plot_data.amount.max() * 0.05
+        offset_neg = plot_data.amount.max() * 0.09
+        for i, (y, diff) in enumerate(zip(blank.values, plot_data.amount.values)):
+            if i in (0, len(x) - 1):
+                continue
+            if np.sign(diff) == 1:
+                y += diff + offset_pos
             else:
-                y = y_height[loop] + row["amount"]
+                y += diff - offset_neg
+            ax.annotate(f"{diff:+,.1f}", (i, y), ha="center")
 
-            # Determine if we want a neg or pos offset
-            if row["amount"] > 0:
-                y += pos_offset
-            else:
-                y -= neg_offset
-            my_plot.annotate("{:,.0f}".format(row["amount"]), (loop, y), ha="center")
-            loop += 1
+        ax.set_xticks(x)
+        ax.set_xticklabels(index)
 
-        # Adjust y-axis to focus on region of interest
-        plt_min = blank[1:-1].min()  # Min value in cumulative sum values
-        plt_max = blank[1:].max()  # Min value in cumulative sum values
-        my_plot.set_ylim(0.9 * plt_min, 1.1 * plt_max)  # blank.max()+int(plot_offset))
+        ax.set_ylim(ylim)
+        ax.set_ylabel("ENergy (GWh/yr)")
 
-        # Rotate the labels
-        my_plot.set_xticklabels(trans.index, rotation=0)
-
-        # Save figure
-        # if save_fig_path:
-        #     my_plot.get_figure().savefig(
-        #         save_fig_path + "/waterfall.png", dpi=200, bbox_inches="tight"
-        #     )
-
-        return my_plot
+        fig.tight_layout()
+        plt.show()
+        if return_fig:
+            return fig, ax

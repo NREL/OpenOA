@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from abc import abstractmethod
-from typing import List, Tuple, Union
-from datetime import time, datetime
+from typing import Tuple, Union
+from datetime import datetime
 
 import pytz
 import h5pyd
@@ -15,12 +14,14 @@ import matplotlib.pyplot as plt
 from pyproj import Proj
 from dateutil import tz
 
-from openoa import logging, logged_method_call
-from openoa.utils import timeseries
+from openoa import logging
+from openoa.utils import timeseries as ts
+from openoa.utils.plot import set_styling
 
 
 Number = Union[int, float]
 logger = logging.getLogger(__name__)
+set_styling()
 
 
 def _remove_tz(df: pd.DataFrame, t_local_column: str) -> Tuple[np.ndarray, np.ndarray]:
@@ -235,15 +236,15 @@ def gap_time_identification(
     t_utc = f"{time_col}_utc"
     t_local = f"{time_col}_localized"
 
-    time_gaps = timeseries.find_time_gaps(df[time_col], freq=freq)
+    time_gaps = ts.find_time_gaps(df[time_col], freq=freq)
     time_gaps_utc = None
     time_gaps_local = None
 
     if t_utc in df.columns:
-        time_gaps_utc = timeseries.find_time_gaps(df[t_utc], freq=freq)
+        time_gaps_utc = ts.find_time_gaps(df[t_utc], freq=freq)
 
     if t_local in df.columns:
-        time_gaps_local = timeseries.find_time_gaps(df[t_local], freq=freq)
+        time_gaps_local = ts.find_time_gaps(df[t_local], freq=freq)
 
     return time_gaps, time_gaps_local, time_gaps_utc
 
@@ -299,9 +300,9 @@ def daylight_savings_plot(
     df_full = df_dst.copy()
 
     # Locate the missing timestamps, convert to UTC, and recreate DST and UTC-offset columns
-    missing_original = timeseries.find_time_gaps(df_dst[time_col], freq)
-    missing_local = timeseries.find_time_gaps(df_dst[t_local], freq)
-    missing_utc = timeseries.find_time_gaps(df_dst[t_utc], freq)
+    missing_original = ts.find_time_gaps(df_dst[time_col], freq)
+    missing_local = ts.find_time_gaps(df_dst[t_local], freq)
+    missing_utc = ts.find_time_gaps(df_dst[t_utc], freq)
 
     missing_df = pd.DataFrame([], columns=df.columns)
     missing_df.loc[:, t_utc] = missing_utc
@@ -352,12 +353,12 @@ def daylight_savings_plot(
         if np.sum(~np.isnan(data_spring[power_col])) > 0:
             # For localized time, we want to ensure we're capturing the DST switch as missing data
             ix_filter, time_stamps = _remove_tz(data_spring, time_col)
-            time_stamps = time_stamps[ix_filter]
+            time_stamps = pd.Series(time_stamps[ix_filter])
             power_data = data_spring.loc[ix_filter, power_col].tolist()
 
             # Find the missing data points on the timezone stripped data and append
             # it to the time stamps, then identify where to insert NaN in the power data
-            missing = timeseries.find_time_gaps(time_stamps, freq)
+            missing = ts.find_time_gaps(time_stamps, freq)
             missing = pd.to_datetime(missing.values).to_pydatetime()
             time_stamps = np.append(time_stamps, missing)
             time_stamps.sort()
@@ -386,7 +387,7 @@ def daylight_savings_plot(
 
             # Find bad timestamps, then fill in any potential UTC time gaps due the focus on the input time field
             ix_filter, time_stamps = _remove_tz(data_spring, t_utc)
-            data_spring = timeseries.gap_fill_data_frame(data_spring[ix_filter], t_utc, freq)
+            data_spring = ts.gap_fill_data_frame(data_spring[ix_filter], t_utc, freq)
             ix_filter, time_stamps = _remove_tz(data_spring, t_utc)
             plt.plot(
                 time_stamps[ix_filter],
@@ -406,6 +407,7 @@ def daylight_savings_plot(
                     c="tab:orange",
                     label="UTC Timestamp Duplicates",
                 )
+            plt.show()
 
         plt.title(f"{year}, Spring")
         plt.ylabel("Power")
@@ -438,7 +440,7 @@ def daylight_savings_plot(
 
             # Find bad timestamps, then fill in any potential UTC time gaps due the focus on the input time field
             ix_filter, time_stamps = _remove_tz(data_fall, t_utc)
-            data_fall = timeseries.gap_fill_data_frame(data_fall[ix_filter], t_utc, freq)
+            data_fall = ts.gap_fill_data_frame(data_fall[ix_filter], t_utc, freq)
             ix_filter, time_stamps = _remove_tz(data_fall, t_utc)
             plt.plot(
                 time_stamps[ix_filter],
@@ -614,8 +616,6 @@ def wtk_diurnal_plot(
     ax.plot(ws_norm, label="WTK Wind Speed")
     ax.plot(power_norm, label="Measured Power")
 
-    ax.grid()
-    ax.set_axisbelow(True)
     ax.legend()
 
     ax.set_xlabel("Hour of Day (UTC)")

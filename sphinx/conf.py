@@ -240,7 +240,7 @@ autodoc_mock_imports = [
     "pygam",
     "scipy",
     "tqdm",
-    #    "matplotlib", ## These are actually required to generate the Bokeh plot in the pandas_plotting docs
+    #    "matplotlib", ## These are actually required to generate the Bokeh plot in the plot docs
     #    "pyproj",
     #    "shapely",
     #    "bokeh",

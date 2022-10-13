@@ -16,13 +16,6 @@ from pyproj import Transformer
 from bokeh.models import WMTSTileSource, ColumnDataSource
 from bokeh.palettes import Category10, viridis
 from bokeh.plotting import figure
-from matplotlib.markers import MarkerStyle
-
-from openoa.utils import filters
-
-
-if TYPE_CHECKING:
-    from openoa.analysis import MonteCarloAEP
 
 
 plt.close("all")
@@ -833,7 +826,7 @@ def plot_windfarm(
 
             from bokeh.plotting import figure, output_file, show
 
-            from openoa.toolkits.pandas_plotting import plot_windfarm
+            from openoa.toolkits.plot import plot_windfarm
             from openoa.types import PlantData
 
             from examples.project_ENGIE import Project_Engie
@@ -986,10 +979,6 @@ def plot_by_id(
         scada = df.loc[t_id]
         ax.scatter(scada[x_axis], scada[y_axis], s=5)
 
-        # Add a grid as the bottom layer
-        ax.grid()
-        ax.set_axisbelow(True)
-
         ax.set_title(t_id)
 
         # Only add axis labels for the bottom row and leftmost column
@@ -1006,6 +995,7 @@ def plot_by_id(
 
     fig.tight_layout()
     plt.show()
+
     if return_fig:
         return fig, axes_list
 
@@ -1032,10 +1022,6 @@ def column_histograms(df: pd.DataFrame, columns: list = None, return_fig: bool =
         data = df.loc[:, col].dropna().values
         ax.hist(data, 40)
         ax.set_title(col)
-
-        # Add a grid as the bottom layer
-        ax.grid()
-        ax.set_axisbelow(True)
 
         # Only add axis labels for the bottom row
         if i % 4 == 0:
@@ -1102,9 +1088,6 @@ def plot_power_curve(
     if legend:
         ax.legend(**legend_kwargs)
 
-    ax.grid()
-    ax.set_axisbelow(True)
-
     ax.set_xlabel("Wind Speed (m/s)")
     ax.set_ylabel("Power (kW)")
 
@@ -1113,7 +1096,9 @@ def plot_power_curve(
 
     if return_fig:
         return fig, ax
+
     fig.tight_layout()
+    plt.show()
 
 
 def plot_monthly_reanalysis_windspeed(
@@ -1186,9 +1171,6 @@ def plot_monthly_reanalysis_windspeed(
         alpha=0.1,
         label="Plant POR",
     )
-
-    ax.grid()
-    ax.set_axisbelow(True)
 
     ax.set_xlim(xlim)
     ax.set_ylim(ylim)
@@ -1265,8 +1247,6 @@ def plot_plant_energy_losses_timeseries(
     ax2.set_ylabel("Loss (%)")
 
     for ax in axes:
-        ax.grid()
-        ax.set_axisbelow(True)
         ax.legend(**legend_kwargs)
 
     ax1.set_xlim(xlim)
@@ -1332,10 +1312,6 @@ def plot_distributions(
     figure_kwargs.setdefault("dpi", 200)
     fig = plt.figure(**figure_kwargs)
     axes = fig.subplots(2, 2, gridspec_kw=dict(wspace=0.1, hspace=0.2))
-
-    for ax in axes.flatten():
-        ax.grid()
-        ax.set_axisbelow(True)
 
     for ax, col, label, _xlim, _ylim in zip(axes.flatten(), which, xlabels, xlim, ylim):
         vals = data[col].values
@@ -1482,9 +1458,6 @@ def plot_boxplot(
             _x = _generate_swarm_values(_y, width=width * 0.9) + x_start + 1
             label = "Individual AEP Points" if x_start == width.size - 1 else None
             ax.scatter(_x, _y, zorder=0, label=label, **plot_kwargs_points)
-
-    ax.grid()
-    ax.set_axisbelow(True)
 
     handles, labels = [box_data["fliers"][0]], ["Outliers"]
     _handles, _labels = ax.get_legend_handles_labels()

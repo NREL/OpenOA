@@ -316,12 +316,6 @@ class MonteCarloAEP(FromDictMixin):
     def calculate_aggregate_dataframe(self):
         """
         Perform pre-processing of the plant data to produce a monthly/daily data frame to be used in AEP analysis.
-
-        Args:
-            (None)
-
-        Returns:
-            (None)
         """
 
         # Average to monthly/daily, quantify NaN data
@@ -1150,9 +1144,9 @@ class MonteCarloAEP(FromDictMixin):
                 the figure and axes objects are returned for further tinkering/saving.
         """
         return plot.plot_monthly_reanalysis_windspeed(
-            data=self._plant.reanalysis,
+            data=self.plant.reanalysis,
             windspeed_col="ws_dens_corr",
-            plant_por=(self._aggregate.index[0], self._aggregate.index[-1]),
+            plant_por=(self.aggregate.index[0], self.aggregate.index[-1]),
             xlim=xlim,
             ylim=ylim,
             return_fig=return_fig,
@@ -1214,11 +1208,11 @@ class MonteCarloAEP(FromDictMixin):
             ]
         )
 
-        valid_aggregate = self._aggregate
+        valid_aggregate = self.aggregate
 
         # Monthly case: apply robust linear regression for outliers detection
         if self.time_resolution == "M":
-            for name, df in self._plant.reanalysis.items():
+            for name, df in self.plant.reanalysis.items():
                 x = sm.add_constant(valid_aggregate[name])
                 y = valid_aggregate["gross_energy_gwh"] * 30 / valid_aggregate["num_days_expected"]
                 rlm = sm.RLM(y, x, M=sm.robust.norms.HuberT(t=outlier_threshold))
@@ -1244,10 +1238,10 @@ class MonteCarloAEP(FromDictMixin):
 
         # Daily/hourly case: apply bin filter for outliers detection
         else:
-            for name, df in self._plant.reanalysis.items():
+            for name, df in self.plant.reanalysis.items():
                 x = valid_aggregate[name]
                 y = valid_aggregate["gross_energy_gwh"]
-                plant_capac = self._plant.metadata.capacity / 1000.0 * self._hours_in_res
+                plant_capac = self.plant.metadata.capacity / 1000.0 * self._hours_in_res
 
                 # Apply bin filter
                 flag = filters.bin_filter(
@@ -1324,7 +1318,7 @@ class MonteCarloAEP(FromDictMixin):
                 tinkering/saving.
         """
         return plot.plot_plant_energy_losses_timeseries(
-            data=self._aggregate,
+            data=self.aggregate,
             energy_col="gross_energy_gwh",
             loss_cols=["availability_pct", "curtailment_pct"],
             energy_label="Gross Energy (GWh/yr)",

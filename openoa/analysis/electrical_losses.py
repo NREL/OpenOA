@@ -18,7 +18,7 @@ from attrs import field, define
 import openoa.utils.timeseries as ts
 from openoa import logging, logged_method_call
 from openoa.plant import PlantData, FromDictMixin
-from openoa.utils.pandas_plotting import set_styling
+from openoa.utils.plot import set_styling
 from openoa.analysis._analysis_validators import validate_UQ_input, validate_open_range_0_1
 
 
