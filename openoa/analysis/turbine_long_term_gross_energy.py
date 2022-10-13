@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 from attrs import field, define
 
-from openoa import logging, logged_method_call
+from openoa.logging import logging, logged_method_call
 from openoa.plant import PlantData, FromDictMixin
 from openoa.utils import filters, imputing
 from openoa.utils import timeseries as ts

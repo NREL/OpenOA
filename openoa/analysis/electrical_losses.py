@@ -15,12 +15,11 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 from attrs import field, define
 
+from openoa.logging import logging, logged_method_call
 import openoa.utils.timeseries as ts
-from openoa import logging, logged_method_call
 from openoa.plant import PlantData, FromDictMixin
 from openoa.utils.plot import set_styling
 from openoa.analysis._analysis_validators import validate_UQ_input, validate_open_range_0_1
-
 
 logger = logging.getLogger(__name__)
 set_styling()

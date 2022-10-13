@@ -16,14 +16,15 @@ import numpy.typing as npt
 import statsmodels.api as sm
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+
 from attrs import field, define
 from sklearn.metrics import r2_score, mean_squared_error
 from matplotlib.markers import MarkerStyle
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import KFold
 
-from openoa import logging, logged_method_call
 from openoa.plant import PlantData, FromDictMixin
+from openoa.logging import logging, logged_method_call
 from openoa.utils import plot, filters
 from openoa.utils import timeseries as tm
 from openoa.utils import unit_conversion as un
@@ -57,14 +58,11 @@ def get_annual_values(data):
 
     return data.resample("12MS").sum().values
 
-
 class MonteCarloAEPResult(object):
     """
     Result object of a MonteCarlo AEP Analysis
     """
-
     pass
-
 
 def _convert_time_resolution_string(x: str):
     if x == "M":

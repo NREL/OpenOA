@@ -13,7 +13,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from attrs import field, define
 
-from openoa import logging, logged_method_call
+from openoa.logging import logging, logged_method_call
 from openoa.plant import PlantData, FromDictMixin
 from openoa.utils import plot
 

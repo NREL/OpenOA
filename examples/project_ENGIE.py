@@ -41,7 +41,8 @@ import pandas as pd
 
 import openoa.utils.unit_conversion as un
 import openoa.utils.met_data_processing as met
-from openoa import PlantData, logging
+from openoa.logging import logging
+from openoa.plant import PlantData
 from openoa.utils import filters, timeseries
 
 

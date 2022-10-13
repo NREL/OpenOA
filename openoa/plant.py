@@ -902,7 +902,6 @@ class PlantMetaData(FromDictMixin):  # noqa: F821
             column mapping and frequency parameters for each type of reanalysis data
             provided. See `ReanalysisMetaData` for more details.
     """
-
     latitude: float = field(default=0, converter=float)
     longitude: float = field(default=0, converter=float)
     capacity: float = field(default=0, converter=float)
