@@ -674,9 +674,9 @@ class CurtailMetaData(FromDictMixin):  # noqa: F821
         time (str): The datetime stamp for the curtailment data, by default "time". This data should
             be of type: `np.datetime64[ns]`, or able to be converted to a pandas DatetimeIndex.
             Additional columns describing the datetime stamps are: `frequency`
-        curtailment (str): The curtailment, in GWh, column in the curtailment data, by default
+        curtailment (str): The curtailment, in kWh, column in the curtailment data, by default
             "curtailment". This data should be of type: `float`.
-        availability (str): The availability, in GWh, column in the curtailment data, by default
+        availability (str): The availability, in kWh, column in the curtailment data, by default
             "availability". This data should be of type: `float`.
         frequency (str): The frequency of `time` in the met tower data, by default "10T". The input
             should align with the `Pandas frequency offset aliases`_.
@@ -709,8 +709,8 @@ class CurtailMetaData(FromDictMixin):  # noqa: F821
     units: dict = field(
         default=dict(
             time="datetim64[ns]",
-            curtailment="GWh",
-            availability="GWh",
+            curtailment="kWh",
+            availability="kWh",
         ),
         init=False,  # don't allow for user input
     )
