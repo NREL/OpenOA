@@ -13,9 +13,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from attrs import field, define
 
-from openoa.logging import logging, logged_method_call
 from openoa.plant import PlantData, FromDictMixin
 from openoa.utils import plot
+from openoa.logging import logging, logged_method_call
 
 
 logger = logging.getLogger(__name__)
@@ -201,12 +201,10 @@ class EYAGapAnalysis(FromDictMixin):
         estimates of AEP.
 
         Args:
-            data(array-like): data to be used to create waterfall plot, if not using
-                :py:attr:`compiled_data`. Defaults to None.
             index(:obj:`list`): List of string values to be used for x-axis labels, which should
                 have one more value than the number of points in :py:attr:`data` to account for
-                the resulting OA total. Defaults to ["EYA AEP", "TIE",  "Availability\nLosses",
-                "Electrical\nLosses", "Unexplained", "OA AEP"].
+                the resulting OA total. Defaults to ["EYA AEP", "TIE",  "Availability Losses",
+                "Electrical Losses", "Unexplained", "OA AEP"].
             ylabel(:obj:`str`): The y-axis label. Defaults to "Energy (GWh/yr)".
             ylim(:obj:`tuple[float | None, float | None]`): The y-axis minimum and maximum display
                 range. Defaults to (None, None).

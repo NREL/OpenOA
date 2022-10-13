@@ -16,7 +16,6 @@ import numpy.typing as npt
 import statsmodels.api as sm
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-
 from attrs import field, define
 from sklearn.metrics import r2_score, mean_squared_error
 from matplotlib.markers import MarkerStyle
@@ -24,11 +23,11 @@ from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import KFold
 
 from openoa.plant import PlantData, FromDictMixin
-from openoa.logging import logging, logged_method_call
 from openoa.utils import plot, filters
 from openoa.utils import timeseries as tm
 from openoa.utils import unit_conversion as un
 from openoa.utils import met_data_processing as mt
+from openoa.logging import logging, logged_method_call
 from openoa.utils.machine_learning_setup import MachineLearningSetup
 
 
@@ -58,11 +57,14 @@ def get_annual_values(data):
 
     return data.resample("12MS").sum().values
 
+
 class MonteCarloAEPResult(object):
     """
     Result object of a MonteCarlo AEP Analysis
     """
+
     pass
+
 
 def _convert_time_resolution_string(x: str):
     if x == "M":
@@ -82,12 +84,9 @@ class MonteCarloAEP(FromDictMixin):
         1. Process revenue meter energy - creates monthly/daily data frame, gets revenue meter on monthly/daily basis, and adds
            data flag
         2. Process loss estimates - add monthly/daily curtailment and availabilty losses to monthly/daily data frame
-
         3. Process reanalysis data - add monthly/daily density-corrected wind speeds, temperature (if used) and wind direction (if used)
            from several reanalysis products to the monthly data frame
-
         4. Set up Monte Carlo - create the necessary Monte Carlo inputs to the OA process
-
         5. Run AEP Monte Carlo - run the OA process iteratively to get distribution of AEP results
 
     The end result is a distribution of AEP results which we use to assess expected AEP and associated uncertainty
@@ -1166,11 +1165,11 @@ class MonteCarloAEP(FromDictMixin):
     ) -> None | tuple[plt.Figure, plt.Axes]:
         """
         Makes a plot of the gross energy vs wind speed for each reanalysis product, with outliers
-        highlighted in a contrasting color and separate marker. For
+        highlighted in a contrasting color and separate marker.
 
         Args:
-            reanalysis (:obj:`dict[str, pandas.DataFrame]`): `PlantData.reanalysis` dictionary of reanalysis
-                `DataFrame`s.
+            reanalysis (:obj:`dict[str, pandas.DataFrame]`): :py:attr:`PlantData.reanalysis`
+                dictionary of reanalysis :py:class:`DataFrame`.
             outlier_thres (:obj:`float`): outlier threshold (typical range of 1 to 4) which adjusts
                 outlier sensitivity detection.
             xlim (:obj:`tuple[float, float]`, optional): A tuple of datetimes

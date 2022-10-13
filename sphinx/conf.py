@@ -178,7 +178,7 @@ html_logo = str(
 
 # -- Options for autodoc --------------------------------------------------
 
-autodoc_typehints = "both"
+# autodoc_typehints = "both"
 autodoc_default_options = {
     "autoclass_content": "class",
     "member-order": "bysource",
@@ -248,19 +248,24 @@ napoleon_use_ivar = False
 autoclass_content = "both"
 
 # -- Options for Autodoc
+# TODO: MAKE SURE THIS STAYS IN LINE WITH setup.py
 
 autodoc_mock_imports = [
-    "statsmodels",
-    "sklearn",
-    "requests",
-    "eia",
-    "numpy",
-    "pandas",
-    "pygam",
-    "scipy",
-    "tqdm",
-    "matplotlib",
-    "pyproj",
-    "shapely",
-    "bokeh",
+    "scikit_learn>=0.20.1,<1.0",
+    "requests>=2.21.0",
+    "eia-python>=1.22",
+    "pyproj>=3.3",
+    "shapely>=1.7.1",
+    "numpy>=1.15.4",
+    "pandas>=0.23.4,<1.3",
+    "pygam>=0.8.0",
+    "scipy>=1.1.0",
+    "statsmodels>=0.11",
+    "tqdm>=4.28.1",
+    "matplotlib>=3.6.*",
+    "bokeh>=2.3.*",
+    "attrs>=22",
+    "pytz",
+    "pyspark",  # TODO: confirm if options required [sql] or [pandas_on_spark]
+    "pyyaml",
 ]

@@ -573,7 +573,7 @@ class TowerMetaData(FromDictMixin):  # noqa: F821
             should align with the `Pandas frequency offset aliases`_.
 
     .. _Pandas frequency offset aliases:
-    https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases
+       https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases
 
     """
 
@@ -632,7 +632,7 @@ class StatusMetaData(FromDictMixin):  # noqa: F821
             should align with the `Pandas frequency offset aliases`_.
 
     .. _Pandas frequency offset aliases:
-    https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases
+       https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases
 
     """
 
@@ -699,7 +699,7 @@ class CurtailMetaData(FromDictMixin):  # noqa: F821
             should align with the `Pandas frequency offset aliases`_.
 
     .. _Pandas frequency offset aliases:
-    https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases
+       https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases
 
     """
 
@@ -902,6 +902,7 @@ class PlantMetaData(FromDictMixin):  # noqa: F821
             column mapping and frequency parameters for each type of reanalysis data
             provided. See `ReanalysisMetaData` for more details.
     """
+
     latitude: float = field(default=0, converter=float)
     longitude: float = field(default=0, converter=float)
     capacity: float = field(default=0, converter=float)
