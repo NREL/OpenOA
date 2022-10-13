@@ -67,6 +67,19 @@ column "Field Name" is the internal naming convention, and should be the diction
 key with the actual column naming as its associated value (as is seen in the YAML snippets for each
 section).
 
+It should be noted though, that validating a :py:class:`PlantData` object with
+:py:attr:`analysis_type` = "all" will check for all of the Field Names listed below for all provided
+data. However, if the :py:class:`PlantData` object is only being validated for a
+specific analysis type, or types, then only the data specified in
+:py:const:`openoa.plant.ANALYSIS_REQUIREMENTS` (shown below) will be checked, and in the case of
+:py:attr:`analysis_type` = None, then no errors will be raised during validation.
+
+.. literalinclude:: ../../openoa/plant.py
+    :language: python
+    :lines: 33-72
+    :linenos:
+    :lineno-start: 33
+
 SCADA
 =====
 

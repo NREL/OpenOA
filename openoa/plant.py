@@ -51,7 +51,7 @@ ANALYSIS_REQUIREMENTS = {
     },
     "TurbineLongTermGrossEnergy": {
         "scada": {
-            "columns": ["id", "windspeed", "power"],  # TODO: wtur_W_avg vs energy_kwh ?
+            "columns": ["id", "windspeed", "power"],
             "freq": _at_least_daily,
         },
         "reanalysis": {
