@@ -19,9 +19,24 @@ configurations can be set in either a dictionary, or a metadata file using a JSO
 format, whichever is preferable to the user. In the examples, the file "examples/data/plant_meta.yml"
 or "examples/data/plant_meta.json" are used interchangeably, and can be used as a guide.
 
+Using the metadata configurations specified in a metadata file (or dictionary), an :py:class:`openoa.plant.PlantData`
+object can be created as follows, where "X_df" represents a pandas DataFrame containing data
+for a specific data type. Alternatively, these DataFrame arguments can be replaced by file paths to
+csv files where the data are saved.::
+
+    plant = PlantData(
+        analysis_type=None,  # List of analysis methods for which the data will be validated
+        metadata="{path_to_metadata_file}/plant_meta.yml",
+        scada=scada_df,
+        meter=meter_df,
+        curtail=curtail_df,
+        asset=asset_df,
+        reanalysis=reanalysis_dict,
+    )
+
 The following sections will show how each of the data should be configured, and where to check for
-these settings in the code itself. It should be noted that neither the :py:attr:`XMetaData.dtypes`, nor the
-:py:attr:`XMetaData.units` can be set manually, or updated as they are exclusively for reference to users.
+these settings in the code itself. It should be noted that neither the :py:attr:`XMetaData.dtypes` (where "X" represents a specific data type), nor the
+:py:attr:`XMetaData.units`, can be set manually, or updated as they are exclusively for reference to users.
 
 Each of the :py:class:`XMetaData` classes accept the inputs of the elements under the column "Field Name" in
 the following subsections, in addition to the frequency (:py:attr:`freq`) for time-dependent inputs. All

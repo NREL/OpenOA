@@ -29,28 +29,28 @@ of OpenOA.
   * Introduces the annual energy production (AEP) class, and how to estimate the uncertainty using
     a Monte Carlo approach
   * Demonstrates some of the supplementary tools to analysis, such as the plotting routines, and
-    how to customize them, and how to use them through the :py:mod`openoa.utils.plotting.py`
+    how to customize them, and how to use them through the :py:mod:`openoa.utils.plotting.py`
     interface
 
 * Turbine Ideal Energy Example
 
   * Introduces the turbine long term gross energy estimation workflow
   * Demonstrates some of the supplementary tools to analysis, such as the plotting routines, and
-    how to customize them, and how to use them through the :py:mod`openoa.utils.plotting.py`
+    how to customize them, and how to use them through the :py:mod:`openoa.utils.plotting.py`
     interface
 
 * Electrical Losses Example
 
   * Introduces the electrical losses analysis workflow
   * Demonstrates some of the supplementary tools to analysis, such as the plotting routines, and
-    how to customize them, and how to use them through the :py:mod`openoa.utils.plotting.py`
+    how to customize them, and how to use them through the :py:mod:`openoa.utils.plotting.py`
     interface
 
 * EYA Gap Analysis Example
 
   * Ties together the previous examples to estimate energy production and potential losses
   * Demonstrates some of the supplementary tools to analysis, such as the plotting routines, and
-    how to customize them, and how to use them through the :py:mod`openoa.utils.plotting.py`
+    how to customize them, and how to use them through the :py:mod:`openoa.utils.plotting.py`
     interface
 
 
