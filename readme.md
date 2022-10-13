@@ -145,8 +145,8 @@ Documentation is automatically built by, and visible through, [Read The Docs](ht
 You can build the documentation with [sphinx](http://www.sphinx-doc.org/en/stable/), but will need to ensure [Pandoc is installed](https://pandoc.org/installing.html) on your computer first:
 
 ```
+pip install -e ".[docs]"
 cd sphinx
-pip install -r requirements.txt
 make html
 ```
 

@@ -10,13 +10,13 @@ curtail:
   availability: availability_kwh
   curtailment: curtailment_kwh
   frequency: 10T
-  time: time
+  net_energy: net_energy_kwh
+  time: time_utc
 latitude: 48.4497
 longitude: 5.5896
-capacity: 8.2
 meter:
   energy: net_energy_kwh
-  time: time
+  time: time_utc
 reanalysis:
   era5:
     frequency: H
@@ -28,7 +28,7 @@ reanalysis:
   merra2:
     frequency: H
     surface_pressure: surface_pressure
-    temperature: temp_2m
+    temperature: temp_10m
     time: datetime
     windspeed_u: u_50
     windspeed_v: v_50
@@ -38,6 +38,6 @@ scada:
   pitch: Ba_avg
   power: P_avg
   temperature: Ot_avg
-  time: time
+  time: Date_time
   wind_direction: Wa_avg
   windspeed: Ws_avg

@@ -821,27 +821,26 @@ def plot_windfarm(
     Returns:
         Bokeh_plot(:obj:`axes handle`): windfarm map
 
-    # TODO: UPDATE THIS DOCSTRING
+    """
+    """
+    TODO: Add this back in when it can be debugged
+    lats, lons = transformer.transform(...) -> ValueError: not enough values to unpack (expected 2, got 0)
+
     Example:
         .. bokeh-plot::
 
             import pandas as pd
-
             from bokeh.plotting import figure, output_file, show
 
-            from openoa.toolkits.plot import plot_windfarm
-            from openoa.types import PlantData
+            from openoa.utils.plot import plot_windfarm
 
-            from examples.project_ENGIE import Project_Engie
+            from examples import project_ENGIE
 
             # Load plant object
-            project = Project_Engie("../examples/data/la_haute_borne")
-
-            # Prepare data
-            project.prepare()
+            project = project_ENGIE.prepare("../examples/data/la_haute_borne")
 
             # Create the bokeh wind farm plot
-            show(plot_windfarm(project,tile_name="ESRI",plot_width=600,plot_height=600))
+            show(plot_windfarm(project.asset, tile_name="ESRI", plot_width=600, plot_height=600))
     """
 
     # See https://wiki.openstreetmap.org/wiki/Tile_servers for various tile services
@@ -912,8 +911,8 @@ def plot_windfarm(
         else:
             asset_df["auto_line_color"] = "black"
 
-    # Create the bokeh data source
-    source = ColumnDataSource(asset_df)
+    # Create the bokeh data source without the "geometry" that isn't compatible with bokeh
+    source = ColumnDataSource(asset_df.drop(columns=["geometry"]))
 
     # Create a bokeh figure with tiles
     plot_map = figure(
@@ -1004,7 +1003,7 @@ def plot_by_id(
 
 
 def column_histograms(df: pd.DataFrame, columns: list = None, return_fig: bool = False):
-    """Produces a histogram plot for each numeric column in `df`s.
+    """Produces a histogram plot for each numeric column in :py:attr:`df`s.
 
     Args:
         df(:obj:`pd.DataFrame`): The dataframe for plotting.

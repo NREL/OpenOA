@@ -1,4 +1,4 @@
-.. _install::
+.. _install:
 
 
 .. ::
@@ -11,6 +11,7 @@
     ", for paragraphs
 
 Install
-*******
+#######
 
-.. mdinclude:: ../readme.md
+.. include:: ../../readme.md
+   :parser: myst_parser.sphinx_
