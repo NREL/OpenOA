@@ -15,11 +15,11 @@ from attrs import field, define
 
 from openoa import logging, logged_method_call
 from openoa.plant import PlantData, FromDictMixin
-from openoa.utils.plot import set_styling
+from openoa.utils import plot
 
 
 logger = logging.getLogger(__name__)
-set_styling()
+plot.set_styling()
 
 
 def validate_range_0_1(instance, attribute: attrs.Attribute, value: float):
@@ -53,16 +53,6 @@ class EYAEstimate(FromDictMixin):
     turbine_losses: float = field(converter=float, validator=validate_range_0_1)
     blade_degradation_losses: float = field(converter=float, validator=validate_range_0_1)
     wake_losses: float = field(converter=float, validator=validate_range_0_1)
-
-    @availability_losses.validator
-    @electrical_losses.validator
-    @turbine_losses.validator
-    @blade_degradation_losses.validator
-    @wake_losses.validator
-    def validate_0_1(self, attribute: attrs.Attribute, value: float) -> None:
-        """Validates that the provided value is in the range of [0, 1)."""
-        if not 0.0 <= value < 1.0:
-            raise ValueError(f"The input to '{attribute.name}' must be in the range (0, 1).")
 
 
 @define(auto_attribs=True)
@@ -140,37 +130,7 @@ class EYAGapAnalysis(FromDictMixin):
                                                     False to not save plot
 
         """
-        logger.info("Initializing EYA Gap Analysis Object")
-
-        # # Store EYA inputs into dictionary
-        # self._eya_estimates = {
-        #     "aep": eya_estimates[0],  # GWh/yr
-        #     "gross_energy": eya_estimates[1],  # GWh/yr
-        #     "availability_losses": eya_estimates[2],  # Fraction
-        #     "electrical_losses": eya_estimates[3],  # Fraction
-        #     "turbine_losses": eya_estimates[4],  # Fraction
-        #     "blade_degradation_losses": eya_estimates[5],  # Fraction
-        #     "wake_losses": eya_estimates[6],
-        # }  # Fraction
-
-        # # Store OA results into dictionary
-        # self._oa_results = {
-        #     "aep": oa_results[0],  # GWh/yr
-        #     "availability_losses": oa_results[1],  # Fraction
-        #     "electrical_losses": oa_results[2],  # Fraction
-        #     "turbine_ideal_energy": oa_results[3],
-        # }  # Fraction
-
-        # # Axis labels for waterfall plot
-        # self._plot_index = [
-        #     "eya_aep",
-        #     "ideal_energy",
-        #     "avail_loss",
-        #     "elec_loss",
-        #     "unexplained/uncertain",
-        # ]
-        # self._makefig = make_fig
-        # self._savefigpath = save_fig_path
+        logger.info("Initialized EYA Gap Analysis Object")
 
     @logged_method_call
     def run(self):
@@ -185,12 +145,6 @@ class EYAGapAnalysis(FromDictMixin):
         """
 
         self.compiled_data = self.compile_data()  # Compile EYA and OA data
-
-        # if self._makefig:
-        #     self.waterfall_plot(
-        #         self._compiled_data, self._plot_index, self._savefigpath
-        #     )  # Produce waterfall plot
-
         logger.info("Gap analysis complete")
 
     def compile_data(self):
@@ -228,15 +182,15 @@ class EYAGapAnalysis(FromDictMixin):
 
     def plot_waterfall(
         self,
-        data: list[float] = None,
         index: list[str] = [
-            "self_aep",
-            "ideal_energy",
-            "avail_loss",
-            "elec_loss",
-            "unexplained/uncertain",
-            "oa_aep",
+            "EYA AEP",
+            "TIE",
+            "Availability\nLosses",
+            "Electrical\nLosses",
+            "Unexplained",
+            "OA AEP",
         ],
+        ylabel: str = "Energy (GWh/yr)",
         ylim: tuple[float, float] = (None, None),
         return_fig: bool = False,
         plot_kwargs: dict = {},
@@ -251,8 +205,11 @@ class EYAGapAnalysis(FromDictMixin):
                 :py:attr:`compiled_data`. Defaults to None.
             index(:obj:`list`): List of string values to be used for x-axis labels, which should
                 have one more value than the number of points in :py:attr:`data` to account for
-                the resulting OA total. Defaults to ["self_aep", "ideal_energy", "avail_loss",
-                "elec_loss", "unexplained/uncertain", "oa_aep"].
+                the resulting OA total. Defaults to ["EYA AEP", "TIE",  "Availability\nLosses",
+                "Electrical\nLosses", "Unexplained", "OA AEP"].
+            ylabel(:obj:`str`): The y-axis label. Defaults to "Energy (GWh/yr)".
+            ylim(:obj:`tuple[float | None, float | None]`): The y-axis minimum and maximum display
+                range. Defaults to (None, None).
             return_fig(:obj:`bool`, optional): Set to True to return the figure and axes objects,
                 otherwise set to False. Defaults to False.
             figure_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be
@@ -266,61 +223,12 @@ class EYAGapAnalysis(FromDictMixin):
             None | tuple[plt.Figure, plt.Axes]: If :py:attr:`return_fig`, then return the figure
                 and axes objects in addition to showing the plot.
         """
-
-        # Store data and create a blank series to use for the waterfall
-        data = data if data is not None else self.compiled_data
-        plot_data = pd.DataFrame(data={"amount": data}, index=index[:-1])
-        blank = plot_data.amount.cumsum().shift(1).fillna(0)
-
-        # Get the net total number for the final element in the waterfall
-        total = plot_data.sum().amount
-        final_name = index[-1]
-        plot_data.loc[final_name] = total  # Add new field to gaps data frame
-        blank.loc[final_name] = total  # Add new field to cumulative sum data frame
-
-        # The steps graphically show the levels as well as used for label placement
-        step = blank.reset_index(drop=True).repeat(3).shift(-1)
-        step[1::3] = np.nan
-
-        # When plotting the last element, we want to show the full bar,
-        # Set the blank to 0
-        blank.loc[final_name] = 0
-
-        # Plot and label
-        figure_kwargs.setdefault("figsize", (12, 6))
-        plot_kwargs.setdefault("width", 0.8)
-        width = plot_kwargs["width"]
-
-        fig = plt.figure(**figure_kwargs)
-        ax = fig.add_subplot(111)
-
-        x = np.arange(plot_data.shape[0])
-        ax.bar(x, plot_data.amount, bottom=blank, **plot_kwargs)
-        ax.hlines(
-            blank[1:-1].tolist() + [total],
-            xmin=x[:-1] - width / 2.0,
-            xmax=x[:-1] + 1 + width / 2.0,
-            colors="tab:orange",
+        return plot.plot_waterfall(
+            self.compiled_data,
+            index=index,
+            ylim=ylim,
+            ylabel=ylabel,
+            return_fig=return_fig,
+            plot_kwargs=plot_kwargs,
+            figure_kwargs=figure_kwargs,
         )
-
-        offset_pos = plot_data.amount.max() * 0.05
-        offset_neg = plot_data.amount.max() * 0.09
-        for i, (y, diff) in enumerate(zip(blank.values, plot_data.amount.values)):
-            if i in (0, len(x) - 1):
-                continue
-            if np.sign(diff) == 1:
-                y += diff + offset_pos
-            else:
-                y += diff - offset_neg
-            ax.annotate(f"{diff:+,.1f}", (i, y), ha="center")
-
-        ax.set_xticks(x)
-        ax.set_xticklabels(index)
-
-        ax.set_ylim(ylim)
-        ax.set_ylabel("Energy (GWh/yr)")
-
-        fig.tight_layout()
-        plt.show()
-        if return_fig:
-            return fig, ax

@@ -1393,6 +1393,7 @@ class MonteCarloAEP(FromDictMixin):
         xlabel: str,
         ylim: tuple[float, float] = (None, None),
         with_points: bool = False,
+        points_label: str = "Individual AEP Estimates",
         return_fig: bool = False,
         figure_kwargs: dict = {},
         plot_kwargs_box: dict = {},
@@ -1407,6 +1408,8 @@ class MonteCarloAEP(FromDictMixin):
             ylim (:obj:`tuple[float, float]`, optional): A tuple of the y-axis plotting display limits.
                 Defaults to None.
             with_points (:obj:`bool`, optional): Flag to plot the individual points like a seaborn `swarmplot`. Defaults to False.
+                points_label(:obj:`bool` | None, optional): Legend label for the points, if plotting.
+            Defaults to None.
             return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
             figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
                 that are passed to `plt.figure()`. Defaults to {}.
@@ -1429,6 +1432,7 @@ class MonteCarloAEP(FromDictMixin):
             ylabel="AEP (GWh/yr)",
             ylim=ylim,
             with_points=with_points,
+            points_label=points_label,
             return_fig=return_fig,
             figure_kwargs=figure_kwargs,
             plot_kwargs_box=plot_kwargs_box,

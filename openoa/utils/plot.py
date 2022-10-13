@@ -6,16 +6,19 @@ This module provides helpful functions for creating various plots
 from __future__ import annotations
 
 import datetime
-from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 import matplotlib as mpl
+import numpy.typing as npt
 import matplotlib.pyplot as plt
 from pyproj import Transformer
 from bokeh.models import WMTSTileSource, ColumnDataSource
 from bokeh.palettes import Category10, viridis
 from bokeh.plotting import figure
+
+
+NDArrayFloat = npt.NDArray[np.float64]
 
 
 plt.close("all")
@@ -1402,8 +1405,9 @@ def plot_boxplot(
     y: pd.Series,
     xlabel: str,
     ylabel: str,
-    ylim: tuple[float, float] = (None, None),
+    ylim: tuple[float | None, float | None] = (None, None),
     with_points: bool = False,
+    points_label: str | None = None,
     return_fig: bool = False,
     figure_kwargs: dict = {},
     plot_kwargs_box: dict = {},
@@ -1419,7 +1423,10 @@ def plot_boxplot(
         ylabel(:obj:`str`): The y-axis label.
         ylim(:obj:`tuple[float, float]`, optional): A tuple of the y-axis plotting display limits.
             Defaults to None.
-        with_points(:obj:`bool`, optional): Flag to plot the individual points like a seaborn `swarmplot`. Defaults to False.
+        with_points(:obj:`bool`, optional): Flag to plot the individual points like a seaborn
+            `swarmplot`. Defaults to False.
+        points_label(:obj:`bool` | None, optional): Legend label for the points, if plotting.
+            Defaults to None.
         return_fig(:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
         figure_kwargs(:obj:`dict`, optional): Additional figure instantiation keyword arguments
             that are passed to `plt.figure()`. Defaults to {}.
@@ -1456,7 +1463,7 @@ def plot_boxplot(
         plot_kwargs_points.setdefault("alpha", 0.5)
         for x_start, (_y, width) in enumerate(zip(y_groups, widths)):
             _x = _generate_swarm_values(_y, width=width * 0.9) + x_start + 1
-            label = "Individual AEP Points" if x_start == width.size - 1 else None
+            label = points_label if x_start == width.size - 1 else None
             ax.scatter(_x, _y, zorder=0, label=label, **plot_kwargs_points)
 
     handles, labels = [box_data["fliers"][0]], ["Outliers"]
@@ -1475,3 +1482,91 @@ def plot_boxplot(
 
     if return_fig:
         return fig, ax, box_data
+
+
+def plot_waterfall(
+    data: list[float] | NDArrayFloat,
+    index: list[str],
+    ylabel: str | None = None,
+    ylim: tuple[float, float] = (None, None),
+    return_fig: bool = False,
+    plot_kwargs: dict = {},
+    figure_kwargs: dict = {},
+) -> None | tuple:
+    """
+    Produce a waterfall plot showing the progression from the EYA estimates to the calculated OA
+    estimates of AEP.
+
+    Args:
+        data(array-like): data to be used to create waterfall.
+        index(:obj:`list`): List of string values to be used for x-axis labels, which should
+            have one more value than the number of points in :py:attr:`data` to account for
+            the calculated OA total.
+        ylabel(:obj:`str`): The y-axis label. Defaults to None.
+        ylim(:obj:`tuple[float | None, float | None]`): The y-axis minimum and maximum display
+            range. Defaults to (None, None).
+        return_fig(:obj:`bool`, optional): Set to True to return the figure and axes objects,
+            otherwise set to False. Defaults to False.
+        figure_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be
+            passed to `plt.figure`. Defaults to {}.
+        plot_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be
+            passed to `ax.plot`. Defaults to {}.
+        legend_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be
+            passed to `ax.legend`. Defaults to {}.
+
+    Returns:
+        None | tuple[plt.Figure, plt.Axes]: If :py:attr:`return_fig`, then return the figure
+            and axes objects in addition to showing the plot.
+    """
+    # Store data and create a bottom series to use for the waterfall
+    plot_data = pd.DataFrame(data={"amount": data}, index=index[:-1])
+    bottom = plot_data.amount.cumsum().shift(1).fillna(0)
+
+    # Get the net total number for the final element in the waterfall
+    total = plot_data.sum().amount
+    final_name = index[-1]
+    plot_data.loc[final_name] = total
+    bottom.loc[final_name] = 0
+
+    # Set the defaults for plotting, if none were provided
+    figure_kwargs.setdefault("figsize", (12, 6))
+    plot_kwargs.setdefault("width", 0.8)
+    width = plot_kwargs["width"]
+
+    # Create the figure and axis
+    fig = plt.figure(**figure_kwargs)
+    ax = fig.add_subplot(111)
+
+    # Plot the bar chart with vertical waterfall lines
+    x = np.arange(plot_data.shape[0])
+    ax.bar(x, plot_data.amount, bottom=bottom, **plot_kwargs)
+    ax.hlines(
+        bottom[1:-1].tolist() + [total],
+        xmin=x[:-1] - width / 2.0,
+        xmax=x[:-1] + 1 + width / 2.0,
+        colors="tab:orange",
+    )
+
+    # Add the annotations above/below each bar with a +/- label on difference for each category
+    offset_pos = plot_data.amount.max() * 0.05
+    offset_neg = plot_data.amount.max() * 0.09
+    for i, (y, diff) in enumerate(zip(bottom.values, plot_data.amount.values)):
+        if i in (0, len(x) - 1):
+            continue
+        if np.sign(diff) == 1:
+            y += diff + offset_pos
+        else:
+            y += diff - offset_neg
+        ax.annotate(f"{diff:+,.1f}", (i, y), ha="center")
+
+    # Add the styling and labeling, as specified by the user
+    ax.set_xticks(x)
+    ax.set_xticklabels(index)
+
+    ax.set_ylim(ylim)
+    ax.set_ylabel(ylabel)
+
+    fig.tight_layout()
+    plt.show()
+    if return_fig:
+        return fig, ax
