@@ -2,6 +2,7 @@ import unittest
 
 import numpy as np
 import numpy.testing as npt
+
 from openoa.analysis.eya_gap_analysis import EYAGapAnalysis
 
 
@@ -9,25 +10,38 @@ class EYAGAPAnalysis(unittest.TestCase):
     def setUp(self):
         np.random.seed(42)
         # Set up operational results data
-        oa_data = [448.0, 0.0493, 0.012, 477.8]
+        oa_data = dict(
+            aep=448.0,
+            availability_losses=0.0493,
+            electrical_losses=0.012,
+            turbine_ideal_energy=477.8,
+        )
         # AEP (GWh/yr), availability loss (fraction), electrical loss (fraction), turbine ideal energy (GWh/yr)
 
         # Set up EYA estimates
-        eya_data = [467.0, 597.14, 0.062, 0.024, 0.037, 0.011, 0.087]
+        eya_data = dict(
+            aep=467.0,
+            gross_energy=597.14,
+            availability_losses=0.062,
+            electrical_losses=0.024,
+            turbine_losses=0.037,
+            blade_degradation_losses=0.011,
+            wake_losses=0.087,
+        )
         # AEP (GWh/yr), gross energy (GWh/yr), availability loss (fraction), electrical loss (fraction),
         # turbine performance loss (fraction), blade degradation loss (fraction), wake loss (fraction)
 
         # Creat gap analysis method object and run
         self.analysis = EYAGapAnalysis(
-            plant="NA", eya_estimates=eya_data, oa_results=oa_data, make_fig=False
-        )
+            eya_estimates=eya_data, oa_results=oa_data
+        )  # make_fig=False)
         self.analysis.run()
 
     def test_eya_gap_analysis_results(self):
 
         # Check that the compiled gap analysis results match as expected
         expected_compiled_data = [467.0, -41.441648, 6.59437, 6.230899, 9.61638]
-        actual_compiled_data = self.analysis._compiled_data
+        actual_compiled_data = self.analysis.compiled_data
         npt.assert_array_almost_equal(expected_compiled_data, actual_compiled_data, decimal=3)
 
     def tearDown(self):

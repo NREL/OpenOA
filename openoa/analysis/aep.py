@@ -7,23 +7,25 @@
 from __future__ import annotations
 
 import random
+import datetime
 
 import attrs
 import numpy as np
 import pandas as pd
 import numpy.typing as npt
 import statsmodels.api as sm
+import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 from attrs import field, define
 from sklearn.metrics import r2_score, mean_squared_error
+from matplotlib.markers import MarkerStyle
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import KFold
 
 from openoa.plant import PlantData, FromDictMixin
 from openoa.logging import logging, logged_method_call
-
-from openoa.utils import filters
+from openoa.utils import plot, filters
 from openoa.utils import timeseries as tm
 from openoa.utils import unit_conversion as un
 from openoa.utils import met_data_processing as mt
@@ -87,6 +89,7 @@ class MonteCarloAEP(FromDictMixin):
         4. Set up Monte Carlo - create the necessary Monte Carlo inputs to the OA process
 
         5. Run AEP Monte Carlo - run the OA process iteratively to get distribution of AEP results
+
     The end result is a distribution of AEP results which we use to assess expected AEP and associated uncertainty
 
     Args:
@@ -287,275 +290,6 @@ class MonteCarloAEP(FromDictMixin):
         # Log the completion of the run
         logger.info("Run completed")
 
-    def plot_reanalysis_normalized_rolling_monthly_windspeed(self):
-        """
-        Make a plot of annual average wind speeds from reanalysis data to show general trends for each
-        Highlight the period of record for plant data
-
-        Returns:
-            matplotlib.pyplot object
-        """
-        import matplotlib.pyplot as plt
-
-        project = self.plant
-
-        # Define parameters needed for plot
-        min_val = 1  # Default parameter providing y-axis minimum for shaded plant POR region
-        max_val = 1  # Default parameter providing y-axis maximum for shaded plant POR region
-        por_start = self.aggregate.index[0]  # Start of plant POR
-        por_end = self.aggregate.index[-1]  # End of plant POR
-
-        plt.figure(figsize=(14, 6))
-        for key in self.reanalysis_products:
-            rean_df = project.reanalysis[key]  # Set reanalysis product
-            ann_mo_ws = (
-                rean_df.resample("MS")["ws_dens_corr"].mean().to_frame()
-            )  # Take monthly average wind speed
-            ann_roll = ann_mo_ws.rolling(12).mean()  # Calculate rolling 12-month average
-            ann_roll_norm = (
-                ann_roll["ws_dens_corr"] / ann_roll["ws_dens_corr"].mean()
-            )  # Normalize rolling 12-month average
-
-            # Update min_val and max_val depending on range of data
-            if ann_roll_norm.min() < min_val:
-                min_val = ann_roll_norm.min()
-            if ann_roll_norm.max() > max_val:
-                max_val = ann_roll_norm.max()
-
-            # Plot wind speed
-            plt.plot(ann_roll_norm, label=key)
-
-        # Plot dotted line at y=1 (i.e. average wind speed)
-        plt.plot((ann_roll.index[0], ann_roll.index[-1]), (1, 1), "k--")
-
-        # Fill in plant POR region
-        plt.fill_between(
-            [por_start, por_end],
-            [min_val, min_val],
-            [max_val, max_val],
-            alpha=0.1,
-            label="Plant POR",
-        )
-
-        # Final touches to plot
-        plt.xlabel("Year")
-        plt.ylabel("Normalized wind speed")
-        plt.legend()
-        plt.tight_layout()
-        return plt
-
-    def plot_reanalysis_gross_energy_data(self, outlier_thres):
-        """
-        Make a plot of gross energy vs wind speed for each reanalysis product,
-        with outliers highlighted
-
-        Args:
-            outlier_thres (float): outlier threshold (typical range of 1 to 4) which adjusts outlier sensitivity detection
-
-        Returns:
-            matplotlib.pyplot object
-        """
-        import matplotlib.pyplot as plt
-
-        valid_aggregate = self.aggregate
-        plt.figure(figsize=(9, 9))
-
-        # Loop through each reanalysis product and make a scatterplot of monthly wind speed vs plant energy
-        for p in np.arange(0, len(list(self.reanalysis_products))):
-            col_name = self.reanalysis_products[p]  # Reanalysis column in monthly data frame
-            # Plot
-            plt.subplot(2, 2, p + 1)
-
-            if (
-                self.time_resolution == "M"
-            ):  # Monthly case: apply robust linear regression for outliers detection
-                x = sm.add_constant(
-                    valid_aggregate[col_name]
-                )  # Define 'x'-values (constant needed for regression function)
-                y = (
-                    valid_aggregate["gross_energy_gwh"] * 30 / valid_aggregate["num_days_expected"]
-                )  # Normalize energy data to 30-days
-
-                rlm = sm.RLM(
-                    y, x, M=sm.robust.norms.HuberT(t=outlier_thres)
-                )  # Robust linear regression with HuberT algorithm (threshold equal to outlier_thres)
-                rlm_results = rlm.fit()
-
-                r2 = np.corrcoef(
-                    x.loc[rlm_results.weights == 1, col_name], y[rlm_results.weights == 1]
-                )[
-                    0, 1
-                ]  # Get R2 from valid data
-
-                # Continue plotting
-                plt.plot(
-                    x.loc[rlm_results.weights != 1, col_name],
-                    y[rlm_results.weights != 1],
-                    "rx",
-                    label="Outlier",
-                )
-                plt.plot(
-                    x.loc[rlm_results.weights == 1, col_name],
-                    y[rlm_results.weights == 1],
-                    ".",
-                    label="Valid data",
-                )
-                plt.title(col_name + ", R2=" + str(np.round(r2, 3)))
-                plt.ylabel("30-day normalized gross energy (GWh)")
-
-            else:  # Daily/hourly case: apply bin filter for outliers detection
-                x = valid_aggregate[col_name]
-                y = valid_aggregate["gross_energy_gwh"]
-                plant_capac = self.plant.metadata.capacity / 1000.0 * self.resample_hours
-
-                # Apply bin filter
-                flag = filters.bin_filter(
-                    bin_col=y,
-                    value_col=x,
-                    bin_width=0.06 * plant_capac,
-                    threshold=outlier_thres,  # wind bin threshold (stdev outside the median)
-                    center_type="median",
-                    bin_min=0.01 * plant_capac,
-                    bin_max=0.85 * plant_capac,
-                    threshold_type="std",
-                    direction="all",  # both left and right (from the median)
-                )
-
-                # Continue plotting
-                plt.plot(
-                    x.loc[flag],
-                    y[flag],
-                    "rx",
-                    label="Outlier",
-                )
-                plt.plot(
-                    x.loc[~flag],
-                    y[~flag],
-                    ".",
-                    label="Valid data",
-                )
-
-                if self.time_resolution == "D":
-                    plt.ylabel("Daily gross energy (GWh)")
-                elif self.time_resolution == "H":
-                    plt.ylabel("Hourly gross energy (GWh)")
-                plt.title(col_name)
-
-            plt.xlabel("Wind speed (m/s)")
-
-        plt.tight_layout()
-        return plt
-
-    def plot_result_aep_distributions(self):
-        """
-        Plot a distribution of AEP values from the Monte-Carlo OA method
-
-        Returns:
-            matplotlib.pyplot object
-        """
-        import matplotlib.pyplot as plt
-
-        fig = plt.figure(figsize=(14, 12))
-
-        sim_results = self.results
-
-        ax = fig.add_subplot(2, 2, 1)
-        ax.hist(sim_results["aep_GWh"], 40, density=1)
-        ax.text(
-            0.05,
-            0.9,
-            "AEP mean = " + str(np.round(sim_results["aep_GWh"].mean(), 1)) + " GWh/yr",
-            transform=ax.transAxes,
-        )
-        ax.text(
-            0.05,
-            0.8,
-            "AEP unc = "
-            + str(np.round(sim_results["aep_GWh"].std() / sim_results["aep_GWh"].mean() * 100, 1))
-            + "%",
-            transform=ax.transAxes,
-        )
-        plt.xlabel("AEP (GWh/yr)")
-
-        ax = fig.add_subplot(2, 2, 2)
-        ax.hist(sim_results["avail_pct"] * 100, 40, density=1)
-        ax.text(
-            0.05,
-            0.9,
-            "Mean = " + str(np.round((sim_results["avail_pct"].mean()) * 100, 1)) + " %",
-            transform=ax.transAxes,
-        )
-        plt.xlabel("Availability Loss (%)")
-
-        ax = fig.add_subplot(2, 2, 3)
-        ax.hist(sim_results["curt_pct"] * 100, 40, density=1)
-        ax.text(
-            0.05,
-            0.9,
-            "Mean: " + str(np.round((sim_results["curt_pct"].mean()) * 100, 2)) + " %",
-            transform=ax.transAxes,
-        )
-        plt.xlabel("Curtailment Loss (%)")
-        plt.tight_layout()
-        return plt
-
-    def plot_aep_boxplot(self, param, lab):
-        """
-        Plot box plots of AEP results sliced by a specified Monte Carlo parameter
-
-        Args:
-           param(:obj:`list`): The Monte Carlo parameter on which to split the AEP results
-           lab(:obj:`str`): The name to use for the parameter when producing the figure
-
-        Returns:
-            (none)
-        """
-
-        import matplotlib.pyplot as plt
-
-        sim_results = self.results
-
-        tmp_df = pd.DataFrame(data={"aep": sim_results.aep_GWh, "param": param})
-        tmp_df.boxplot(column="aep", by="param", figsize=(8, 6))
-        plt.ylabel("AEP (GWh/yr)")
-        plt.xlabel(lab)
-        plt.title("AEP estimates by %s" % lab)
-        plt.suptitle("")
-        plt.tight_layout()
-        return plt
-
-    def plot_aggregate_plant_data_timeseries(self):
-        """
-        Plot timeseries of monthly/daily gross energy, availability and curtailment
-
-        Returns:
-            matplotlib.pyplot object
-        """
-        import matplotlib.pyplot as plt
-
-        valid_aggregate = self.aggregate
-
-        plt.figure(figsize=(12, 9))
-
-        # Gross energy
-        plt.subplot(2, 1, 1)
-        plt.plot(valid_aggregate.gross_energy_gwh, ".-")
-        plt.grid("on")
-        plt.xlabel("Year")
-        plt.ylabel("Gross energy (GWh)")
-
-        # Availability and curtailment
-        plt.subplot(2, 1, 2)
-        plt.plot(valid_aggregate.availability_pct * 100, ".-", label="Availability")
-        plt.plot(valid_aggregate.curtailment_pct * 100, ".-", label="Curtailment")
-        plt.grid("on")
-        plt.xlabel("Year")
-        plt.ylabel("Loss (%)")
-        plt.legend()
-
-        plt.tight_layout()
-        return plt
-
     @logged_method_call
     def groupby_time_res(self, df):
         """
@@ -581,12 +315,6 @@ class MonteCarloAEP(FromDictMixin):
     def calculate_aggregate_dataframe(self):
         """
         Perform pre-processing of the plant data to produce a monthly/daily data frame to be used in AEP analysis.
-
-        Args:
-            (None)
-
-        Returns:
-            (None)
         """
 
         # Average to monthly/daily, quantify NaN data
@@ -1381,3 +1109,332 @@ class MonteCarloAEP(FromDictMixin):
 
         # Return long-term availabilty and curtailment
         return mc_avail_lt, mc_curt_lt
+
+    # Plotting Routines
+
+    def plot_normalized_monthly_reanalysis_windspeed(
+        self,
+        xlim: tuple[datetime.datetime, datetime.datetime] = (None, None),
+        ylim: tuple[float, float] = (None, None),
+        return_fig: bool = False,
+        figure_kwargs: dict = {},
+        plot_kwargs: dict = {},
+        legend_kwargs: dict = {},
+    ) -> None | tuple[plt.Figure, plt.Axes]:
+        """Make a plot of the normalized annual average wind speeds from reanalysis data to show general
+        trends for each, and highlighting the period of record for the plant data.
+
+        Args:
+            aep (:obj:`openoa.analysis.MonteCarloAEP`): An initialized MonteCarloAEP object.
+            xlim (:obj:`tuple[datetime.datetime, datetime.datetime]`, optional): A tuple of datetimes
+                representing the x-axis plotting display limits. Defaults to (None, None).
+            ylim (:obj:`tuple[float, float]`, optional): A tuple of the y-axis plotting display limits.
+                Defaults to (None, None).
+            return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
+            figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
+                that are passed to `plt.figure()`. Defaults to {}.
+            plot_kwargs (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
+                `ax.plot()`. Defaults to {}.
+            legend_kwargs (:obj:`dict`, optional): Additional legend keyword arguments that are passed to
+                `ax.legend()`. Defaults to {}.
+
+        Returns:
+            None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes]: If `return_fig` is True, then
+                the figure and axes objects are returned for further tinkering/saving.
+        """
+        return plot.plot_monthly_reanalysis_windspeed(
+            data=self.plant.reanalysis,
+            windspeed_col="ws_dens_corr",
+            plant_por=(self.aggregate.index[0], self.aggregate.index[-1]),
+            xlim=xlim,
+            ylim=ylim,
+            return_fig=return_fig,
+            figure_kwargs=figure_kwargs,
+            plot_kwargs=plot_kwargs,
+            legend_kwargs=legend_kwargs,
+        )
+
+    def plot_reanalysis_gross_energy_data(
+        self,
+        outlier_threshold: int,
+        xlim: tuple[float, float] = (None, None),
+        ylim: tuple[float, float] = (None, None),
+        return_fig: bool = False,
+        figure_kwargs: dict = {},
+        plot_kwargs: dict = {},
+        legend_kwargs: dict = {},
+    ) -> None | tuple[plt.Figure, plt.Axes]:
+        """
+        Makes a plot of the gross energy vs wind speed for each reanalysis product, with outliers
+        highlighted in a contrasting color and separate marker. For
+
+        Args:
+            reanalysis (:obj:`dict[str, pandas.DataFrame]`): `PlantData.reanalysis` dictionary of reanalysis
+                `DataFrame`s.
+            outlier_thres (:obj:`float`): outlier threshold (typical range of 1 to 4) which adjusts
+                outlier sensitivity detection.
+            xlim (:obj:`tuple[float, float]`, optional): A tuple of datetimes
+                representing the x-axis plotting display limits. Defaults to (None, None).
+            ylim (:obj:`tuple[float, float]`, optional): A tuple of the y-axis plotting display limits.
+                Defaults to (None, None).
+            return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
+            figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
+                that are passed to `plt.figure()`. Defaults to {}.
+            plot_kwargs (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
+                `ax.scatter()`. Defaults to {}.
+            legend_kwargs (:obj:`dict`, optional): Additional legend keyword arguments that are passed to
+                `ax.legend()`. Defaults to {}.
+
+        Returns:
+            None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes]: If `return_fig` is True, then
+                the figure and axes objects are returned for further tinkering/saving.
+        """
+
+        figure_kwargs.setdefault("figsize", (9, 9))
+        figure_kwargs.setdefault("dpi", 200)
+        fig = plt.figure(**figure_kwargs)
+        ax = fig.add_subplot(111)
+        ax.set_prop_cycle(
+            color=[
+                "tab:blue",
+                "tab:orange",
+                "tab:green",
+                "tab:red",
+                "tab:brown",
+                "tab:pink",
+                "tab:gray",
+                "tab:olive",
+            ]
+        )
+
+        valid_aggregate = self.aggregate
+
+        # Monthly case: apply robust linear regression for outliers detection
+        if self.time_resolution == "M":
+            for name, df in self.plant.reanalysis.items():
+                x = sm.add_constant(valid_aggregate[name])
+                y = valid_aggregate["gross_energy_gwh"] * 30 / valid_aggregate["num_days_expected"]
+                rlm = sm.RLM(y, x, M=sm.robust.norms.HuberT(t=outlier_threshold))
+                rlm_results = rlm.fit()
+                ix_outlier = rlm_results.weights != 1
+                r2 = np.corrcoef(x.loc[~ix_outlier, name], y[~ix_outlier])[0, 1]
+                ax.scatter(
+                    x.loc[~ix_outlier, name],
+                    y[~ix_outlier],
+                    marker=MarkerStyle(marker="o", fillstyle="none"),
+                    label=f"Valid {name} Data (R2={r2:.3f})",
+                    **plot_kwargs,
+                )
+                ax.scatter(
+                    x.loc[ix_outlier, name],
+                    y[ix_outlier],
+                    marker="x",
+                    label=f"{name} Outlier",
+                    **plot_kwargs,
+                )
+
+            ax.set_ylabel("30-day normalized gross energy (GWh)")
+
+        # Daily/hourly case: apply bin filter for outliers detection
+        else:
+            for name, df in self.plant.reanalysis.items():
+                x = valid_aggregate[name]
+                y = valid_aggregate["gross_energy_gwh"]
+                plant_capac = self.plant.metadata.capacity / 1000.0 * self._hours_in_res
+
+                # Apply bin filter
+                flag = filters.bin_filter(
+                    bin_col=y,
+                    value_col=x,
+                    bin_width=0.06 * plant_capac,
+                    threshold=outlier_threshold,  # wind bin threshold (stdev outside the median)
+                    center_type="median",
+                    bin_min=0.01 * plant_capac,
+                    bin_max=0.85 * plant_capac,
+                    threshold_type="std",
+                    direction="all",  # both left and right (from the median)
+                )
+
+                # Continue plotting
+                ax.scatter(x.loc[flag], y[flag], "x", label=f"{name} Outlier", **plot_kwargs)
+                ax.scatter(x.loc[~flag], y[~flag], ".", label=f"Valid {name} data", **plot_kwargs)
+
+            if self.time_resolution == "D":
+                ax.set_ylabel("Daily gross energy (GWh)")
+            elif self.time_resolution == "H":
+                ax.set_ylabel("Hourly gross energy (GWh)")
+
+        ax.grid()
+        ax.set_axisbelow(True)
+        ax.legend(**legend_kwargs)
+        ax.set_xlabel("Wind speed (m/s)")
+
+        ax.set_xlim(xlim)
+        ax.set_ylim(ylim)
+
+        fig.tight_layout()
+        plt.show()
+
+        if return_fig:
+            return fig, ax
+
+    def plot_aggregate_plant_data_timeseries(
+        self,
+        xlim: tuple[datetime.datetime, datetime.datetime] = (None, None),
+        ylim_energy: tuple[float, float] = (None, None),
+        ylim_loss: tuple[float, float] = (None, None),
+        return_fig: bool = False,
+        figure_kwargs: dict = {},
+        plot_kwargs: dict = {},
+        legend_kwargs: dict = {},
+    ):
+        """
+        Plot timeseries of monthly/daily gross energy, availability and curtailment.
+
+        Args:
+            data(:obj:`pandas.DataFrame`): A pandas DataFrame containing energy production and losses.
+            energy_col(:obj:`str`): The name of the column in :py:attr:`data` containing the energy production.
+            loss_cols(:obj:`list[str]`): The name(s) of the column(s) in :py:attr:`data` containing the loss data.
+            energy_label(:obj:`str`): The legend label and y-axis label for the energy plot.
+            loss_labels(:obj:`list[str]`): The legend labels losses plot.
+            xlim (:obj:`tuple[datetime.datetime, datetime.datetime]`, optional): A tuple of datetimes
+                representing the x-axis plotting display limits. Defaults to None.
+            ylim_energy (:obj:`tuple[float, float]`, optional): A tuple of the y-axis plotting display
+                limits for the gross energy plot (top figure). Defaults to None.
+            ylim_loss (:obj:`tuple[float, float]`, optional): A tuple of the y-axis plotting display
+                limits for the loss plot (bottom figure). Defaults to (None, None).
+            return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
+            figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
+                that are passed to `plt.figure()`. Defaults to {}.
+            plot_kwargs (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
+                `ax.scatter()`. Defaults to {}.
+            legend_kwargs (:obj:`dict`, optional): Additional legend keyword arguments that are passed to
+                `ax.legend()`. Defaults to {}.
+
+        Returns:
+            None | tuple[matplotlib.pyplot.Figure, tuple[matplotlib.pyplot.Axes, matplotlib.pyplot.Axes]]:
+                If `return_fig` is True, then the figure and axes objects are returned for further
+                tinkering/saving.
+        """
+        return plot.plot_plant_energy_losses_timeseries(
+            data=self.aggregate,
+            energy_col="gross_energy_gwh",
+            loss_cols=["availability_pct", "curtailment_pct"],
+            energy_label="Gross Energy (GWh/yr)",
+            loss_labels=["Availability", "Curtailment"],
+            xlim=xlim,
+            ylim_energy=ylim_energy,
+            ylim_loss=ylim_loss,
+            return_fig=return_fig,
+            figure_kwargs=figure_kwargs,
+            plot_kwargs=plot_kwargs,
+            legend_kwargs=legend_kwargs,
+        )
+
+    def plot_result_aep_distributions(
+        self,
+        xlim_aep: tuple[float, float] = (None, None),
+        xlim_availability: tuple[float, float] = (None, None),
+        xlim_curtail: tuple[float, float] = (None, None),
+        ylim_aep: tuple[float, float] = (None, None),
+        ylim_availability: tuple[float, float] = (None, None),
+        ylim_curtail: tuple[float, float] = (None, None),
+        return_fig: bool = False,
+        figure_kwargs: dict = {},
+        plot_kwargs: dict = {},
+        annotate_kwargs: dict = {},
+    ) -> None | tuple[plt.Figure, plt.Axes]:
+        """
+        Plot a distribution of AEP values from the Monte-Carlo OA method
+
+        Args:
+            xlim_aep (:obj:`tuple[float, float]`, optional): A tuple of floats representing the x-axis plotting display
+                limits for the AEP subplot. Defaults to (None, None).
+            xlim_availability (:obj:`tuple[float, float]`, optional): A tuple of floats representing the x-axis plotting
+                display limits for the availability subplot. Defaults to (None, None).
+            xlim_curtail (:obj:`tuple[float, float]`, optional): A tuple of floats representing the
+                x-axis plotting display limits for the curtailment subplot. Defaults to (None, None).
+            ylim_aep (:obj:`tuple[float, float]`, optional): A tuple of floats representing the y-axis plotting display
+                limits for the AEP subplot. Defaults to (None, None).
+            ylim_availability (:obj:`tuple[float, float]`, optional): A tuple of floats representing the y-axis plotting
+                display limits for the availability subplot. Defaults to (None, None).
+            ylim_curtail (:obj:`tuple[float, float]`, optional): A tuple of floats representing the
+                y-axis plotting display limits for the curtailment subplot. Defaults to (None, None).
+            return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
+            figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
+                that are passed to `plt.figure()`. Defaults to {}.
+            plot_kwargs (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
+                `ax.hist()`. Defaults to {}.
+            annotate_kwargs (:obj:`dict`, optional): Additional annotation keyword arguments that are
+                passed to `ax.annotate()`. Defaults to {}.
+
+        Returns:
+            None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes]: If `return_fig` is True, then
+                the figure and axes objects are returned for further tinkering/saving.
+        """
+        plot_results = self.results.copy()
+        plot_results[["avail_pct", "curt_pct"]] = plot_results[["avail_pct", "curt_pct"]] * 100
+        return plot.plot_distributions(
+            data=plot_results,
+            which=["aep_GWh", "avail_pct", "curt_pct"],
+            xlabels=["AEP (GWh/yr)", "Availability Loss (%)", "Curtailment Loss (%)"],
+            xlim=(xlim_aep, xlim_availability, xlim_curtail),
+            ylim=(ylim_aep, ylim_availability, ylim_curtail),
+            return_fig=return_fig,
+            figure_kwargs=figure_kwargs,
+            plot_kwargs=plot_kwargs,
+            annotate_kwargs=annotate_kwargs,
+        )
+
+    def plot_aep_boxplot(
+        self,
+        x: pd.Series,
+        xlabel: str,
+        ylim: tuple[float, float] = (None, None),
+        with_points: bool = False,
+        points_label: str = "Individual AEP Estimates",
+        return_fig: bool = False,
+        figure_kwargs: dict = {},
+        plot_kwargs_box: dict = {},
+        plot_kwargs_points: dict = {},
+        legend_kwargs: dict = {},
+    ) -> None | tuple[plt.Figure, plt.Axes]:
+        """Plot box plots of AEP results sliced by a specified Monte Carlo parameter
+
+        Args:
+            x(:obj:`pandas.Series`): The data that splits the results in y.
+            xlabel(:obj:`str`): The x-axis label.
+            ylim (:obj:`tuple[float, float]`, optional): A tuple of the y-axis plotting display limits.
+                Defaults to None.
+            with_points (:obj:`bool`, optional): Flag to plot the individual points like a seaborn `swarmplot`. Defaults to False.
+                points_label(:obj:`bool` | None, optional): Legend label for the points, if plotting.
+            Defaults to None.
+            return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
+            figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
+                that are passed to `plt.figure()`. Defaults to {}.
+            plot_kwargs_box (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
+                `ax.boxplot()`. Defahults to {}.
+            plot_kwargs_points (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
+                `ax.boxplot()`. Defaults to {}.
+            legend_kwargs (:obj:`dict`, optional): Additional legend keyword arguments that are passed to
+                `ax.legend()`. Defaults to {}.
+
+        Returns:
+            None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes, dict]: If `return_fig` is
+                True, then the figure object, axes object, and a dictionary of the boxplot objects are
+                returned for further tinkering/saving.
+        """
+        return plot.plot_boxplot(
+            x=x,
+            xlabel=xlabel,
+            y=self.results.aep_GWh,
+            ylabel="AEP (GWh/yr)",
+            ylim=ylim,
+            with_points=with_points,
+            points_label=points_label,
+            return_fig=return_fig,
+            figure_kwargs=figure_kwargs,
+            plot_kwargs_box=plot_kwargs_box,
+            plot_kwargs_points=plot_kwargs_points,
+            legend_kwargs=legend_kwargs,
+        )
