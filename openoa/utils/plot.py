@@ -1000,7 +1000,7 @@ def plot_by_id(
 
 
 def column_histograms(df: pd.DataFrame, columns: list = None, return_fig: bool = False):
-    """Produces a histogram plot for each numeric column in `df`s.
+    """Produces a histogram plot for each numeric column in :py:attr:`df`s.
 
     Args:
         df(:obj:`pd.DataFrame`): The dataframe for plotting.

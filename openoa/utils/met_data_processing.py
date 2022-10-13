@@ -211,9 +211,6 @@ def compute_shear(
     Computes shear coefficient between wind speed measurements using the power law.
     The shear coefficient is obtained by evaluating the expression for an OLS regression coefficient.
 
-    Updated version targeting OpenOA V3 due to the following api breaking change:
-        - Removal of ref_col, instead, returning the reference column used
-
     Args:
         data(:obj:`pandas.DataFrame`): A pandas `DataFrame` with wind speed columns that correspond
             to the keys of `ws_heights`.
