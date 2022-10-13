@@ -243,12 +243,16 @@ class EYAGapAnalysis(FromDictMixin):
         figure_kwargs: dict = {},
     ) -> None | tuple:
         """
-        Produce a waterfall plot showing the progression from the self to OA estimates of AEP.
+        Produce a waterfall plot showing the progression from the EYA estimates to the calculated OA
+        estimates of AEP.
 
         Args:
             data(array-like): data to be used to create waterfall plot, if not using
                 :py:attr:`compiled_data`. Defaults to None.
-            index(:obj:`list`): List of string values to be used for x-axis labels.
+            index(:obj:`list`): List of string values to be used for x-axis labels, which should
+                have one more value than the number of points in :py:attr:`data` to account for
+                the resulting OA total. Defaults to ["self_aep", "ideal_energy", "avail_loss",
+                "elec_loss", "unexplained/uncertain", "oa_aep"].
             return_fig(:obj:`bool`, optional): Set to True to return the figure and axes objects,
                 otherwise set to False. Defaults to False.
             figure_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be
@@ -314,7 +318,7 @@ class EYAGapAnalysis(FromDictMixin):
         ax.set_xticklabels(index)
 
         ax.set_ylim(ylim)
-        ax.set_ylabel("ENergy (GWh/yr)")
+        ax.set_ylabel("Energy (GWh/yr)")
 
         fig.tight_layout()
         plt.show()
