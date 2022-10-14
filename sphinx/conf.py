@@ -32,12 +32,12 @@ new_nb = nbmerge.merge_notebooks(
         "./examples/examples.ipynb",
         "../examples/00_intro_to_plant_data.ipynb",
         # TODO: uncomment when the examples are updated and reincorporated
-        # "../examples/01_utils_examples.ipynb",
-        # "../examples/02_plant_aep_analysis.ipynb",
+        "../examples/01_utils_examples.ipynb",
+        "../examples/02_plant_aep_analysis.ipynb",
         # "../examples/02b_augmented_plant_aep_analysis.ipynb",
-        # "../examples/03_turbine_ideal_energy.ipynb",
-        # "../examples/04_electrical_losses.ipynb",
-        # "../examples/05_eya_gap_analysis.ipynb",
+        "../examples/03_turbine_ideal_energy.ipynb",
+        "../examples/04_electrical_losses.ipynb",
+        "../examples/05_eya_gap_analysis.ipynb",
     ),
 )
 nbmerge.write_notebook(new_nb, "./examples/examplesout.ipynb")
