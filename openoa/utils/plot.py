@@ -940,10 +940,10 @@ def plot_by_id(
 
     Args:
         df(:obj:`pd.DataFrame`): The dataframe for comparing values.
-        id_col(:obj:`String`): The id column (or index column) in `df`.
-        x_axis(:obj:'String'): Independent variable to plot, should align with a column in `df`.
-        y_axis(:obj:'String'): Dependent variable to plot, should align with a column in `df`.
-        return_fig(:obj:`String`): Indicator for if the figure and axes objects should be returned,
+        id_col(:obj:`str`): The id column (or index column) in `df`.
+        x_axis(:obj:`str`): Independent variable to plot, should align with a column in `df`.
+        y_axis(:obj:`str`): Dependent variable to plot, should align with a column in `df`.
+        return_fig(:obj:`bool`): Indicator for if the figure and axes objects should be returned,
             by default False.
 
     Returns:
@@ -1004,11 +1004,11 @@ def plot_by_id(
 
 
 def column_histograms(df: pd.DataFrame, columns: list = None, return_fig: bool = False):
-    """Produces a histogram plot for each numeric column in :py:attr:`df`s.
+    """Produces a histogram plot for each numeric column in :py:attr:`df`.
 
     Args:
         df(:obj:`pd.DataFrame`): The dataframe for plotting.
-        return_fig(:obj:`String`): Indicator for if the figure and axes objects should be returned,
+        return_fig(:obj:`bool`): Indicator for if the figure and axes objects should be returned,
             by default False.
 
     Returns:
@@ -1046,7 +1046,7 @@ def plot_power_curve(
     wind_speed: pd.Series,
     power: pd.Series,
     flag: np.ndarray | pd.Series,
-    flag_labels: tuple[str, str] = None,
+    flag_labels: tuple[str, str] = ("Flagged Readings", "Power Curve"),
     xlim: tuple[float, float] = (None, None),
     ylim: tuple[float, float] = (None, None),
     legend: bool = False,
@@ -1060,17 +1060,29 @@ def plot_power_curve(
     will be created.
 
     Args:
-        wind_speed (:obj:`pandas.Series`): A pandas Series or numpy array of the recorded wind speeds, in m/s.
-        power (:obj:`pandas.Series` | `np.ndarray`): A pandas Series or numpy array of the recorded power, in kW.
-        flag (:obj:`np.ndarray` | `pd.Series`): A pandas Series or numpy array of booleans for which points to flag in the windspeed and power data.
-        flag_labels (:obj:`tuple[str, str]`, optional): The labels to give to the scatter points, where the 0th entry is the flagged points, and the second entry correpsponds to the standard power curve. Defaults to None.
-        xlim (:obj:`tuple[float, float]`, optional): A tuple of the x-axis (min, max) values. Defaults to (None, None).
-        ylim (:obj:`tuple[float, float]`, optional): A tuple of the y-axis (min, max) values. Defaults to (None, None).
-        legend (:obj:`bool`, optional): Set to True to place a legend in the figure, otherwise set to False. Defaults to False.
-        return_fig (:obj:`bool`, optional): Set to True to return the figure and axes objects, otherwise set to False. Defaults to False.
-        figure_kwargs (:obj:`dict`, optional): Additional keyword arguments that should be passed to `plt.figure`. Defaults to {}.
-        scatter_kwargs (:obj:`dict`, optional): Additional keyword arguments that should be passed to `ax.scatter`. Defaults to {}.
-        legend_kwargs (:obj:`dict`, optional): Additional keyword arguments that should be passed to `ax.legend`. Defaults to {}.
+        wind_speed (:obj:`pandas.Series`): A pandas Series or numpy array of the recorded wind
+            speeds, in m/s.
+        power (:obj:`pandas.Series` | `np.ndarray`): A pandas Series or numpy array of
+            the recorded power, in kW.
+        flag (:obj:`numpy.ndarray` | `pd.Series`): A pandas Series or numpy array of booleans for
+            which points to flag in the windspeed and power data.
+        flag_labels (:obj:`tuple[str, str]`, optional): The labels to give to the scatter points,
+            corresponding to the flagged points and raw points, respectively. Defaults to
+            ("Flagged Readings", "Power Curve").
+        xlim (:obj:`tuple[float, float]`, optional): A tuple of the x-axis (min, max) values.
+            Defaults to (None, None).
+        ylim (:obj:`tuple[float, float]`, optional): A tuple of the y-axis (min, max) values.
+            Defaults to (None, None).
+        legend (:obj:`bool`, optional): Set to True to place a legend in the figure, otherwise set
+            to False. Defaults to False.
+        return_fig (:obj:`bool`, optional): Set to True to return the figure and axes objects,
+            otherwise set to False. Defaults to False.
+        figure_kwargs (:obj:`dict`, optional): Additional keyword arguments that should be passed to
+            `plt.figure`. Defaults to {}.
+        scatter_kwargs (:obj:`dict`, optional): Additional keyword arguments that should be passed
+            to `ax.scatter`. Defaults to {}.
+        legend_kwargs (:obj:`dict`, optional): Additional keyword arguments that should be passed to
+            `ax.legend`. Defaults to {}.
 
     Returns:
         None | tuple[plt.Figure, plt.Axes]: _description_
