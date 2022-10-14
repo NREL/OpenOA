@@ -17,17 +17,19 @@ import numpy.typing as npt
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from attrs import field, define
+from matplotlib.ticker import StrMethodFormatter
 
-from openoa.logging import logging, logged_method_call
 from openoa.plant import PlantData, FromDictMixin
-from openoa.utils import filters, imputing
+from openoa.utils import plot, filters, imputing
 from openoa.utils import timeseries as ts
 from openoa.utils import met_data_processing as met
+from openoa.logging import logging, logged_method_call
 from openoa.utils.power_curve import functions
 from openoa.analysis._analysis_validators import validate_UQ_input, validate_open_range_0_1
 
 
 logger = logging.getLogger(__name__)
+plot.set_styling()
 
 NDArrayFloat = npt.NDArray[np.float64]
 
@@ -521,94 +523,167 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
         self.plant_gross[i] = turb_mo_avg.sum(axis=1).sum(axis=0)
         self.turb_lt_gross = turb_gross
 
-    def plot_filtered_power_curves(self, save_folder, output_to_terminal=False):
-        """
-        Plot the raw and flagged power curve data and save to file.
+    def plot_filtered_power_curves(
+        self,
+        turbines: list[str] | None = None,
+        flag_labels: tuple[str, str] = None,
+        max_cols: int = 3,
+        xlim: tuple[float, float] = (None, None),
+        ylim: tuple[float, float] = (None, None),
+        legend: bool = False,
+        return_fig: bool = False,
+        figure_kwargs: dict = {},
+        legend_kwargs: dict = {},
+        plot_kwargs: dict = {},
+    ):
+        """Plot the raw and flagged power curve data.
 
         Args:
-            save_folder('obj':'str'): The pathname to where figure files should be saved
-            output_to_terminal('obj':'boolean'): Indicate whether or not to output figures to terminal
+            turbines(:obj:`list[str]`, optional): The list of turbines to be plot, if not all of the
+                keys in :py:attr:`data`.
+            flag_labels (:obj:`tuple[str, str]`, optional): The labels to give to the scatter points,
+                where the first entryis the flagged points, and the second entry correpsponds to the
+                standard power curve. Defaults to None.
+            max_cols(:obj:`int`, optional): The maximum number of columns in the plot. Defaults to 3.
+            xlim(:obj:`tuple[float, float]`, optional): A tuple of the x-axis (min, max) values.
+                Defaults to (None, None).
+            ylim(:obj:`tuple[float, float]`, optional): A tuple of the y-axis (min, max) values.
+                Defaults to (None, None).
+            legend(:obj:`bool`, optional): Set to True to place a legend in the figure, otherwise set
+                to False. Defaults to False.
+            return_fig(:obj:`bool`, optional): Set to True to return the figure and axes objects,
+                otherwise set to False. Defaults to False.
+            figure_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be passed
+                to `plt.figure`. Defaults to {}.
+            plot_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be passed
+                to `ax.scatter`. Defaults to {}.
+            legend_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be passed
+                to `ax.legend`. Defaults to {}.
 
         Returns:
-            (None)
+            None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes]: If `return_fig` is True, then
+                the figure and axes objects are returned for further tinkering/saving.
         """
+        return plot.plot_power_curves(
+            data=self.scada_dict,
+            windspeed_col="windspeed",
+            power_col="power",
+            flag_col="flag_final",
+            turbines=turbines,
+            flag_labels=flag_labels,
+            max_cols=max_cols,
+            xlim=xlim,
+            ylim=ylim,
+            legend=legend,
+            return_fig=return_fig,
+            figure_kwargs=figure_kwargs,
+            legend_kwargs=legend_kwargs,
+            plot_kwargs=plot_kwargs,
+        )
 
-        # TODO: NEED PLOTTING TO BE MERGED FIRST
-
-        dic = self.scada_dict
-
-        # Loop through turbines
-        for t in self.turbine_ids:
-            filt_df = dic[t].loc[dic[t]["flag_final"]]  # Filter only for valid data
-
-            plt.figure(figsize=(6, 5))
-            plt.scatter(dic[t].windspeed, dic[t].power, s=1, label="Raw")  # Plot all data
-            plt.scatter(
-                filt_df["windspeed"], filt_df["power"], s=1, label="Flagged"
-            )  # Plot flagged data
-            plt.xlim(0, 30)
-            plt.xlabel("Wind speed (m/s)")
-            plt.ylabel("Power (W)")
-            plt.title("Filtered power curve for Turbine %s" % t)
-            plt.legend(loc="lower right")
-            plt.savefig(
-                "%s/filtered_power_curve_%s.png"
-                % (
-                    save_folder,
-                    t,
-                ),
-                dpi=200,
-            )  # Save file
-
-            # Output figure to terminal if desired
-            if output_to_terminal:
-                plt.show()
-
-            plt.close()
-
-    def plot_daily_fitting_result(self, save_folder, output_to_terminal=False):
-        """
-        Plot the raw and flagged power curve data and save to file.
+    def plot_daily_fitting_result(
+        self,
+        turbines: list[str] | None = None,
+        flag_labels: tuple[str, str, str] = ("Modeled", "Imputed", "Input"),
+        max_cols: int = 3,
+        xlim: tuple[float, float] = (None, None),
+        ylim: tuple[float, float] = (None, None),
+        legend: bool = False,
+        return_fig: bool = False,
+        figure_kwargs: dict = {},
+        legend_kwargs: dict = {},
+        plot_kwargs: dict = {},
+    ):
+        """Plot the raw, imputed, and modeled power curve data.
 
         Args:
-            save_folder('obj':'str'): The pathname to where figure files should be saved
-            output_to_terminal('obj':'boolean'): Indicate whether or not to output figures to terminal
+            turbines(:obj:`list[str]`, optional): The list of turbines to be plot, if not all of the
+                keys in :py:attr:`data`.
+            labels (:obj:`tuple[str, str]`, optional): The labels to give to the scatter points,
+                corresponding to the modeled, imputed, and input data, respectively. Defaults to
+                ("Modeled", "Imputed", "Input").
+            max_cols(:obj:`int`, optional): The maximum number of columns in the plot. Defaults to 3.
+            xlim(:obj:`tuple[float, float]`, optional): A tuple of the x-axis (min, max) values.
+                Defaults to (None, None).
+            ylim(:obj:`tuple[float, float]`, optional): A tuple of the y-axis (min, max) values.
+                Defaults to (None, None).
+            legend(:obj:`bool`, optional): Set to True to place a legend in the figure, otherwise set
+                to False. Defaults to False.
+            return_fig(:obj:`bool`, optional): Set to True to return the figure and axes objects,
+                otherwise set to False. Defaults to False.
+            figure_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be passed
+                to `plt.figure`. Defaults to {}.
+            plot_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be passed
+                to `ax.scatter`. Defaults to {}.
+            legend_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be passed
+                to `ax.legend`. Defaults to {}.
 
         Returns:
-            (None)
+            None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes]: If `return_fig` is True, then
+                the figure and axes objects are returned for further tinkering/saving.
         """
+        turbines = list(self.turbine_model_dict.keys()) if turbines is None else turbines
+        num_cols = len(turbines)
+        num_rows = int(np.ceil(num_cols / max_cols))
 
-        # TODO: NEED PLOTTING TO BE MERGED FIRST
+        if flag_labels is None:
+            flag_labels = ("Modeled", "Imputed", "Input")
 
-        mod_input = self.turbine_model_dict
+        figure_kwargs.setdefault("dpi", 200)
+        figure_kwargs.setdefault("figsize", (15, num_rows * 5))
+        fig, axes_list = plt.subplots(num_rows, max_cols, **figure_kwargs)
 
-        # Loop through turbines
-        for t in self.turbine_ids:
-            df = mod_input[(t)]
-            daily_reanalysis = self.daily_reanalysis
-            ws_daily = daily_reanalysis["windspeed"]
-
+        ws_daily = self.daily_reanalysis["windspeed"]
+        for i, (t, ax) in enumerate(zip(turbines, axes_list.flatten())):
+            df = self.turbine_model_dict[t]
             df_imputed = df.loc[df["energy_corrected"] != df["energy_imputed"]]
 
-            plt.figure(figsize=(6, 5))
-            plt.plot(ws_daily, self.turb_lt_gross[t], "r.", alpha=0.1, label="Modeled")
-            plt.plot(df["windspeed"], df["energy_imputed"], ".", label="Input")
-            plt.plot(df_imputed["windspeed"], df_imputed["energy_imputed"], ".", label="Imputed")
-            plt.xlabel("Wind speed (m/s)")
-            plt.ylabel("Daily Energy (kWh)")
-            plt.title("Daily SCADA Energy Fitting, Turbine %s" % t)
-            plt.legend(loc="lower right")
-            plt.savefig(
-                "%s/daily_power_curve_%s.png"
-                % (
-                    save_folder,
-                    t,
-                ),
-                dpi=200,
-            )  # Save file
+            ax.scatter(
+                ws_daily,
+                self.turb_lt_gross[t],
+                label=flag_labels[0],
+                alpha=0.2,
+                color="tab:blue",
+                **plot_kwargs,
+            )
+            ax.scatter(
+                df["windspeed"],
+                df["energy_imputed"],
+                label=flag_labels[2],
+                alpha=0.6,
+                color="tab:green",
+                **plot_kwargs,
+            )
+            ax.scatter(
+                df_imputed["windspeed"],
+                df_imputed["energy_imputed"],
+                label=flag_labels[1],
+                alpha=0.6,
+                color="tab:orange",
+                **plot_kwargs,
+            )
 
-            # Output figure to terminal if desired
-            if output_to_terminal:
-                plt.show()
+            ax.set_title(t)
+            ax.set_xlim(xlim)
+            ax.set_ylim(ylim)
 
-            plt.close()
+            ax.yaxis.set_major_formatter(StrMethodFormatter("{x:,.0f}"))
+
+            if legend:
+                ax.legend(**legend_kwargs)
+
+            if i % max_cols == 0:
+                ax.set_ylabel("Power (kW)")
+
+            if i in range(max_cols * (num_rows - 1), num_cols):
+                ax.set_xlabel("Wind Speed (m/s)")
+
+        num_axes = axes_list.size
+        if i < num_axes - 1:
+            for j in range(i + 1, num_axes):
+                fig.delaxes(axes_list.flatten()[j])
+
+        fig.tight_layout()
+        plt.show()
+        if return_fig:
+            return fig, ax

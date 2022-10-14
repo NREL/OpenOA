@@ -16,6 +16,7 @@ from pyproj import Transformer
 from bokeh.models import WMTSTileSource, ColumnDataSource
 from bokeh.palettes import Category10, viridis
 from bokeh.plotting import figure
+from matplotlib.ticker import StrMethodFormatter
 
 
 NDArrayFloat = npt.NDArray[np.float64]
@@ -946,7 +947,7 @@ def plot_by_id(
             by default False.
 
     Returns:
-        (:obj: `None`)
+        (:obj:`None`)
     """
     # Operate on a totally new copy of the data so that transofrmations don't carry through
     df = df.copy()
@@ -1059,12 +1060,12 @@ def plot_power_curve(
     will be created.
 
     Args:
-        wind_speed (:obj: `pandas.Series`): A pandas Series or numpy array of the recorded wind speeds, in m/s.
-        power (:obj: `pandas.Series` | `np.ndarray`): A pandas Series or numpy array of the recorded power, in kW.
-        flag (:obj: `np.ndarray` | `pd.Series`): A pandas Series or numpy array of booleans for which points to flag in the windspeed and power data.
-        flag_labels (:obj: `tuple[str, str]`, optional): The labels to give to the scatter points, where the 0th entry is the flagged points, and the second entry correpsponds to the standard power curve. Defaults to None.
-        xlim (:obj: `tuple[float, float]`, optional): A tuple of the x-axis (min, max) values. Defaults to (None, None).
-        ylim (:obj: `tuple[float, float]`, optional): A tuple of the y-axis (min, max) values. Defaults to (None, None).
+        wind_speed (:obj:`pandas.Series`): A pandas Series or numpy array of the recorded wind speeds, in m/s.
+        power (:obj:`pandas.Series` | `np.ndarray`): A pandas Series or numpy array of the recorded power, in kW.
+        flag (:obj:`np.ndarray` | `pd.Series`): A pandas Series or numpy array of booleans for which points to flag in the windspeed and power data.
+        flag_labels (:obj:`tuple[str, str]`, optional): The labels to give to the scatter points, where the 0th entry is the flagged points, and the second entry correpsponds to the standard power curve. Defaults to None.
+        xlim (:obj:`tuple[float, float]`, optional): A tuple of the x-axis (min, max) values. Defaults to (None, None).
+        ylim (:obj:`tuple[float, float]`, optional): A tuple of the y-axis (min, max) values. Defaults to (None, None).
         legend (:obj:`bool`, optional): Set to True to place a legend in the figure, otherwise set to False. Defaults to False.
         return_fig (:obj:`bool`, optional): Set to True to return the figure and axes objects, otherwise set to False. Defaults to False.
         figure_kwargs (:obj:`dict`, optional): Additional keyword arguments that should be passed to `plt.figure`. Defaults to {}.
@@ -1086,6 +1087,8 @@ def plot_power_curve(
         flagged_label = "Flagged Readings" if flag_labels is None else flag_labels[0]
         ax.scatter(wind_speed, power, label=pc_label, **scatter_kwargs)
         ax.scatter(wind_speed[flag], power[flag], label=flagged_label, **scatter_kwargs)
+
+    ax.yaxis.set_major_formatter(StrMethodFormatter("{x:,.0f}"))
 
     if legend:
         ax.legend(**legend_kwargs)
@@ -1564,6 +1567,103 @@ def plot_waterfall(
 
     ax.set_ylim(ylim)
     ax.set_ylabel(ylabel)
+
+    fig.tight_layout()
+    plt.show()
+    if return_fig:
+        return fig, ax
+
+
+def plot_power_curves(
+    data: dict[str, pd.DataFrame],
+    power_col: str,
+    windspeed_col: str,
+    flag_col: str = None,
+    turbines: list[str] | None = None,
+    flag_labels: tuple[str, str] = ("Flagged Readings", "Power Curve"),
+    max_cols: int = 3,
+    xlim: tuple[float, float] = (None, None),
+    ylim: tuple[float, float] = (None, None),
+    legend: bool = False,
+    return_fig: bool = False,
+    figure_kwargs: dict = {},
+    legend_kwargs: dict = {},
+    plot_kwargs: dict = {},
+):
+    """Plots a series of power curves for a dictionary of turbine data, allowing for an optional
+    filtering for singling out readings in the figure.
+
+    Args:
+        data(:obj:`dict[str, pd.DataFrame]`): The dictionary of turbine IDs and and SCADA data.
+        wind_speed_col(:obj:`pandas.Series`): A pandas Series or numpy array of the recorded wind
+            speeds, in m/s.
+        power_col(:obj:`pandas.Series` | :obj:`np.ndarray`): A pandas Series or numpy array of the
+            recorded power, in kW.
+        flag_col(:obj:`np.ndarray` | :obj:`pd.Series`): A pandas Series or numpy array of booleans for
+            which points to flag in the windspeed and power data.
+        turbines(:obj:`list[str]`, optional): The list of turbines to be plot, if not all of the
+            keys in :py:attr:`data`.
+        flag_labels (:obj:`tuple[str, str]`, optional): The labels to give to the scatter points,
+            corresponding to the flagged readings and raw readings, respectively. Defaults to
+            ("Flagged Readings", "Power Curve").
+        max_cols(:obj:`int`, optional): The maximum number of columns in the plot. Defaults to 3.
+        xlim(:obj:`tuple[float, float]`, optional): A tuple of the x-axis (min, max) values.
+            Defaults to (None, None).
+        ylim(:obj:`tuple[float, float]`, optional): A tuple of the y-axis (min, max) values.
+            Defaults to (None, None).
+        legend(:obj:`bool`, optional): Set to True to place a legend in the figure, otherwise set
+            to False. Defaults to False.
+        return_fig(:obj:`bool`, optional): Set to True to return the figure and axes objects,
+            otherwise set to False. Defaults to False.
+        figure_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be passed to
+            `plt.figure`. Defaults to {}.
+        plot_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be passed
+            to `ax.scatter`. Defaults to {}.
+        legend_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be passed to
+            `ax.legend`. Defaults to {}.
+
+    Returns:
+        None | tuple[plt.Figure, plt.Axes]: Returns the figure and axes objects if
+            :py:attr:`return_fig` is True.
+    """
+    turbines = list(data.keys()) if turbines is None else turbines
+    num_cols = len(turbines)
+    num_rows = int(np.ceil(num_cols / max_cols))
+
+    figure_kwargs.setdefault("dpi", 200)
+    figure_kwargs.setdefault("figsize", (15, num_rows * 5))
+    fig, axes_list = plt.subplots(num_rows, max_cols, **figure_kwargs)
+
+    for i, (t, ax) in enumerate(zip(turbines, axes_list.flatten())):
+        plot_data = data[t]
+
+        label = "Power Curve" if flag_labels is None else flag_labels[1]
+        ax.scatter(plot_data[windspeed_col], plot_data[power_col], label=label, **plot_kwargs)
+
+        if flag_col is not None:
+            plot_data = plot_data.loc[plot_data[flag_col]]
+            label = "Flagged Readings" if flag_labels is None else flag_labels[0]
+            ax.scatter(plot_data[windspeed_col], plot_data[power_col], label=label, **plot_kwargs)
+
+        ax.set_title(t)
+        ax.set_xlim(xlim)
+        ax.set_ylim(ylim)
+
+        ax.yaxis.set_major_formatter(StrMethodFormatter("{x:,.0f}"))
+
+        if legend:
+            ax.legend(**legend_kwargs)
+
+        if i % max_cols == 0:
+            ax.set_ylabel("Power (kW)")
+
+        if i in range(max_cols * (num_rows - 1), num_cols):
+            ax.set_xlabel("Wind Speed (m/s)")
+
+    num_axes = axes_list.size
+    if i < num_axes - 1:
+        for j in range(i + 1, num_axes):
+            fig.delaxes(axes_list.flatten()[j])
 
     fig.tight_layout()
     plt.show()
