@@ -22,4 +22,4 @@ What's New?
     :parser: myst_parser.sphinx_
 
 
-.. _Binder page: https://mybinder.org/v2/gh/NREL/OpenOA/main?filepath=examples
+.. _Binder page: https://mybinder.org/v2/gh/NREL/OpenOA/develop_v3?filepath=examples
