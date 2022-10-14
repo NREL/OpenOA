@@ -4,9 +4,9 @@ When bumping version, please be sure to also update parameters in sphinx/conf.py
 """
 
 
-## API Shortcuts
+# API Shortcuts
 
 from openoa.plant import PlantData
-import openoa.analysis
 
-PlantData.MonteCarloAEP = openoa.analysis.aep.MonteCarloAEP
+
+# TODO: Attach analysis classes to PlantData
