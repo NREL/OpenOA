@@ -13,7 +13,7 @@ Overview
 In each of the following examples we'll be providing more insight into the different functionalities
 of OpenOA.
 
-.. * :ref:`00: Intro to PlantData <examplesout#Intro-to-the-OpenOA-PlantData-and-QA-Methods>`
+
 Introduction and QA Example
 ===========================
 
@@ -64,11 +64,11 @@ EYA Gap Analysis Example
   interface
 
 
+Table of Contents
+*****************
 
 .. toctree::
     :maxdepth: 3
-    :caption: Table of Contents
-    :name: examples_toc
 
     examplesout
 

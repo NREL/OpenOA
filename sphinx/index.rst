@@ -47,7 +47,6 @@ If you use this software in your work, please cite our JOSS article with the fol
         journal = {Journal of Open Source Software}
     }
 
-
 Table of Contents
 *****************
 
