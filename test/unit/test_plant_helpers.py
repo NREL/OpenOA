@@ -369,7 +369,7 @@ def test_CurtailMetaData():
         frequency="H",
     )
     valid_map = deepcopy(meta_dict)
-    valid_map.update(dict(time="time", net_energy="net_energy"))
+    valid_map.update(dict(time="time"))
     valid_map.pop("frequency")
 
     meta = CurtailMetaData.from_dict(meta_dict)
