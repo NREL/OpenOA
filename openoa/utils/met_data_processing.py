@@ -222,13 +222,10 @@ def compute_shear(
             These reference values can be used for extrapolating wind speed. Defaults to False.
 
     Returns:
-        If return_reference_values is False (default):
-        :obj:`pandas.Series`: shear coefficient (unitless)
-
-        If return_reference_values is True:
-        :obj:`tuple[pandas.Series, float, pandas.Series]`: The shear coefficient (unitless), reference
-            height (m), and reference wind speed.
-
+        :obj:`pandas.Series` | :obj:`tuple[pandas.Series, float, pandas.Series]`: If
+            :py:attr:`return_reference_values` is False, return just the shear coefficient
+            (unitless), else return the shear coefficent (unitless), reference height (m), and
+            reference wind speed (m/s).
     """
 
     # Extract the wind speed columns from `data` and create "u" 2-D array; where element

@@ -6,31 +6,38 @@ This module provides helpful functions for creating various plots
 from __future__ import annotations
 
 import datetime
-from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
-import matplotlib
-import statsmodels.api as sm
+import matplotlib as mpl
+import numpy.typing as npt
 import matplotlib.pyplot as plt
 from pyproj import Transformer
 from bokeh.models import WMTSTileSource, ColumnDataSource
 from bokeh.palettes import Category10, viridis
 from bokeh.plotting import figure
-from matplotlib.markers import MarkerStyle
-
-from openoa.utils import filters
+from matplotlib.ticker import StrMethodFormatter
 
 
-if TYPE_CHECKING:
-    from openoa.analysis import MonteCarloAEP
+NDArrayFloat = npt.NDArray[np.float64]
 
 
 plt.close("all")
-font = {"family": "serif", "size": 14}
-matplotlib.rc("font", **font)
-matplotlib.rc("text", usetex=False)
-matplotlib.rcParams.update({"figure.figsize": (15, 6)})
+
+
+def set_styling() -> None:
+    """Sets some of the matplotlib plotting styling to be consistent throughout any module where
+    plotting is implemented.
+    """
+    font = {"family": "serif", "size": 14}
+    mpl.rc("font", **font)
+    mpl.rc("text", usetex=False)
+    mpl.rcParams["figure.figsize"] = (15, 6)
+    mpl.rcParams["axes.grid"] = True
+    mpl.rcParams["axes.axisbelow"] = True
+
+
+set_styling()
 
 
 def coordinateMapping(lon1, lat1, lon2, lat2):
@@ -784,7 +791,7 @@ def color_to_rgb(color):
         if max(color) > 1:
             color = tuple([i / 255 for i in color])
 
-    rgb = matplotlib.colors.to_rgb(color)
+    rgb = mpl.colors.to_rgb(color)
 
     rgb = tuple([int(i * 255) for i in rgb])
 
@@ -826,7 +833,7 @@ def plot_windfarm(
             import pandas as pd
             from bokeh.plotting import figure, output_file, show
 
-            from openoa.utils.pandas_plotting import plot_windfarm
+            from openoa.utils.plot import plot_windfarm
 
             from examples import project_ENGIE
 
@@ -933,14 +940,14 @@ def plot_by_id(
 
     Args:
         df(:obj:`pd.DataFrame`): The dataframe for comparing values.
-        id_col(:obj:`String`): The id column (or index column) in `df`.
-        x_axis(:obj:'String'): Independent variable to plot, should align with a column in `df`.
-        y_axis(:obj:'String'): Dependent variable to plot, should align with a column in `df`.
-        return_fig(:obj:`String`): Indicator for if the figure and axes objects should be returned,
+        id_col(:obj:`str`): The id column (or index column) in `df`.
+        x_axis(:obj:`str`): Independent variable to plot, should align with a column in `df`.
+        y_axis(:obj:`str`): Dependent variable to plot, should align with a column in `df`.
+        return_fig(:obj:`bool`): Indicator for if the figure and axes objects should be returned,
             by default False.
 
     Returns:
-        (:obj: `None`)
+        (:obj:`None`)
     """
     # Operate on a totally new copy of the data so that transofrmations don't carry through
     df = df.copy()
@@ -975,10 +982,6 @@ def plot_by_id(
         scada = df.loc[t_id]
         ax.scatter(scada[x_axis], scada[y_axis], s=5)
 
-        # Add a grid as the bottom layer
-        ax.grid()
-        ax.set_axisbelow(True)
-
         ax.set_title(t_id)
 
         # Only add axis labels for the bottom row and leftmost column
@@ -995,16 +998,17 @@ def plot_by_id(
 
     fig.tight_layout()
     plt.show()
+
     if return_fig:
         return fig, axes_list
 
 
 def column_histograms(df: pd.DataFrame, columns: list = None, return_fig: bool = False):
-    """Produces a histogram plot for each numeric column in :py:attr:`df`s.
+    """Produces a histogram plot for each numeric column in :py:attr:`df`.
 
     Args:
         df(:obj:`pd.DataFrame`): The dataframe for plotting.
-        return_fig(:obj:`String`): Indicator for if the figure and axes objects should be returned,
+        return_fig(:obj:`bool`): Indicator for if the figure and axes objects should be returned,
             by default False.
 
     Returns:
@@ -1021,10 +1025,6 @@ def column_histograms(df: pd.DataFrame, columns: list = None, return_fig: bool =
         data = df.loc[:, col].dropna().values
         ax.hist(data, 40)
         ax.set_title(col)
-
-        # Add a grid as the bottom layer
-        ax.grid()
-        ax.set_axisbelow(True)
 
         # Only add axis labels for the bottom row
         if i % 4 == 0:
@@ -1046,7 +1046,7 @@ def plot_power_curve(
     wind_speed: pd.Series,
     power: pd.Series,
     flag: np.ndarray | pd.Series,
-    flag_labels: tuple[str, str] = None,
+    flag_labels: tuple[str, str] = ("Flagged Readings", "Power Curve"),
     xlim: tuple[float, float] = (None, None),
     ylim: tuple[float, float] = (None, None),
     legend: bool = False,
@@ -1060,17 +1060,29 @@ def plot_power_curve(
     will be created.
 
     Args:
-        wind_speed (:obj: `pandas.Series`): A pandas Series or numpy array of the recorded wind speeds, in m/s.
-        power (:obj: `pandas.Series` | `np.ndarray`): A pandas Series or numpy array of the recorded power, in kW.
-        flag (:obj: `np.ndarray` | `pd.Series`): A pandas Series or numpy array of booleans for which points to flag in the windspeed and power data.
-        flag_labels (:obj: `tuple[str, str]`, optional): The labels to give to the scatter points, where the 0th entry is the flagged points, and the second entry correpsponds to the standard power curve. Defaults to None.
-        xlim (:obj: `tuple[float, float]`, optional): A tuple of the x-axis (min, max) values. Defaults to (None, None).
-        ylim (:obj: `tuple[float, float]`, optional): A tuple of the y-axis (min, max) values. Defaults to (None, None).
-        legend (:obj:`bool`, optional): Set to True to place a legend in the figure, otherwise set to False. Defaults to False.
-        return_fig (:obj:`bool`, optional): Set to True to return the figure and axes objects, otherwise set to False. Defaults to False.
-        figure_kwargs (:obj:`dict`, optional): Additional keyword arguments that should be passed to `plt.figure`. Defaults to {}.
-        scatter_kwargs (:obj:`dict`, optional): Additional keyword arguments that should be passed to `ax.scatter`. Defaults to {}.
-        legend_kwargs (:obj:`dict`, optional): Additional keyword arguments that should be passed to `ax.legend`. Defaults to {}.
+        wind_speed (:obj:`pandas.Series`): A pandas Series or numpy array of the recorded wind
+            speeds, in m/s.
+        power (:obj:`pandas.Series` | `np.ndarray`): A pandas Series or numpy array of
+            the recorded power, in kW.
+        flag (:obj:`numpy.ndarray` | `pd.Series`): A pandas Series or numpy array of booleans for
+            which points to flag in the windspeed and power data.
+        flag_labels (:obj:`tuple[str, str]`, optional): The labels to give to the scatter points,
+            corresponding to the flagged points and raw points, respectively. Defaults to
+            ("Flagged Readings", "Power Curve").
+        xlim (:obj:`tuple[float, float]`, optional): A tuple of the x-axis (min, max) values.
+            Defaults to (None, None).
+        ylim (:obj:`tuple[float, float]`, optional): A tuple of the y-axis (min, max) values.
+            Defaults to (None, None).
+        legend (:obj:`bool`, optional): Set to True to place a legend in the figure, otherwise set
+            to False. Defaults to False.
+        return_fig (:obj:`bool`, optional): Set to True to return the figure and axes objects,
+            otherwise set to False. Defaults to False.
+        figure_kwargs (:obj:`dict`, optional): Additional keyword arguments that should be passed to
+            `plt.figure`. Defaults to {}.
+        scatter_kwargs (:obj:`dict`, optional): Additional keyword arguments that should be passed
+            to `ax.scatter`. Defaults to {}.
+        legend_kwargs (:obj:`dict`, optional): Additional keyword arguments that should be passed to
+            `ax.legend`. Defaults to {}.
 
     Returns:
         None | tuple[plt.Figure, plt.Axes]: _description_
@@ -1088,11 +1100,10 @@ def plot_power_curve(
         ax.scatter(wind_speed, power, label=pc_label, **scatter_kwargs)
         ax.scatter(wind_speed[flag], power[flag], label=flagged_label, **scatter_kwargs)
 
+    ax.yaxis.set_major_formatter(StrMethodFormatter("{x:,.0f}"))
+
     if legend:
         ax.legend(**legend_kwargs)
-
-    ax.grid()
-    ax.set_axisbelow(True)
 
     ax.set_xlabel("Wind Speed (m/s)")
     ax.set_ylabel("Power (kW)")
@@ -1102,7 +1113,9 @@ def plot_power_curve(
 
     if return_fig:
         return fig, ax
+
     fig.tight_layout()
+    plt.show()
 
 
 def plot_monthly_reanalysis_windspeed(
@@ -1175,9 +1188,6 @@ def plot_monthly_reanalysis_windspeed(
         alpha=0.1,
         label="Plant POR",
     )
-
-    ax.grid()
-    ax.set_axisbelow(True)
 
     ax.set_xlim(xlim)
     ax.set_ylim(ylim)
@@ -1254,8 +1264,6 @@ def plot_plant_energy_losses_timeseries(
     ax2.set_ylabel("Loss (%)")
 
     for ax in axes:
-        ax.grid()
-        ax.set_axisbelow(True)
         ax.legend(**legend_kwargs)
 
     ax1.set_xlim(xlim)
@@ -1321,10 +1329,6 @@ def plot_distributions(
     figure_kwargs.setdefault("dpi", 200)
     fig = plt.figure(**figure_kwargs)
     axes = fig.subplots(2, 2, gridspec_kw=dict(wspace=0.1, hspace=0.2))
-
-    for ax in axes.flatten():
-        ax.grid()
-        ax.set_axisbelow(True)
 
     for ax, col, label, _xlim, _ylim in zip(axes.flatten(), which, xlabels, xlim, ylim):
         vals = data[col].values
@@ -1415,8 +1419,9 @@ def plot_boxplot(
     y: pd.Series,
     xlabel: str,
     ylabel: str,
-    ylim: tuple[float, float] = (None, None),
+    ylim: tuple[float | None, float | None] = (None, None),
     with_points: bool = False,
+    points_label: str | None = None,
     return_fig: bool = False,
     figure_kwargs: dict = {},
     plot_kwargs_box: dict = {},
@@ -1432,7 +1437,10 @@ def plot_boxplot(
         ylabel(:obj:`str`): The y-axis label.
         ylim(:obj:`tuple[float, float]`, optional): A tuple of the y-axis plotting display limits.
             Defaults to None.
-        with_points(:obj:`bool`, optional): Flag to plot the individual points like a seaborn `swarmplot`. Defaults to False.
+        with_points(:obj:`bool`, optional): Flag to plot the individual points like a seaborn
+            `swarmplot`. Defaults to False.
+        points_label(:obj:`bool` | None, optional): Legend label for the points, if plotting.
+            Defaults to None.
         return_fig(:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
         figure_kwargs(:obj:`dict`, optional): Additional figure instantiation keyword arguments
             that are passed to `plt.figure()`. Defaults to {}.
@@ -1469,11 +1477,8 @@ def plot_boxplot(
         plot_kwargs_points.setdefault("alpha", 0.5)
         for x_start, (_y, width) in enumerate(zip(y_groups, widths)):
             _x = _generate_swarm_values(_y, width=width * 0.9) + x_start + 1
-            label = "Individual AEP Points" if x_start == width.size - 1 else None
+            label = points_label if x_start == width.size - 1 else None
             ax.scatter(_x, _y, zorder=0, label=label, **plot_kwargs_points)
-
-    ax.grid()
-    ax.set_axisbelow(True)
 
     handles, labels = [box_data["fliers"][0]], ["Outliers"]
     _handles, _labels = ax.get_legend_handles_labels()
@@ -1491,3 +1496,188 @@ def plot_boxplot(
 
     if return_fig:
         return fig, ax, box_data
+
+
+def plot_waterfall(
+    data: list[float] | NDArrayFloat,
+    index: list[str],
+    ylabel: str | None = None,
+    ylim: tuple[float, float] = (None, None),
+    return_fig: bool = False,
+    plot_kwargs: dict = {},
+    figure_kwargs: dict = {},
+) -> None | tuple:
+    """
+    Produce a waterfall plot showing the progression from the EYA estimates to the calculated OA
+    estimates of AEP.
+
+    Args:
+        data(array-like): data to be used to create waterfall.
+        index(:obj:`list`): List of string values to be used for x-axis labels, which should
+            have one more value than the number of points in :py:attr:`data` to account for
+            the calculated OA total.
+        ylabel(:obj:`str`): The y-axis label. Defaults to None.
+        ylim(:obj:`tuple[float | None, float | None]`): The y-axis minimum and maximum display
+            range. Defaults to (None, None).
+        return_fig(:obj:`bool`, optional): Set to True to return the figure and axes objects,
+            otherwise set to False. Defaults to False.
+        figure_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be
+            passed to `plt.figure`. Defaults to {}.
+        plot_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be
+            passed to `ax.plot`. Defaults to {}.
+        legend_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be
+            passed to `ax.legend`. Defaults to {}.
+
+    Returns:
+        None | tuple[plt.Figure, plt.Axes]: If :py:attr:`return_fig`, then return the figure
+            and axes objects in addition to showing the plot.
+    """
+    # Store data and create a bottom series to use for the waterfall
+    plot_data = pd.DataFrame(data={"amount": data}, index=index[:-1])
+    bottom = plot_data.amount.cumsum().shift(1).fillna(0)
+
+    # Get the net total number for the final element in the waterfall
+    total = plot_data.sum().amount
+    final_name = index[-1]
+    plot_data.loc[final_name] = total
+    bottom.loc[final_name] = 0
+
+    # Set the defaults for plotting, if none were provided
+    figure_kwargs.setdefault("figsize", (12, 6))
+    plot_kwargs.setdefault("width", 0.8)
+    width = plot_kwargs["width"]
+
+    # Create the figure and axis
+    fig = plt.figure(**figure_kwargs)
+    ax = fig.add_subplot(111)
+
+    # Plot the bar chart with vertical waterfall lines
+    x = np.arange(plot_data.shape[0])
+    ax.bar(x, plot_data.amount, bottom=bottom, **plot_kwargs)
+    ax.hlines(
+        bottom[1:-1].tolist() + [total],
+        xmin=x[:-1] - width / 2.0,
+        xmax=x[:-1] + 1 + width / 2.0,
+        colors="tab:orange",
+    )
+
+    # Add the annotations above/below each bar with a +/- label on difference for each category
+    offset_pos = plot_data.amount.max() * 0.05
+    offset_neg = plot_data.amount.max() * 0.09
+    for i, (y, diff) in enumerate(zip(bottom.values, plot_data.amount.values)):
+        if i in (0, len(x) - 1):
+            continue
+        if np.sign(diff) == 1:
+            y += diff + offset_pos
+        else:
+            y += diff - offset_neg
+        ax.annotate(f"{diff:+,.1f}", (i, y), ha="center")
+
+    # Add the styling and labeling, as specified by the user
+    ax.set_xticks(x)
+    ax.set_xticklabels(index)
+
+    ax.set_ylim(ylim)
+    ax.set_ylabel(ylabel)
+
+    fig.tight_layout()
+    plt.show()
+    if return_fig:
+        return fig, ax
+
+
+def plot_power_curves(
+    data: dict[str, pd.DataFrame],
+    power_col: str,
+    windspeed_col: str,
+    flag_col: str = None,
+    turbines: list[str] | None = None,
+    flag_labels: tuple[str, str] = ("Flagged Readings", "Power Curve"),
+    max_cols: int = 3,
+    xlim: tuple[float, float] = (None, None),
+    ylim: tuple[float, float] = (None, None),
+    legend: bool = False,
+    return_fig: bool = False,
+    figure_kwargs: dict = {},
+    legend_kwargs: dict = {},
+    plot_kwargs: dict = {},
+):
+    """Plots a series of power curves for a dictionary of turbine data, allowing for an optional
+    filtering for singling out readings in the figure.
+
+    Args:
+        data(:obj:`dict[str, pd.DataFrame]`): The dictionary of turbine IDs and and SCADA data.
+        wind_speed_col(:obj:`pandas.Series`): A pandas Series or numpy array of the recorded wind
+            speeds, in m/s.
+        power_col(:obj:`pandas.Series` | :obj:`np.ndarray`): A pandas Series or numpy array of the
+            recorded power, in kW.
+        flag_col(:obj:`np.ndarray` | :obj:`pd.Series`): A pandas Series or numpy array of booleans for
+            which points to flag in the windspeed and power data.
+        turbines(:obj:`list[str]`, optional): The list of turbines to be plot, if not all of the
+            keys in :py:attr:`data`.
+        flag_labels (:obj:`tuple[str, str]`, optional): The labels to give to the scatter points,
+            corresponding to the flagged readings and raw readings, respectively. Defaults to
+            ("Flagged Readings", "Power Curve").
+        max_cols(:obj:`int`, optional): The maximum number of columns in the plot. Defaults to 3.
+        xlim(:obj:`tuple[float, float]`, optional): A tuple of the x-axis (min, max) values.
+            Defaults to (None, None).
+        ylim(:obj:`tuple[float, float]`, optional): A tuple of the y-axis (min, max) values.
+            Defaults to (None, None).
+        legend(:obj:`bool`, optional): Set to True to place a legend in the figure, otherwise set
+            to False. Defaults to False.
+        return_fig(:obj:`bool`, optional): Set to True to return the figure and axes objects,
+            otherwise set to False. Defaults to False.
+        figure_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be passed to
+            `plt.figure`. Defaults to {}.
+        plot_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be passed
+            to `ax.scatter`. Defaults to {}.
+        legend_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be passed to
+            `ax.legend`. Defaults to {}.
+
+    Returns:
+        None | tuple[plt.Figure, plt.Axes]: Returns the figure and axes objects if
+            :py:attr:`return_fig` is True.
+    """
+    turbines = list(data.keys()) if turbines is None else turbines
+    num_cols = len(turbines)
+    num_rows = int(np.ceil(num_cols / max_cols))
+
+    figure_kwargs.setdefault("dpi", 200)
+    figure_kwargs.setdefault("figsize", (15, num_rows * 5))
+    fig, axes_list = plt.subplots(num_rows, max_cols, **figure_kwargs)
+
+    for i, (t, ax) in enumerate(zip(turbines, axes_list.flatten())):
+        plot_data = data[t]
+
+        label = "Power Curve" if flag_labels is None else flag_labels[1]
+        ax.scatter(plot_data[windspeed_col], plot_data[power_col], label=label, **plot_kwargs)
+
+        if flag_col is not None:
+            plot_data = plot_data.loc[plot_data[flag_col]]
+            label = "Flagged Readings" if flag_labels is None else flag_labels[0]
+            ax.scatter(plot_data[windspeed_col], plot_data[power_col], label=label, **plot_kwargs)
+
+        ax.set_title(t)
+        ax.set_xlim(xlim)
+        ax.set_ylim(ylim)
+
+        ax.yaxis.set_major_formatter(StrMethodFormatter("{x:,.0f}"))
+
+        if legend:
+            ax.legend(**legend_kwargs)
+
+        if i % max_cols == 0:
+            ax.set_ylabel("Power (kW)")
+
+        if i in range(max_cols * (num_rows - 1), num_cols):
+            ax.set_xlabel("Wind Speed (m/s)")
+
+    num_axes = axes_list.size
+    if i < num_axes - 1:
+        for j in range(i + 1, num_axes):
+            fig.delaxes(axes_list.flatten()[j])
+
+    fig.tight_layout()
+    plt.show()
+    if return_fig:
+        return fig, ax

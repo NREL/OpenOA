@@ -1,2 +1,4 @@
-from .aep import MonteCarloAEP
-from .turbine_long_term_gross_energy import TurbineLongTermGrossEnergy
+from openoa.analysis.aep import MonteCarloAEP
+from openoa.analysis.eya_gap_analysis import EYAGapAnalysis
+from openoa.analysis.electrical_losses import ElectricalLosses
+from openoa.analysis.turbine_long_term_gross_energy import TurbineLongTermGrossEnergy

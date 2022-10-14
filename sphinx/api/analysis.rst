@@ -9,20 +9,12 @@ together to create reproducible analysis workflows.
 
 .. autoclass:: openoa.analysis.aep.MonteCarloAEP
     :members:
-    :undoc-members:
-    :show-inheritance:
-
-.. autoclass:: openoa.analysis.eya_gap_analysis.EYAGapAnalysis
-    :members:
-    :undoc-members:
-    :show-inheritance:
 
 .. autoclass:: openoa.analysis.turbine_long_term_gross_energy.TurbineLongTermGrossEnergy
     :members:
-    :undoc-members:
-    :show-inheritance:
 
 .. autoclass:: openoa.analysis.electrical_losses.ElectricalLosses
     :members:
-    :undoc-members:
-    :show-inheritance:
+
+.. autoclass:: openoa.analysis.eya_gap_analysis.EYAGapAnalysis
+    :members:
