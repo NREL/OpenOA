@@ -14,6 +14,70 @@ from dateutil.parser import parse
 from openoa.utils._converters import series_method
 
 
+def offset_to_seconds(offset: str | np.datetime64) -> int | float:
+    """Converts pandas datetime offset alias to its corresponding number of seconds.
+
+    Args:
+        offset(:obj:`str` | `numpy.datetime64`): The pandas offset alias or numpy timestamp to be
+            converted to seconds.
+
+    Returns:
+        :obj:`int` | `float`: The number of seconds corresponding to :py:attr:`offset`.
+    """
+    try:
+        seconds = pd.to_timedelta(offset).total_seconds()
+    except ValueError:  # Needs a leading number or the above will fail
+        seconds = pd.to_timedelta(f"1{offset}").total_seconds()
+    return seconds
+
+
+def determine_frequency_seconds(data: pd.DataFrame, index_col: str | None = None) -> int | float:
+    """Calculates the most common time difference between all non-duplicate timestamps and returns
+    that difference in seconds.
+
+    Args:
+        data(:obj:`pandas.DataFrame`): The pandas DataFrame to determine the DatetimeIndex frequency.
+        index_col(:obj:`str` | `None`, optional): The name of the index column if :py:attr:`data`
+            uses a MultiIndex, otherwise leave as None. Defaults to None.
+
+    Returns:
+        :obj:`int` | `float`: The number of seconds corresponding to :py:attr:`offset`.
+    """
+    # Get the non-duplicated DatetimeIndex values from a single level, or multi-level index
+    index = data.index if index_col is None else data.index.get_level_values(index_col)
+    index = index.unique()
+
+    unique_diffs, counts = np.unique(np.diff(index), return_counts=True)
+    return offset_to_seconds(unique_diffs[np.argmax(counts)])
+
+
+def determine_frequency(data: pd.DataFrame, index_col: str | None = None) -> str | int | float:
+    """Gets the offset alias from the datetime index of :py:attr:`data`, or calculates the most
+    common time difference between all non-duplicate timestamps.
+
+    Args:
+        data(:obj:`pandas.DataFrame`): The pandas DataFrame to determine the DatetimeIndex frequency.
+        index_col(:obj:`str` | `None`, optional): The name of the index column if :py:attr:`data`
+            uses a MultiIndex, otherwise leave as None. Defaults to None.
+
+    Returns:
+        :obj:`str` | `int` | `float`: The offset string or number of seconds between timestamps.
+    """
+    # Get the timetamp index values
+    index = data.index if index_col is None else data.index.get_level_values(index_col)
+
+    # Check for an offset string being available
+    freq = index.freqstr
+    if freq is None:
+        freq = pd.infer_freq(data.index.get_level_values("time"))
+
+    # If there is at least one missing data point, or timestamp misalignment, the above will fail,
+    # so
+    if freq is None:
+        freq = determine_frequency_seconds(data, index_col)
+    return freq
+
+
 def convert_local_to_utc(d: str | datetime.datetime, tz_string: str) -> datetime.datetime:
     """
     Convert timestamps in local time to UTC. The function can only act on a single timestamp at a time, so

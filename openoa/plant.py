@@ -15,8 +15,10 @@ from attrs import field, define
 from pyproj import Transformer
 from shapely.geometry import Point
 
+import openoa.utils.timeseries as ts
 import openoa.utils.met_data_processing as met
 from openoa.utils.metadata_fetch import attach_eia_data
+from openoa.utils.unit_conversion import convert_power_to_energy
 
 
 # *************************************************************************
@@ -43,14 +45,14 @@ ANALYSIS_REQUIREMENTS = {
             "columns": ["windspeed", "density"],
             "conditional_columns": {
                 "reg_temperature": ["temperature"],
-                "reg_winddirection": ["windspeed_u", "windspeed_v"],
+                "reg_wind_direction": ["windspeed_u", "windspeed_v"],
             },
             "freq": _at_least_monthly,
         },
     },
     "TurbineLongTermGrossEnergy": {
         "scada": {
-            "columns": ["id", "windspeed", "power"],  # TODO: wtur_W_avg vs energy_kwh ?
+            "columns": ["id", "windspeed", "power"],
             "freq": _at_least_daily,
         },
         "reanalysis": {
@@ -138,9 +140,9 @@ def _analysis_filter(error_dict: dict, analysis_types: list[str] = ["all"]) -> d
     """Filters the errors found by the analysis requirements  provided by the `analysis_types`.
 
     Args:
-        error_dict (:obj: `dict`): The dictionary of errors separated by the keys:
+        error_dict (`dict`): The dictionary of errors separated by the keys:
             "missing", "dtype", and "frequency".
-        analysis_types (:obj: `list[str]`, optional): The list of analysis types to
+        analysis_types (`list[str]`, optional): The list of analysis types to
             consider for validation. If "all" is contained in the list, then all errors
             are returned back, and if `None` is contained in the list, then no errors
             are returned, otherwise the union of analysis requirements is returned back.
@@ -221,17 +223,20 @@ def _compose_error_message(error_dict: dict, analysis_types: list[str] = ["all"]
 
 
 def frequency_validator(
-    actual_freq: str, desired_freq: Optional[str | None | set[str]], exact: bool
+    actual_freq: str | int | float | None,
+    desired_freq: Optional[str | None | set[str]],
+    exact: bool,
 ) -> bool:
     """Helper function to check if the actual datetime stamp frequency is valid compared
     to what is required.
 
     Args:
-        actual_freq (str): The frequency of the datetime stamp, or `df.index.freq`.
+        actual_freq(:obj:`str` | `int` | `float` | `None`): The frequency of the timestamp, either
+            as an offset alias or manually determined in seconds between timestamps.
         desired_freq (Optional[str  |  None  |  set[str]]): Either the exact frequency,
             required or a set of options that are also valid, in which case any numeric
             information encoded in `actual_freq` will be dropped.
-        exact (bool): If the provided frequency codes should be exact matches (`True`),
+        exact(:obj:`bool`): If the provided frequency codes should be exact matches (`True`),
             or, if `False`, the check should be for a combination of matches.
 
     Returns:
@@ -246,11 +251,19 @@ def frequency_validator(
     if isinstance(desired_freq, str):
         desired_freq = set([desired_freq])
 
+    # If an offset alias couldn't be found, then convert the desired frequency strings to seconds
+    if not isinstance(actual_freq, str):
+        desired_freq = set([ts.offset_to_seconds(el) for el in desired_freq])
+
     if exact:
         return actual_freq in desired_freq
 
-    actual_freq = "".join(filter(str.isalpha, actual_freq))
-    return actual_freq in desired_freq
+    if isinstance(actual_freq, str):
+        actual_freq = "".join(filter(str.isalpha, actual_freq))
+        return actual_freq in desired_freq
+
+    # For non-exact matches, just check that the actual is less than the maximum allowable frequency
+    return actual_freq < max(desired_freq)
 
 
 def convert_to_list(
@@ -447,8 +460,10 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
         frequency (str): The frequency of `time` in the SCADA data, by default "10T". The input
             should align with the `Pandas frequency offset aliases`_.
 
+
     .. _Pandas frequency offset aliases:
-    https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases
+       https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases
+
     """
 
     # DataFrame columns
@@ -467,6 +482,7 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
     # Parameterizations that should not be changed
     # Prescribed mappings, datatypes, and units for in-code reference.
     name: str = field(default="scada", init=False)
+    energy: str = field(default="energy", init=False)  # calculated in PlantData
     col_map: dict = field(init=False)
     dtypes: dict = field(
         default=dict(
@@ -478,6 +494,7 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
             status=str,
             pitch=float,
             temperature=float,
+            energy=float,
         ),
         init=False,  # don't allow for user input
     )
@@ -491,6 +508,7 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
             status=None,
             pitch="deg",
             temperature="C",
+            energy="kWh",
         ),
         init=False,  # don't allow for user input
     )
@@ -505,6 +523,7 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
             status=self.status,
             pitch=self.pitch,
             temperature=self.temperature,
+            energy=self.energy,
         )
 
 
@@ -525,8 +544,10 @@ class MeterMetaData(FromDictMixin):  # noqa: F821
         frequency (str): The frequency of `time` in the meter data, by default "10T". The input
             should align with the `Pandas frequency offset aliases`_.
 
+
     .. _Pandas frequency offset aliases:
-    https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases
+       https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases
+
     """
 
     # DataFrame columns
@@ -582,7 +603,8 @@ class TowerMetaData(FromDictMixin):  # noqa: F821
             should align with the `Pandas frequency offset aliases`_.
 
     .. _Pandas frequency offset aliases:
-    https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases
+       https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases
+
     """
 
     # DataFrame columns
@@ -640,7 +662,8 @@ class StatusMetaData(FromDictMixin):  # noqa: F821
             should align with the `Pandas frequency offset aliases`_.
 
     .. _Pandas frequency offset aliases:
-    https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases
+       https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases
+
     """
 
     # DataFrame columns
@@ -698,24 +721,22 @@ class CurtailMetaData(FromDictMixin):  # noqa: F821
         time (str): The datetime stamp for the curtailment data, by default "time". This data should
             be of type: `np.datetime64[ns]`, or able to be converted to a pandas DatetimeIndex.
             Additional columns describing the datetime stamps are: `frequency`
-        curtailment (str): The curtailment percentage column in the curtailment data, by default
+        curtailment (str): The curtailment, in kWh, column in the curtailment data, by default
             "curtailment". This data should be of type: `float`.
-        availability (str): The availability percentage column in the curtailment data, by default
+        availability (str): The availability, in kWh, column in the curtailment data, by default
             "availability". This data should be of type: `float`.
-        net_energy (str): The net energy produced, in kW, column in the curtailment data, by default
-            "net_energy". This data should be of type: `float`.
         frequency (str): The frequency of `time` in the met tower data, by default "10T". The input
             should align with the `Pandas frequency offset aliases`_.
 
     .. _Pandas frequency offset aliases:
-    https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases
+       https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases
+
     """
 
     # DataFrame columns
     time: str = field(default="time")
     curtailment: str = field(default="curtailment")
     availability: str = field(default="availability")
-    net_energy: str = field(default="net_energy")
 
     # Data about the columns
     frequency: str = field(default="10T")
@@ -729,16 +750,14 @@ class CurtailMetaData(FromDictMixin):  # noqa: F821
             time=np.datetime64,
             curtailment=float,
             availability=float,
-            net_energy=float,
         ),
         init=False,  # don't allow for user input
     )
     units: dict = field(
         default=dict(
             time="datetim64[ns]",
-            curtailment=float,
-            availability=float,
-            net_energy="kW",
+            curtailment="kWh",
+            availability="kWh",
         ),
         init=False,  # don't allow for user input
     )
@@ -748,7 +767,6 @@ class CurtailMetaData(FromDictMixin):  # noqa: F821
             time=self.time,
             curtailment=self.curtailment,
             availability=self.availability,
-            net_energy=self.net_energy,
         )
 
 
@@ -894,22 +912,22 @@ class PlantMetaData(FromDictMixin):  # noqa: F821
     types that can compose a `PlantData` object.
 
     Args:
-        latitude (:obj: `float`): The wind power plant's center point latitude.
-        longitude (:obj: `float`): The wind power plant's center point longitude.
-        capacity (:obj: `float`): The capacity of the plant in MW
-        scada (:obj: `SCADAMetaData`): A dictionary containing the `SCADAMetaData`
+        latitude (`float`): The wind power plant's center point latitude.
+        longitude (`float`): The wind power plant's center point longitude.
+        capacity (`float`): The capacity of the plant in MW
+        scada (`SCADAMetaData`): A dictionary containing the `SCADAMetaData`
             column mapping and frequency parameters. See `SCADAMetaData` for more details.
-        meter (:obj: `MeterMetaData`): A dictionary containing the `MeterMetaData`
+        meter (`MeterMetaData`): A dictionary containing the `MeterMetaData`
             column mapping and frequency parameters. See `MeterMetaData` for more details.
-        tower (:obj: `TowerMetaData`): A dictionary containing the `TowerMetaData`
+        tower (`TowerMetaData`): A dictionary containing the `TowerMetaData`
             column mapping and frequency parameters. See `TowerMetaData` for more details.
-        status (:obj: `StatusMetaData`): A dictionary containing the `StatusMetaData`
+        status (`StatusMetaData`): A dictionary containing the `StatusMetaData`
             column mapping parameters. See `StatusMetaData` for more details.
-        curtail (:obj: `CurtailMetaData`): A dictionary containing the `CurtailMetaData`
+        curtail (`CurtailMetaData`): A dictionary containing the `CurtailMetaData`
             column mapping and frequency parameters. See `CurtailMetaData` for more details.
-        asset (:obj: `AssetMetaData`): A dictionary containing the `AssetMetaData`
+        asset (`AssetMetaData`): A dictionary containing the `AssetMetaData`
             column mapping parameters. See `AssetMetaData` for more details.
-        reanalysis (:obj: `dict[str, ReanalysisMetaData]`): A dictionary containing the
+        reanalysis (`dict[str, ReanalysisMetaData]`): A dictionary containing the
             reanalysis type (as keys, such as "era5" or "merra2") and `ReanalysisMetaData`
             column mapping and frequency parameters for each type of reanalysis data
             provided. See `ReanalysisMetaData` for more details.
@@ -978,7 +996,7 @@ class PlantMetaData(FromDictMixin):  # noqa: F821
         """Loads the metadata from a JSON file.
 
         Args:
-            metadata_file (:obj: `str | Path`): The full path and file name of the JSON file.
+            metadata_file (`str | Path`): The full path and file name of the JSON file.
 
         Raises:
             FileExistsError: Raised if the file doesn't exist at the provided location.
@@ -998,7 +1016,7 @@ class PlantMetaData(FromDictMixin):  # noqa: F821
         """Loads the metadata from a YAML file with a PyYAML encoding.
 
         Args:
-            metadata_file (:obj: `str | Path`): The full path and file name of the YAML file.
+            metadata_file (`str | Path`): The full path and file name of the YAML file.
 
         Raises:
             FileExistsError: Raised if the file doesn't exist at the provided location.
@@ -1018,7 +1036,7 @@ class PlantMetaData(FromDictMixin):  # noqa: F821
         """Loads the metadata from either a dictionary or file such as a JSON or YAML file.
 
         Args:
-            metadata_file (:obj: `str | Path | dict`): Either a pre-loaded dictionary or
+            metadata_file (`str | Path | dict`): Either a pre-loaded dictionary or
                 the full path and file name of the JSON or YAML file.
 
         Raises:
@@ -1102,16 +1120,17 @@ class PlantData:
     consistency.
 
     Args:
-        metadata (:obj: `PlantMetaData`): A nested dictionary of the schema definition
+        metadata (`PlantMetaData`): A nested dictionary of the schema definition
             for each of the data types that will be input, and some additional plant
             parameters. See `PlantMetaData`, `SCADAMetaData`, `MeterMetaData`,
             `TowerMetaData`, `StatusMetaData`, `CurtailMetaData`, `AssetMetaData`,
             and/or `ReanalysisMetaData` for more information.
-        analysis_type (:obj: `list[str]`): A single, or list of, analysis type(s) that
+        analysis_type (`list[str]`): A single, or list of, analysis type(s) that
             will be run, that are configured in `ANALYSIS_REQUIREMENTS`.
+
             - None: Don't raise any errors for errors found in the data. This is intended
-              for loading in messy data, but `validate()` should be run later if planning
-              on running any analyses.
+              for loading in messy data, but :py:meth:`validate` should be run later
+              if planning on running any analyses.
             - "all": This is to check that all columns specified in the metadata schema
               align with the data provided, as well as data types and frequencies (where
               applicable).
@@ -1123,32 +1142,30 @@ class PlantData:
             - "ElectricalLosses": Checks the data components that are relevant to an
               electrical losses analysis. See `ANALYSIS_REQUIREMENTS` for requirements
               details.
-            - "WakeLosses": Checks the data components that are relevant to a
-              wake losses analysis. See `ANALYSIS_REQUIREMENTS` for requirements
-              details.
-        scada (:obj: `pd.DataFrame`): Either the SCADA data that's been pre-loaded to a
+
+        scada (`pd.DataFrame`): Either the SCADA data that's been pre-loaded to a
             pandas `DataFrame`, or a path to the location of the data to be imported.
-            See `SCADAMetaData` for column data specifications.
-        meter (:obj: `pd.DataFrame`): Either the meter data that's been pre-loaded to a
+            See :py:class:`SCADAMetaData` for column data specifications.
+        meter (`pd.DataFrame`): Either the meter data that's been pre-loaded to a
             pandas `DataFrame`, or a path to the location of the data to be imported.
-            See `MeterMetaData` for column data specifications.
-        tower (:obj: `pd.DataFrame`): Either the met tower data that's been pre-loaded
+            See :py:class:`MeterMetaData` for column data specifications.
+        tower (`pd.DataFrame`): Either the met tower data that's been pre-loaded
             to a pandas `DataFrame`, or a path to the location of the data to be
-            imported. See `TowerMetaDsata` for column data specifications.
-        status (:obj: `pd.DataFrame`): Either the status data that's been pre-loaded to
+            imported. See :py:class:`TowerMetaDsata` for column data specifications.
+        status (`pd.DataFrame`): Either the status data that's been pre-loaded to
             a pandas `DataFrame`, or a path to the location of the data to be imported.
-            See `StatusMetaData` for column data specifications.
-        curtail (:obj: `pd.DataFrame`): Either the curtailment data that's been
+            See :py:class:`StatusMetaData` for column data specifications.
+        curtail (`pd.DataFrame`): Either the curtailment data that's been
             pre-loaded to a pandas `DataFrame`, or a path to the location of the data to
-            be imported. See `CurtailMetaData` for column data specifications.
-        asset (:obj: `pd.DataFrame`): Either the asset summary data that's been
+            be imported. See :py:class:`CurtailMetaData` for column data specifications.
+        asset (`pd.DataFrame`): Either the asset summary data that's been
             pre-loaded to a pandas `DataFrame`, or a path to the location of the data to
-            be imported. See `AssetMetaData` for column data specifications.
-        reanalysis (:obj: `dict[str, pd.DataFrame]`): Either the reanalysis data that's
+            be imported. See :py:class:`AssetMetaData` for column data specifications.
+        reanalysis (`dict[str, pd.DataFrame]`): Either the reanalysis data that's
             been pre-loaded to a dictionary of pandas `DataFrame`s with keys indicating
             the data source, such as "era5" or "merra2", or a dictionary of paths to the
             location of the data to be imported following the same key naming convention.
-            See `ReanalysisMetaData` for column data specifications.
+            See :py:class:`ReanalysisMetaData` for column data specifications.
 
     Raises:
         ValueError: Raised if any analysis specific validation checks don't pass with an
@@ -1199,6 +1216,7 @@ class PlantData:
         # TODO: Need to have a class level input for the user-preferred projection system
         # TODO: Why does the non-WGS84 projection matter?
         self.parse_asset_geometry()
+        self._calculate_turbine_energy()
 
         # Change the column names to the -25 convention for easier use in the rest of the code base
         self.update_column_names()
@@ -1411,11 +1429,11 @@ class PlantData:
         """Validates the dtype for each column for the specified `category`.
 
         Args:
-            category (:obj: `str`, optional): The name of the data that should be
+            category (`str`, optional): The name of the data that should be
                 checked, or "all" to validate all of the data types. Defaults to "all".
 
         Returns:
-            (:obj: `dict[str, list[str]]`): A dictionary of each data type and any
+            (`dict[str, list[str]]`): A dictionary of each data type and any
                 columns that  don't match the required dtype and can't be converted to
                 it successfully.
         """
@@ -1461,7 +1479,7 @@ class PlantData:
         that do not meet the frequency criteria.
 
         Args:
-            category (:obj: `str`, optional): The data type category. Defaults to "all".
+            category (`str`, optional): The data type category. Defaults to "all".
 
         Returns:
             list[str]: The list of data types that don't meet the required datetime frequency.
@@ -1471,27 +1489,19 @@ class PlantData:
         # Collect all the frequencies for each of the data types
         data_dict = self.data_dict
         actual_frequencies = {}
+
         for name, df in data_dict.items():
             if df is None:
                 continue
 
             if name in ("scada", "status", "tower"):
-                freq = df.index.get_level_values("time").freqstr
-                if freq is None:
-                    freq = pd.infer_freq(df.index.get_level_values("time"))
-                actual_frequencies[name] = freq
+                actual_frequencies[name] = ts.determine_frequency(df, "time")
             elif name in ("meter", "curtail"):
-                freq = df.index.freqstr
-                if freq is None:
-                    freq = pd.infer_freq(df.index)
-                actual_frequencies[name] = freq
+                actual_frequencies[name] = ts.determine_frequency(df)
             elif name == "reanalysis":
                 actual_frequencies["reanalysis"] = {}
                 for sub_name, df in data_dict[name].items():
-                    freq = df.index.freqstr
-                    if freq is None:
-                        freq = pd.infer_freq(df.index)
-                    actual_frequencies["reanalysis"][sub_name] = freq
+                    actual_frequencies["reanalysis"][sub_name] = ts.determine_frequency(df)
 
         invalid_freq = {}
         for name, freq in actual_frequencies.items():
@@ -1651,14 +1661,25 @@ class PlantData:
                 )
             self.reanalysis = reanalysis
 
+    def _calculate_turbine_energy(self) -> None:
+        energy_col = self.metadata.scada.energy
+        power_col = self.metadata.scada.power
+        frequency = self.metadata.scada.frequency
+        self.scada[energy_col] = convert_power_to_energy(self.scada[power_col], frequency)
+
     @property
-    def turbine_id(self) -> np.ndarray:
+    def turbine_ids(self) -> np.ndarray:
         """The 1D array of turbine IDs. This is created from the `asset` data, or unique IDs from the
         SCADA data, if `asset` is undefined.
         """
         if self.asset is None:
             return self.scada.index.get_level_values("id").unique()
         return self.asset.loc[self.asset["type"] == "turbine"].index.values
+
+    @property
+    def n_turbines(self) -> int:
+        """The number of turbines contained in the data."""
+        return self.turbine_ids.size
 
     def turbine_df(self, turbine_id: str) -> pd.DataFrame:
         """Filters `scada` on a single `turbine_id` and returns the filtered data frame.
@@ -1674,13 +1695,18 @@ class PlantData:
         return self.scada.xs(turbine_id, level=1)
 
     @property
-    def tower_id(self) -> np.ndarray:
+    def tower_ids(self) -> np.ndarray:
         """The 1D array of met tower IDs. This is created from the `asset` data, or unique IDs from the
         tower data, if `asset` is undefined.
         """
         if self.asset is None:
             return self.tower.index.get_level_values("id").unique()
         return self.asset.loc[self.asset["type"] == "tower"].index.values
+
+    @property
+    def n_towers(self) -> int:
+        """The number of met towers contained in the data."""
+        return self.tower_ids.size
 
     def tower_df(self, tower_id: str) -> pd.DataFrame:
         """Filters `tower` on a single `tower_id` and returns the filtered data frame.
@@ -1696,12 +1722,12 @@ class PlantData:
         return self.tower.xs(tower_id, level=1)
 
     @property
-    def asset_id(self) -> np.ndarray:
+    def asset_ids(self) -> np.ndarray:
         """The ID array of turbine and met tower IDs. This is created from the `asset` data, or unique
         IDs from both the SCADA data and tower data, if `asset` is undefined.
         """
         if self.asset is None:
-            return np.concatenate([self.turbine_id, self.tower_id])
+            return np.concatenate([self.turbine_ids, self.tower_ids])
         return self.asset.index.values
 
     # NOTE: v2 AssetData methods
@@ -1874,8 +1900,8 @@ class PlantData:
         """
 
         # Get the valid IDs for both the turbines and towers
-        ix_turb = self.turbine_id if turbine_ids is None else np.array(turbine_ids)
-        ix_tower = self.tower_id if tower_ids is None else np.array(tower_ids)
+        ix_turb = self.turbine_ids if turbine_ids is None else np.array(turbine_ids)
+        ix_tower = self.tower_ids if tower_ids is None else np.array(tower_ids)
         ix = np.concatenate([ix_turb, ix_tower])
 
         distance = self.asset_distance_matrix.loc[ix, ix]
@@ -1918,14 +1944,6 @@ class PlantData:
         if "nearest_tower_id" not in self.asset.columns:
             self.calculate_nearest_neighbor()
         return self.asset.loc[id, "nearest_tower_id"].values[0]
-
-    def turbine_ids(self) -> list[str]:
-        """Convenience method for getting the unique turbine IDs from the scada data.
-
-        Returns:
-            list[str]: List of unique turbine identifiers.
-        """
-        return self.scada[self.metadata.scada.id].unique()
 
 
 # **********************************************************
