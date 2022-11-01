@@ -70,13 +70,13 @@ ANALYSIS_REQUIREMENTS = {
             "freq": _at_least_monthly,
         },
     },
-    "WakeLosses": {  # TODO: how to include conditional requirement for tower if using tower wind direction?
+    "WakeLosses": {
         "scada": {
             "columns": [
                 "id",
                 "windspeed",
                 "power",
-            ],  # TODO: how do we include wind direction (which could be wind dir. or nacelle position)?
+            ],
             "freq": _at_least_hourly,
         },
         "reanalysis": {
@@ -1141,6 +1141,9 @@ class PlantData:
               for requirements details.
             - "ElectricalLosses": Checks the data components that are relevant to an
               electrical losses analysis. See `ANALYSIS_REQUIREMENTS` for requirements
+              details.
+            - "WakeLosses": Checks the data components that are relevant to a
+              wake losses analysis. See `ANALYSIS_REQUIREMENTS` for requirements
               details.
 
         scada (`pd.DataFrame`): Either the SCADA data that's been pre-loaded to a
