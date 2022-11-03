@@ -1578,7 +1578,9 @@ class PlantData:
 
             wd = col_map["wind_direction"]
             if wd not in df and has_u_v:
-                df[wd] = met.compute_wind_direction(df[u], df[v])
+                # TODO: added .values to fix an issue where df[u] and df[v] with ANY NaN values would cause df[wd]
+                # to be all NaN. Is there a better to fix this?
+                df[wd] = met.compute_wind_direction(df[u], df[v]).values
 
             dens = col_map["density"]
             sp = col_map["surface_pressure"]
