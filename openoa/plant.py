@@ -1735,7 +1735,6 @@ class PlantData:
 
     # NOTE: v2 AssetData methods
 
-    @property
     def asset_distance_matrix(self, asset_type: str = None) -> pd.DataFrame:
         """Calculates the distance between all assets on the site with `np.inf` for the distance
         between an asset and itself.
@@ -1771,7 +1770,6 @@ class PlantData:
         np.fill_diagonal(distance.values, np.inf)
         return distance
 
-    @property
     def asset_direction_matrix(self, asset_type: str = None) -> pd.DataFrame:
         """Calculates the direction between all assets on the site with `np.inf` for the direction
         between an asset and itself, for all assets or a specific asset type.

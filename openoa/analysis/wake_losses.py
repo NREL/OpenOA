@@ -6,6 +6,8 @@
 # estimate wake losses during the period of record. Methods for calclating the long-term
 # wake losses using reanalaysis data and quantifying uncertainty are provided as well.
 
+from __future__ import annotations
+
 import random
 
 import attrs
@@ -16,15 +18,15 @@ from tqdm import tqdm
 from attrs import field, define
 from sklearn.linear_model import LinearRegression
 
-from openoa import logging, logged_method_call
 from openoa.plant import PlantData, FromDictMixin
 from openoa.utils import filters
+from openoa.logging import logging, logged_method_call
 from openoa.utils.plot import set_styling
 from openoa.analysis._analysis_validators import validate_UQ_input
 
 
 logger = logging.getLogger(__name__)
-set_styling()
+# set_styling()
 
 NDArrayFloat = npt.NDArray[np.float64]
 
@@ -92,6 +94,14 @@ class WakeLosses(FromDictMixin):
     turbine_wake_losses_lt_ws: NDArrayFloat = field(init=False)
     energy_por_ws: NDArrayFloat = field(init=False)
     energy_lt_ws: NDArrayFloat = field(init=False)
+    wake_losses_lt_mean: float = field(init=False)
+    turbine_wake_losses_lt_mean: float = field(init=False)
+    wake_losses_por_mean: float = field(init=False)
+    turbine_wake_losses_por_mean: float = field(init=False)
+    wake_losses_lt_std: float = field(init=False)
+    turbine_wake_losses_lt_std: float = field(init=False)
+    wake_losses_por_std: float = field(init=False)
+    turbine_wake_losses_por_std: float = field(init=False)
     _num_sim: int = field(init=False)
     _wd_bin_width_LT_corr: float = field(init=False)
     _ws_bin_width_LT_corr: float = field(init=False)
@@ -1039,7 +1049,7 @@ class WakeLosses(FromDictMixin):
             )
             df_1hr_bin.loc[
                 fill_inds, [("actual_plant_power", ""), ("potential_plant_power", "")]
-            ] = (self.plant.capacity * 1e6)
+            ] = (self.plant.metadata.capacity * 1e6)
             df_1hr_bin.loc[
                 fill_inds,
                 [("power", t) for t in self.turbine_ids]
