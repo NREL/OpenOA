@@ -1,43 +1,43 @@
 asset:
-  elevation: elevation_m
-  hub_height: Hub_height_m
+  elevation: elevation_m  # elevation abouve sea level, meters
+  hub_height: Hub_height_m  # hub height, meters
   id: Wind_turbine_name
-  latitude: Latitude
-  longitude: Longitude
-  rated_power: Rated_power
-  rotor_diameter: Rotor_diameter_m
+  latitude: Latitude  # WGS-84 latitude
+  longitude: Longitude  # WGS-84 longitude
+  rated_power: Rated_power  # rated power, MW
+  rotor_diameter: Rotor_diameter_m  # rotor diameter, meters
 curtail:
-  IAVL_DnWh: availability_kwh
-  IAVL_ExtPwrDnWh: curtailment_kwh
-  frequency: 10T
-  time: time
-latitude: 48.4497
-longitude: 5.5896
-capacity: 8.2
+  IAVL_DnWh: availability_kwh  # availability, kWh
+  IAVL_ExtPwrDnWh: curtailment_kwh  # curtailment, kWh
+  frequency: 10T  # timestamp frequency
+  time: time_utc  # timestamp
+latitude: 48.4497  # WGS-84 latitudinal plant centroid
+longitude: 5.5896  # WGS-84 longitudinal plant centroid
+capacity: 8.2  # Plant capacity, MW
 meter:
-  MMTR_SupWh: net_energy_kwh
-  time: time
+  MMTR_SupWh: net_energy_kwh  # net energy, kWh
+  time: time_utc  # timestamp
 reanalysis:
-  era5:
-    frequency: H
-    WMETR_EnvPres: surf_pres
-    WMETR_EnvTmp: t_2m
-    time: datetime
-    WMETR_HorWdSpdU: u_100
-    WMETR_HorWdSpdV: v_100
-  merra2:
-    frequency: H
-    WMETR_EnvPres: surface_pressure
-    WMETR_EnvTmp: temp_2m
-    time: datetime
-    WMETR_HorWdSpdU: u_50
-    WMETR_HorWdSpdV: v_50
+  era5:  # reanalysis product name/ID
+    frequency: H  # timestamp frequency
+    WMETR_EnvPres: surf_pres  # surface pressure, Pa
+    WMETR_EnvTmp: t_2m  # temperature, K
+    time: datetime  # timestamps
+    WMETR_HorWdSpdU: u_100  # u-direction windspeed, m/s
+    WMETR_HorWdSpdV: v_100  # v-direction windspeed, m/s
+  merra2:  # reanalysis product name/ID
+    frequency: H  # timestamp frequency
+    WMETR_EnvPres: surface_pressure  # surface pressure, Pa
+    WMETR_EnvTmp: temp_10m  # temperature, K
+    time: datetime  # timestamps
+    WMETR_HorWdSpdU: u_50  # u-direction windspeed, m/s
+    WMETR_HorWdSpdV: v_50  # v-direction windspeed, m/s
 scada:
-  frequency: 10T
-  id: Wind_turbine_name
-  WROT_BlPthAngVal: Ba_avg
-  WTUR_W: P_avg
-  WMET_EnvTmp: Ot_avg
-  time: time
-  WMET_HorWdDir: Wa_avg
-  WMET_HorWdSpd: Ws_avg
+  frequency: 10T  # timestamp frequency
+  id: Wind_turbine_name  # Unique ID of wind turbine
+  WROT_BlPthAngVal: Ba_avg  # pitch angle, degrees
+  WTUR_W: P_avg  # power produced, kW
+  WMET_EnvTmp: Ot_avg  # temperature, C
+  time: Date_time  # timestamps
+  WMET_HorWdDir: Wa_avg  # wind direction, degrees
+  WMET_HorWdSpd: Ws_avg  # non-directional windspeed, m/s
