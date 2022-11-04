@@ -49,9 +49,9 @@ of the other metadata types.
 
 .. literalinclude:: ../../examples/data/plant_meta.yml
     :language: yaml
-    :lines: 35-43
+    :lines: 34-42
     :linenos:
-    :lineno-start: 35
+    :lineno-start: 34
 
 
 
@@ -104,9 +104,9 @@ data type or can be converted to that type.
 
 .. literalinclude:: ../../examples/data/plant_meta.yml
     :language: yaml
-    :lines: 35-43
+    :lines: 34-42
     :linenos:
-    :lineno-start: 35
+    :lineno-start: 34
 
 Meter
 =====
@@ -127,9 +127,9 @@ data type or can be converted to that type.
 
 .. literalinclude:: ../../examples/data/plant_meta.yml
     :language: yaml
-    :lines: 17-19
+    :lines: 16-18
     :linenos:
-    :lineno-start: 17
+    :lineno-start: 16
 
 Tower
 =====
@@ -217,7 +217,7 @@ type or can be converted to that type.
 
 .. literalinclude:: ../../examples/data/plant_meta.yml
     :language: yaml
-    :lines: 1-9
+    :lines: 1-8
     :linenos:
     :lineno-start: 1
 
@@ -286,9 +286,9 @@ data provided in this dataset using the hypsometric equation.
 
 .. literalinclude:: ../../examples/data/plant_meta.yml
     :language: yaml
-    :lines: 20-34
+    :lines: 19-33
     :linenos:
-    :lineno-start: 20
+    :lineno-start: 19
 
 PlantData API
 *************

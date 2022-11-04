@@ -10,34 +10,33 @@ curtail:
   IAVL_DnWh: availability_kwh  # availability, kWh
   IAVL_ExtPwrDnWh: curtailment_kwh  # curtailment, kWh
   frequency: 10T  # timestamp frequency
-  net_energy: net_energy_kwh  # net energy, kWh
   time: time_utc  # timestamp
 latitude: 48.4497  # WGS-84 latitudinal plant centroid
 longitude: 5.5896  # WGS-84 longitudinal plant centroid
 meter:
-  energy: net_energy_kwh  # net energy, kWh
+  MMTR_SupWh: net_energy_kwh  # net energy, kWh
   time: time_utc  # timestamp
 reanalysis:
   era5:  # reanalysis product name/ID
     frequency: H  # timestamp frequency
-    surface_pressure: surf_pres  # surface pressure, Pa
-    temperature: t_2m  # temperature, K
+    WMETR_EnvPres: surf_pres  # surface pressure, Pa
+    WMETR_EnvTmp: t_2m  # temperature, K
     time: datetime  # timestamps
-    windspeed_u: u_100  # u-direction windspeed, m/s
-    windspeed_v: v_100  # v-direction windspeed, m/s
+    WMETR_HorWdSpdU: u_100  # u-direction windspeed, m/s
+    WMETR_HorWdSpdV: v_100  # v-direction windspeed, m/s
   merra2:  # reanalysis product name/ID
     frequency: H  # timestamp frequency
-    surface_pressure: surface_pressure
-    temperature: temp_10m  # temperature, K
+    WMETR_EnvPres: surface_pressure  # surface pressure, Pa
+    WMETR_EnvTmp: temp_10m  # temperature, K
     time: datetime  # timestamps
-    windspeed_u: u_50  # u-direction windspeed, m/s
-    windspeed_v: v_50  # v-direction windspeed, m/s
+    WMETR_HorWdSpdU: u_50  # u-direction windspeed, m/s
+    WMETR_HorWdSpdV: v_50  # v-direction windspeed, m/s
 scada:
   frequency: 10T  # timestamp frequency
   id: Wind_turbine_name  # Unique ID of wind turbine
-  pitch: Ba_avg  # pitch angle, degrees
-  power: P_avg  # power produced, kW
-  temperature: Ot_avg  # temperature, C
+  WROT_BlPthAngVal: Ba_avg  # pitch angle, degrees
+  WTUR_W: P_avg  # power produced, kW
+  WMET_EnvTmp: Ot_avg  # temperature, C
   time: Date_time  # timestamps
-  wind_direction: Wa_avg  # wind direction, degrees
-  windspeed: Ws_avg  # non-directional windspeed, m/s
+  WMET_HorWdDir: Wa_avg  # wind direction, degrees
+  WMET_HorWdSpd: Ws_avg  # non-directional windspeed, m/s
