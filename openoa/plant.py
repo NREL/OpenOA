@@ -43,21 +43,21 @@ ANALYSIS_REQUIREMENTS = {
             "freq": _at_least_monthly,
         },
         "reanalysis": {
-            "columns": ["windspeed", "density"],
+            "columns": ["WMETR_HorWdSpd", "WMETR_AirDen"],
             "conditional_columns": {
-                "reg_temperature": ["temperature"],
-                "reg_wind_direction": ["windspeed_u", "windspeed_v"],
+                "reg_temperature": ["WMETR_EnvTmp"],
+                "reg_wind_direction": ["WMETR_HorWdSpdU", "WMETR_HorWdSpdV"],
             },
             "freq": _at_least_monthly,
         },
     },
     "TurbineLongTermGrossEnergy": {
         "scada": {
-            "columns": ["id", "windspeed", "power"],
+            "columns": ["id", "WMET_HorWdSpd", "WTUR_W"],
             "freq": _at_least_daily,
         },
         "reanalysis": {
-            "columns": ["windspeed", "wind_direction", "density"],
+            "columns": ["WMETR_HorWdSpd", "WMETR_HorWdDir", "WMETR_AirDen"],
             "freq": _at_least_daily,
         },
     },
@@ -819,15 +819,39 @@ class AssetMetaData(FromDictMixin):  # noqa: F821
 
 @define(auto_attribs=True)
 class ReanalysisMetaData(FromDictMixin):  # noqa: F821
-    # DataFrame columns
+    """A metadata schematic for each of the reanalsis products to be used for operationa analyses
+    to create the necessary column mappings and other validation components, or other data about
+    the site's asset metadata, that will contribute to a larger plant metadata schema/routine.
+
+    Args:
+        time (str): The datetime stamp for the curtailment data, by default "time". This data should
+            be of type: `np.datetime64[ns]`, or able to be converted to a pandas DatetimeIndex.
+            Additional columns describing the datetime stamps are: `frequency`
+        WMETR_HorWdSpd (:obj:`str`): The reanalysis non-directional windspeed data column name, in
+            m/s, by default "WMETR_HorWdSpd".
+        WMETR_HorWdSpdU (:obj:`str`): The reanalysis u-direction windspeed data column name, in m/s,
+            by default "WMETR_HorWdSpdU".
+        WMETR_HorWdSpdV (:obj:`str`): The reanalysis v-directional windspeed data column name, in
+            m/s, by default "WMETR_HorWdSpdV".
+        WMETR_HorWdDir (:obj:`str`): The reanalysis windspeed horizontal direction data column name,
+            in degrees, by default "WMETR_HorWdDir".
+        WMETR_EnvTmp (:obj:`str`): The temperature data column name in the renalysis data, in
+            degrees Kelvin, by default "WMETR_EnvTmp".
+        WMETR_AirDen (:obj:`str`): The air density reanalysis data column name, in kg/m^3, by
+            default "WMETR_AirDen".
+        WMETR_EnvPres (:obj:`str`): The surface air pressure reanalysis data column name, in Pa, by
+            default "WMETR_EnvPres".
+        frequency (:obj:`str`): The frequency of the timestamps in the :py:attr:`time` column, by
+            default "10T".
+    """
     time: str = field(default="time")
-    windspeed: str = field(default="windspeed")
-    windspeed_u: str = field(default="windspeed_u")
-    windspeed_v: str = field(default="windspeed_v")
-    wind_direction: str = field(default="wind_direction")
-    temperature: str = field(default="temperature")
-    density: str = field(default="density")
-    surface_pressure: str = field(default="surface_pressure")
+    WMETR_HorWdSpd: str = field(default="WMETR_HorWdSpd")
+    WMETR_HorWdSpdU: str = field(default="WMETR_HorWdSpdU")
+    WMETR_HorWdSpdV: str = field(default="WMETR_HorWdSpdV")
+    WMETR_HorWdDir: str = field(default="WMETR_HorWdDir")
+    WMETR_EnvTmp: str = field(default="WMETR_EnvTmp")
+    WMETR_AirDen: str = field(default="WMETR_AirDen")
+    WMETR_EnvPres: str = field(default="surface_pressure")
 
     # Data about the columns
     frequency: str = field(default="10T")
@@ -839,26 +863,26 @@ class ReanalysisMetaData(FromDictMixin):  # noqa: F821
     dtypes: dict = field(
         default=dict(
             time=np.datetime64,
-            windspeed=float,
-            windspeed_u=float,
-            windspeed_v=float,
-            wind_direction=float,
-            temperature=float,
-            density=float,
-            surface_pressure=float,
+            WMETR_HorWdSpd=float,
+            WMETR_HorWdSpdU=float,
+            WMETR_HorWdSpdV=float,
+            WMETR_HorWdDir=float,
+            WMETR_EnvTmp=float,
+            WMETR_AirDen=float,
+            WMETR_EnvPres=float,
         ),
         init=False,  # don't allow for user input
     )
     units: dict = field(
         default=dict(
             time="datetim64[ns]",
-            windspeed="m/s",
-            windspeed_u="m/s",
-            windspeed_v="m/s",
-            wind_direction="deg",
-            temperature="K",
-            density="kg/m^3",
-            surface_pressure="Pa",
+            WMETR_HorWdSpd="m/s",
+            WMETR_HorWdSpdU="m/s",
+            WMETR_HorWdSpdV="m/s",
+            WMETR_HorWdDir="deg",
+            WMETR_EnvTmp="K",
+            WMETR_AirDen="kg/m^3",
+            WMETR_EnvPres="Pa",
         ),
         init=False,  # don't allow for user input
     )
@@ -866,13 +890,13 @@ class ReanalysisMetaData(FromDictMixin):  # noqa: F821
     def __attrs_post_init__(self) -> None:
         self.col_map = dict(
             time=self.time,
-            windspeed=self.windspeed,
-            windspeed_u=self.windspeed_u,
-            windspeed_v=self.windspeed_v,
-            wind_direction=self.wind_direction,
-            temperature=self.temperature,
-            density=self.density,
-            surface_pressure=self.surface_pressure,
+            WMETR_HorWdSpd=self.WMETR_HorWdSpd,
+            WMETR_HorWdSpdU=self.WMETR_HorWdSpdU,
+            WMETR_HorWdSpdV=self.WMETR_HorWdSpdV,
+            WMETR_HorWdDir=self.WMETR_HorWdDir,
+            WMETR_EnvTmp=self.WMETR_EnvTmp,
+            WMETR_AirDen=self.WMETR_AirDen,
+            WMETR_EnvPres=self.WMETR_EnvPres,
         )
 
 
@@ -1535,21 +1559,21 @@ class PlantData:
         reanalysis = {}
         for name, df in self.reanalysis.items():
             col_map = self.metadata.reanalysis[name].col_map
-            u = col_map["windspeed_u"]
-            v = col_map["windspeed_v"]
+            u = col_map["WMETR_HorWdSpdU"]
+            v = col_map["WMETR_HorWdSpdV"]
             has_u_v = (u in df) & (v in df)
 
-            ws = col_map["windspeed"]
+            ws = col_map["WMETR_HorWdSpd"]
             if ws not in df and has_u_v:
                 df[ws] = np.sqrt(df[u].values ** 2 + df[v].values ** 2)
 
-            wd = col_map["wind_direction"]
+            wd = col_map["WMETR_HorWdDir"]
             if wd not in df and has_u_v:
                 df[wd] = met.compute_wind_direction(df[u], df[v])
 
-            dens = col_map["density"]
-            sp = col_map["surface_pressure"]
-            temp = col_map["temperature"]
+            dens = col_map["WMETR_AirDen"]
+            sp = col_map["WMETR_EnvPres"]
+            temp = col_map["WMETR_EnvTmp"]
             has_sp_temp = (sp in df) & (temp in df)
             if dens not in df and has_sp_temp:
                 df[dens] = met.compute_air_density(df[temp], df[sp])

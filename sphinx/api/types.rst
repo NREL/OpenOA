@@ -278,7 +278,7 @@ data provided in this dataset using the hypsometric equation.
  WMETR_HorWdSpd       windspeed          float                                   m/s
  WMETR_HorWdSpdU      windspeed-u        float                                   m/s
  WMETR_HorWdSpdV      windspeed-v        float                                   m/s
- wind_direction       wind direction     float                                   degrees
+ WMETR_HorWdDir       wind direction     float                                   degrees
  WMETR_EnvTmp         temperature        float                                   Kelvin
  WMETR_AirDen         air density        float                                   kg/m^3
  WMEsTR_EnvPres       surface pressure   float                                   Pa

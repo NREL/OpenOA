@@ -63,8 +63,8 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
     Required schema of PlantData:
 
         - _scada_freq
-        - reanalysis products ['merra2', 'erai', 'ncep2'] with columns ['time', 'u_ms', 'v_ms', 'windspeed_ms', 'rho_kgm-3']
-        - scada with columns: ['time', 'id', 'wmet_wdspd_avg', 'wtur_W_avg', 'energy_kwh']
+        - reanalysis products with columns ['time', 'WMETR_HorWdSpdU', 'WMETR_HorWdSpdV', 'WMETR_HorWdSpd', 'WMETR_AirDen']
+        - scada with columns: ['time', 'id', 'WMET_HorWdSpd', 'WTUR_W', 'energy']
 
     Args:
         UQ(:obj:`bool`): Indicator to perform (True) or not (False) uncertainty quantification.
@@ -365,16 +365,16 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
 
         # Capture the runs reanalysis data set and ensure the U/V components exist
         reanalysis_df = self.plant.reanalysis[self._run.reanalysis_product]
-        if len(set(("windspeed_u", "windspeed_v")).intersection(reanalysis_df.columns)) < 2:
-            reanalysis_df["windspeed_u"], reanalysis_df["windspeed_v"] = met.compute_u_v_components(
-                "windspeed", "wind_direction", reanalysis_df
+        if len(set(("WMETR_HorWdSpdU", "WMETR_HorWdSpdV")).intersection(reanalysis_df.columns)) < 2:
+            reanalysis_df["WMETR_HorWdSpdU"], reanalysis_df["WMETR_HorWdSpdV"] = met.compute_u_v_components(
+                "WMETR_HorWdSpd", "WMETR_HorWdDir", reanalysis_df
             )
 
         # Resample at a daily resolution and recalculate daily average wind direction
         df_daily = reanalysis_df.groupby([pd.Grouper(freq="D", level="time")])[
-            ["windspeed_u", "windspeed_v", "windspeed", "density"]
+            ["WMETR_HorWdSpdU", "WMETR_HorWdSpdV", "WMETR_HorWdSpd", "WMETR_AirDen"]
         ].mean()
-        wd = met.compute_wind_direction(u="windspeed_u", v="windspeed_v", data=df_daily)
+        wd = met.compute_wind_direction(u="WMETR_HorWdSpdU", v="WMETR_HorWdSpdV", data=df_daily)
         df_daily = df_daily.assign(wind_direction=wd.values)
         self.daily_reanalysis = df_daily
 
@@ -460,7 +460,7 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
                 self.scada_valid.loc[self.scada_valid.index.get_level_values("id") == t]
                 .set_index("day")
                 .join(reanalysis)
-                .dropna(subset=["energy_imputed", "windspeed"])
+                .dropna(subset=["energy_imputed", "WMETR_HorWdSpd"])
             )
 
     def fit_model(self) -> None:
@@ -479,9 +479,9 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
 
             # Consider wind speed, wind direction, and air density as features
             mod_results[t] = functions.gam_3param(
-                windspeed_col="windspeed",
-                wind_direction_col="wind_direction",
-                air_density_col="density",
+                windspeed_col="WMETR_HorWdSpd",
+                wind_direction_col="WMETR_HorWdDir",
+                air_density_col="WMETR_AirDen",
                 power_col="energy_imputed",
                 data=df,
             )
@@ -506,9 +506,9 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
         # Loop through the turbines and apply the GAM to the reanalysis data
         for t in self.turbine_ids:  # Loop through turbines
             turb_gross.loc[:, t] = mod_results[t](
-                daily_reanalysis["windspeed"],
-                daily_reanalysis["wind_direction"],
-                daily_reanalysis["density"],
+                daily_reanalysis["WMETR_HorWdSpd"],
+                daily_reanalysis["WMETR_HorWdDir"],
+                daily_reanalysis["WMETR_AirDen"],
             )
 
         turb_gross[turb_gross < 0] = 0
@@ -566,8 +566,8 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
         """
         return plot.plot_power_curves(
             data=self.scada_dict,
-            windspeed_col="windspeed",
-            power_col="power",
+            windspeed_col="WMET_HorWdSpd",
+            power_col="WTUR_W",
             flag_col="flag_final",
             turbines=turbines,
             flag_labels=flag_labels,
@@ -633,7 +633,7 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
         figure_kwargs.setdefault("figsize", (15, num_rows * 5))
         fig, axes_list = plt.subplots(num_rows, max_cols, **figure_kwargs)
 
-        ws_daily = self.daily_reanalysis["windspeed"]
+        ws_daily = self.daily_reanalysis["WMETR_HorWdSpd"]
         for i, (t, ax) in enumerate(zip(turbines, axes_list.flatten())):
             df = self.turbine_model_dict[t]
             df_imputed = df.loc[df["energy_corrected"] != df["energy_imputed"]]
@@ -647,7 +647,7 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
                 **plot_kwargs,
             )
             ax.scatter(
-                df["windspeed"],
+                df["WMETR_HorWdSpd"],
                 df["energy_imputed"],
                 label=flag_labels[2],
                 alpha=0.6,
@@ -655,7 +655,7 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
                 **plot_kwargs,
             )
             ax.scatter(
-                df_imputed["windspeed"],
+                df_imputed["WMETR_HorWdSpd"],
                 df_imputed["energy_imputed"],
                 label=flag_labels[1],
                 alpha=0.6,
