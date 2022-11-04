@@ -91,9 +91,8 @@ setup(
     url="https://github.com/NREL/OpenOA",
     packages=find_packages(exclude=["test"]),
     include_package_data=True,
-    data_files=[("openoa/types", ["openoa/types/plant_schema.json"])],
     install_requires=REQUIRED,
     extras_require=EXTRAS,
     tests_require=TESTS,
-    python_requires=">=3.6, <=3.10",
+    python_requires=">=3.8, <=3.10",
 )
