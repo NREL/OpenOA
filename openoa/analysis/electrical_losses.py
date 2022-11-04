@@ -214,7 +214,7 @@ class ElectricalLosses(FromDictMixin):
 
         # Sum up meter data to daily
         self.meter_daily = meter_df.resample("D").sum()
-        self.meter_daily["count"] = meter_df.resample("D")["energy"].count()
+        self.meter_daily["count"] = meter_df.resample("D")["MMTR_SupWh"].count()
 
         # Specify expected count provided all timestamps reporting
         expected_count = (

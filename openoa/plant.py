@@ -35,7 +35,7 @@ _at_least_hourly = ("H", "T", "min", "S", "L", "ms", "U", "us", "N")
 ANALYSIS_REQUIREMENTS = {
     "MonteCarloAEP": {
         "meter": {
-            "columns": ["energy"],
+            "columns": ["MMTR_SupWh"],
             "freq": _at_least_monthly,
         },
         "curtail": {
@@ -67,7 +67,7 @@ ANALYSIS_REQUIREMENTS = {
             "freq": _at_least_daily,
         },
         "meter": {
-            "columns": ["energy"],
+            "columns": ["MMTR_SupWh"],
             "freq": _at_least_monthly,
         },
     },
@@ -509,8 +509,8 @@ class MeterMetaData(FromDictMixin):  # noqa: F821
             Additional columns describing the datetime stamps are: `frequency`
         power (str): The power produced, in kW, column in the meter data, by default "power".
             This data should be of type: `float`.
-        energy (str): The energy produced, in kWh, column in the meter data, by default
-            "temperature". This data should be of type: `float`.
+        MMTR_SupWh (str): The energy produced, in kWh, column in the meter data, by default
+            "MMTR_SupWh". This data should be of type: `float`.
         frequency (str): The frequency of `time` in the meter data, by default "10T". The input
             should align with the `Pandas frequency offset aliases`_.
 
@@ -523,7 +523,7 @@ class MeterMetaData(FromDictMixin):  # noqa: F821
     # DataFrame columns
     time: str = field(default="time")
     power: str = field(default="power")
-    energy: str = field(default="energy")
+    MMTR_SupWh: str = field(default="MMTR_SupWh")
 
     # Data about the columns
     frequency: str = field(default="10T")
@@ -536,7 +536,7 @@ class MeterMetaData(FromDictMixin):  # noqa: F821
         default=dict(
             time=np.datetime64,
             power=float,
-            energy=float,
+            MMTR_SupWh=float,
         ),
         init=False,  # don't allow for user input
     )
@@ -544,7 +544,7 @@ class MeterMetaData(FromDictMixin):  # noqa: F821
         default=dict(
             time="datetim64[ns]",
             power="kW",
-            energy="kWh",
+            MMTR_SupWh="kWh",
         ),
         init=False,  # don't allow for user input
     )
@@ -553,7 +553,7 @@ class MeterMetaData(FromDictMixin):  # noqa: F821
         self.col_map = dict(
             time=self.time,
             power=self.power,
-            energy=self.energy,
+            MMTR_SupWh=self.MMTR_SupWh,
         )
 
 

@@ -282,7 +282,7 @@ def test_MeterMetaData():
         frequency="D",
     )
     valid_map = deepcopy(meta_dict)
-    valid_map.update(dict(time="time", energy="energy"))
+    valid_map.update(dict(time="time", MMTR_SupWh="MMTR_SupWh"))
     valid_map.pop("frequency")
 
     meta = MeterMetaData.from_dict(meta_dict)

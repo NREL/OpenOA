@@ -347,12 +347,12 @@ class MonteCarloAEP(FromDictMixin):
         df = self.plant.meter  # Get the meter data frame
 
         # Create the monthly/daily data frame by summing meter energy, in GWh
-        self.aggregate = df.resample(self.resample_freq)["energy"].sum().to_frame() / 1e6
-        self.aggregate.rename(columns={"energy": "energy_gwh"}, inplace=True)
+        self.aggregate = df.resample(self.resample_freq)["MMTR_SupWh"].sum().to_frame() / 1e6
+        self.aggregate.rename(columns={"MMTR_SupWh": "energy_gwh"}, inplace=True)
 
         # Determine how much 10-min data was missing for each year-month/daily energy value. Flag accordigly if any is missing
         # Get percentage of meter data that were NaN when summing to monthly/daily
-        self.aggregate["energy_nan_perc"] = df.resample(self.resample_freq)["energy"].apply(
+        self.aggregate["energy_nan_perc"] = df.resample(self.resample_freq)["MMTR_SupWh"].apply(
             tm.percent_nan
         )
 
@@ -368,7 +368,7 @@ class MonteCarloAEP(FromDictMixin):
             if self.plant.metadata.meter.frequency in ("1M", "1MS"):
                 self.aggregate["num_days_actual"] = self.aggregate["num_days_expected"]
             else:
-                self.aggregate["num_days_actual"] = df.resample("MS")["energy"].apply(tm.num_days)
+                self.aggregate["num_days_actual"] = df.resample("MS")["MMTR_SupWh"].apply(tm.num_days)
 
     @logged_method_call
     def process_loss_estimates(self):
