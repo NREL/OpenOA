@@ -507,8 +507,6 @@ class MeterMetaData(FromDictMixin):  # noqa: F821
         time (str): The datetime stamp for the meter data, by default "time". This data should
             be of type: `np.datetime64[ns]`, or able to be converted to a pandas DatetimeIndex.
             Additional columns describing the datetime stamps are: `frequency`
-        power (str): The power produced, in kW, column in the meter data, by default "power".
-            This data should be of type: `float`.
         MMTR_SupWh (str): The energy produced, in kWh, column in the meter data, by default
             "MMTR_SupWh". This data should be of type: `float`.
         frequency (str): The frequency of `time` in the meter data, by default "10T". The input
@@ -522,7 +520,6 @@ class MeterMetaData(FromDictMixin):  # noqa: F821
 
     # DataFrame columns
     time: str = field(default="time")
-    power: str = field(default="power")
     MMTR_SupWh: str = field(default="MMTR_SupWh")
 
     # Data about the columns
@@ -535,7 +532,6 @@ class MeterMetaData(FromDictMixin):  # noqa: F821
     dtypes: dict = field(
         default=dict(
             time=np.datetime64,
-            power=float,
             MMTR_SupWh=float,
         ),
         init=False,  # don't allow for user input
@@ -543,7 +539,6 @@ class MeterMetaData(FromDictMixin):  # noqa: F821
     units: dict = field(
         default=dict(
             time="datetim64[ns]",
-            power="kW",
             MMTR_SupWh="kWh",
         ),
         init=False,  # don't allow for user input
@@ -552,7 +547,6 @@ class MeterMetaData(FromDictMixin):  # noqa: F821
     def __attrs_post_init__(self) -> None:
         self.col_map = dict(
             time=self.time,
-            power=self.power,
             MMTR_SupWh=self.MMTR_SupWh,
         )
 
@@ -1301,6 +1295,27 @@ class PlantData:
                 self.reanalysis[name] = self.reanalysis[name].set_index([time_col])
                 self.reanalysis[name].index.name = "time"
 
+    def _unset_index_columns(self) -> None:
+        """Resets the index for each of the data types. This is intended solely for the use with
+        the :py:meth:`validate` to ensure the validation methods are able to find the index columns
+        in the column space
+        """
+        if self.scada is not None:
+            self.scada.reset_index(drop=False, inplace=True)
+        if self.meter is not None:
+            self.meter.reset_index(drop=False, inplace=True)
+        if self.status is not None:
+            self.status.reset_index(drop=False, inplace=True)
+        if self.tower is not None:
+            self.tower.reset_index(drop=False, inplace=True)
+        if self.curtail is not None:
+            self.curtail.reset_index(drop=False, inplace=True)
+        if self.asset is not None:
+            self.asset.reset_index(drop=False, inplace=True)
+        if self.reanalysis is not None:
+            for name in self.reanalysis:
+                self.reanalysis[name].reset_index(drop=False, inplace=True)
+
     @property
     def data_dict(self) -> dict[str, pd.DataFrame]:
         """Property that returns a dictionary of the data contained in the `PlantData` object.
@@ -1528,6 +1543,9 @@ class PlantData:
         Raises:
             ValueError: Raised at the end if errors are caught in the validation steps.
         """
+        # Put the index columns back into the column space to ensure success of re-validation
+        self._unset_index_columns()
+
         # Initialization will have converted the column naming convention, but an updated
         # metadata should account for the renaming of the columns
         if metadata is None:
@@ -1535,11 +1553,15 @@ class PlantData:
         else:
             self.metadata = metadata
 
+        # Reset the index columns to be part of the columns space so the validations still work
+
         self._errors = {
             "missing": self._validate_column_names(),
             "dtype": self._validate_dtypes(),
-            "frequency": self._validate_frequency(),
         }
+
+        self._set_index_columns()
+        self._errors["frequency"] = self._validate_frequency()
 
         # TODO: Check for extra columns?
         # TODO: Define other checks?
@@ -1547,7 +1569,6 @@ class PlantData:
         error_message = _compose_error_message(self._errors, self.analysis_type)
         if error_message:
             raise ValueError(error_message)
-
         self.update_column_names()
 
     def _calculate_reanalysis_columns(self) -> None:

@@ -104,9 +104,9 @@ data type or can be converted to that type.
 
 .. literalinclude:: ../../examples/data/plant_meta.yml
     :language: yaml
-    :lines: 34-42
+    :lines: 35-43
     :linenos:
-    :lineno-start: 34
+    :lineno-start: 35
 
 Meter
 =====
@@ -121,15 +121,14 @@ data type or can be converted to that type.
  Field Name           Descriptive Name    Data Type (MeterMetaData.dtypes)   Units (MeterMetaData.units)
 ==================== =================== ================================== =============================
  time                 time stamp          datetime64[ns]                     datetime64[ns]
- power                power               float                              kW
  MMTR_SupWh           energy              float                              kWh
 ==================== =================== ================================== =============================
 
 .. literalinclude:: ../../examples/data/plant_meta.yml
     :language: yaml
-    :lines: 16-18
+    :lines: 17-19
     :linenos:
-    :lineno-start: 16
+    :lineno-start: 17
 
 Tower
 =====
@@ -286,9 +285,9 @@ data provided in this dataset using the hypsometric equation.
 
 .. literalinclude:: ../../examples/data/plant_meta.yml
     :language: yaml
-    :lines: 19-33
+    :lines: 20-34
     :linenos:
-    :lineno-start: 19
+    :lineno-start: 20
 
 PlantData API
 *************
