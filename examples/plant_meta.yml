@@ -1,43 +1,43 @@
 asset:
-  elevation: elevation_m
-  hub_height: Hub_height_m
+  elevation: elevation_m  # elevation abouve sea level, meters
+  hub_height: Hub_height_m  # hub height, meters
   id: Wind_turbine_name
-  latitude: Latitude
-  longitude: Longitude
-  rated_power: Rated_power
-  rotor_diameter: Rotor_diameter_m
+  latitude: Latitude  # WGS-84 latitude
+  longitude: Longitude  # WGS-84 longitude
+  rated_power: Rated_power  # rated power, MW
+  rotor_diameter: Rotor_diameter_m  # rotor diameter, meters
 curtail:
-  availability: availability_kwh
-  curtailment: curtailment_kwh
-  frequency: 10T
-  net_energy: net_energy_kwh
-  time: time_utc
-latitude: 48.4497
-longitude: 5.5896
+  IAVL_DnWh: availability_kwh  # availability, kWh
+  curtailment: curtailment_kwh  # curtailment, kWh
+  frequency: 10T  # timestamp frequency
+  net_energy: net_energy_kwh  # net energy, kWh
+  time: time_utc  # timestamp
+latitude: 48.4497  # WGS-84 latitudinal plant centroid
+longitude: 5.5896  # WGS-84 longitudinal plant centroid
 meter:
-  energy: net_energy_kwh
-  time: time_utc
+  energy: net_energy_kwh  # net energy, kWh
+  time: time_utc  # timestamp
 reanalysis:
-  era5:
-    frequency: H
-    surface_pressure: surf_pres
-    temperature: t_2m
-    time: datetime
-    windspeed_u: u_100
-    windspeed_v: v_100
-  merra2:
-    frequency: H
+  era5:  # reanalysis product name/ID
+    frequency: H  # timestamp frequency
+    surface_pressure: surf_pres  # surface pressure, Pa
+    temperature: t_2m  # temperature, K
+    time: datetime  # timestamps
+    windspeed_u: u_100  # u-direction windspeed, m/s
+    windspeed_v: v_100  # v-direction windspeed, m/s
+  merra2:  # reanalysis product name/ID
+    frequency: H  # timestamp frequency
     surface_pressure: surface_pressure
-    temperature: temp_10m
-    time: datetime
-    windspeed_u: u_50
-    windspeed_v: v_50
+    temperature: temp_10m  # temperature, K
+    time: datetime  # timestamps
+    windspeed_u: u_50  # u-direction windspeed, m/s
+    windspeed_v: v_50  # v-direction windspeed, m/s
 scada:
-  frequency: 10T
-  id: Wind_turbine_name
-  pitch: Ba_avg
-  power: P_avg
-  temperature: Ot_avg
-  time: Date_time
-  wind_direction: Wa_avg
-  windspeed: Ws_avg
+  frequency: 10T  # timestamp frequency
+  id: Wind_turbine_name  # Unique ID of wind turbine
+  pitch: Ba_avg  # pitch angle, degrees
+  power: P_avg  # power produced, kW
+  temperature: Ot_avg  # temperature, C
+  time: Date_time  # timestamps
+  wind_direction: Wa_avg  # wind direction, degrees
+  windspeed: Ws_avg  # non-directional windspeed, m/s

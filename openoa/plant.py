@@ -39,7 +39,7 @@ ANALYSIS_REQUIREMENTS = {
             "freq": _at_least_monthly,
         },
         "curtail": {
-            "columns": ["availability", "curtailment"],
+            "columns": ["IAVL_DnWh", "curtailment"],
             "freq": _at_least_monthly,
         },
         "reanalysis": {
@@ -693,8 +693,8 @@ class CurtailMetaData(FromDictMixin):  # noqa: F821
             Additional columns describing the datetime stamps are: `frequency`
         curtailment (str): The curtailment, in kWh, column in the curtailment data, by default
             "curtailment". This data should be of type: `float`.
-        availability (str): The availability, in kWh, column in the curtailment data, by default
-            "availability". This data should be of type: `float`.
+        IAVL_DnWh (str): The availability, in kWh, column in the curtailment data, by default
+            "IAVL_DnWh". This data should be of type: `float`.
         frequency (str): The frequency of `time` in the met tower data, by default "10T". The input
             should align with the `Pandas frequency offset aliases`_.
 
@@ -706,7 +706,7 @@ class CurtailMetaData(FromDictMixin):  # noqa: F821
     # DataFrame columns
     time: str = field(default="time")
     curtailment: str = field(default="curtailment")
-    availability: str = field(default="availability")
+    IAVL_DnWh: str = field(default="IAVL_DnWh")
 
     # Data about the columns
     frequency: str = field(default="10T")
@@ -719,7 +719,7 @@ class CurtailMetaData(FromDictMixin):  # noqa: F821
         default=dict(
             time=np.datetime64,
             curtailment=float,
-            availability=float,
+            IAVL_DnWh=float,
         ),
         init=False,  # don't allow for user input
     )
@@ -727,7 +727,7 @@ class CurtailMetaData(FromDictMixin):  # noqa: F821
         default=dict(
             time="datetim64[ns]",
             curtailment="kWh",
-            availability="kWh",
+            IAVL_DnWh="kWh",
         ),
         init=False,  # don't allow for user input
     )
@@ -736,7 +736,7 @@ class CurtailMetaData(FromDictMixin):  # noqa: F821
         self.col_map = dict(
             time=self.time,
             curtailment=self.curtailment,
-            availability=self.availability,
+            IAVL_DnWh=self.IAVL_DnWh,
         )
 
 

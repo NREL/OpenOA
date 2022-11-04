@@ -384,11 +384,11 @@ class MonteCarloAEP(FromDictMixin):
         df = self.plant.curtail.copy()
 
         curt_aggregate = np.divide(
-            df.resample(self.resample_freq)[["availability", "curtailment"]].sum(), 1e6
+            df.resample(self.resample_freq)[["IAVL_DnWh", "curtailment"]].sum(), 1e6
         )  # Get sum of avail and curt losses in GWh
 
         curt_aggregate.rename(
-            columns={"availability": "availability_gwh", "curtailment": "curtailment_gwh"},
+            columns={"IAVL_DnWh": "availability_gwh", "curtailment": "curtailment_gwh"},
             inplace=True,
         )
         # Merge with revenue meter monthly/daily data
