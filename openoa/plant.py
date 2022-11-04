@@ -415,17 +415,17 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
             columns describing the datetime stamps are: `frequency`
         id (str): The turbine identifier column in the SCADA data, by default "id". This data should be of
             type: `str`.
-        power (str): The power produced, in kW, column in the SCADA data, by default "power".
+        WTUR_W (str): The power produced, in kW, column in the SCADA data, by default "WTUR_W".
             This data should be of type: `float`.
-        windspeed (str): The measured windspeed, in m/s, column in the SCADA data, by default "windspeed".
+        WMET_HorWdSpd (str): The measured windspeed, in m/s, column in the SCADA data, by default "WMET_HorWdSpd".
             This data should be of type: `float`.
-        wind_direction (str): The measured wind direction, in degrees, column in the SCADA data, by default
-            "wind_direction". This data should be of type: `float`.
+        WMET_HorWdDir (str): The measured wind direction, in degrees, column in the SCADA data, by default
+            "WMET_HorWdDir". This data should be of type: `float`.
         status (str): The status code column in the SCADA data, by default "status". This data
             should be of type: `str`.
-        pitch (str): The pitch, in degrees, column in the SCADA data, by default "pitch". This data
+        WROT_BlPthAngVal (str): The pitch, in degrees, column in the SCADA data, by default "WROT_BlPthAngVal". This data
             should be of type: `float`.
-        temperature (str): The temperature column in the SCADA data, by default "temperature". This
+        WMET_EnvTmp (str): The temperature column in the SCADA data, by default "WMET_EnvTmp". This
             data should be of type: `float`.
         frequency (str): The frequency of `time` in the SCADA data, by default "10T". The input
             should align with the `Pandas frequency offset aliases`_.
@@ -439,12 +439,12 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
     # DataFrame columns
     time: str = field(default="time")
     id: str = field(default="id")
-    power: str = field(default="power")
-    windspeed: str = field(default="windspeed")
-    wind_direction: str = field(default="wind_direction")
+    WTUR_W: str = field(default="WTUR_W")
+    WMET_HorWdSpd: str = field(default="WMET_HorWdSpd")
+    WMET_HorWdDir: str = field(default="WMET_HorWdDir")
     status: str = field(default="status")
-    pitch: str = field(default="pitch")
-    temperature: str = field(default="temperature")
+    WROT_BlPthAngVal: str = field(default="WROT_BlPthAngVal")
+    WMET_EnvTmp: str = field(default="WMET_EnvTmp")
 
     # Data about the columns
     frequency: str = field(default="10T")
@@ -458,12 +458,12 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
         default=dict(
             time=np.datetime64,
             id=str,
-            power=float,
-            windspeed=float,
-            wind_direction=float,
+            WTUR_W=float,
+            WMET_HorWdSpd=float,
+            WMET_HorWdDir=float,
             status=str,
-            pitch=float,
-            temperature=float,
+            WROT_BlPthAngVal=float,
+            WMET_EnvTmp=float,
             energy=float,
         ),
         init=False,  # don't allow for user input
@@ -472,12 +472,12 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
         default=dict(
             time="datetim64[ns]",
             id=None,
-            power="kW",
-            windspeed="m/s",
-            wind_direction="deg",
+            WTUR_W="kW",
+            WMET_HorWdSpd="m/s",
+            WMET_HorWdDir="deg",
             status=None,
-            pitch="deg",
-            temperature="C",
+            WROT_BlPthAngVal="deg",
+            WMET_EnvTmp="C",
             energy="kWh",
         ),
         init=False,  # don't allow for user input
@@ -487,12 +487,12 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
         self.col_map = dict(
             time=self.time,
             id=self.id,
-            power=self.power,
-            windspeed=self.windspeed,
-            wind_direction=self.wind_direction,
+            WTUR_W=self.WTUR_W,
+            WMET_HorWdSpd=self.WMET_HorWdSpd,
+            WMET_HorWdDir=self.WMET_HorWdDir,
             status=self.status,
-            pitch=self.pitch,
-            temperature=self.temperature,
+            WROT_BlPthAngVal=self.WROT_BlPthAngVal,
+            WMET_EnvTmp=self.WMET_EnvTmp,
             energy=self.energy,
         )
 
@@ -1551,7 +1551,7 @@ class PlantData:
         self.update_column_names()
 
     def _calculate_reanalysis_columns(self) -> None:
-        """Calculates extra variables such as wind_direction from the provided
+        """Calculates extra variables such as wind direction from the provided
         reanalysis data if they don't already exist.
         """
         if self.reanalysis is None:
@@ -1657,7 +1657,7 @@ class PlantData:
 
     def _calculate_turbine_energy(self) -> None:
         energy_col = self.metadata.scada.energy
-        power_col = self.metadata.scada.power
+        power_col = self.metadata.scada.WTUR_W
         frequency = self.metadata.scada.frequency
         self.scada[energy_col] = convert_power_to_energy(self.scada[power_col], frequency)
 
