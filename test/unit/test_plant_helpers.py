@@ -364,8 +364,8 @@ def test_CurtailMetaData():
 
     # Leaving time and net_energy as the default values
     meta_dict = dict(
-        curtailment="curtail",
-        availability="avail",
+        IAVL_ExtPwrDnWh="curtail",
+        IAVL_DnWh="avail",
         frequency="H",
     )
     valid_map = deepcopy(meta_dict)

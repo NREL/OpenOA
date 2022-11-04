@@ -10,7 +10,7 @@
   },
   "curtail": {
     "IAVL_DnWh": "availability_kwh",
-    "curtailment": "curtailment_kwh",
+    "IAVL_ExtPwrDnWh": "curtailment_kwh",
     "frequency": "10T",
     "net_energy": "net_energy_kwh",
     "time": "time"

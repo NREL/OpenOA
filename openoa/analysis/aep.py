@@ -384,11 +384,11 @@ class MonteCarloAEP(FromDictMixin):
         df = self.plant.curtail.copy()
 
         curt_aggregate = np.divide(
-            df.resample(self.resample_freq)[["IAVL_DnWh", "curtailment"]].sum(), 1e6
+            df.resample(self.resample_freq)[["IAVL_DnWh", "IAVL_ExtPwrDnWh"]].sum(), 1e6
         )  # Get sum of avail and curt losses in GWh
 
         curt_aggregate.rename(
-            columns={"IAVL_DnWh": "availability_gwh", "curtailment": "curtailment_gwh"},
+            columns={"IAVL_DnWh": "availability_gwh", "IAVL_ExtPwrDnWh": "curtailment_gwh"},
             inplace=True,
         )
         # Merge with revenue meter monthly/daily data
@@ -412,10 +412,10 @@ class MonteCarloAEP(FromDictMixin):
         )
 
         # Get percentage of 10-min meter data that were NaN when summing to monthly/daily
-        self.aggregate["avail_nan_perc"] = df.resample(self.resample_freq)["availability"].apply(
+        self.aggregate["avail_nan_perc"] = df.resample(self.resample_freq)["IAVL_DnWh"].apply(
             tm.percent_nan
         )
-        self.aggregate["curt_nan_perc"] = df.resample(self.resample_freq)["curtailment"].apply(
+        self.aggregate["curt_nan_perc"] = df.resample(self.resample_freq)["IAVL_ExtPwrDnWh"].apply(
             tm.percent_nan
         )
 

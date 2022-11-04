@@ -160,7 +160,7 @@ data type or can be converted to that type.
  Field Name           Descriptive Name   Data Type (CurtailMetaData.dtypes)   Units (CurtailMetaData.units)
 ==================== ================== ==================================== ===============================
  time                 time stamp         datetime64[ns]                       datetime64[ns]
- curtailment          curtailment        float                                kWh
+ IAVL_ExtPwrDnWh      curtailment        float                                kWh
  IAVL_DnWh            availability       float                                kWh
 ==================== ================== ==================================== ===============================
 

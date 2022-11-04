@@ -8,7 +8,7 @@ asset:
   rotor_diameter: Rotor_diameter_m  # rotor diameter, meters
 curtail:
   IAVL_DnWh: availability_kwh  # availability, kWh
-  curtailment: curtailment_kwh  # curtailment, kWh
+  IAVL_ExtPwrDnWh: curtailment_kwh  # curtailment, kWh
   frequency: 10T  # timestamp frequency
   net_energy: net_energy_kwh  # net energy, kWh
   time: time_utc  # timestamp
