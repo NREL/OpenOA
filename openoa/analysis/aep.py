@@ -12,7 +12,6 @@ import datetime
 import attrs
 import numpy as np
 import pandas as pd
-import matplotlib as mpl
 import numpy.typing as npt
 import statsmodels.api as sm
 import matplotlib.pyplot as plt

@@ -278,8 +278,8 @@ class ElectricalLosses(FromDictMixin):
             merge_sum = self.combined_energy.sum(axis=0)
 
             # Calculate electrical loss from difference of sum of turbine and meter energy
-            self.total_turbine_energy = merge_sum["energy_scada"] * _run.scada_data_fraction
-            self.total_meter_energy = merge_sum["energy_meter"] * _run.meter_data_fraction
+            self.total_turbine_energy = merge_sum["energy"] * _run.scada_data_fraction
+            self.total_meter_energy = merge_sum["MMTR_SupWh"] * _run.meter_data_fraction
 
             self.electrical_losses[n] = 1 - self.total_meter_energy / self.total_turbine_energy
 
@@ -318,7 +318,7 @@ class ElectricalLosses(FromDictMixin):
 
         monthly_energy = self.combined_energy.resample("MS").sum()
         losses = (
-            monthly_energy["corrected_energy"] - monthly_energy["energy_meter"]
+            monthly_energy["corrected_energy"] - monthly_energy["MMTR_SupWh"]
         ) / monthly_energy["corrected_energy"]
 
         mean = losses.mean()

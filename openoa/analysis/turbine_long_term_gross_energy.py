@@ -375,7 +375,7 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
             ["WMETR_HorWdSpdU", "WMETR_HorWdSpdV", "WMETR_HorWdSpd", "WMETR_AirDen"]
         ].mean()
         wd = met.compute_wind_direction(u="WMETR_HorWdSpdU", v="WMETR_HorWdSpdV", data=df_daily)
-        df_daily = df_daily.assign(wind_direction=wd.values)
+        df_daily = df_daily.assign(WMETR_HorWdDir=wd.values)
         self.daily_reanalysis = df_daily
 
         # Store the results for re-use
