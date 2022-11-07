@@ -12,6 +12,7 @@ import datetime
 import attrs
 import numpy as np
 import pandas as pd
+import matplotlib as mpl
 import numpy.typing as npt
 import statsmodels.api as sm
 import matplotlib.pyplot as plt
@@ -1190,7 +1191,6 @@ class MonteCarloAEP(FromDictMixin):
             None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes]: If `return_fig` is True, then
                 the figure and axes objects are returned for further tinkering/saving.
         """
-
         figure_kwargs.setdefault("figsize", (9, 9))
         figure_kwargs.setdefault("dpi", 200)
         fig = plt.figure(**figure_kwargs)
@@ -1234,7 +1234,7 @@ class MonteCarloAEP(FromDictMixin):
                     **plot_kwargs,
                 )
 
-            ax.set_ylabel("30-day normalized gross energy (GWh)")
+            ax.set_ylabel("30-day Normalized Gross Energy (GWh)")
 
         # Daily/hourly case: apply bin filter for outliers detection
         else:
@@ -1265,8 +1265,6 @@ class MonteCarloAEP(FromDictMixin):
             elif self.time_resolution == "H":
                 ax.set_ylabel("Hourly gross energy (GWh)")
 
-        ax.grid()
-        ax.set_axisbelow(True)
         ax.legend(**legend_kwargs)
         ax.set_xlabel("Wind speed (m/s)")
 
