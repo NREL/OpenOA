@@ -11,7 +11,6 @@ scada:
   frequency: 10T
 meter:
   time: time
-  power: power
   MMTR_SupWh: MMTR_SupWh
   frequency: 10T
 tower:

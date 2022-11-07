@@ -25,6 +25,7 @@ reanalysis:
     time: datetime  # timestamps
     WMETR_HorWdSpdU: u_100  # u-direction windspeed, m/s
     WMETR_HorWdSpdV: v_100  # v-direction windspeed, m/s
+    WMETR_HorWdDir: winddirection_deg  # wind direction, degrees
   merra2:  # reanalysis product name/ID
     frequency: H  # timestamp frequency
     WMETR_EnvPres: surface_pressure  # surface pressure, Pa
@@ -32,6 +33,7 @@ reanalysis:
     time: datetime  # timestamps
     WMETR_HorWdSpdU: u_50  # u-direction windspeed, m/s
     WMETR_HorWdSpdV: v_50  # v-direction windspeed, m/s
+    WMETR_HorWdDir: winddirection_deg  # wind direction, degrees
 scada:
   frequency: 10T  # timestamp frequency
   id: Wind_turbine_name  # Unique ID of wind turbine

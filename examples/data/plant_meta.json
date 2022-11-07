@@ -27,7 +27,8 @@
       "WMETR_EnvTmp": "t_2m",
       "time": "datetime",
       "WMETR_HorWdSpdU": "u_100",
-      "WMETR_HorWdSpdV": "v_100"
+      "WMETR_HorWdSpdV": "v_100",
+      "WMETR_HorWdDir": "winddirection_deg"
     },
     "merra2": {
       "frequency": "H",
@@ -35,7 +36,8 @@
       "WMETR_EnvTmp": "temp_10m",
       "time": "datetime",
       "WMETR_HorWdSpdU": "u_50",
-      "WMETR_HorWdSpdV": "v_50"
+      "WMETR_HorWdSpdV": "v_50",
+      "WMETR_HorWdDir": "winddirection_deg"
     }
   },
   "scada": {
