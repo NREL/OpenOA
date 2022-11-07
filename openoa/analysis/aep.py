@@ -35,6 +35,8 @@ logger = logging.getLogger(__name__)
 
 NDArrayFloat = npt.NDArray[np.float64]
 
+plot.set_styling()
+
 
 def get_annual_values(data):
     """
