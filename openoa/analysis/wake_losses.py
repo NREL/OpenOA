@@ -1,10 +1,10 @@
-# This class defines key analytical routines for calculating wake losses for an operating
-# wind plant using SCADA data. For each SCADA time step, freestream wind turbines are
-# identified using the turbine coordinates and a reference wind direction signal. The mean
-# power production for all turbines in the wind plant is summed over all time steps and
-# compared to the mean power of the freestream turbines summed over all time steps to
-# estimate wake losses during the period of record. Methods for calclating the long-term
-# wake losses using reanalaysis data and quantifying uncertainty are provided as well.
+# This class defines key analytical routines for estimating wake losses for an operating
+# wind plant using SCADA data. At a high level, for each SCADA time step, freestream wind
+# turbines are identified using the turbine coordinates and a reference wind direction
+# signal. The mean power production for all turbines in the wind plant is summed over all
+# time steps and compared to the mean power of the freestream turbines summed over all time
+# steps to estimate wake losses during the period of record. Methods for calclating the
+# long-term wake losses using reanalaysis data and quantifying uncertainty are provided as well.
 
 from __future__ import annotations
 
@@ -26,7 +26,6 @@ from openoa.analysis._analysis_validators import validate_UQ_input
 
 
 logger = logging.getLogger(__name__)
-# set_styling()
 
 NDArrayFloat = npt.NDArray[np.float64]
 
@@ -34,9 +33,50 @@ NDArrayFloat = npt.NDArray[np.float64]
 @define(auto_attribs=True)
 class WakeLosses(FromDictMixin):
     """
-    A serial (Pandas-driven) implementation of a method for estimating wake losses from SCADA data.
+    A serial implementation of a method for estimating wake losses from SCADA data. Wake losses are estimated for the
+    entire wind plant as well as for each individual turbine for a) the period of record for which data are available,
+    and b) the estimated long-term wind conditions the wind plant will experience based on historical reanalysis wind
+    resource data. The method is comprised of the following core steps.
 
-    TODO: Add more details.
+    First, a representative wind plant-level wind direction is calculated at each time step using the mean value of the
+    wind direction signals for the specified set of wind turbines or meteorological (met) towers. Note that time steps
+    for which any necessary plant-level or turbine-level data are missing are discarded.
+
+    If uncertainty quantification (UQ) is selected, wake losses are calculated multiple times using a Monte Carlo
+    approach using randomly chosen analysis parameters and time steps randomly sampled with replacement each iteration.
+    The remaining steps described below are performed for each Monte Carlo iteration. If UQ is not used, wake losses
+    are calculated once using the specified analysis parameters for the full set of available time steps.
+
+    As a first step in each iteration, the set of derated, curtailed, or unavailable turbines (i.e., turbines whose
+    power production is limited not by wake losses but by operating mode) is identified for each time step using power
+    curve outlier detection.
+
+    Next, for a sequence of wind direction bins, the set of freestream turbines is identified based on whether any
+    other wind turbines are located upstream of a turbine within a user-specified sector of wind directions centered on
+    the bin center direction. The average power production and average wind speed are then calculated for the set of
+    freestream turbines operating normally (i.e., not derated) for each time step.
+
+    Period-of-record wake losses are then calculated for the wind plant by comparing the potential energy production,
+    calculated as the sum of the mean freestream power production multiplied by the number of turbines in the wind
+    plant, to the actual energy production, given by the sum of the actual wind plant power production at each time
+    step. If the option to correct for derated turbines is selected, the potential power production of the wind plant
+    is assumed to be limited to the actual power produced by the derated turbines plus the mean power production of the
+    freestream turbines for all other turbines in the wind plant. This same basic procedure is then used to estimate
+    the wake losses for each individual wind turbine.
+
+    Finally, the long-term corrected wake losses are estimated using long-term historical reanalysis data. The
+    long-term frequencies of occurance are calculated for a set of wind direction and wind speed bins, based on
+    hourly reanalysis data (typically, 10-20 years). Next, the mean freestream wind speeds calculated from SCADA data
+    are compared to the wind speeds from the reanalysis data using linear regression and are corrected to remove
+    biases. Using the representative wind plant wind directions from SCADA or met tower data and the corrected
+    freestream wind speeds, the average potential and actual wind plant power production are computed for each wind
+    direction and wind speed bin. The long-term corrected wake losses are then estimated by comparing the long-term
+    corrected potential and actual energy production, which are in turn determined by weighting the average potential
+    and actual power production in each wind condition bin by the long-term frequencies. This basic process is then
+    repeated to estimate the long-term corrected wake losses for each individual turbine. Note that the long-term
+    correction is determined for each reanalysis product specified by the user. If UQ is used, a random reanalysis
+    product is selected each iteration. If UQ is not selected, the long-term corrected wake losses are calculated as
+    the average wake losses determined for all reanalysis products.
 
     Args:
         plant (:obj:`PlantData`): A :py:attr:`openoa.plant.PlantData` object that has been validated
@@ -238,7 +278,8 @@ class WakeLosses(FromDictMixin):
                 to True.
             no_wakes_ws_thresh_LT_corr (float, optional): The wind speed threshold (inclusive) above which rated
                 power is assigned to both the actual and potential power production variables if operational data are
-                missing for any wind direction and wind speed bin during the long term-correction process. Only used if
+                missing for any wind direction and wind speed bin during the long term-correction process. This wind
+                speed corresponds to the wind speed measured at freestream wind turbines. Only used if
                 assume_no_wakes_high_ws_LT_corr is True. Defaults to 13 m/s.
         Returns:
             (None)
@@ -291,7 +332,7 @@ class WakeLosses(FromDictMixin):
 
         for n in tqdm(range(self._num_sim)):
 
-            self._run = self.inputs.loc[n]
+            self._run = self.inputs.loc[n].copy()
 
             # Estimate periods when each turbine is unavailable, derated, or curtailed, based on power curve filtering
             for t in self.turbine_ids:
@@ -791,12 +832,12 @@ class WakeLosses(FromDictMixin):
         # Calculate reference mean wind direction
         self._calculate_mean_wind_direction()
 
-        # remove times with any missing turbine IDs or data
-        # TODO: revisit because this may remove too many samples
-        self.aggregate_df = self.aggregate_df.dropna(how="any")
-
         # Add reanalysis data to aggregate data frame
         self._include_reanal_data()
+
+        # remove times with any missing data
+        # TODO: revisit because this may remove too many samples
+        self.aggregate_df = self.aggregate_df.dropna(how="any")
 
         # Drop turbine-level wind direction column
         if self.wind_direction_data_type == "scada":
@@ -848,11 +889,11 @@ class WakeLosses(FromDictMixin):
             (None)
         """
 
-        # combine all reanalysis variables into aggregate data frame
+        # combine all wind speed and wind direction reanalysis variables into aggregate data frame
 
         for product in self.reanal_products:
 
-            df_rean = self.plant.reanalysis[product].copy()
+            df_rean = self.plant.reanalysis[product][["windspeed", "wind_direction"]].copy()
 
             # Drop minute field
             df_rean.index = df_rean.index.floor("H")
@@ -881,7 +922,7 @@ class WakeLosses(FromDictMixin):
             # Apply window range filter to flag samples for which wind speed is greater than a threshold and power is
             # below 1% of rated power
 
-            turb_capac = self.plant.asset.loc[t, "rated_power"] * 1e3
+            turb_capac = self.plant.asset.loc[t, "rated_power"]
 
             flag_window = filters.window_range_flag(
                 window_col=self.aggregate_df[("windspeed", t)],
@@ -969,6 +1010,11 @@ class WakeLosses(FromDictMixin):
             df_1hr["windspeed_mean_freestream"].values.reshape(-1, 1)
         )
 
+        # adjust the _no_wakes_ws_thresh_LT_corr parameter to relect the SCADA wind speed correction as well
+        no_wakes_ws_corr_thresh_LT_corr = np.round(
+            reg.predict(np.array(self._no_wakes_ws_thresh_LT_corr).reshape(1, -1))[0]
+        )
+
         # Create data frame with long-term frequencies of wind direction and wind speed bins from reanalysis data
         df_reanal_freqs = pd.DataFrame()
 
@@ -1045,16 +1091,16 @@ class WakeLosses(FromDictMixin):
         # missing by assigning rated power to the actual and potential power production
         if self._assume_no_wakes_high_ws_LT_corr:
             fill_inds = (df_1hr_bin[("actual_plant_power", "")].isna()) & (
-                df_1hr_bin.index.get_level_values(1) >= self._no_wakes_ws_thresh_LT_corr
+                df_1hr_bin.index.get_level_values(1) >= no_wakes_ws_corr_thresh_LT_corr
             )
             df_1hr_bin.loc[
                 fill_inds, [("actual_plant_power", ""), ("potential_plant_power", "")]
-            ] = (self.plant.metadata.capacity * 1e6)
+            ] = (self.plant.metadata.capacity * 1e3)
             df_1hr_bin.loc[
                 fill_inds,
                 [("power", t) for t in self.turbine_ids]
                 + [("potential_turbine_power", t) for t in self.turbine_ids],
-            ] = 2 * [self.plant.asset.loc[t, "rated_power"] * 1e3 for t in self.turbine_ids]
+            ] = 2 * [self.plant.asset.loc[t, "rated_power"] for t in self.turbine_ids]
 
         df_1hr_bin["actual_plant_energy"] = (
             df_1hr_bin["freq"] * df_1hr_bin[("actual_plant_power", "")]
@@ -1321,12 +1367,10 @@ class WakeLosses(FromDictMixin):
         axs[len(axs) - 1].set_xlabel(r"Wind Direction ($^\circ$)")
         axs[0].legend()
         axs[0].set_ylabel("Wind Plant Efficiency (-)")
-        axs[0].grid()
 
         if plot_norm_energy:
             axs[1].legend()
             axs[1].set_ylabel("Normalized Wind Plant\nEnergy Production (-)")
-            axs[1].grid()
 
             plt.tight_layout()
 
@@ -1528,12 +1572,10 @@ class WakeLosses(FromDictMixin):
         axs[len(axs) - 1].set_xlabel("Freestream Wind Speed (m/s)")
         axs[0].legend()
         axs[0].set_ylabel("Wind Plant Efficiency (-)")
-        axs[0].grid()
 
         if plot_norm_energy:
             axs[1].legend()
             axs[1].set_ylabel("Normalized Wind Plant\nEnergy Production (-)")
-            axs[1].grid()
 
             plt.tight_layout()
 
