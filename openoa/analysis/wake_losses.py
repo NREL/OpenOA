@@ -227,7 +227,7 @@ class WakeLosses(FromDictMixin):
         Args:
             num_sim (int, optional): Number of Monte Carlo iterations to perform. Only used if UQ = True.
                 Defaults to 100.
-            wd_bin_width (float, optional): Wind diretion bin size when identifying freestream wind turbines
+            wd_bin_width (float, optional): Wind direction bin size when identifying freestream wind turbines
                 (degrees). Defaults to 5 degrees.
             freestream_sector_width (tuple | float, optional): Wind direction sector size to use when
                 identifying freestream wind turbines (degrees). If no turbines are located upstream of a particular
