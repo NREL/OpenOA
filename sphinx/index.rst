@@ -29,7 +29,7 @@ and reanalysis products such as Merra2.
 Analysis routines are provided in analysis classes, which each use the PlantData objects to ingest data.
 
 To interact with how each of these components of OpenOA are used, please visit our examples notebooks on
-`Binder <https://mybinder.org/v2/gh/NREL/OpenOA/master?filepath=examples>`_, or view them statically on the
+`Binder <https://mybinder.org/v2/gh/NREL/OpenOA/develop_v3?filepath=examples>`_, or view them statically on the
 `examples page <examplesout.ipynb>`_.
 
 If you use this software in your work, please cite our JOSS article with the following BibTex::
@@ -60,7 +60,7 @@ Table of Contents
 
 
 .. |Binder Badge| image:: https://mybinder.org/badge_logo.svg
-   :target: https://mybinder.org/v2/gh/NREL/OpenOA/main?filepath=examples
+   :target: https://mybinder.org/v2/gh/NREL/OpenOA/develop_v3?filepath=examples
 .. |Gitter Badge| image:: https://badges.gitter.im/NREL_OpenOA/community.svg
    :target: https://gitter.im/NREL_OpenOA/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge
 .. |Journal of Open Source Software Badge| image:: https://joss.theoj.org/papers/d635ef3c3784d49f6e81e07a0b35ff6b/status.svg
