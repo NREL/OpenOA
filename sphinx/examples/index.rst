@@ -63,6 +63,17 @@ EYA Gap Analysis Example
   how to customize them, and how to use them through the :py:mod:`openoa.utils.plotting.py`
   interface
 
+Wake Loss Analysis Example
+========================
+
+* Introduces the operational wake loss estimation class and workflow
+* Demonstrates the estimation of wake losses based on turbine-level SCADA data during the
+  period of record as well as the long-term corrected wake losses incorporating historical
+  reanalysis wind resource data
+* Illustrates the estimation of wake losses at the wind plant level as well as for each wind
+  turbine with and without uncertainty quantification
+* Demonstrates methods for plotting wake losses as a function of wind direction and wind speed
+
 
 Table of Contents
 *****************
