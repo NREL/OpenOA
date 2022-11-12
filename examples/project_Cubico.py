@@ -354,6 +354,7 @@ def get_era5(asset="penmanshiel",lat=55.864,lon=-2.352):
 
     Returns:
         NetCDF annual ERA5 files saved to the asset data folder
+        ERA5 csv file saved to the asset data folder
     """
 
     # set up cds-api client
@@ -443,7 +444,104 @@ def get_era5(asset="penmanshiel",lat=55.864,lon=-2.352):
     df.to_csv("data//"+asset+"//"+asset+"_era5_monthly_10m.csv")
 
 
+def get_merra2(asset="penmanshiel",lat=55.864,lon=-2.352):
+    """
+    Get MERRA2 data directly from the NASA GES DISC service
+    This requires registration on the GES DISC service
+    See: https://disc.gsfc.nasa.gov/information/howto?title=How%20to%20Generate%20Earthdata%20Prerequisite%20Files
 
+    Monthly 10m height data is demonstrated here,
+    as hourly data takes too long to download, but could be amended
+    and other GES DISC datasets also used (e.g. FLDAS)
+
+    Args:
+        asset (str): name of the asset.
+        lat (float): latitude of the asset as decimal degrees
+        lon (float): longitude of the asset as decimal degrees
+
+    Returns:
+        Global NetCDF monthly MERRA-2 files saved to the data folder - TODO: limit to nearest 9 nodes
+        MERRA-2 csv file saved to the asset data folder
+    """
+    
+    base_url = r"https://goldsmr4.gesdisc.eosdis.nasa.gov/opendap/MERRA2_MONTHLY/M2IMNXLFO.5.12.4/"
+
+    # the merra2 asset data is stored with the asset data
+    outfile_path_asset = r"data//"+asset+"/MERRA2_monthly_10m//"
+
+    # the global data is stored in its own data folder
+    outfile_path = r"data/MERRA2_monthly_10m//"
+    
+    # create outfile_path if it does not exist
+    if not os.path.exists(outfile_path):
+        os.makedirs(outfile_path)
+
+
+    now = datetime.datetime.now()
+    years = list(range(2000,now.year+1,1))
+
+    # download the data
+    for year in years:
+        
+        # get the file names from the GES DISC site for the year
+        result = requests.get(base_url+str(year))
+        
+        files = re.findall(r"(>MERRA2_\S+.nc4)", result.text)
+        files = list(dict.fromkeys(files))
+        files = [x[1:] for x in files]
+        
+        # download each of the files and save them
+        for file in files:
+            
+            outfile = outfile_path+"/MERRA2_monthly_"+file.split(".")[-2]+".nc"
+
+            if not os.path.isfile(outfile):
+
+                url = base_url+str(year)+"//"+file+r".nc4?PS,SPEEDLML,TLML,time,lat,lon"
+                
+                result = requests.get(url)
+
+                try:
+                    result.raise_for_status()
+                    
+                    try:
+                        with open(outfile, 'wb') as f:
+                            f.write(result.content)
+                    except:
+                        print('Error writing to '+outfile)
+
+                    print('Contents of '+file+' written to '+outfile)
+
+                except:
+                    print('Requests.get() returned an error code '+str(result.status_code))
+                    print(url)
+                    
+                    
+    # get the saved data
+    ds_nc = xr.open_mfdataset(outfile_path+"MERRA2_monthly_"+"*.nc")
+
+    # renamce variables to conform with OpenOA
+    ds_nc = ds_nc.rename_vars({"SPEEDLML":"windspeed_ms","TLML":"temperature_K","PS":"surf_pres_Pa"})
+    
+    # select the central node only for now
+    sel = ds_nc.sel(latitude=lat,longitude=lon, method="nearest")   
+
+    # convert to a pandas dataframe
+    df = sel.to_dataframe()
+
+    # select required columns
+    df = df[["windspeed_ms","temperature_K","surf_pres_Pa"]]
+
+    # rename the index to match other datasets
+    df.index.name = "datetime"
+
+    # drop any empty rows
+    df = df.dropna()
+    
+    # export to csv for easy loading next time
+    df.to_csv("data//"+asset+"//"+asset+"_MERRA2_monthly_10m.csv")
+                    
+                    
 def prepare(asset="kelmarsh", return_value="plantdata"):
     """
     Do all loading and preparation of the data for this plant.
