@@ -67,19 +67,34 @@ def download_file(url,outfile):
         Downloaded file saved to outfile
     """
     
-    get_response = requests.get(url,stream=True)
+    result = requests.get(url,stream=True)
     
-    chunk_number = 0
-    with open(outfile, "wb") as f:
+    try:
+        result.raise_for_status()
         
-        for chunk in get_response.iter_content(chunk_size=1024*1024):
+        chunk_number = 0
+        
+        try:
+            with open(outfile, "wb") as f:
+                
+                for chunk in result.iter_content(chunk_size=1024*1024):
+                    
+                    chunk_number = chunk_number + 1
+                    
+                    print(str(chunk_number) + " MB downloaded", end="\r")
+                    
+                    if chunk: # filter out keep-alive new chunks
+                        f.write(chunk)
+                        
+            logger.info('Contents of '+url+' written to '+outfile)
             
-            chunk_number = chunk_number + 1
+        except:
+            logger.error('Error writing to '+outfile)
             
-            print(str(chunk_number) + " MB downloaded", end="\r")
-            
-            if chunk: # filter out keep-alive new chunks
-                f.write(chunk)
+           
+    except:
+        logger.error('Requests.get() returned an error code '+str(result.status_code))
+        logger.error(url)
 
 
 def download_zenodo_data(record_id,outfile_path):
@@ -460,17 +475,14 @@ def get_merra2(asset="penmanshiel",lat=55.864,lon=-2.352):
         lon (float): longitude of the asset as decimal degrees
 
     Returns:
-        Global NetCDF monthly MERRA-2 files saved to the data folder - TODO: limit to nearest 9 nodes
+        NetCDF monthly MERRA-2 files saved to the data folder
         MERRA-2 csv file saved to the asset data folder
     """
     
     base_url = r"https://goldsmr4.gesdisc.eosdis.nasa.gov/opendap/MERRA2_MONTHLY/M2IMNXLFO.5.12.4/"
 
     # the merra2 asset data is stored with the asset data
-    outfile_path_asset = r"data//"+asset+"/MERRA2_monthly_10m//"
-
-    # the global data is stored in its own data folder
-    outfile_path = r"data/MERRA2_monthly_10m//"
+    outfile_path = r"data//"+asset+"//MERRA2_monthly_10m//"
     
     # create outfile_path if it does not exist
     if not os.path.exists(outfile_path):
@@ -480,6 +492,8 @@ def get_merra2(asset="penmanshiel",lat=55.864,lon=-2.352):
     now = datetime.datetime.now()
     years = list(range(2000,now.year+1,1))
 
+    
+    
     # download the data
     for year in years:
         
@@ -490,6 +504,11 @@ def get_merra2(asset="penmanshiel",lat=55.864,lon=-2.352):
         files = list(dict.fromkeys(files))
         files = [x[1:] for x in files]
         
+        
+        # coordinate indexes
+        lat_i = ""
+        lon_i = ""
+        
         # download each of the files and save them
         for file in files:
             
@@ -497,25 +516,25 @@ def get_merra2(asset="penmanshiel",lat=55.864,lon=-2.352):
 
             if not os.path.isfile(outfile):
 
-                url = base_url+str(year)+"//"+file+r".nc4?PS,SPEEDLML,TLML,time,lat,lon"
+                # download one file for determining coordinate indicies
+                if lat_i=="":
+                    url = base_url+str(year)+"//"+file+r".nc4?PS,SPEEDLML,TLML,time,lat,lon"
+                    download_file(url,outfile)
+                    ds_nc = xr.open_dataset(outfile)
+                    ds_nc_idx = ds_nc.assign_coords(lon_idx=("lon",range(ds_nc.dims['lon'])),lat_idx=("lat",range(ds_nc.dims['lat'])))
+                    sel = ds_nc_idx.sel(lat=lat,lon=lon, method="nearest")
+                    lon_i = "["+str(sel.lon_idx.values-1)+":"+str(sel.lon_idx.values+1)+"]"
+                    lat_i = "["+str(sel.lat_idx.values-1)+":"+str(sel.lat_idx.values+1)+"]"
+                    ds_nc.close()
+                    os.remove(outfile) 
+                    
+                    
+                url = base_url+str(year)+"//"+file+r".nc4?PS[0:0]"+lat_i+lon_i+",SPEEDLML[0:0]"+lat_i+lon_i+",TLML[0:0]"+lat_i+lon_i+",time,lat"+lat_i+",lon"+lon_i
                 
-                result = requests.get(url)
+                download_file(url,outfile)
+                
 
-                try:
-                    result.raise_for_status()
-                    
-                    try:
-                        with open(outfile, 'wb') as f:
-                            f.write(result.content)
-                    except:
-                        print('Error writing to '+outfile)
-
-                    print('Contents of '+file+' written to '+outfile)
-
-                except:
-                    print('Requests.get() returned an error code '+str(result.status_code))
-                    print(url)
-                    
+                            
                     
     # get the saved data
     ds_nc = xr.open_mfdataset(outfile_path+"MERRA2_monthly_"+"*.nc")
@@ -524,7 +543,7 @@ def get_merra2(asset="penmanshiel",lat=55.864,lon=-2.352):
     ds_nc = ds_nc.rename_vars({"SPEEDLML":"windspeed_ms","TLML":"temperature_K","PS":"surf_pres_Pa"})
     
     # select the central node only for now
-    sel = ds_nc.sel(latitude=lat,longitude=lon, method="nearest")   
+    sel = ds_nc.sel(lat=lat,lon=lon, method="nearest")   
 
     # convert to a pandas dataframe
     df = sel.to_dataframe()
@@ -540,6 +559,7 @@ def get_merra2(asset="penmanshiel",lat=55.864,lon=-2.352):
     
     # export to csv for easy loading next time
     df.to_csv("data//"+asset+"//"+asset+"_MERRA2_monthly_10m.csv")
+    
                     
                     
 def prepare(asset="kelmarsh", return_value="plantdata"):
