@@ -252,7 +252,7 @@ def test_SCADAMetaData():
         frequency="H",
     )
     valid_map = deepcopy(meta_dict)
-    valid_map.update(dict(id="id", WTUR_W="WTUR_W"))
+    valid_map.update(dict(WTUR_TurNam="WTUR_TurNam", WTUR_W="WTUR_W"))
     valid_map.pop("frequency")
 
     meta = SCADAMetaData.from_dict(meta_dict)
