@@ -63,7 +63,7 @@ ANALYSIS_REQUIREMENTS = {
     },
     "ElectricalLosses": {
         "scada": {
-            "columns": ["energy"],
+            "columns": ["WTUR_SupWh"],
             "freq": _at_least_daily,
         },
         "meter": {
@@ -413,7 +413,7 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
         time (str): The datetime stamp for the SCADA data, by default "time". This data should be of
             type: `np.datetime64[ns]`, or able to be converted to a pandas DatetimeIndex. Additional
             columns describing the datetime stamps are: `frequency`
-        id (str): The turbine identifier column in the SCADA data, by default "id". This data should be of
+        WTUR_TurNam (str): The turbine identifier column in the SCADA data, by default "id". This data should be of
             type: `str`.
         WTUR_W (str): The power produced, in kW, column in the SCADA data, by default "WTUR_W".
             This data should be of type: `float`.
@@ -421,7 +421,7 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
             This data should be of type: `float`.
         WMET_HorWdDir (str): The measured wind direction, in degrees, column in the SCADA data, by default
             "WMET_HorWdDir". This data should be of type: `float`.
-        status (str): The status code column in the SCADA data, by default "status". This data
+        WTUR_TurSt (str): The status code column in the SCADA data, by default "WTUR_TurSt". This data
             should be of type: `str`.
         WROT_BlPthAngVal (str): The pitch, in degrees, column in the SCADA data, by default "WROT_BlPthAngVal". This data
             should be of type: `float`.
@@ -438,11 +438,11 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
 
     # DataFrame columns
     time: str = field(default="time")
-    id: str = field(default="id")
+    WTUR_TurNam: str = field(default="WTUR_TurNam")
     WTUR_W: str = field(default="WTUR_W")
     WMET_HorWdSpd: str = field(default="WMET_HorWdSpd")
     WMET_HorWdDir: str = field(default="WMET_HorWdDir")
-    status: str = field(default="status")
+    WTUR_TurSt: str = field(default="WTUR_TurSt")
     WROT_BlPthAngVal: str = field(default="WROT_BlPthAngVal")
     WMET_EnvTmp: str = field(default="WMET_EnvTmp")
 
@@ -452,33 +452,33 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
     # Parameterizations that should not be changed
     # Prescribed mappings, datatypes, and units for in-code reference.
     name: str = field(default="scada", init=False)
-    energy: str = field(default="energy", init=False)  # calculated in PlantData
+    WTUR_SupWh: str = field(default="WTUR_SupWh", init=False)  # calculated in PlantData
     col_map: dict = field(init=False)
     dtypes: dict = field(
         default=dict(
             time=np.datetime64,
-            id=str,
+            WTUR_TurNam=str,
             WTUR_W=float,
             WMET_HorWdSpd=float,
             WMET_HorWdDir=float,
-            status=str,
+            WTUR_TurSt=str,
             WROT_BlPthAngVal=float,
             WMET_EnvTmp=float,
-            energy=float,
+            WTUR_SupWh=float,
         ),
         init=False,  # don't allow for user input
     )
     units: dict = field(
         default=dict(
             time="datetim64[ns]",
-            id=None,
+            WTUR_TurNam=None,
             WTUR_W="kW",
             WMET_HorWdSpd="m/s",
             WMET_HorWdDir="deg",
-            status=None,
+            WTUR_TurSt=None,
             WROT_BlPthAngVal="deg",
             WMET_EnvTmp="C",
-            energy="kWh",
+            WTUR_SupWh="kWh",
         ),
         init=False,  # don't allow for user input
     )
@@ -486,14 +486,14 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
     def __attrs_post_init__(self) -> None:
         self.col_map = dict(
             time=self.time,
-            id=self.id,
+            WTUR_TurNam=self.WTUR_TurNam,
             WTUR_W=self.WTUR_W,
             WMET_HorWdSpd=self.WMET_HorWdSpd,
             WMET_HorWdDir=self.WMET_HorWdDir,
-            status=self.status,
+            WTUR_TurSt=self.WTUR_TurSt,
             WROT_BlPthAngVal=self.WROT_BlPthAngVal,
             WMET_EnvTmp=self.WMET_EnvTmp,
-            energy=self.energy,
+            WTUR_SupWh=self.WTUR_SupWh,
         )
 
 
@@ -838,6 +838,7 @@ class ReanalysisMetaData(FromDictMixin):  # noqa: F821
         frequency (:obj:`str`): The frequency of the timestamps in the :py:attr:`time` column, by
             default "10T".
     """
+
     time: str = field(default="time")
     WMETR_HorWdSpd: str = field(default="WMETR_HorWdSpd")
     WMETR_HorWdSpdU: str = field(default="WMETR_HorWdSpdU")
@@ -1252,10 +1253,10 @@ class PlantData:
         """Sets the index value for each of the `PlantData` objects that are not `None`."""
         if self.scada is not None:
             time_col = self.metadata.scada.col_map["time"]
-            id_col = self.metadata.scada.col_map["id"]
+            id_col = self.metadata.scada.col_map["WTUR_TurNam"]
             self.scada[time_col] = pd.DatetimeIndex(self.scada[time_col])
             self.scada = self.scada.set_index([time_col, id_col])
-            self.scada.index.names = ["time", "id"]
+            self.scada.index.names = ["time", "WTUR_TurNam"]
 
         if self.meter is not None:
             time_col = self.metadata.meter.col_map["time"]
@@ -1677,7 +1678,7 @@ class PlantData:
             self.reanalysis = reanalysis
 
     def _calculate_turbine_energy(self) -> None:
-        energy_col = self.metadata.scada.energy
+        energy_col = self.metadata.scada.WTUR_SupWh
         power_col = self.metadata.scada.WTUR_W
         frequency = self.metadata.scada.frequency
         self.scada[energy_col] = convert_power_to_energy(self.scada[power_col], frequency)

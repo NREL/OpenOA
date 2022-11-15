@@ -93,11 +93,11 @@ data type or can be converted to that type.
  Field Name          Descriptive Name   Data Type (SCADAMetaData.dtypes)   Units (SCADAMetaData.units)
 ==================== ================= ================================== =============================
  time                 time stamp        datetime64[ns]                     datetime64[ns]
- id                   id                string                             None
+ WTUR_TurNam          id                string                             None
  WTUR_W               power             float                              kW
  WMET_HorWdSpd        windspeed         float                              m/s
  WMET_HorWdDir        winddirection     float                              degrees
- status               status            string                             None
+ WTUR_TurSt           status            string                             None
  WROT_BlPthAngVal     pitch             float                              degrees
  WMET_EnvTmp          temp              float                              Celsius
 ==================== ================= ================================== =============================
@@ -270,18 +270,18 @@ data. Air density at the 58th model level is calculated using temperature data e
 of pressure at that level using the ideal gas law. Pressure at the 58th model level is extrapolated from surface pressure
 data provided in this dataset using the hypsometric equation.
 
-==================== ================== ======================================= ==================================
- Field Name           Descriptive Name   Data Type (ReanalysisMetaData.dtypes)   Units (ReanalysisMetaData.units)
-==================== ================== ======================================= ==================================
- time                 time stamp         datetime64[ns]                          datetime64[ns]
- WMETR_HorWdSpd       windspeed          float                                   m/s
- WMETR_HorWdSpdU      windspeed-u        float                                   m/s
- WMETR_HorWdSpdV      windspeed-v        float                                   m/s
- WMETR_HorWdDir       wind direction     float                                   degrees
- WMETR_EnvTmp         temperature        float                                   Kelvin
- WMETR_AirDen         air density        float                                   kg/m^3
- WMEsTR_EnvPres       surface pressure   float                                   Pa
-==================== ================== ======================================= ==================================
+==================== ===================== ======================================= ==================================
+ Field Name           Descriptive Name      Data Type (ReanalysisMetaData.dtypes)   Units (ReanalysisMetaData.units)
+==================== ===================== ======================================= ==================================
+ time                 time stamp            datetime64[ns]                          datetime64[ns]
+ WMETR_HorWdSpd       windspeed             float                                   m/s
+ WMETR_HorWdSpdU      eastward windspeed    float                                   m/s
+ WMETR_HorWdSpdV      northward windspeed   float                                   m/s
+ WMETR_HorWdDir       wind direction        float                                   degrees
+ WMETR_EnvTmp         temperature           float                                   Kelvin
+ WMETR_AirDen         air density           float                                   kg/m^3
+ WMEsTR_EnvPres       surface pressure      float                                   Pa
+==================== ===================== ======================================= ==================================
 
 .. literalinclude:: ../../examples/data/plant_meta.yml
     :language: yaml

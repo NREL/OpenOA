@@ -64,7 +64,7 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
 
         - _scada_freq
         - reanalysis products with columns ['time', 'WMETR_HorWdSpdU', 'WMETR_HorWdSpdV', 'WMETR_HorWdSpd', 'WMETR_AirDen']
-        - scada with columns: ['time', 'id', 'WMET_HorWdSpd', 'WTUR_W', 'energy']
+        - scada with columns: ['time', 'id', 'WMET_HorWdSpd', 'WTUR_W', 'WTUR_SupWh']
 
     Args:
         UQ(:obj:`bool`): Indicator to perform (True) or not (False) uncertainty quantification.
@@ -246,7 +246,7 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
          8. Combine the flags using an "or" combination to be a new column in scada: "valid"
         """
         self.scada = (
-            self.plant.scada.swaplevel().sort_index().dropna(subset=["WMET_HorWdSpd", "energy"])
+            self.plant.scada.swaplevel().sort_index().dropna(subset=["WMET_HorWdSpd", "WTUR_SupWh"])
         )
         turbine_capacity = self.scada.groupby(level="id").max()["WTUR_W"]
         flag_range = filters.range_flag(self.scada.loc[:, "WMET_HorWdSpd"], below=0, above=40)
@@ -304,7 +304,7 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
             )  # Set maximum range for using bin-filter
 
             dic[t].dropna(
-                subset=["WMET_HorWdSpd", "energy"], inplace=True
+                subset=["WMET_HorWdSpd", "WTUR_SupWh"], inplace=True
             )  # Drop any data where scada wind speed or energy is NaN
 
             # Flag turbine energy data less than zero
@@ -366,9 +366,10 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
         # Capture the runs reanalysis data set and ensure the U/V components exist
         reanalysis_df = self.plant.reanalysis[self._run.reanalysis_product]
         if len(set(("WMETR_HorWdSpdU", "WMETR_HorWdSpdV")).intersection(reanalysis_df.columns)) < 2:
-            reanalysis_df["WMETR_HorWdSpdU"], reanalysis_df["WMETR_HorWdSpdV"] = met.compute_u_v_components(
-                "WMETR_HorWdSpd", "WMETR_HorWdDir", reanalysis_df
-            )
+            (
+                reanalysis_df["WMETR_HorWdSpdU"],
+                reanalysis_df["WMETR_HorWdSpdV"],
+            ) = met.compute_u_v_components("WMETR_HorWdSpd", "WMETR_HorWdDir", reanalysis_df)
 
         # Resample at a daily resolution and recalculate daily average wind direction
         df_daily = reanalysis_df.groupby([pd.Grouper(freq="D", level="time")])[
@@ -404,24 +405,26 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
             scada_filt = scada[t].loc[~scada[t]["flag_final"]]  # Filter for valid data
             # Calculate daily energy sum
             scada_daily = (
-                scada_filt.groupby([pd.Grouper(freq="D", level="time")])["energy"].sum().to_frame()
+                scada_filt.groupby([pd.Grouper(freq="D", level="time")])["WTUR_SupWh"]
+                .sum()
+                .to_frame()
             )
 
             # Count number of entries in sum
             scada_daily["data_count"] = (
-                scada_filt.groupby([pd.Grouper(freq="D", level="time")])["energy"]
+                scada_filt.groupby([pd.Grouper(freq="D", level="time")])["WTUR_SupWh"]
                 .count()
                 .to_frame()
             )
             scada_daily["percent_nan"] = (
-                scada_filt.groupby([pd.Grouper(freq="D", level="time")])["energy"]
+                scada_filt.groupby([pd.Grouper(freq="D", level="time")])["WTUR_SupWh"]
                 .apply(ts.percent_nan)
                 .to_frame()
             )
 
             # Correct energy for missing data
             scada_daily["energy_corrected"] = (
-                scada_daily["energy"] * expected_count / scada_daily["data_count"]
+                scada_daily["WTUR_SupWh"] * expected_count / scada_daily["data_count"]
             )
 
             # Discard daily sums if less than 140 data counts (90% reported data)

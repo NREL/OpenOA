@@ -246,7 +246,7 @@ def test_SCADAMetaData():
         time="datetime",
         WMET_HorWdSpd="ws_100",
         WMET_HorWdDir="wd_100",
-        status="turb_stat",
+        WTUR_TurSt="turb_stat",
         WROT_BlPthAngVal="rotor_angle",
         WMET_EnvTmp="temp",
         frequency="H",
@@ -257,7 +257,7 @@ def test_SCADAMetaData():
 
     meta = SCADAMetaData.from_dict(meta_dict)
     cols = deepcopy(meta.col_map)
-    cols.pop("energy")  # need to move the internally-set mapping
+    cols.pop("WTUR_SupWh")  # need to move the internally-set mapping
     assert cols == valid_map
     assert meta.frequency == meta_dict["frequency"]
 
