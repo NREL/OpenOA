@@ -40,6 +40,7 @@ EXTRAS = {
         "nbmerge==0.0.4",
         "nbsphinx==0.8.*",
         "sphinx_design==0.3.*",
+        "sphinxcontrib-bibtex",
         "myst-parser",
     ],
     "entr": ["pyhive"],
