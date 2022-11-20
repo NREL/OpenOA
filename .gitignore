@@ -39,3 +39,4 @@ sphinx/examplesout.ipynb
 .local
 
 .ipython
+*.nc
