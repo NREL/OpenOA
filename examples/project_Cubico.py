@@ -19,8 +19,8 @@ steps taken to correct the raw data for use in the PRUF OA code.
 
 4. Reanalysis products
 - Import MERRA-2 and ERA5 1-hour reanalysis data
-- Import ERA-5 monthly reanalysis data at 10m height for wind
-- Wind speed, wind direction, temperature, and density
+- Import ERA-5 and MERRA-2 monthly reanalysis data at ground level
+- Fields cover wind speed, wind direction, temperature, and air density
 """
 
 from __future__ import annotations
@@ -372,12 +372,15 @@ def get_era5(asset="penmanshiel",lat=55.864,lon=-2.352):
         ERA5 csv file saved to the asset data folder
     """
 
+    logger.info("Please note access to ERA5 data requires registration")
+    logger.info("Please see: https://cds.climate.copernicus.eu/api-how-to")
+
     # set up cds-api client
     try:
         c = cdsapi.Client()
     except Exception as e:
         logger.error('Failed to make connection to cds: '+ str(e))
-        logger.error('Please See: https://cds.climate.copernicus.eu/api-how-to')
+        logger.error('Please see: https://cds.climate.copernicus.eu/api-how-to')
         raise NameError(e)
 
     # the data is stored with the asset data
@@ -479,6 +482,10 @@ def get_merra2(asset="penmanshiel",lat=55.864,lon=-2.352):
         MERRA-2 csv file saved to the asset data folder
     """
     
+    logger.info("Please note access to MERRA2 data requires registration")
+    logger.info("Please see: https://disc.gsfc.nasa.gov/information/howto?title=How%20to%20Generate%20Earthdata%20Prerequisite%20Files")
+
+    # base url containing the monthly data set M2IMNXLFO
     base_url = r"https://goldsmr4.gesdisc.eosdis.nasa.gov/opendap/MERRA2_MONTHLY/M2IMNXLFO.5.12.4/"
 
     # the merra2 asset data is stored with the asset data
@@ -645,7 +652,15 @@ def prepare(asset="kelmarsh", return_value="plantdata"):
 
     logger.info("Reading ERA5 monthly")
     reanalysis_era5_monthly_df = pd.read_csv(path/(asset+"_era5_monthly_10m.csv"))
-    reanalysis_dict.update(dict(erai=reanalysis_era5_monthly_df))
+    reanalysis_dict.update(dict(era5_monthly=reanalysis_era5_monthly_df))
+
+    # MERRA2 monthly 10m
+    logger.info("Loading MERRA2 monthly")
+    get_merra2(asset=asset,lat=asset_df["Latitude"].mean(),lon=asset_df["Longitude"].mean())
+
+    logger.info("Reading MERRA2 monthly")
+    reanalysis_merra2_monthly_df = pd.read_csv(path/(asset+"_merra2_monthly_10m.csv"))
+    reanalysis_dict.update(dict(merra2_monthly=reanalysis_merra2_monthly_df))
 
 
     ###################
@@ -705,7 +720,7 @@ def prepare(asset="kelmarsh", return_value="plantdata"):
           "wind_direction":"winddirection_deg",
         },
 
-        "erai": {
+        "era5_monthly": {
           "frequency": "1MS",
           "surface_pressure": "surf_pres_Pa",
           "temperature": "temperature_K",
@@ -713,6 +728,14 @@ def prepare(asset="kelmarsh", return_value="plantdata"):
           "windspeed":"windspeed_ms",
         },
         
+        "merra2_monthly": {
+          "frequency": "1MS",
+          "surface_pressure": "surf_pres_Pa",
+          "temperature": "temperature_K",
+          "time": "datetime",
+          "windspeed":"windspeed_ms",
+        },
+
       },
         
       "scada": {
