@@ -22,32 +22,32 @@
   },
   "reanalysis": {
     "era5": {
-      "frequency": "H",
       "WMETR_EnvPres": "surf_pres",
       "WMETR_EnvTmp": "t_2m",
-      "time": "datetime",
+      "WMETR_HorWdDir": "winddirection_deg",
       "WMETR_HorWdSpdU": "u_100",
       "WMETR_HorWdSpdV": "v_100",
-      "WMETR_HorWdDir": "winddirection_deg"
+      "frequency": "H",
+      "time": "datetime"
     },
     "merra2": {
-      "frequency": "H",
       "WMETR_EnvPres": "surface_pressure",
       "WMETR_EnvTmp": "temp_10m",
-      "time": "datetime",
+      "WMETR_HorWdDir": "winddirection_deg",
       "WMETR_HorWdSpdU": "u_50",
       "WMETR_HorWdSpdV": "v_50",
-      "WMETR_HorWdDir": "winddirection_deg"
+      "frequency": "H",
+      "time": "datetime"
     }
   },
   "scada": {
-    "frequency": "10T",
-    "id": "Wind_turbine_name",
-    "WROT_BlPthAngVal": "Ba_avg",
-    "WTUR_W": "P_avg",
     "WMET_EnvTmp": "Ot_avg",
-    "time": "Date_time",
     "WMET_HorWdDir": "Wa_avg",
-    "WMET_HorWdSpd": "Ws_avg"
+    "WMET_HorWdSpd": "Ws_avg",
+    "WROT_BlPthAngVal": "Ba_avg",
+    "WTUR_TurNam": "Wind_turbine_name",
+    "WTUR_W": "P_avg",
+    "frequency": "10T",
+    "time": "Date_time"
   }
 }

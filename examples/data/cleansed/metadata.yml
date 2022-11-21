@@ -1,13 +1,13 @@
 scada:
   time: time
-  id: id
+  WTUR_TurNam: WTUR_TurNam
   WTUR_W: WTUR_W
   WMET_HorWdSpd: WMET_HorWdSpd
   WMET_HorWdDir: WMET_HorWdDir
-  status: status
+  WTUR_TurSt: WTUR_TurSt
   WROT_BlPthAngVal: WROT_BlPthAngVal
   WMET_EnvTmp: WMET_EnvTmp
-  energy: energy
+  WTUR_SupWh: WTUR_SupWh
   frequency: 10T
 meter:
   time: time

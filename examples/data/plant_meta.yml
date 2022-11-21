@@ -36,7 +36,7 @@ reanalysis:
     WMETR_HorWdDir: winddirection_deg  # wind direction, degrees
 scada:
   frequency: 10T  # timestamp frequency
-  id: Wind_turbine_name  # Unique ID of wind turbine
+  WTUR_TurNam: Wind_turbine_name  # Unique ID of wind turbine
   WROT_BlPthAngVal: Ba_avg  # pitch angle, degrees
   WTUR_W: P_avg  # power produced, kW
   WMET_EnvTmp: Ot_avg  # temperature, C
