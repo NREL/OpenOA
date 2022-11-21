@@ -1390,21 +1390,33 @@ class PlantData:
         with open((save_path / metadata).with_suffix(".yml"), "w") as f:
             yaml.safe_dump(meta, f, default_flow_style=False, sort_keys=False)
         if self.scada is not None:
-            self.scada.to_csv((save_path / scada).with_suffix(".csv"), index_label=["time", "id"])
+            self.scada.reset_index(drop=False).to_csv(
+                (save_path / scada).with_suffix(".csv"), index=False
+            )
         if self.status is not None:
-            self.status.to_csv((save_path / status).with_suffix(".csv"), index_label=["time", "id"])
+            self.status.reset_index(drop=False).to_csv(
+                (save_path / status).with_suffix(".csv"), index=False
+            )
         if self.tower is not None:
-            self.tower.to_csv((save_path / tower).with_suffix(".csv"), index_label=["time", "id"])
+            self.tower.reset_index(drop=False).to_csv(
+                (save_path / tower).with_suffix(".csv"), index=False
+            )
         if self.meter is not None:
-            self.meter.to_csv((save_path / meter).with_suffix(".csv"), index_label=["time"])
+            self.meter.reset_index(drop=False).to_csv(
+                (save_path / meter).with_suffix(".csv"), index=False
+            )
         if self.curtail is not None:
-            self.curtail.to_csv((save_path / curtail).with_suffix(".csv"), index_label=["time"])
+            self.curtail.reset_index(drop=False).to_csv(
+                (save_path / curtail).with_suffix(".csv"), index=False
+            )
         if self.asset is not None:
-            self.asset.to_csv((save_path / asset).with_suffix(".csv"), index_label=["id"])
+            self.asset.reset_index(drop=False).to_csv(
+                (save_path / asset).with_suffix(".csv"), index=False
+            )
         if self.reanalysis is not None:
             for name, df in self.reanalysis.items():
-                df.to_csv(
-                    (save_path / f"{reanalysis}_{name}").with_suffix(".csv"), index_label=["time"]
+                df.reset_index(drop=False).to_csv(
+                    (save_path / f"{reanalysis}_{name}").with_suffix(".csv"), index=False
                 )
 
     def _validate_column_names(self, category: str = "all") -> dict[str, list[str]]:
