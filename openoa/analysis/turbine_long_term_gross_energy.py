@@ -283,7 +283,7 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
         for t in self.turbine_ids:
             # Store relevant variables in dictionary
             dic[t] = df.loc[df.index.get_level_values("WTUR_TurNam") == t].reindex(
-                columns=["WMET_HorWdSpd", "WTUR_W", "energy"]
+                columns=["WMET_HorWdSpd", "WTUR_W", "WTUR_SupWh"]
             )
             dic[t].sort_index(inplace=True)
 

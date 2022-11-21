@@ -370,7 +370,9 @@ class MonteCarloAEP(FromDictMixin):
             if self.plant.metadata.meter.frequency in ("1M", "1MS"):
                 self.aggregate["num_days_actual"] = self.aggregate["num_days_expected"]
             else:
-                self.aggregate["num_days_actual"] = df.resample("MS")["MMTR_SupWh"].apply(tm.num_days)
+                self.aggregate["num_days_actual"] = df.resample("MS")["MMTR_SupWh"].apply(
+                    tm.num_days
+                )
 
     @logged_method_call
     def process_loss_estimates(self):
@@ -688,7 +690,7 @@ class MonteCarloAEP(FromDictMixin):
             # Apply range filter to temperature, in Kelvin
             df_sub = df_sub.assign(
                 flag_range_T=filters.range_flag(
-                    df_sub[f"{reanal}_temperature"], lower=200, upper=320
+                    df_sub[f"{reanal}_WMETR_EnvTmp"], lower=200, upper=320
                 )
             )
         # Apply window range filter
@@ -748,7 +750,9 @@ class MonteCarloAEP(FromDictMixin):
             [reanal, "energy_gwh", "availability_gwh", "curtailment_gwh"],
         ]
         if self.reg_wind_direction:
-            add_cols = [f"{reanal}_{x}" for x in ("WMETR_HorWdDir", "WMETR_HorWdSpdU", "WMETR_HorWdSpdV")]
+            add_cols = [
+                f"{reanal}_{x}" for x in ("WMETR_HorWdDir", "WMETR_HorWdSpdU", "WMETR_HorWdSpdV")
+            ]
             valid_data_to_add = df_sub.loc[~df_sub.loc[:, "flag_final"], add_cols]
             valid_data = pd.concat([valid_data, valid_data_to_add], axis=1)
 

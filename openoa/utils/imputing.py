@@ -200,12 +200,12 @@ def impute_all_assets_by_correlation(
                 # target_data=data.xs(target_id, level=1).loc[:, [impute_col]],
                 target_data=data.loc[
                     data.index.get_level_values(1) == target_id, [impute_col]
-                ].droplevel("id"),
+                ].droplevel("WTUR_TurNam"),
                 target_col=impute_col,
                 # reference_data=data.xs(id_neighbor, level=1).loc[:, [reference_col]],
                 reference_data=data.loc[
                     data.index.get_level_values(1) == id_neighbor, [reference_col]
-                ].droplevel("id"),
+                ].droplevel("WTUR_TurNam"),
                 reference_col=impute_col,
                 method=method,
                 degree=degree,
