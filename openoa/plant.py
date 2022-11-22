@@ -1837,7 +1837,7 @@ class PlantData:
         Returns a list of freestream (unwaked) turbines for a given wind direction. Freestream turbines can be
         identified using different methods ("sector" or "IEC" methods). For the sector method, if there are any
         turbines upstream of a turbine within a fixed wind direction sector centered on the wind direction of interest,
-        defined by the sector_width argument, the turbine is condiered waked. The IEC method uses the freestream
+        defined by the sector_width argument, the turbine is considered waked. The IEC method uses the freestream
         definition provided in Annex A of IEC 61400-12-1 (2005).
 
         Args:
