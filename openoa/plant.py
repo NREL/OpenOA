@@ -1749,8 +1749,14 @@ class PlantData:
         """
         if asset_type is None:
             ix = self.asset.index.values
-        else:
+        elif asset_type == "turbine":
             ix = self.asset.loc[self.asset["type"] == asset_type].index.values
+        elif asset_type == "tower":
+            ix = self.asset.loc[self.asset["type"] == asset_type].index.values
+        else:
+            raise ValueError(
+                f"Input to `asset_type`: {asset_type} is invalid and must be one of 'None', 'tower', or 'turbine'."
+            )
 
         distance = (
             pd.DataFrame(
@@ -1785,8 +1791,14 @@ class PlantData:
         """
         if asset_type is None:
             ix = self.asset.index.values
-        else:
+        elif asset_type == "turbine":
             ix = self.asset.loc[self.asset["type"] == asset_type].index.values
+        elif asset_type == "tower":
+            ix = self.asset.loc[self.asset["type"] == asset_type].index.values
+        else:
+            raise ValueError(
+                f"Input to `asset_type`: {asset_type} is invalid and must be one of 'None', 'tower', or 'turbine'."
+            )
 
         direction = (
             pd.DataFrame(
