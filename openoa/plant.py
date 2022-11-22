@@ -1863,12 +1863,13 @@ class PlantData:
             )
         elif freestream_method == "IEC":
             # find freestream turbines according to the definition in Annex A of IEC 61400-12-1 (2005)
-            turbine_distance_matrix = self.distance_matrix(asset_type="turbine")
+            turbine_distance_matrix = self.asset_distance_matrix(asset_type="turbine")
 
             # normalize distances by rotor diameters of upstream turbines
-            rotor_diameters = np.ones((len(turbine_direction_matrix), 1)) * np.array(
-                self.asset.loc[self.asset["type"] == "turbine", "rotor_diameter"]
-            )
+            rotor_diameters = np.ones((len(turbine_direction_matrix), 1))
+            rotor_diameters *= self.asset.loc[
+                turbine_direction_matrix.index, "rotor_diameter"
+            ].values
             turbine_distance_matrix /= rotor_diameters
 
             freestream_indices = np.all(
