@@ -1223,7 +1223,7 @@ class PlantData:
     @asset.validator
     @reanalysis.validator
     def data_validator(
-        self, instance: attrs.Attribute, value: pd.DataFrame | dict[pd.DataFrame] | None
+        self, instance: attrs.Attribute, value: pd.DataFrame | dict[str | pd.DataFrame] | None
     ) -> None:
         """Validator function for each of the data buckets in `PlantData` that checks
         that the appropriate columns exist for each dataframe, each column is of the
