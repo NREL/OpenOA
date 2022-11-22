@@ -64,7 +64,7 @@ EYA Gap Analysis Example
   interface
 
 Wake Loss Analysis Example
-========================
+==========================
 
 * Introduces the operational wake loss estimation class and workflow
 * Demonstrates the estimation of wake losses based on turbine-level SCADA data during the

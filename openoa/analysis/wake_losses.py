@@ -33,72 +33,90 @@ NDArrayFloat = npt.NDArray[np.float64]
 @define(auto_attribs=True)
 class WakeLosses(FromDictMixin):
     """
-    A serial implementation of a method for estimating wake losses from SCADA data. Wake losses are estimated for the
-    entire wind plant as well as for each individual turbine for a) the period of record for which data are available,
-    and b) the estimated long-term wind conditions the wind plant will experience based on historical reanalysis wind
-    resource data. The method is comprised of the following core steps.
+    A serial implementation of a method for estimating wake losses from SCADA data. Wake losses are
+    estimated for the entire wind plant as well as for each individual turbine for a) the period of
+    record for which data are available, and b) the estimated long-term wind conditions the wind
+    plant will experience based on historical reanalysis wind resource data.
 
-    First, a representative wind plant-level wind direction is calculated at each time step using the mean value of the
-    wind direction signals for the specified set of wind turbines or meteorological (met) towers. Note that time steps
-    for which any necessary plant-level or turbine-level data are missing are discarded.
+    The method is comprised of the following core steps:
+        1. Calculate a representative wind plant-level wind direction at each time step using the
+           mean wind direction of the specified of wind turbines or meteorological (met) towers.
+           Note that time steps for which any necessary plant-level or turbine-level data are
+           missing are discarded.
 
-    If uncertainty quantification (UQ) is selected, wake losses are calculated multiple times using a Monte Carlo
-    approach using randomly chosen analysis parameters and time steps randomly sampled with replacement each iteration.
-    The remaining steps described below are performed for each Monte Carlo iteration. If UQ is not used, wake losses
-    are calculated once using the specified analysis parameters for the full set of available time steps.
+           a. If :py:attr:`UQ` is selected, wake losses are calculated multiple times using a Monte
+              Carlo approach with randomly chosen analysis parameters and randomly sampled, with
+              replacement, time steps for each iteration. The remaining steps described below are
+              performed for each Monte Carlo iteration. If UQ is not used, wake losses are calculated
+              once using the specified analysis parameters for the full set of available time steps.
 
-    As a first step in each iteration, the set of derated, curtailed, or unavailable turbines (i.e., turbines whose
-    power production is limited not by wake losses but by operating mode) is identified for each time step using power
-    curve outlier detection.
+        2. Identify the set of derated, curtailed, or unavailable turbines (i.e., turbines whose power
+           production is limited not by wake losses but by operating mode)for each time step using a
+           power curve outlier detection.
+        3. Calculate the average wind speed and power production for the set of normally operating
+           (i.e., not derated) freestream turbines.
 
-    Next, for a sequence of wind direction bins, the set of freestream turbines is identified based on whether any
-    other wind turbines are located upstream of a turbine within a user-specified sector of wind directions centered on
-    the bin center direction. The average power production and average wind speed are then calculated for the set of
-    freestream turbines operating normally (i.e., not derated) for each time step.
+           a. Freestream turbines are those with upstream turbines located within a user-specified
+              sector of wind directions centered on the bin center direction.
 
-    Period-of-record wake losses are then calculated for the wind plant by comparing the potential energy production,
-    calculated as the sum of the mean freestream power production multiplied by the number of turbines in the wind
-    plant, to the actual energy production, given by the sum of the actual wind plant power production at each time
-    step. If the option to correct for derated turbines is selected, the potential power production of the wind plant
-    is assumed to be limited to the actual power produced by the derated turbines plus the mean power production of the
-    freestream turbines for all other turbines in the wind plant. This same basic procedure is then used to estimate
-    the wake losses for each individual wind turbine.
+        4. Calculate the POR losses for the wind plant by comparing the potential energy production
+           (sum of the mean freestream power production multiplied by the number of turbines in the
+           wind power plant) to the actual energy production (sum of the actual wind plant power
+           production at each time step).
 
-    Finally, the long-term corrected wake losses are estimated using long-term historical reanalysis data. The
-    long-term frequencies of occurance are calculated for a set of wind direction and wind speed bins, based on
-    hourly reanalysis data (typically, 10-20 years). Next, the mean freestream wind speeds calculated from SCADA data
-    are compared to the wind speeds from the reanalysis data using linear regression and are corrected to remove
-    biases. Using the representative wind plant wind directions from SCADA or met tower data and the corrected
-    freestream wind speeds, the average potential and actual wind plant power production are computed for each wind
-    direction and wind speed bin. The long-term corrected wake losses are then estimated by comparing the long-term
-    corrected potential and actual energy production, which are in turn determined by weighting the average potential
-    and actual power production in each wind condition bin by the long-term frequencies. This basic process is then
-    repeated to estimate the long-term corrected wake losses for each individual turbine. Note that the long-term
-    correction is determined for each reanalysis product specified by the user. If UQ is used, a random reanalysis
-    product is selected each iteration. If UQ is not selected, the long-term corrected wake losses are calculated as
-    the average wake losses determined for all reanalysis products.
+           a. If :py:attr:`correct_for_derating` is True, then the potential power production of the
+              wind plant is assumed to be the actual power produced by the derated turbines plus the
+              mean power production of the freestream turbines for all other turbines in the wind
+              plant. This procedure is then used to estimate the wake losses for each individual
+              wind turbine.
+
+        5. Finally, estimate the long-term corrected wake losses using the long-term historical
+           reanalysis data.
+
+           a. Calculate the long-term occurence frequencies for a set of wind direction and wind
+              speed bins based on the hour reanalysis data (typically, 10-20 years).
+           b. Next, using a linear regression, compare the mean freestream wind speeds calculated
+              from the SCADA data to the wind speeds from the reanalysis data and correct to remove
+              biases.
+           c. Compute the average potential and actual wind power plant production using the
+              representative wind plant wind directions from the SCADA or met tower data in
+              conjunction with the corrected freestream wind speeds for each wind direction and wind
+              speed bin.
+           d. Estimate the long-term corrected wake losses by comparing the long-term
+              corrected potential and actual energy production. These are computed by weighting
+              the average potential and actual power production for each with condition bin
+              with the long-term frequencies.
+
+        6. Repeat to estimate the long-term corrected wake losses for each individual turbine. Note
+           that the long-term correction is determined for each reanalysis product specified by the
+           user. If UQ is used, a random reanalysis product is selected each iteration. If UQ is not
+           selected, the long-term corrected wake losses are calculated as the average wake losses
+           determined for all reanalysis products.
 
     Args:
         plant (:obj:`PlantData`): A :py:attr:`openoa.plant.PlantData` object that has been validated
             with at least `:py:attr:`openoa.plant.PlantData.analysis_type` = "WakeLosses".
         wind_direction_col (:obj:`string`, optional): Column name to use for wind direction.
             Defaults to "wind_direction"
-        wind_direction_data_type (:obj:`string`, optional): Data type to use for wind directions ("scada" for
-            turbine measurements or "tower" for meteorological tower measurements). Defaults to "scada".
-        wind_direction_asset_ids (:obj:`list`, optional): List of asset IDs (turbines or met towers) used to
-            calculate the average wind direction at each time step. If None, all assets of the corresponding data
-            type will be used. Defaults to None.
-        UQ (:obj:`bool`, optional): Dertermines whether to perform uncertainty quantification using Monte Carlo
-            simulation (True) or provide a single wake loss estimate (False). Defaults to True.
-        start_date (:obj:`pandas.Timestamp` or :obj:`string`, optional): Start datetime for wake loss analysis. If
-            None, the earliest SCADA datetime will be used. Default is None.
-        end_date (:obj:`pandas.Timestamp` or :obj:`string`, optional): End datetime for wake loss analysis. If
-            None, the latest SCADA datetime will be used. Default is None.
-        reanal_products (:obj:`list`, optional): List of reanalysis products to use for long-term correction. If
-            UQ = True, a single product will be selected form this list each Monte Carlo iteration. Defaults to
-            ["merra2", "era5"].
-        end_date_lt (:obj:`string` or :obj:`pandas.Timestamp`): The last date to use for the long-term correction.
-            If None, the most recent date common to all reanalysis products will be used.
+        wind_direction_data_type (:obj:`string`, optional): Data type to use for wind directions
+            ("scada" for turbine measurements or "tower" for meteorological tower measurements).
+            Defaults to "scada".
+        wind_direction_asset_ids (:obj:`list`, optional): List of asset IDs (turbines or met towers)
+            used to calculate the average wind direction at each time step. If None, all assets of
+            the corresponding data type will be used. Defaults to None.
+        UQ (:obj:`bool`, optional): Dertermines whether to perform uncertainty quantification using
+            Monte Carlo simulation (True) or provide a single wake loss estimate (False). Defaults
+            to True.
+        start_date (:obj:`pandas.Timestamp` or :obj:`string`, optional): Start datetime for wake
+            loss analysis. If None, the earliest SCADA datetime will be used. Default is None.
+        end_date (:obj:`pandas.Timestamp` or :obj:`string`, optional): End datetime for wake loss
+            analysis. If None, the latest SCADA datetime will be used. Default is None.
+        reanal_products (:obj:`list`, optional): List of reanalysis products to use for long-term
+            correction. If UQ = True, a single product will be selected form this list each Monte
+            Carlo iteration. Defaults to ["merra2", "era5"].
+        end_date_lt (:obj:`string` or :obj:`pandas.Timestamp`): The last date to use for the
+            long-term correction. If None, the most recent date common to all reanalysis products
+            will be used.
     """
 
     plant: PlantData = field(validator=attrs.validators.instance_of(PlantData))
