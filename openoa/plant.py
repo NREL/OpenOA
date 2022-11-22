@@ -1749,9 +1749,7 @@ class PlantData:
         """
         if asset_type is None:
             ix = self.asset.index.values
-        elif asset_type == "turbine":
-            ix = self.asset.loc[self.asset["type"] == asset_type].index.values
-        elif asset_type == "tower":
+        elif asset_type in ("turbine", "tower"):
             ix = self.asset.loc[self.asset["type"] == asset_type].index.values
         else:
             raise ValueError(
@@ -1791,9 +1789,7 @@ class PlantData:
         """
         if asset_type is None:
             ix = self.asset.index.values
-        elif asset_type == "turbine":
-            ix = self.asset.loc[self.asset["type"] == asset_type].index.values
-        elif asset_type == "tower":
+        elif asset_type in ("turbine", "tower"):
             ix = self.asset.loc[self.asset["type"] == asset_type].index.values
         else:
             raise ValueError(
