@@ -725,12 +725,6 @@ class WakeLosses(FromDictMixin):
         """
         Create and populate the data frame defining the Monte Carlo simulation parameters. This data frame is stored as
         self.inputs.
-
-        Args:
-            (None)
-
-        Returns:
-            (None)
         """
 
         if self.UQ:
@@ -825,12 +819,6 @@ class WakeLosses(FromDictMixin):
         """
         Creates a data frame with relevant scada columns, plant-level columns, and reanalysis variables to be used for
         the wake loss analysis. The reference mean wind direction is then added to the data frame.
-
-        Args:
-            (None)
-
-        Returns:
-            (None)
         """
 
         # keep relevant SCADA columns, create a unique time index and two-level turbine variable columns
@@ -867,11 +855,6 @@ class WakeLosses(FromDictMixin):
         Calculates the mean wind direction at each time step using the specified wind direction column for the
         specified subset of turbines or met towers. This reference mean wind direction is added to the plant-level data
         frame.
-
-        Args:
-            (None)
-        Returns:
-            (None)
         """
 
         def circular_average(x):
@@ -900,11 +883,6 @@ class WakeLosses(FromDictMixin):
     def _include_reanal_data(self):
         """
         Combines reanalysis data columns with the aggregate data frame for use in long-term correction.
-
-        Args:
-            (None)
-        Returns:
-            (None)
         """
 
         # combine all wind speed and wind direction reanalysis variables into aggregate data frame
@@ -928,12 +906,6 @@ class WakeLosses(FromDictMixin):
         """
         Estimates whether each turbine is derated, curtailed, or otherwise not operating for each time stamp based on
         power curve filtering. A derated flag is then added to the aggregate data frame for each turbine.
-
-        Args:
-            (None)
-
-        Returns:
-            (None)
         """
 
         for t in self.turbine_ids:
@@ -975,9 +947,6 @@ class WakeLosses(FromDictMixin):
         """
         Estimates long term-corrected wake losses by binning wake losses by wind direction and wind speed and weighting
         by bin frequencies from long-term historical reanalysis data.
-
-        Args:
-            (None)
 
         Returns:
             tuple[float, np.ndarray, np.ndarray, np.ndarray, np.ndarray]: The estimated long term-corrected wake
