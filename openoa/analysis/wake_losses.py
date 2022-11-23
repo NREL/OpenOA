@@ -238,69 +238,79 @@ class WakeLosses(FromDictMixin):
         no_wakes_ws_thresh_LT_corr: float = 13.0,
     ):
         """
-        Estimates wake losses by comparing wind plant energy production to energy production of turbines identified as
-        operating in freestream conditions. Wake losses are expressed as a fractional loss (e.g., 0.05 indicates a wake
-        loss values of 5%).
+        Estimates wake losses by comparing wind plant energy production to energy production of the
+        turbines identified as operating in freestream conditions. Wake losses are expressed as a
+        fractional loss (e.g., 0.05 indicates a wake loss values of 5%).
 
         Args:
-            num_sim (int, optional): Number of Monte Carlo iterations to perform. Only used if UQ = True.
-                Defaults to 100.
-            wd_bin_width (float, optional): Wind direction bin size when identifying freestream wind turbines
-                (degrees). Defaults to 5 degrees.
+            num_sim (int, optional): Number of Monte Carlo iterations to perform. Only used if
+                :py:attr:`UQ` = True. Defaults to 100.
+            wd_bin_width (float, optional): Wind direction bin size when identifying freestream wind
+                turbines (degrees). Defaults to 5 degrees.
             freestream_sector_width (tuple | float, optional): Wind direction sector size to use when
-                identifying freestream wind turbines (degrees). If no turbines are located upstream of a particular
-                turbine within the sector, the turbine will be classified as a freestream turbine. This should be a
-                tuple when UQ = True (values are Monte-Carlo sampled within the specified range) or a single value when
-                UQ = False. If undefined (None), a value of 90 degrees will be used if UQ = False and values of (50,
-                110) will be used if UQ = True. Defaults to None.
+                identifying freestream wind turbines (degrees). If no turbines are located upstream
+                of a particular turbine within the sector, the turbine will be classified as a
+                freestream turbine. When :py:attr:`UQ` = True, then this should be a tuple of the
+                lower and upper bounds for the Monte Carlo sampling, and when :py:attr:`UQ` = False
+                this should be a single value. If None, then a default value of 90 degrees will be
+                used if :py:attr:`UQ` = False and a default value of (50, 110) will be used if
+                :py:attr:`UQ` = True. Defaults to None.
             freestream_power_method (str, optional): Method used to determine the representative power
                 prouction of the freestream turbines ("mean", "median", "max"). Defaults to "mean".
-            freestream_wind_speed_method (str, optional): Method used to determine the representative wind
-                speed of the freestream turbines ("mean", "median"). Defaults to "mean".
+            freestream_wind_speed_method (str, optional): Method used to determine the representative
+                wind speed of the freestream turbines ("mean", "median"). Defaults to "mean".
             correct_for_derating (bool, optional): Indicates whether derated, curtailed, or otherwise
-                unavailable turbines should be flagged and excluded from the calculation of ideal freestream wind plant
-                power production for a given time stamp. If True, ideal freestream power production will be calculated
-                as the sum of the derated turbine powers added to the mean power of the freestream turbines in normal
-                operation multiplied by the number of turbines operating normally in the wind plant. Defaults to True.
+                unavailable turbines should be flagged and excluded from the calculation of ideal
+                freestream wind plant power production for a given time stamp. If True, ideal
+                freestream power production will be calculated as the sum of the derated turbine
+                powers added to the mean power of the freestream turbines in normal operation
+                multiplied by the number of turbines operating normally in the wind plant. Defaults
+                to True.
             derating_filter_wind_speed_start (tuple | float, optional): The wind speed above which
-                turbines will be flagged as derated/curtailed/shutdown if power is less than 1% of rated power (m/s).
-                Only used when correct_for_derating is True. This should be a tuple when UQ = True (values are
-                Monte-Carlo sampled within the specified range) or a single value when UQ = False. If undefined (None),
-                a value of 4.5 m/s will be used if UQ = False and values of (4.0, 5.0) will be used if UQ = True.
-                Defaults to None.
+                turbines will be flagged as derated/curtailed/shutdown if power is less than 1% of
+                rated power (m/s). Only used when correct_for_derating is True. This should be a
+                tuple when :py:attr:`UQ` = True (values are Monte-Carlo sampled within the specified
+                range) or a single value when :py:attr:`UQ` = False. If undefined (None), a value of
+                4.5 m/s will be used if :py:attr:`UQ` = False and values of (4.0, 5.0) will be used
+                if :py:attr:`UQ` = True. Defaults to None.
             max_power_filter (tuple | float, optional): Maximum power threshold, defined as a fraction
                 of rated power, to which the power curve bin filter should be applied. Only used when
-                correct_for_derating is True. This should be a tuple when UQ = True (values are Monte-Carlo sampled
-                within the specified range) or a single value when UQ = False. If undefined (None), a value of 0.95 will
-                be used if UQ = False and values of (0.92, 0.98) will be used if UQ = True. Defaults to None.
-            wind_bin_mad_thresh (tuple | float, optional): The filter threshold for each power bin used
-                to identify derated/curtailed/shutdown turbines, expressed as the number of median absolute deviations
-                above the median wind speed. Only used when correct_for_derating is True. This should be a tuple when
-                UQ = True (values are Monte-Carlo sampled within the specified range) or a single value when UQ =
-                False. If undefined (None), a value of 7.0 will be used if UQ = False and values of (4.0,
-                13.0) will be used if UQ = True. Defaults to None.
-            wd_bin_width_LT_corr (float, optional): Size of wind direction bins used to calculate long-term
-                frequencies from historical reanalysis data and correct wake losses during the period of record
-                (degrees). Defaults to 5 degrees.
-            ws_bin_width_LT_corr (float, optional): Size of wind speed bins used to calculate long-term
-                frequencies from historical reanalysis data and correct wake losses during the period of record (m/s).
-                Defaults to 1 m/s.
-            num_years_LT (tuple | int, optional): Number of years of historical reanalysis data to use
-                for long-term correction. This should be a tuple when UQ = True (values are Monte-Carlo sampled within
-                the specified range) or a single value when UQ = False. If undefined (None), a value of 20 will be
-                used if UQ = False and values of (10, 20) will be used if UQ = True. Defaults to None.
-            assume_no_wakes_high_ws_LT_corr (bool, optional): If True, wind direction and wind speed bins for
-                which operational data are missing above a certain wind speed threshold are corrected by assigning the
-                wind turbines' rated power to both the actual and potential power production variables during the long
-                term-correction process. This assumes there are no wake losses above the wind speed threshold. Defaults
-                to True.
-            no_wakes_ws_thresh_LT_corr (float, optional): The wind speed threshold (inclusive) above which rated
-                power is assigned to both the actual and potential power production variables if operational data are
-                missing for any wind direction and wind speed bin during the long term-correction process. This wind
-                speed corresponds to the wind speed measured at freestream wind turbines. Only used if
-                assume_no_wakes_high_ws_LT_corr is True. Defaults to 13 m/s.
-        Returns:
-            (None)
+                :py:attr:`correct_for_derating` = True. This should be a tuple when :py:attr:`UQ` =
+                True (values are Monte-Carlo sampled within the specified range) or a single value
+                when :py:attr:`UQ` = False. If undefined (None), a value of 0.95 will be used if
+                :py:attr:`UQ` = False and values of (0.92, 0.98) will be used if :py:attr:`UQ` =
+                True. Defaults to None.
+            wind_bin_mad_thresh (tuple | float, optional): The filter threshold for each power bin
+                used to identify derated/curtailed/shutdown turbines, expressed as the number of
+                median absolute deviations above the median wind speed. Only used when
+                :py:attr:`correct_for_derating` is True. This should be a tuple when
+                :py:attr:`UQ` = True (values are Monte-Carlo sampled within the specified range) or
+                a single value when :py:attr:`UQ` = False. If undefined (None), a value of 7.0 will
+                be used if :py:attr:`UQ` = False and values of (4.0, 13.0) will be used if
+                :py:attr:`UQ` = True. Defaults to None.
+            wd_bin_width_LT_corr (float, optional): Size of wind direction bins used to calculate
+                long-term frequencies from historical reanalysis data and correct wake losses during
+                the period of record (degrees). Defaults to 5 degrees.
+            ws_bin_width_LT_corr (float, optional): Size of wind speed bins used to calculate
+                long-term frequencies from historical reanalysis data and correct wake losses during
+                the period of record (m/s). Defaults to 1 m/s.
+            num_years_LT (tuple | int, optional): Number of years of historical reanalysis data to
+                use for long-term correction. This should be a tuple when :py:attr:`UQ` = True
+                (values are Monte-Carlo sampled within the specified range) or a single value when
+                :py:attr:`UQ` = False. If undefined (None), a value of 20 will be used if
+                :py:attr:`UQ` = False and values of (10, 20) will be used if :py:attr:`UQ` = True.
+                Defaults to None.
+            assume_no_wakes_high_ws_LT_corr (bool, optional): If True, wind direction and wind speed
+                bins for which operational data are missing above a certain wind speed threshold are
+                corrected by assigning the wind turbines' rated power to both the actual and
+                potential power production variables during the long term-correction process. This
+                assumes there are no wake losses above the wind speed threshold. Defaults to True.
+            no_wakes_ws_thresh_LT_corr (float, optional): The wind speed threshold (inclusive) above
+                which rated power is assigned to both the actual and potential power production
+                variables if operational data are missing for any wind direction and wind speed bin
+                during the long term-correction process. This wind speed corresponds to the wind
+                speed measured at freestream wind turbines. Only used if
+                :py:attr:`assume_no_wakes_high_ws_LT_corr` = True. Defaults to 13 m/s.
         """
 
         self._num_sim = num_sim
