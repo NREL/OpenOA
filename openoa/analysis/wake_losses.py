@@ -14,6 +14,7 @@ import attrs
 import numpy as np
 import pandas as pd
 import numpy.typing as npt
+import matplotlib.pyplot as plt
 from tqdm import tqdm
 from attrs import field, define
 from sklearn.linear_model import LinearRegression
@@ -26,8 +27,8 @@ from openoa.analysis._analysis_validators import validate_UQ_input
 
 
 logger = logging.getLogger(__name__)
-
 NDArrayFloat = npt.NDArray[np.float64]
+set_styling()
 
 
 @define(auto_attribs=True)
@@ -508,12 +509,13 @@ class WakeLosses(FromDictMixin):
                 self.aggregate_df_sample["wind_direction_bin"] == 360.0, "wind_direction_bin"
             ] = 0.0
 
-            # calculate turbine-level wake losses during period of record
+            # Calculate turbine-level wake losses during period of record
             turbine_wake_losses_por = len(self.turbine_ids) * [0.0]
             for i, t in enumerate(self.turbine_ids):
-                # determine ideal turbine energy as sum of the power produced by the turbine when it is derated and the
-                # mean power produced by all freestream turbines when the turbine is operating normally
 
+                # Determine ideal turbine energy as sum of the power produced by the turbine when it
+                # is derated and the mean power produced by all freestream turbines when the turbine
+                # is operating normally
                 self.aggregate_df_sample.loc[
                     ~self.aggregate_df_sample[("derate_flag", t)], ("potential_turbine_power", t)
                 ] = self.aggregate_df_sample.loc[
@@ -983,9 +985,6 @@ class WakeLosses(FromDictMixin):
             reg.predict(np.array(self._no_wakes_ws_thresh_LT_corr).reshape(1, -1))[0]
         )
 
-        # Create data frame with long-term frequencies of wind direction and wind speed bins from reanalysis data
-        df_reanal_freqs = pd.DataFrame()
-
         # get reanalysis data and limit date range
         df_reanal = self.plant.reanalysis[self._run.reanalysis_product].copy()
         df_reanal = df_reanal.loc[
@@ -1008,10 +1007,11 @@ class WakeLosses(FromDictMixin):
         df_reanal["freq"] = 1.0
         df_reanal = df_reanal.groupby(["wind_direction_bin", "windspeed_bin"]).count()["freq"]
 
+        # Create data frame with long-term frequencies of wind direction and wind speed bins from reanalysis data
         df_reanal_freqs = pd.DataFrame(df_reanal / df_reanal.sum())
 
-        # Weight wake losses in each wind direction and wind speed bin by long-term frequencies to estimate long-term
-        # wake losses
+        # Weight wake losses in each wind direction and wind speed bin by long-term frequencies to
+        # estimate long-term wake losses
         df_1hr["windspeed_bin"] = (
             self._ws_bin_width_LT_corr
             * (
@@ -1055,8 +1055,8 @@ class WakeLosses(FromDictMixin):
 
         df_1hr_bin = pd.concat([df_reanal_freqs, df_1hr_bin], axis=1)
 
-        # If specified, assume no wake losses at wind speeds above a given threshold for bins where data are
-        # missing by assigning rated power to the actual and potential power production
+        # If specified, assume no wake losses at wind speeds above a given threshold for bins where
+        # data are missing by assigning rated power to the actual and potential power production
         if self._assume_no_wakes_high_ws_LT_corr:
             fill_inds = (df_1hr_bin[("actual_plant_power", "")].isna()) & (
                 df_1hr_bin.index.get_level_values(1) >= no_wakes_ws_corr_thresh_LT_corr
@@ -1170,8 +1170,6 @@ class WakeLosses(FromDictMixin):
             matplotlib.pyplot.axes: An axes object or array of two axes corresponding to the wake loss plot or
                 wake loss and normalized energy plots
         """
-
-        import matplotlib.pyplot as plt
 
         color_codes = ["#4477AA", "#228833"]
 
@@ -1341,9 +1339,9 @@ class WakeLosses(FromDictMixin):
             axs[1].set_ylabel("Normalized Wind Plant\nEnergy Production (-)")
 
             plt.tight_layout()
-
             return axs
         else:
+            plt.tight_layout()
             return ax
 
     def plot_wake_losses_by_wind_speed(self, plot_norm_energy: bool = True, turbine_id: str = None):
@@ -1361,8 +1359,6 @@ class WakeLosses(FromDictMixin):
             matplotlib.pyplot.axes: An axes object or array of two axes corresponding to the wake loss plot or
                 wake loss and normalized energy plots
         """
-
-        import matplotlib.pyplot as plt
 
         color_codes = ["#4477AA", "#228833"]
 
@@ -1546,7 +1542,7 @@ class WakeLosses(FromDictMixin):
             axs[1].set_ylabel("Normalized Wind Plant\nEnergy Production (-)")
 
             plt.tight_layout()
-
             return axs
         else:
+            plt.tight_layout()
             return ax
