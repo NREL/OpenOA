@@ -817,23 +817,22 @@ class WakeLosses(FromDictMixin):
     @logged_method_call
     def _calculate_aggregate_dataframe(self):
         """
-        Creates a data frame with relevant scada columns, plant-level columns, and reanalysis variables to be used for
-        the wake loss analysis. The reference mean wind direction is then added to the data frame.
+        Creates a data frame with relevant scada columns, plant-level columns, and reanalysis
+        variables to be used for the wake loss analysis. The reference mean wind direction is then
+        added to the data frame.
         """
 
         # keep relevant SCADA columns, create a unique time index and two-level turbine variable columns
         # (variable name and turbine ID)
-        valid_times = (self.plant.scada.index.get_level_values("time") >= self.start_date) & (
-            self.plant.scada.index.get_level_values("time") <= self.end_date
-        )
 
         # include scada wind direction column only if using scada to determine mean wind direction for wind plant
+        scada_cols = ["windspeed", "power"]
         if self.wind_direction_data_type == "scada":
-            scada_cols = ["windspeed", self.wind_direction_col, "power"]
-        else:
-            scada_cols = ["windspeed", "power"]
+            scada_cols.insert(1, self.wind_direction_col)
 
-        self.aggregate_df = self.plant.scada.loc[valid_times, scada_cols].unstack()
+        self.aggregate_df = self.plant.scada.loc[
+            self.start_date : self.end_date, scada_cols
+        ].unstack()
 
         # Calculate reference mean wind direction
         self._calculate_mean_wind_direction()
