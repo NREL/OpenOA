@@ -160,7 +160,7 @@ class WakeLosses(FromDictMixin):
     turbine_wake_losses_lt_std: float = field(init=False)
     wake_losses_por_std: float = field(init=False)
     turbine_wake_losses_por_std: float = field(init=False)
-    _num_sim: int = field(init=False)
+    num_sim: int = field(init=False)
     _wd_bin_width_LT_corr: float = field(init=False)
     _ws_bin_width_LT_corr: float = field(init=False)
     _assume_no_wakes_high_ws_LT_corr: bool = field(init=False)
@@ -313,7 +313,7 @@ class WakeLosses(FromDictMixin):
                 :py:attr:`assume_no_wakes_high_ws_LT_corr` = True. Defaults to 13 m/s.
         """
 
-        self._num_sim = num_sim
+        self.num_sim = num_sim
         self._wd_bin_width_LT_corr = wd_bin_width_LT_corr
         self._ws_bin_width_LT_corr = ws_bin_width_LT_corr
         self._assume_no_wakes_high_ws_LT_corr = assume_no_wakes_high_ws_LT_corr
@@ -358,7 +358,7 @@ class WakeLosses(FromDictMixin):
         # Set up Monte Carlo simulation inputs if UQ = True or single simulation inputs if UQ = False.
         self._setup_monte_carlo_inputs()
 
-        for n in tqdm(range(self._num_sim)):
+        for n in tqdm(range(self.num_sim)):
 
             self._run = self.inputs.loc[n].copy()
 
@@ -739,75 +739,73 @@ class WakeLosses(FromDictMixin):
 
         if self.UQ:
             inputs = {
-                "reanalysis_product": random.choices(self.reanal_products, k=self._num_sim),
+                "reanalysis_product": random.choices(self.reanal_products, k=self.num_sim),
                 "freestream_sector_width": np.random.randint(
                     self._freestream_sector_width[0],
                     self._freestream_sector_width[1] + 1,
-                    self._num_sim,
+                    self.num_sim,
                 ),
                 "wind_bin_mad_thresh": np.random.randint(
-                    self._wind_bin_mad_thresh[0], self._wind_bin_mad_thresh[1] + 1, self._num_sim
+                    self._wind_bin_mad_thresh[0], self._wind_bin_mad_thresh[1] + 1, self.num_sim
                 ),
                 "derating_filter_wind_speed_start": np.random.randint(
                     self._derating_filter_wind_speed_start[0] * 10,
                     self._derating_filter_wind_speed_start[1] * 10 + 1,
-                    self._num_sim,
+                    self.num_sim,
                 )
                 / 10.0,
                 "max_power_filter": np.random.randint(
                     self._max_power_filter[0] * 100,
                     self._max_power_filter[1] * 100 + 1,
-                    self._num_sim,
+                    self.num_sim,
                 )
                 / 100.0,
                 "num_years_LT": np.random.randint(
-                    self._num_years_LT[0], self._num_years_LT[1] + 1, self._num_sim
+                    self._num_years_LT[0], self._num_years_LT[1] + 1, self.num_sim
                 ),
             }
             self.inputs = pd.DataFrame(inputs)
 
-            self.wake_losses_por = np.empty([self._num_sim, 1])
-            self.turbine_wake_losses_por = np.empty([self._num_sim, len(self.turbine_ids)])
-            self.wake_losses_lt = np.empty([self._num_sim, 1])
-            self.turbine_wake_losses_lt = np.empty([self._num_sim, len(self.turbine_ids)])
+            self.wake_losses_por = np.empty([self.num_sim, 1])
+            self.turbine_wake_losses_por = np.empty([self.num_sim, len(self.turbine_ids)])
+            self.wake_losses_lt = np.empty([self.num_sim, 1])
+            self.turbine_wake_losses_lt = np.empty([self.num_sim, len(self.turbine_ids)])
 
             # For saving wake losses and energy production binned by wind direction
             self.wake_losses_por_wd = np.empty(
-                [self._num_sim, int(360.0 / self._wd_bin_width_LT_corr)]
+                [self.num_sim, int(360.0 / self._wd_bin_width_LT_corr)]
             )
             self.turbine_wake_losses_por_wd = np.empty(
-                [self._num_sim, len(self.turbine_ids), int(360.0 / self._wd_bin_width_LT_corr)]
+                [self.num_sim, len(self.turbine_ids), int(360.0 / self._wd_bin_width_LT_corr)]
             )
             self.wake_losses_lt_wd = np.empty(
-                [self._num_sim, int(360.0 / self._wd_bin_width_LT_corr)]
+                [self.num_sim, int(360.0 / self._wd_bin_width_LT_corr)]
             )
             self.turbine_wake_losses_lt_wd = np.empty(
-                [self._num_sim, len(self.turbine_ids), int(360.0 / self._wd_bin_width_LT_corr)]
+                [self.num_sim, len(self.turbine_ids), int(360.0 / self._wd_bin_width_LT_corr)]
             )
 
-            self.energy_por_wd = np.empty([self._num_sim, int(360.0 / self._wd_bin_width_LT_corr)])
-            self.energy_lt_wd = np.empty([self._num_sim, int(360.0 / self._wd_bin_width_LT_corr)])
+            self.energy_por_wd = np.empty([self.num_sim, int(360.0 / self._wd_bin_width_LT_corr)])
+            self.energy_lt_wd = np.empty([self.num_sim, int(360.0 / self._wd_bin_width_LT_corr)])
 
             # For saving wake losses and energy production binned by wind speed
             self.wake_losses_por_ws = np.empty(
-                [self._num_sim, int(30.0 / self._ws_bin_width_LT_corr) + 1]
+                [self.num_sim, int(30.0 / self._ws_bin_width_LT_corr) + 1]
             )
             self.turbine_wake_losses_por_ws = np.empty(
-                [self._num_sim, len(self.turbine_ids), int(30.0 / self._ws_bin_width_LT_corr) + 1]
+                [self.num_sim, len(self.turbine_ids), int(30.0 / self._ws_bin_width_LT_corr) + 1]
             )
             self.wake_losses_lt_ws = np.empty(
-                [self._num_sim, int(30.0 / self._ws_bin_width_LT_corr) + 1]
+                [self.num_sim, int(30.0 / self._ws_bin_width_LT_corr) + 1]
             )
             self.turbine_wake_losses_lt_ws = np.empty(
-                [self._num_sim, len(self.turbine_ids), int(30.0 / self._ws_bin_width_LT_corr) + 1]
+                [self.num_sim, len(self.turbine_ids), int(30.0 / self._ws_bin_width_LT_corr) + 1]
             )
 
             self.energy_por_ws = np.empty(
-                [self._num_sim, int(30.0 / self._ws_bin_width_LT_corr) + 1]
+                [self.num_sim, int(30.0 / self._ws_bin_width_LT_corr) + 1]
             )
-            self.energy_lt_ws = np.empty(
-                [self._num_sim, int(30.0 / self._ws_bin_width_LT_corr) + 1]
-            )
+            self.energy_lt_ws = np.empty([self.num_sim, int(30.0 / self._ws_bin_width_LT_corr) + 1])
 
         elif not self.UQ:
             inputs = {
@@ -822,7 +820,7 @@ class WakeLosses(FromDictMixin):
             }
             self.inputs = pd.DataFrame(inputs)
 
-            self._num_sim = 1
+            self.num_sim = 1
 
     @logged_method_call
     def _calculate_aggregate_dataframe(self):
