@@ -383,7 +383,6 @@ class WakeLosses(FromDictMixin):
             wd_bins = np.arange(0.0, 360.0, wd_bin_width)
 
             # Create columns for turbine power and wind speed during normal operation (NaN otherwise)
-
             for t in self.turbine_ids:
                 valid_inds = ~self.aggregate_df_sample[("derate_flag", t)]
                 self.aggregate_df_sample.loc[
@@ -399,7 +398,6 @@ class WakeLosses(FromDictMixin):
             # Find freestream turbines for each wind direction. Update the dictionary only when the set of turbines
             # differs from the previous wind direction bin.
             freestream_turbine_dict = {}
-
             freestream_turbine_ids_prev = []
 
             for wd in wd_bins:
@@ -417,11 +415,9 @@ class WakeLosses(FromDictMixin):
                 freestream_turbine_dict.pop(0.0)
 
             # Find freestream energy production for each wind direction sector containing the same freestream turbines
-
             freestream_sector_wds = list(freestream_turbine_dict.keys())
 
             for i_wd, wd in enumerate(freestream_sector_wds):
-
                 freestream_turbine_ids = freestream_turbine_dict[wd]
 
                 # if UQ is enabled, randomly resample set of freestream turbines
@@ -432,35 +428,19 @@ class WakeLosses(FromDictMixin):
 
                 # Check whether last wind direction in dictionary and handle wind direction wrapping
                 # between 0 and 360 degrees
+                _agg_wd = self.aggregate_df_sample["wind_direction_ref"]
                 if wd == 0.0:
-                    wd_bin_flag = (
-                        self.aggregate_df_sample["wind_direction_ref"]
-                        >= (360.0 - 0.5 * wd_bin_width)
-                    ) | (
-                        self.aggregate_df_sample["wind_direction_ref"]
-                        < (freestream_sector_wds[i_wd + 1] - 0.5 * wd_bin_width)
-                    )
+                    wd_bin_flag = _agg_wd >= 360.0 - 0.5 * wd_bin_width
+                    wd_bin_flag |= _agg_wd < (freestream_sector_wds[i_wd + 1] - 0.5 * wd_bin_width)
                 elif i_wd < len(freestream_sector_wds) - 1:
-                    wd_bin_flag = (
-                        self.aggregate_df_sample["wind_direction_ref"] >= (wd - 0.5 * wd_bin_width)
-                    ) & (
-                        self.aggregate_df_sample["wind_direction_ref"]
-                        < (freestream_sector_wds[i_wd + 1] - 0.5 * wd_bin_width)
-                    )
+                    wd_bin_flag = _agg_wd >= (wd - 0.5 * wd_bin_width)
+                    wd_bin_flag &= _agg_wd < (freestream_sector_wds[i_wd + 1] - 0.5 * wd_bin_width)
                 elif (i_wd == len(freestream_sector_wds) - 1) & (freestream_sector_wds[0] == 0.0):
-                    wd_bin_flag = (
-                        self.aggregate_df_sample["wind_direction_ref"] >= (wd - 0.5 * wd_bin_width)
-                    ) & (
-                        self.aggregate_df_sample["wind_direction_ref"]
-                        < (360.0 - 0.5 * wd_bin_width)
-                    )
+                    wd_bin_flag = _agg_wd >= (wd - 0.5 * wd_bin_width)
+                    wd_bin_flag &= _agg_wd < (360.0 - 0.5 * wd_bin_width)
                 else:  # last wind direction in dictionary and first wind direction is not zero:
-                    wd_bin_flag = (
-                        self.aggregate_df_sample["wind_direction_ref"] >= (wd - 0.5 * wd_bin_width)
-                    ) | (
-                        self.aggregate_df_sample["wind_direction_ref"]
-                        < (freestream_sector_wds[0] - 0.5 * wd_bin_width)
-                    )
+                    wd_bin_flag = _agg_wd >= (wd - 0.5 * wd_bin_width)
+                    wd_bin_flag |= _agg_wd < (freestream_sector_wds[0] - 0.5 * wd_bin_width)
 
                 # Assign representative energy and wind speed of freestream turbines. If correct_for_derating
                 # is True, only freestream turbines operating normally will be considered.
