@@ -445,27 +445,21 @@ class WakeLosses(FromDictMixin):
                 # Assign representative energy and wind speed of freestream turbines. If correct_for_derating
                 # is True, only freestream turbines operating normally will be considered.
 
+                _power = self.aggregate_df_sample.loc[wd_bin_flag, "power_normal"]
                 if freestream_power_method == "mean":
-                    self.aggregate_df_sample.loc[wd_bin_flag, "power_mean_freestream"] = (
-                        self.aggregate_df_sample.loc[wd_bin_flag, "power_normal"]
-                    )[freestream_turbine_ids].mean(axis=1)
+                    _power = _power[freestream_turbine_ids].mean(axis=1)
                 elif freestream_power_method == "median":
-                    self.aggregate_df_sample.loc[wd_bin_flag, "power_mean_freestream"] = (
-                        self.aggregate_df_sample.loc[wd_bin_flag, "power_normal"]
-                    )[freestream_turbine_ids].median(axis=1)
+                    _power = _power[freestream_turbine_ids].median(axis=1)
                 elif freestream_power_method == "max":
-                    self.aggregate_df_sample.loc[wd_bin_flag, "power_mean_freestream"] = (
-                        self.aggregate_df_sample.loc[wd_bin_flag, "power_normal"]
-                    )[freestream_turbine_ids].max(axis=1)
+                    _power = _power.max(axis=1)
+                self.aggregate_df_sample.loc[wd_bin_flag, "power_mean_freestream"] = _power
 
+                _ws = self.aggregate_df_sample.loc[wd_bin_flag, "windspeed_normal"]
                 if freestream_wind_speed_method == "mean":
-                    self.aggregate_df_sample.loc[wd_bin_flag, "windspeed_mean_freestream"] = (
-                        self.aggregate_df_sample.loc[wd_bin_flag, "windspeed_normal"]
-                    )[freestream_turbine_ids].mean(axis=1)
+                    _ws = _ws[freestream_turbine_ids].mean(axis=1)
                 elif freestream_wind_speed_method == "median":
-                    self.aggregate_df_sample.loc[wd_bin_flag, "windspeed_mean_freestream"] = (
-                        self.aggregate_df_sample.loc[wd_bin_flag, "windspeed_normal"]
-                    )[freestream_turbine_ids].median(axis=1)
+                    _ws = _ws[freestream_turbine_ids].median(axis=1)
+                self.aggregate_df_sample.loc[wd_bin_flag, "windspeed_mean_freestream"] = _ws
 
             # Remove rows where no freestream turbines in normal operation were identified
             self.aggregate_df_sample = self.aggregate_df_sample.dropna(
