@@ -397,13 +397,13 @@ def load_reanalysis_prepare(plant, product):
 
 ### UDFs
 
-from pyspark.sql.functions import udf
-from pyspark.sql.types import BooleanType
-from pyspark.sql import SQLContext
-from operational_analysis.toolkits.filters import range_flag
+# from pyspark.sql.functions import udf
+# from pyspark.sql.types import BooleanType
+# from pyspark.sql import SQLContext
+# from operational_analysis.toolkits.filters import range_flag
 
-openoa_range_flag_filter = udf(range_flag, BooleanType())
+# openoa_range_flag_filter = udf(range_flag, BooleanType())
 
-def register_all(context: SQLContext):
-    context.udf.register("openoa_range_flag_filter", openoa_range_flag_filter)
+# def register_all(context: SQLContext):
+#     context.udf.register("openoa_range_flag_filter", openoa_range_flag_filter)
 
