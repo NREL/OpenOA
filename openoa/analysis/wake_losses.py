@@ -41,7 +41,7 @@ class WakeLosses(FromDictMixin):
 
     The method is comprised of the following core steps:
         1. Calculate a representative wind plant-level wind direction at each time step using the
-           mean wind direction of the specified of wind turbines or meteorological (met) towers.
+           mean wind direction of the specified wind turbines or meteorological (met) towers.
            Note that time steps for which any necessary plant-level or turbine-level data are
            missing are discarded.
 
@@ -52,30 +52,34 @@ class WakeLosses(FromDictMixin):
               once using the specified analysis parameters for the full set of available time steps.
 
         2. Identify the set of derated, curtailed, or unavailable turbines (i.e., turbines whose power
-           production is limited not by wake losses but by operating mode)for each time step using a
-           power curve outlier detection.
+           production is limited not by wake losses but by operating mode) for each time step using a
+           power curve outlier detection method.
         3. Calculate the average wind speed and power production for the set of normally operating
-           (i.e., not derated) freestream turbines.
+           (i.e., not derated) freestream turbines for each time step.
 
-           a. Freestream turbines are those with upstream turbines located within a user-specified
-              sector of wind directions centered on the bin center direction.
+           a. Freestream turbines are those without any upstream turbines located within a
+              user-specified sector of wind directions centered on the representative plant-level wind
+              direction.
 
-        4. Calculate the POR losses for the wind plant by comparing the potential energy production
-           (sum of the mean freestream power production multiplied by the number of turbines in the
-           wind power plant) to the actual energy production (sum of the actual wind plant power
-           production at each time step).
+        4. Calculate the POR wake losses for the wind plant by comparing the potential energy production
+           (sum of the mean freestream power production at each time step multiplied by the number of
+           turbines in the wind power plant) to the actual energy production (sum of the actual wind
+           plant power production at each time step). This procedure is then used to estimate the wake
+           losses for each individual wind turbine.
 
            a. If :py:attr:`correct_for_derating` is True, then the potential power production of the
               wind plant is assumed to be the actual power produced by the derated turbines plus the
               mean power production of the freestream turbines for all other turbines in the wind
-              plant. This procedure is then used to estimate the wake losses for each individual
-              wind turbine.
+              plant. Again, a similar procedure is used to estimate individual turbine wake losses.
 
         5. Finally, estimate the long-term corrected wake losses using the long-term historical
-           reanalysis data.
+           reanalysis data. Note that the long-term correction is determined for each reanalysis
+           product specified by the user. If UQ is used, a random reanalysis product is selected
+           each iteration. If UQ is not selected, the long-term corrected wake losses are calculated
+           as the average wake losses determined for all reanalysis products.
 
            a. Calculate the long-term occurence frequencies for a set of wind direction and wind
-              speed bins based on the hour reanalysis data (typically, 10-20 years).
+              speed bins based on the hourly reanalysis data (typically, 10-20 years).
            b. Next, using a linear regression, compare the mean freestream wind speeds calculated
               from the SCADA data to the wind speeds from the reanalysis data and correct to remove
               biases.
@@ -85,18 +89,13 @@ class WakeLosses(FromDictMixin):
               speed bin.
            d. Estimate the long-term corrected wake losses by comparing the long-term
               corrected potential and actual energy production. These are computed by weighting
-              the average potential and actual power production for each with condition bin
+              the average potential and actual power production for each wind condition bin
               with the long-term frequencies.
-
-        6. Repeat to estimate the long-term corrected wake losses for each individual turbine. Note
-           that the long-term correction is determined for each reanalysis product specified by the
-           user. If UQ is used, a random reanalysis product is selected each iteration. If UQ is not
-           selected, the long-term corrected wake losses are calculated as the average wake losses
-           determined for all reanalysis products.
+           e. Repeat to estimate the long-term corrected wake losses for each individual turbine.
 
     Args:
         plant (:obj:`PlantData`): A :py:attr:`openoa.plant.PlantData` object that has been validated
-            with at least `:py:attr:`openoa.plant.PlantData.analysis_type` = "WakeLosses".
+            with at least :py:attr:`openoa.plant.PlantData.analysis_type` = "WakeLosses".
         wind_direction_col (:obj:`string`, optional): Column name to use for wind direction.
             Defaults to "wind_direction"
         wind_direction_data_type (:obj:`string`, optional): Data type to use for wind directions
