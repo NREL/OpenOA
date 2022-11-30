@@ -1749,8 +1749,12 @@ class PlantData:
         """
         if asset_type is None:
             ix = self.asset.index.values
-        else:
+        elif asset_type in ("turbine", "tower"):
             ix = self.asset.loc[self.asset["type"] == asset_type].index.values
+        else:
+            raise ValueError(
+                f"Input to `asset_type`: {asset_type} is invalid and must be one of 'None', 'tower', or 'turbine'."
+            )
 
         distance = (
             pd.DataFrame(
@@ -1785,8 +1789,12 @@ class PlantData:
         """
         if asset_type is None:
             ix = self.asset.index.values
-        else:
+        elif asset_type in ("turbine", "tower"):
             ix = self.asset.loc[self.asset["type"] == asset_type].index.values
+        else:
+            raise ValueError(
+                f"Input to `asset_type`: {asset_type} is invalid and must be one of 'None', 'tower', or 'turbine'."
+            )
 
         direction = (
             pd.DataFrame(
@@ -1829,7 +1837,7 @@ class PlantData:
         Returns a list of freestream (unwaked) turbines for a given wind direction. Freestream turbines can be
         identified using different methods ("sector" or "IEC" methods). For the sector method, if there are any
         turbines upstream of a turbine within a fixed wind direction sector centered on the wind direction of interest,
-        defined by the sector_width argument, the turbine is condiered waked. The IEC method uses the freestream
+        defined by the sector_width argument, the turbine is considered waked. The IEC method uses the freestream
         definition provided in Annex A of IEC 61400-12-1 (2005).
 
         Args:
@@ -1855,12 +1863,13 @@ class PlantData:
             )
         elif freestream_method == "IEC":
             # find freestream turbines according to the definition in Annex A of IEC 61400-12-1 (2005)
-            turbine_distance_matrix = self.distance_matrix(asset_type="turbine")
+            turbine_distance_matrix = self.asset_distance_matrix(asset_type="turbine")
 
             # normalize distances by rotor diameters of upstream turbines
-            rotor_diameters = np.ones((len(turbine_direction_matrix), 1)) * np.array(
-                self.asset.loc[self.asset["type"] == "turbine", "rotor_diameter"]
-            )
+            rotor_diameters = np.ones((len(turbine_direction_matrix), 1))
+            rotor_diameters *= self.asset.loc[
+                turbine_direction_matrix.index, "rotor_diameter"
+            ].values
             turbine_distance_matrix /= rotor_diameters
 
             freestream_indices = np.all(
