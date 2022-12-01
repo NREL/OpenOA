@@ -451,7 +451,7 @@ class WakeLosses(FromDictMixin):
                 elif freestream_power_method == "median":
                     _power = _power[freestream_turbine_ids].median(axis=1)
                 elif freestream_power_method == "max":
-                    _power = _power.max(axis=1)
+                    _power = _power[freestream_turbine_ids].max(axis=1)
                 self.aggregate_df_sample.loc[wd_bin_flag, "power_mean_freestream"] = _power
 
                 _ws = self.aggregate_df_sample.loc[wd_bin_flag, "windspeed_normal"]
