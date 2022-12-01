@@ -1866,10 +1866,10 @@ class PlantData:
             turbine_distance_matrix = self.asset_distance_matrix(asset_type="turbine")
 
             # normalize distances by rotor diameters of upstream turbines
-            rotor_diameters = np.ones((len(turbine_direction_matrix), 1))
-            rotor_diameters *= self.asset.loc[
+            rotor_diameters_vector = self.asset.loc[
                 turbine_direction_matrix.index, "rotor_diameter"
             ].values
+            rotor_diameters = np.ones((len(turbine_direction_matrix), 1)) * rotor_diameters_vector
             turbine_distance_matrix /= rotor_diameters
 
             freestream_indices = np.all(

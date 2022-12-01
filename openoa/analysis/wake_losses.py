@@ -268,11 +268,11 @@ class WakeLosses(FromDictMixin):
                 to True.
             derating_filter_wind_speed_start (tuple | float, optional): The wind speed above which
                 turbines will be flagged as derated/curtailed/shutdown if power is less than 1% of
-                rated power (m/s). Only used when correct_for_derating is True. This should be a
-                tuple when :py:attr:`UQ` = True (values are Monte-Carlo sampled within the specified
-                range) or a single value when :py:attr:`UQ` = False. If undefined (None), a value of
-                4.5 m/s will be used if :py:attr:`UQ` = False and values of (4.0, 5.0) will be used
-                if :py:attr:`UQ` = True. Defaults to None.
+                rated power (m/s). Only used when :py:attr:`correct_for_derating` is True. This should
+                be a tuple when :py:attr:`UQ` = True (values are Monte-Carlo sampled within the
+                specified range) or a single value when :py:attr:`UQ` = False. If undefined (None), a
+                value of 4.5 m/s will be used if :py:attr:`UQ` = False and values of (4.0, 5.0) will
+                be used if :py:attr:`UQ` = True. Defaults to None.
             max_power_filter (tuple | float, optional): Maximum power threshold, defined as a fraction
                 of rated power, to which the power curve bin filter should be applied. Only used when
                 :py:attr:`correct_for_derating` = True. This should be a tuple when :py:attr:`UQ` =
