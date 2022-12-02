@@ -72,11 +72,7 @@ ANALYSIS_REQUIREMENTS = {
     },
     "WakeLosses": {
         "scada": {
-            "columns": [
-                "id",
-                "windspeed",
-                "power",
-            ],
+            "columns": ["id", "windspeed", "power"],
             "freq": _at_least_hourly,
         },
         "reanalysis": {
@@ -1204,6 +1200,8 @@ class PlantData:
         default={"missing": {}, "dtype": {}, "frequency": {}, "attributes": []}, init=False
     )
     eia: dict = field(default={}, init=False)
+    asset_distance_matrix: pd.DataFrame = field(init=False)
+    asset_direction_matrix: pd.DataFrame = field(init=False)
 
     def __attrs_post_init__(self):
         self._calculate_reanalysis_columns()
@@ -1219,6 +1217,8 @@ class PlantData:
         # TODO: Need to have a class level input for the user-preferred projection system
         # TODO: Why does the non-WGS84 projection matter?
         self.parse_asset_geometry()
+        self.calculate_asset_distance_matrix()
+        self.calculate_asset_direction_matrix()
         self._calculate_turbine_energy()
 
         # Change the column names to the -25 convention for easier use in the rest of the code base
@@ -1737,25 +1737,14 @@ class PlantData:
 
     # NOTE: v2 AssetData methods
 
-    def asset_distance_matrix(self, asset_type: str = None) -> pd.DataFrame:
+    def calculate_asset_distance_matrix(self) -> pd.DataFrame:
         """Calculates the distance between all assets on the site with `np.inf` for the distance
         between an asset and itself.
 
-        Args:
-            asset_type (str, optional): Optional asset type to calculate distances for
-                ("turbine" or "tower"). If None, all assets are included. Defaults to None.
         Returns:
             pd.DataFrame: Dataframe containing distances between each pair of assets
         """
-        if asset_type is None:
-            ix = self.asset.index.values
-        elif asset_type in ("turbine", "tower"):
-            ix = self.asset.loc[self.asset["type"] == asset_type].index.values
-        else:
-            raise ValueError(
-                f"Input to `asset_type`: {asset_type} is invalid and must be one of 'None', 'tower', or 'turbine'."
-            )
-
+        ix = self.asset.index.values
         distance = (
             pd.DataFrame(
                 [i, j, self.asset.loc[i, "geometry"].distance(self.asset.loc[j, "geometry"])]
@@ -1774,28 +1763,57 @@ class PlantData:
         # Maintain v2 compatibility of np.inf for the diagonal
         distance = distance + distance.values.T - np.diag(np.diag(distance.values))
         np.fill_diagonal(distance.values, np.inf)
-        return distance
+        self.asset_distance_matrix = distance
 
-    def asset_direction_matrix(self, asset_type: str = None) -> pd.DataFrame:
-        """Calculates the direction between all assets on the site with `np.inf` for the direction
-        between an asset and itself, for all assets or a specific asset type.
+    def turbine_distance_matrix(self, turbine_id: str = None) -> pd.DataFrame:
+        """Returns the distances between all turbines in the plant with `np.inf` for the distance
+        between a turbine and itself.
 
         Args:
-            asset_type (str, optional): Optional asset type to calculate directions for
-                ("turbine" or "tower"). If None, all assets are included. Defaults to None.
+            turbine_id (str, optional): Specific turbine ID for which the distances to other turbines
+                are returned. If None, a matrix containing the distances between all pairs of turbines
+                is returned. Defaults to None.
+        Returns:
+            pd.DataFrame: Dataframe containing distances between each pair of turbines
+        """
+        if self.asset_distance_matrix.size == 0:
+            self.calculate_asset_distance_matrix()
+
+        row_ix = self.turbine_ids
+        if turbine_id is not None:
+            row_ix = turbine_id
+
+        return self.asset_distance_matrix.loc[row_ix, self.turbine_ids]
+
+    def tower_distance_matrix(self, tower_id: str = None) -> pd.DataFrame:
+        """Returns the distances between all towers in the plant with `np.inf` for the distance
+        between a tower and itself.
+
+        Args:
+            tower_id (str, optional): Specific tower ID for which the distances to other towers
+                are returned. If None, a matrix containing the distances between all pairs of towers
+                is returned. Defaults to None.
+        Returns:
+            pd.DataFrame: Dataframe containing distances between each pair of towers
+        """
+        if self.asset_distance_matrix.size == 0:
+            self.calculate_asset_distance_matrix()
+
+        row_ix = self.tower_ids
+        if tower_id is not None:
+            row_ix = tower_id
+
+        return self.asset_distance_matrix.loc[row_ix, self.tower_ids]
+
+    def calculate_asset_direction_matrix(self) -> pd.DataFrame:
+        """Calculates the direction between all assets on the site with `np.inf` for the direction
+        between an asset and itself, for all assets.
+
         Returns:
             pd.DataFrame: Dataframe containing directions between each pair of assets (defined as the direction
                 from the asset given by the row index to the asset given by the column index, relative to north)
         """
-        if asset_type is None:
-            ix = self.asset.index.values
-        elif asset_type in ("turbine", "tower"):
-            ix = self.asset.loc[self.asset["type"] == asset_type].index.values
-        else:
-            raise ValueError(
-                f"Input to `asset_type`: {asset_type} is invalid and must be one of 'None', 'tower', or 'turbine'."
-            )
-
+        ix = self.asset.index.values
         direction = (
             pd.DataFrame(
                 [
@@ -1828,7 +1846,51 @@ class PlantData:
             - np.diag(np.diag(direction.values))
         )
         np.fill_diagonal(direction.values, np.inf)
-        return direction
+        self.asset_direction_matrix = direction
+
+    def turbine_direction_matrix(self, turbine_id: str = None) -> pd.DataFrame:
+        """Returns the directions between all turbines in the plant with `np.inf` for the direction
+        between a turbine and itself.
+
+        Args:
+            turbine_id (str, optional): Specific turbine ID for which the directions to other turbines
+                are returned. If None, a matrix containing the directions between all pairs of turbines
+                is returned. Defaults to None.
+        Returns:
+            pd.DataFrame: Dataframe containing directions between each pair of turbines (defined as the
+                direction from the turbine given by the row index to the turbine given by the column
+                index, relative to north)
+        """
+        if self.asset_direction_matrix.size == 0:
+            self.calculate_asset_direction_matrix()
+
+        row_ix = self.turbine_ids
+        if turbine_id is not None:
+            row_ix = turbine_id
+
+        return self.asset_direction_matrix.loc[row_ix, self.turbine_ids]
+
+    def tower_direction_matrix(self, tower_id: str = None) -> pd.DataFrame:
+        """Returns the directions between all towers in the plant with `np.inf` for the direction
+        between a tower and itself.
+
+        Args:
+            tower_id (str, optional): Specific tower ID for which the directions to other towers
+                are returned. If None, a matrix containing the directions between all pairs of towers
+                is returned. Defaults to None.
+        Returns:
+            pd.DataFrame: Dataframe containing directions between each pair of towers (defined as the
+                direction from the tower given by the row index to the tower given by the column
+                index, relative to north)
+        """
+        if self.asset_direction_matrix.size == 0:
+            self.calculate_asset_direction_matrix()
+
+        row_ix = self.tower_ids
+        if tower_id is not None:
+            row_ix = tower_id
+
+        return self.asset_direction_matrix.loc[row_ix, self.tower_ids]
 
     def get_freestream_turbines(
         self, wd: float, freestream_method: str = "sector", sector_width: float = 90.0

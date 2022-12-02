@@ -876,8 +876,8 @@ class WakeLosses(FromDictMixin):
             # Drop minute field
             df_rean.index = df_rean.index.floor("H")
 
-            # Upsample to 10-minute samples to match SCADA data
-            df_rean = df_rean.resample("10T").ffill()
+            # Upsample to match SCADA data frequency
+            df_rean = df_rean.resample(self.plant.metadata.scada.frequency).ffill()
             df_rean = df_rean.add_suffix(f"_{product}")
             df_rean = df_rean[df_rean.index.isin(self.aggregate_df.index)]
 
