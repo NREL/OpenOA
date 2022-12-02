@@ -2,9 +2,9 @@ name: Run Unit and Regression Tests with Code Coverage
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, develop_v3 ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main, develop, develop_v3 ]
   schedule:
     - cron: "0 0 * * MON"
 
