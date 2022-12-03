@@ -1913,7 +1913,7 @@ class PlantData:
         Returns:
             list: List of freestream turbine asset IDs
         """
-        turbine_direction_matrix = self.asset_direction_matrix(asset_type="turbine")
+        turbine_direction_matrix = self.turbine_direction_matrix()
 
         if freestream_method == "sector":
             # find turbines for which no other upstream turbines are within half of the sector width of the specified
@@ -1925,7 +1925,7 @@ class PlantData:
             )
         elif freestream_method == "IEC":
             # find freestream turbines according to the definition in Annex A of IEC 61400-12-1 (2005)
-            turbine_distance_matrix = self.asset_distance_matrix(asset_type="turbine")
+            turbine_distance_matrix = self.turbine_distance_matrix()
 
             # normalize distances by rotor diameters of upstream turbines
             rotor_diameters_vector = self.asset.loc[
