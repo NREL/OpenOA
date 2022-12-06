@@ -11,6 +11,56 @@ class SimpleMetProcessing(unittest.TestCase):
     def setUp(self):
         pass
 
+    def test_wrap_180(self):
+        # test Series input
+        x = pd.Series([-450.0, -270.0, -90.0, 0.0, 90.0, 270.0, 450.0])
+        wd_ans = [-90.0, 90.0, -90.0, 0.0, 90.0, -90.0, 90.0]  # Expected result
+
+        y = mt.wrap_180(x)  # Test result
+        nptest.assert_array_equal(y, wd_ans)
+
+        # test array input
+        x = np.array([-450.0, -270.0, -90.0, 0.0, 90.0, 270.0, 450.0])
+        wd_ans = [-90.0, 90.0, -90.0, 0.0, 90.0, -90.0, 90.0]  # Expected result
+
+        y = mt.wrap_180(x)  # Test result
+        nptest.assert_array_equal(y, wd_ans)
+
+        # test float input
+        x = -270.0
+        wd_ans = 90.0  # Expected result
+
+        y = mt.wrap_180(x)  # Test result
+        assert y == wd_ans
+
+    def test_circular_mean(self):
+        # wind direction test data
+        df = pd.DataFrame({"wd1": [-60.0, -90.0, 5.0], "wd2": [45.0, -5.0, 30.0]})
+
+        # test DataFrame input, averaging along rows
+        wd_ans = [352.5, 312.5, 17.5]  # Expected result
+
+        y = mt.circular_mean(df, axis=1)  # Test result
+        nptest.assert_array_equal(y, wd_ans)
+
+        # test DataFrame input, averaging along columns
+        wd_ans = [310.066954, 23.552040]  # Expected result
+
+        y = mt.circular_mean(df)  # Test result
+        nptest.assert_array_almost_equal(y, wd_ans)
+
+        # test Series input
+        wd_ans = 310.066954  # Expected result
+
+        y = mt.circular_mean(df["wd1"])  # Test result
+        nptest.assert_almost_equal(y, wd_ans, decimal=6)
+
+        # test 2D array input, averaging along rows
+        wd_ans = [352.5, 312.5, 17.5]  # Expected result
+
+        y = mt.circular_mean(df.values, axis=1)  # Test result
+        nptest.assert_array_equal(y, wd_ans)
+
     def test_compute_wind_direction(self):
         u = pd.Series([0, -1, -1, -1, 0, 1, 1, 1])
         v = pd.Series([-1, -1, 0, 1, 1, 1, 0, -1])

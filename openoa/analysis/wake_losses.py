@@ -21,6 +21,7 @@ from sklearn.linear_model import LinearRegression
 
 from openoa.plant import PlantData, FromDictMixin
 from openoa.utils import filters
+from openoa.utils import met_data_processing as met
 from openoa.logging import logging, logged_method_call
 from openoa.utils.plot import set_styling
 from openoa.analysis._analysis_validators import validate_UQ_input
@@ -839,26 +840,15 @@ class WakeLosses(FromDictMixin):
         frame.
         """
 
-        def circular_average(x):
-            return (
-                np.degrees(
-                    np.arctan2(
-                        np.sin(np.radians(x)).mean(axis=1),
-                        np.cos(np.radians(x)).mean(axis=1),
-                    )
-                )
-                % 360.0
-            )
-
         if self.wind_direction_data_type == "scada":
-            self.aggregate_df["wind_direction_ref"] = circular_average(
-                self.aggregate_df[self.wind_direction_col][self.wind_direction_asset_ids]
+            self.aggregate_df["wind_direction_ref"] = met.circular_mean(
+                self.aggregate_df[self.wind_direction_col][self.wind_direction_asset_ids], axis=1
             )
         elif self.wind_direction_data_type == "tower":
             df_tower = self.plant.tower[[self.wind_direction_col]].unstack()
 
-            self.aggregate_df["wind_direction_ref"] = circular_average(
-                df_tower[self.wind_direction_col][self.wind_direction_asset_ids]
+            self.aggregate_df["wind_direction_ref"] = met.circular_mean(
+                df_tower[self.wind_direction_col][self.wind_direction_asset_ids], axis=1
             )
 
     @logged_method_call
@@ -1346,7 +1336,7 @@ class WakeLosses(FromDictMixin):
     def plot_wake_losses_by_wind_speed(self, plot_norm_energy: bool = True, turbine_id: str = None):
         """
         Plots wake losses during the period of record in the form of wind farm efficiency as a function of wind
-        speed as well as normalized wind plant energy production as a function of wind speee.
+        speed as well as normalized wind plant energy production as a function of wind speed.
 
         Args:
             plot_norm_energy (bool, optional): If True, include a plot of normalized wind plant energy

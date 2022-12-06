@@ -407,23 +407,6 @@ def rename_columns(df: pd.DataFrame, col_map: dict, reverse: bool = True) -> pd.
     return df.rename(columns=col_map)
 
 
-def wrap_180(x: float | np.ndarray):
-    """
-    Converts an angle or array of angles in degrees to the range -180 to +180 degrees.
-    TODO: Would this be better in a separate utils module?
-
-    Args:
-        x (float | np.ndarray): Input angle(s) (degrees)
-    Returns:
-        float | np.ndarray: The input angle(s) converted to the range -180 to +180 degrees (degrees)
-    """
-    input_type = type(x)
-
-    x = x % 360.0  # convert to range 0 to 360 degrees
-    x = np.where(x > 180.0, x - 360.0, x)
-    return x if input_type == np.ndarray else float(x)
-
-
 # ***************************************
 # Define the meta data validation classes
 # ***************************************
@@ -1919,7 +1902,7 @@ class PlantData:
             # find turbines for which no other upstream turbines are within half of the sector width of the specified
             # wind direction
             freestream_indices = np.all(
-                (np.abs(wrap_180(wd - turbine_direction_matrix.values)) > 0.5 * sector_width)
+                (np.abs(met.wrap_180(wd - turbine_direction_matrix.values)) > 0.5 * sector_width)
                 | np.diag(np.ones(len(turbine_direction_matrix), dtype=bool)),
                 axis=1,
             )
@@ -1938,7 +1921,7 @@ class PlantData:
                 (
                     (turbine_distance_matrix.values > 2)
                     & (
-                        np.abs(wrap_180(wd - turbine_direction_matrix.values))
+                        np.abs(met.wrap_180(wd - turbine_direction_matrix.values))
                         > 0.5
                         * (
                             1.3 * np.degrees(np.arctan(2.5 / turbine_distance_matrix.values + 0.15))
