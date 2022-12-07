@@ -1,18 +1,24 @@
 """
-ENTR OpenOA Toolkit
+ENTR OpenOA Toolkit for OpenOA V3 API
 
-Provides low-level utility functions to load data from ENTR warehouse into PlantData objects using the PyHive library.
+Provides low-level utility functions to load data from ENTR warehouse into PlantData objects using the PyHive (for remote warehouses) or PySpark (for local spark clusters and UDFs) libraries.
 
 With an existing OpenOA PlantData object, you can use the functions from this file as follows:
 
 ```
-conn = entr.get_connection(thrift_server_host, thrift_server_port)
-entr.load_metadata(conn, plant)
-entr.load_asset(conn, plant)
-entr.load_scada(conn, plant)
-entr.load_curtailment(conn, plant)
-entr.load_meter(conn, plant)
-entr.load_reanalysis(conn, plant, reanalysis_products)
+conn = PyHiveEntrConnection(thrift_server_host, thrift_server_port)
+conn = PySparkEntrConnection()
+
+plant_metadata:dict = entr.load_metadata(conn, plant_name)
+asset:pd.DataFrame, asset_metadata:dict = entr.load_asset(conn, plant_metadata, cols=...)
+scada:pd.DataFrame, scada_metadata:dict = entr.load_scada(conn, plant_metadata, cols=...)
+... curtailment, meter, reanalysis...
+
+plant_metadata["scada"] = scada_metadata
+plant_metadata["asset] = asset_metadata
+
+plant = PlantData(plant_metadata, scada, asset...)
+
 ```
 
 This usage pattern is implemented in PlantData.from_entr()
@@ -32,47 +38,74 @@ In some cases, check_metadata_row is called to assert properties about a table's
 """
 
 import pandas as pd
-import operational_analysis.toolkits.unit_conversion as un
-import operational_analysis.toolkits.met_data_processing as met
+import openoa.utils.unit_conversion as un
+import openoa.utils.met_data_processing as met
+from dataclasses import dataclass
 
-## --- DATABASE FUNCTIONS ---
+## --- DATABASE CONNECTIONS ---
 
-_conn = None
+class EntrConnection:
+    _conn: object
 
-def get_connection(thrift_server_host,thrift_server_port):
-    """
-    Get Python DBAPI2 connection object for ENTR Warehouse.
+    def pandas_query(self, query_string:str) -> pd.DataFrame:
+        pass
 
-    Args:
-        thrift_server_host(:obj:`str`): URL of Apache Thrift2 server
-        thrift_server_port(:obj:`int`): Port of Apache Thrift2 server
+class PySparkEntrConnection(EntrConnection):
 
-    Returns:
-        (:obj:`connection`): Connection object.
-    """
-    global _conn
-    if _conn is None:
+    def __init__(self):
+        """
+        Get PySpark-Based Connection object for ENTR Warehouse.
+        """
+        from pyspark.sql import SparkSession
+        self._conn = SparkSession.builder\
+            .appName("entr_openoa_connector")\
+            .config("spark.sql.warehouse.dir", "/home/jovyan/warehouse")\
+            .config("spark.hadoop.javax.jdo.option.ConnectionURL", "jdbc:derby:;databaseName=/home/jovyan/warehouse/metastore_db;create=true")\
+            .config("spark.sql.execution.arrow.pyspark.enabled", "true")\
+            .enableHiveSupport()\
+            .getOrCreate()
+        self._conn.sql("use entr_warehouse")
+
+    def pandas_query(self, query_string:str) -> pd.DataFrame:
+        """
+        Query the PySpark-Based ENTR Warehouse, returning a pandas dataframe.
+
+        Args:
+            query_string(:obj:`str`): Spark SQL Query
+        
+        Returns:
+            :obj:`pandas.DataFrame`: Result of the query.
+        """
+        return self._conn.sql(query_string).toPandas()
+
+class PyHiveEntrConnection(EntrConnection):
+
+    def __init__(self,thrift_server_host:str="localhost",thrift_server_port:int=10000):
+        """
+        Get PyHive-Based Connection object for ENTR Warehouse. This connection object at self._conn is DBAPI2 compatible.
+
+        Args:
+            thrift_server_host(:obj:`str`): URL of Apache Thrift2 server
+            thrift_server_port(:obj:`int`): Port of Apache Thrift2 server
+        """
         from pyhive import hive
-        _conn = hive.Connection(host=thrift_server_host, port=thrift_server_port)
-    return _conn
+        self._conn = hive.Connection(host=thrift_server_host, port=thrift_server_port)
 
-def do_query(conn, query):
-    """
-    Execute a query string using a connection object, and return the result as a dataframe.
+    def pandas_query(self, query_string:str) -> pd.DataFrame:
+        """
+        Query the PyHive-Based ENTR Warehouse, returning a pandas dataframe.
 
-    Args:
-        conn(:obj:`connection`): Python DBAPI2 connection object.
-        query(:obj:`str`): Query string to execute
-
-    Returns:
-        (:obj:`pd.DataFrame`): Result of the query in Pandas dataframe format.
-    """
-    df = pd.read_sql(query, conn)
-    return df
+        Args:
+            query_string(:obj:`str`): SQL Query
+        
+        Returns:
+            :obj:`pandas.DataFrame`: Result of the query.
+        """
+        return pd.read_sql(query_string, self._conn)
 
 ## --- PLANT LEVEL METADATA ---
 
-def load_metadata(conn, plant):
+def load_metadata(conn:EntrConnection, plant_name:str) -> dict:
     ## Plant Metadata
     metadata_query = f"""
     SELECT
@@ -86,23 +119,26 @@ def load_metadata(conn, plant):
     FROM
         entr_warehouse.dim_asset_wind_plant
     WHERE
-        plant_name = "{plant.name}";
+        plant_name = "{plant_name}";
     """
-    metadata = pd.read_sql(metadata_query, conn)
+    metadata = conn.pandas_query(metadata_query)
 
-    assert len(metadata)<2, f"Multiple plants matching name {wind_plant}"
-    assert len(metadata)>0, f"No plant matching name {wind_plant}"
+    assert len(metadata)<2, f"Multiple plants matching name {plant_name}"
+    assert len(metadata)>0, f"No plant matching name {plant_name}"
 
-    plant.latitude = metadata["latitude"][0]
-    plant.longitude = metadata["longitude"][0]
-    plant._plant_capacity = metadata["plant_capacity"][0]
-    plant._num_turbines = metadata["number_of_turbines"][0]
-    plant._turbine_capacity = metadata["turbine_capacity"][0]
-    plant._entr_plant_id = metadata["plant_id"][0]
+    metadata_dict = {
+        "latitude": metadata["latitude"][0],
+        "longitude": metadata["longitude"][0],
+        "capacity": metadata["plant_capacity"][0],
+        "number_of_turbines": metadata["number_of_turbines"][0],
+        "turbine_capacity": metadata["turbine_capacity"][0],
+        "_entr_plant_id": metadata["plant_id"][0]
+    }
+    return metadata_dict
 
 ## --- ASSET ---
 
-def load_asset(conn, plant):
+def load_asset(conn:EntrConnection, plant_metadata:dict):
     asset_query = f"""
     SELECT
         plant_id,
@@ -119,14 +155,14 @@ def load_asset(conn, plant):
     FROM
         entr_warehouse.dim_asset_wind_turbine
     WHERE
-        plant_id = {plant._entr_plant_id};
+        plant_id = {plant_metadata['_entr_plant_id']};
     """
-    #plant._asset = pyspark.sql(asset_query).to_pandas()
-    plant._asset = pd.read_sql(asset_query, conn)
+    return conn.pandas_query(asset_query)
 
 ## --- SCADA ---
 
-def load_scada_meta(conn, plant):
+def load_scada_meta(conn:EntrConnection, plant_metadata:dict):
+    # Query the warehouse for any non-uniform metadata
     query = f"""
     SELECT
         interval_s,
@@ -137,11 +173,16 @@ def load_scada_meta(conn, plant):
     WHERE
         entr_tag_name = 'WTUR.W';
     """
-    meter_meta_df = pd.read_sql(query, conn)
+    scada_meta_df = conn.pandas_query(query)
 
-    # Parse frequency
-    freq, _, _ = check_metadata_row(meter_meta_df.iloc[0], allowed_freq=['10T'], allowed_types=["average"], allowed_units=["W","Wh"])
-    plant._scada_freq = freq
+    freq, _, _ = check_metadata_row(scada_meta_df.iloc[0], allowed_freq=['10T'], allowed_types=["average"], allowed_units=["W","Wh"])
+
+    # Build the metadata dictionary
+    scada_metadata = {
+        "frequency": freq
+    }
+
+    return scada_metadata
 
 def load_scada(conn, plant):
 
