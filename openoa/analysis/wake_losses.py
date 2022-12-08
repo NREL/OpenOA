@@ -1186,10 +1186,10 @@ class WakeLosses(FromDictMixin):
                 `ax.legend()` for the wind farm efficiency and, if `plot_norm_energy` is True, energy
                 distributions subplots. Defaults to {}.
         Returns:
-            None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes] | tuple[matplotlib.pyplot.Figure,
-                tuple[matplotlib.pyplot.Axes, matplotlib.pyplot.Axes]]: If `return_fig` is True, then the
-                figure and axes object(s), corresponding to the wake loss plot or, if `plot_norm_energy` is
-                True, wake loss and normalized energy plots, are returned for further tinkering/saving.
+            None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes] | tuple[matplotlib.pyplot.Figure, tuple [matplotlib.pyplot.Axes, matplotlib.pyplot.Axes]]:
+                If `return_fig` is True, then the figure and axes object(s), corresponding to the wake
+                loss plot or, if `plot_norm_energy` is True, wake loss and normalized energy plots, are
+                returned for further tinkering/saving.
         """
 
         color_codes = ["#4477AA", "#228833"]
@@ -1445,10 +1445,10 @@ class WakeLosses(FromDictMixin):
                 `ax.legend()` for the wind farm efficiency and, if `plot_norm_energy` is True, energy
                 distributions subplots. Defaults to {}.
         Returns:
-            None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes] | tuple[matplotlib.pyplot.Figure,
-                tuple[matplotlib.pyplot.Axes, matplotlib.pyplot.Axes]]: If `return_fig` is True, then the
-                figure and axes object(s), corresponding to the wake loss plot or, if `plot_norm_energy` is
-                True, wake loss and normalized energy plots, are returned for further tinkering/saving.
+            None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes] | tuple[matplotlib.pyplot.Figure, tuple [matplotlib.pyplot.Axes, matplotlib.pyplot.Axes]]:
+                If `return_fig` is True, then the figure and axes object(s), corresponding to the wake
+                loss plot or, if `plot_norm_energy` is True, wake loss and normalized energy plots, are
+                returned for further tinkering/saving.
         """
 
         color_codes = ["#4477AA", "#228833"]
