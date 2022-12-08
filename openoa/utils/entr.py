@@ -144,12 +144,12 @@ def load_asset(conn:EntrConnection, plant_metadata:dict):
         plant_id,
         wind_turbine_id,
         wind_turbine_name,
-        latitude,
-        longitude,
-        elevation,
-        hub_height,
-        rotor_diameter,
-        rated_power,
+        float(latitude) as latitude,
+        float(longitude) as longitude,
+        float(elevation) as elevation,
+        float(hub_height) as hub_height,
+        float(rotor_diameter) as rotor_diameter,
+        float(rated_power) as rated_power,
         manufacturer,
         model
     FROM
@@ -157,7 +157,18 @@ def load_asset(conn:EntrConnection, plant_metadata:dict):
     WHERE
         plant_id = {plant_metadata['_entr_plant_id']};
     """
-    return conn.pandas_query(asset_query)
+    asset_df = conn.pandas_query(asset_query)
+
+    asset_metadata = {
+        "elevation":"elevation",
+        "id":"wind_turbine_name",
+        "latitude":"latitude",
+        "longitude":"longitude",
+        "rated_power":"rated_power",
+        "rotor_diameter":"rotor_diameter"
+    }
+
+    return asset_df, asset_metadata
 
 ## --- SCADA ---
 
@@ -184,67 +195,85 @@ def load_scada_meta(conn:EntrConnection, plant_metadata:dict):
 
     return scada_metadata
 
-def load_scada(conn, plant):
+def load_scada(conn:EntrConnection, plant_metadata:dict):
 
-    load_scada_meta(conn, plant)
+    scada_metadata = load_scada_meta(conn, plant_metadata)
     
     scada_query = f"""
     SELECT
         entr_warehouse.openoa_wtg_scada.wind_turbine_name,
         date_time,
-        `WROT.BlPthAngVal`,
-        `WTUR.W`,
-        `WMET.HorWdSpd`,
-        `WMET.HorWdDirRel`,
-        `WMET.EnvTmp`,
-        `WNAC.Dir`,
-        `WMET.HorWdDir`,
-        `WTUR.SupWh`
+        float(`WROT.BlPthAngVal`) as `WROT.BlPthAngVal`,
+        float(`WTUR.W`) as `WTUR.W`,
+        float(`WMET.HorWdSpd`) as `WMET.HorWdSpd`,
+        float(`WMET.HorWdDirRel`) as `WMET.HorWdDirRel`,
+        float(`WMET.EnvTmp`) as `WMET.EnvTmp`,
+        float(`WNAC.Dir`) as `WNAC.Dir`,
+        float(`WMET.HorWdDir`) as `WMET.HorWdDir`,
+        float(`WTUR.SupWh`) as `WTUR.SupWh`
     FROM
         entr_warehouse.openoa_wtg_scada
     WHERE
-        plant_id = {plant._entr_plant_id};
+        plant_id = {plant_metadata['_entr_plant_id']};
     """
-    plant.scada.df = pd.read_sql(scada_query, conn)
-
-    load_scada_prepare(plant)
-
-def load_scada_prepare(plant):
+    scada_df = conn.pandas_query(scada_query)
     
-    plant._scada.df['time'] = pd.to_datetime(plant._scada.df['date_time'],utc=True).dt.tz_localize(None)
+    scada_df['time'] = pd.to_datetime(scada_df['date_time'],utc=True).dt.tz_localize(None)
 
     # # Remove duplicated timestamps and turbine id
-    plant._scada.df = plant._scada.df.drop_duplicates(subset=['time','wind_turbine_name'],keep='first')
+    scada_df = scada_df.drop_duplicates(subset=['time','wind_turbine_name'],keep='first')
 
     # # Set time as index
-    plant._scada.df.set_index('time',inplace=True,drop=False)
+    scada_df.set_index('time',inplace=True,drop=False)
 
-    plant._scada.df = plant._scada.df[(plant._scada.df["WMET.EnvTmp"]>=-15.0) & (plant._scada.df["WMET.EnvTmp"]<=45.0)]
+    scada_df = scada_df[(scada_df["WMET.EnvTmp"]>=-15.0) & (scada_df["WMET.EnvTmp"]<=45.0)]
 
     # # Convert pitch to range -180 to 180.
-    plant._scada.df["WROT.BlPthAngVal"] = plant._scada.df["WROT.BlPthAngVal"] % 360
-    plant._scada.df.loc[plant._scada.df["WROT.BlPthAngVal"] > 180.0,"WROT.BlPthAngVal"] \
-        = plant._scada.df.loc[plant._scada.df["WROT.BlPthAngVal"] > 180.0,"WROT.BlPthAngVal"] - 360.0
+    scada_df["WROT.BlPthAngVal"] = scada_df["WROT.BlPthAngVal"] % 360
+    scada_df.loc[scada_df["WROT.BlPthAngVal"] > 180.0,"WROT.BlPthAngVal"] \
+        = scada_df.loc[scada_df["WROT.BlPthAngVal"] > 180.0,"WROT.BlPthAngVal"] - 360.0
 
     # # Calculate energy
-    plant._scada.df['energy_kwh'] = plant._scada.df['WTUR.SupWh'] / 1000.0
+    scada_df['energy_kwh'] = scada_df['WTUR.SupWh'] / 1000.0
+
+    # Todo, read this from a standard YAML file.
+    scada_metadata["id"] = "wind_turbine_name"
+    scada_metadata["power"] = "WTUR.W"
+    scada_metadata["pitch"] = "WROT.BlPthAngVal"
+    scada_metadata["temperature"] = "WMET.EnvTmp"
+    scada_metadata["time"] = "time"
+    scada_metadata["wind_direction"] = "WMET.HorWdDir"
+    scada_metadata["windspeed"] = "WMET.HorWdSpd"
+
+    return scada_df, scada_metadata
+
+    # scada:
+    # frequency: 10T
+    # id: Wind_turbine_name
+    # pitch: Ba_avg
+    # power: P_avg
+    # temperature: Ot_avg
+    # time: time
+    # wind_direction: Wa_avg
+    # windspeed: Ws_avg
+
 
     # # Note: there is no vane direction variable defined in -25, so
     # # making one up
-    scada_map = {
-                "date_time"                 : "time",
-                "wind_turbine_name"    : "id",
-                "WTUR.W"              : "wtur_W_avg",
+    # scada_map = {
+    #             "date_time"                 : "time",
+    #             "wind_turbine_name"    : "id",
+    #             "WTUR.W"              : "wtur_W_avg",
 
-                "WMET.HorWdSpd"          : "wmet_wdspd_avg",
-                "WMET.HorWdDirRel"       : "wmet_HorWdDir_avg",
-                "WMET.HorWdDir"          : "wmet_VaneDir_avg",
-                "WNAC.Dir"               : "wyaw_YwAng_avg",
-                "WMET.EnvTmp"            : "wmet_EnvTmp_avg",
-                "WROT.BlPthAngVal"       : "wrot_BlPthAngVal1_avg",
-                }
+    #             "WMET.HorWdSpd"          : "wmet_wdspd_avg",
+    #             "WMET.HorWdDirRel"       : "wmet_HorWdDir_avg",
+    #             "WMET.HorWdDir"          : "wmet_VaneDir_avg",
+    #             "WNAC.Dir"               : "wyaw_YwAng_avg",
+    #             "WMET.EnvTmp"            : "wmet_EnvTmp_avg",
+    #             "WROT.BlPthAngVal"       : "wrot_BlPthAngVal1_avg",
+    #             }
 
-    plant._scada.df.rename(scada_map, axis="columns", inplace=True)
+    # plant._scada.df.rename(scada_map, axis="columns", inplace=True)
 
 def check_metadata_row(row, allowed_freq=["10T"], allowed_types=["sum"], allowed_units=["kWh"]):
     """
