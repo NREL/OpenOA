@@ -14,7 +14,7 @@ asset:pd.DataFrame, asset_metadata:dict = entr.load_asset(conn, plant_metadata, 
 scada:pd.DataFrame, scada_metadata:dict = entr.load_scada(conn, plant_metadata, cols=...)
 ... curtailment, meter, reanalysis...
 
-plant_metadata["scada"] = scada_metadata
+plant_metadata["scada": scada_metadata
 plant_metadata["asset] = asset_metadata
 
 plant = PlantData(plant_metadata, scada, asset...)
@@ -190,7 +190,14 @@ def load_scada_meta(conn:EntrConnection, plant_metadata:dict):
 
     # Build the metadata dictionary
     scada_metadata = {
-        "frequency": freq
+        "frequency": freq,
+        "id": "wind_turbine_name",
+        "power": "WTUR.W",
+        "pitch": "WROT.BlPthAngVal",
+        "temperature": "WMET.EnvTmp",
+        "time": "time",
+        "wind_direction": "WMET.HorWdDir",
+        "windspeed": "WMET.HorWdSpd"
     }
 
     return scada_metadata
@@ -236,15 +243,6 @@ def load_scada(conn:EntrConnection, plant_metadata:dict):
     # # Calculate energy
     scada_df['energy_kwh'] = scada_df['WTUR.SupWh'] / 1000.0
 
-    # Todo, read this from a standard YAML file.
-    scada_metadata["id"] = "wind_turbine_name"
-    scada_metadata["power"] = "WTUR.W"
-    scada_metadata["pitch"] = "WROT.BlPthAngVal"
-    scada_metadata["temperature"] = "WMET.EnvTmp"
-    scada_metadata["time"] = "time"
-    scada_metadata["wind_direction"] = "WMET.HorWdDir"
-    scada_metadata["windspeed"] = "WMET.HorWdSpd"
-
     return scada_df, scada_metadata
 
 
@@ -268,7 +266,7 @@ def check_metadata_row(row, allowed_freq=["10T"], allowed_types=["sum"], allowed
 
 ## --- CURTAILMENT ---
 
-def load_curtailment_meta(conn:EntrConnection, plant_metadata:dict):
+def load_curtailment_meta(conn:EntrConnection, plant_metadata:dict) -> dict:
     query = f"""
     SELECT
         interval_s,
@@ -279,48 +277,48 @@ def load_curtailment_meta(conn:EntrConnection, plant_metadata:dict):
     WHERE
         entr_tag_name in ('IAVL.DnWh', 'IAVL.ExtPwrDnWh')
     """
-    meter_meta_df = pd.read_sql(query, conn)
-    freq, _, _ = check_metadata_row(meter_meta_df.iloc[0], allowed_freq=['10T'], allowed_types=["sum"], allowed_units=["kWh"])
-    plant._curtail_freq = freq
+    curtail_meta_df = conn.pandas_query(query)
+    freq, _, _ = check_metadata_row(curtail_meta_df.iloc[0], allowed_freq=['10T'], allowed_types=["sum"], allowed_units=["kWh"])
+
+    # Build the metadata dictionary
+    curtail_metadata = {
+        "frequency": freq,
+        "availability": 'IAVL.DnWh',
+        "curtailment": 'IAVL.ExtPwrDnWh',
+        "time": "date_time"
+    }
+
+    return curtail_metadata
 
 def load_curtailment(conn:EntrConnection, plant_metadata:dict):
 
-    load_curtailment_meta(conn, plant)
+    curtail_metadata = load_curtailment_meta(conn, plant_metadata)
 
     query = f"""
     SELECT
         date_time,
-        `IAVL.DnWh`,
-        `IAVL.ExtPwrDnWh`
+        float(`IAVL.DnWh`) as `IAVL.DnWh`,
+        float(`IAVL.ExtPwrDnWh`) as `IAVL.ExtPwrDnWh`
     FROM
         entr_warehouse.openoa_curtailment_and_availability
     WHERE
-        plant_id = {plant._entr_plant_id}
+        plant_id = {plant_metadata['_entr_plant_id']}
     ORDER BY
         date_time;
     """
-    plant.curtail.df = pd.read_sql(query, conn)
 
-    load_curtailment_prepare(plant)
-
-def load_curtailment_prepare(plant):
-
-    curtail_map = {
-        'IAVL.DnWh':'availability_kwh',
-        'IAVL.ExtPwrDnWh':'curtailment_kwh',
-        'date_time':'time'
-    }
-
-    plant._curtail.df.rename(curtail_map, axis="columns", inplace=True)
+    curtail_df = conn.pandas_query(query)
 
     # Create datetime field
-    plant._curtail.df['time'] = pd.to_datetime(plant._curtail.df.time).dt.tz_localize(None)
-    plant._curtail.df.set_index('time',inplace=True,drop=False)
+    curtail_df['date_time'] = pd.to_datetime(curtail_df["date_time"]).dt.tz_localize(None)
+    curtail_df.set_index('date_time',inplace=True,drop=False)
+
+    return curtail_df, curtail_metadata
 
 
 ## --- METER ---
 
-def load_meter_meta(conn:EntrConnection, plant_metadata:dict):
+def load_meter_meta(conn:EntrConnection, plant_metadata:dict) -> dict:
     query = f"""
     SELECT
         interval_s,
@@ -331,39 +329,39 @@ def load_meter_meta(conn:EntrConnection, plant_metadata:dict):
     WHERE
         entr_tag_name = 'MMTR.SupWh'
     """
-    meter_meta_df = pd.read_sql(query, conn)
+    meter_meta_df = conn.pandas_query(query)
 
     # Parse frequency
     freq, _, _ = check_metadata_row(meter_meta_df.iloc[0], allowed_freq=['10T'], allowed_types=["sum"], allowed_units=["kWh"])
-    plant._meter_freq = freq
+
+    # Build the metadata dictionary
+    meter_metadata = {
+        "frequency": freq,
+        "energy": "MMTR.SupWh",
+        "time": "date_time"
+    }
+
+    return meter_metadata
 
 def load_meter(conn:EntrConnection, plant_metadata:dict):
 
-    load_meter_meta(conn, plant)
+    meter_metadata = load_meter_meta(conn, plant_metadata)
 
     meter_query = f"""
     SELECT
         date_time,
-        `MMTR.SupWh`
+        float(`MMTR.SupWh`) as `MMTR.SupWh`
     FROM
         entr_warehouse.openoa_revenue_meter
     WHERE
-        plant_id = {plant._entr_plant_id};
+        plant_id = {plant_metadata['_entr_plant_id']};
     """
-    plant.meter.df = pd.read_sql(meter_query, conn)
+    meter_df = conn.pandas_query(meter_query)
 
-    load_meter_prepare(plant)
+    meter_df['date_time'] = pd.to_datetime(meter_df["date_time"]).dt.tz_localize(None)
+    meter_df.set_index('date_time',inplace=True,drop=False)
 
-def load_meter_prepare(plant):
-
-    plant._meter.df['time'] = pd.to_datetime(plant._meter.df["date_time"]).dt.tz_localize(None)
-    plant._meter.df.set_index('time',inplace=True,drop=False)
-
-    meter_map = {
-        "MMTR.SupWh": "energy_kwh"
-    }
-
-    plant._meter.df.rename(meter_map, axis="columns", inplace=True)
+    return meter_df, meter_metadata
 
 ## --- REANALYSIS ---
 
@@ -393,7 +391,7 @@ def load_reanalysis(conn:EntrConnection, plant_metadata:dict, reanalysis_product
         FROM
             entr_warehouse.openoa_reanalysis
         WHERE
-            plant_id = {plant._entr_plant_id} AND
+            plant_id = {plant_metadata['_entr_plant_id']} AND
             reanalysis_dataset_name = "{product_query_string}";
         """
         plant.reanalysis._product[product.lower()].df = pd.read_sql(reanalysis_query, conn)

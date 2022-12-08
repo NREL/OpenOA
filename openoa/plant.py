@@ -1831,34 +1831,23 @@ def from_entr(
     plant_metadata = entr.load_metadata(connection, plant_name)
     asset_df, asset_metadata = entr.load_asset(connection, plant_metadata)
     scada_df, scada_metadata = entr.load_scada(connection, plant_metadata)
+    curtail_df, curtail_metadata = entr.load_curtailment(connection, plant_metadata)
+    meter_df, meter_metadata = entr.load_meter(connection, plant_metadata)
 
     combined_metadata = plant_metadata.copy()
     combined_metadata["asset"] = asset_metadata
     combined_metadata["scada"] = scada_metadata
+    combined_metadata["curtail"] = curtail_metadata
+    combined_metadata["meter"] = meter_metadata
 
-    # Todo: convert these to return dataframes and dictionaries that OpenOA PlantData constructor can use
-    # metadata = entr.load_metadata(conn, plant)
-    # asset_df = entr.load_asset(conn, plant)
-    # scada_df = entr.load_scada(conn, plant)
-    # curtail_df = entr.load_curtailment(conn, plant)
-    # meter_df = entr.load_meter(conn, plant)
-    # reanalysis_dict = entr.load_reanalysis(conn, plant, reanalysis_products)
-
-    # Todo: Write a prepare funciton in entr.py to replace previous lines
-    # metadata, asset_df, scada_df, curtail_df, meter_df, reanalysis_dict = entr.prepare()
-
-    # Todo: Put those data into this constructor
-    # scada_df, meter_df, curtail_df, asset_df, reanalysis_dict = project_ENGIE.prepare(
-    # path="data/la_haute_borne",
-    # return_value="dataframes"
-    # )
+    print("Loaded Dataframes")
 
     plant = PlantData(
         analysis_type=None,  # No validation desired at this point in time
         metadata=combined_metadata,
         scada=scada_df,
-        # meter=meter_df,
-        # curtail=curtail_df,
+        meter=meter_df,
+        curtail=curtail_df,
         asset=asset_df,
         # reanalysis=reanalysis_dict,
     )
