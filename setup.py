@@ -27,6 +27,7 @@ REQUIRED = [
     "pytz",
     "pyspark",  # TODO: confirm if options required [sql] or [pandas_on_spark]
     "pyyaml",
+    "h5pyd",
 ]
 
 TESTS = ["pytest>=5.4.2", "pytest-cov>=2.8.1"]
@@ -44,7 +45,6 @@ EXTRAS = {
         "myst-parser",
     ],
     "entr": ["pyhive"],
-    "wtk": ["h5pyd"],
     "develop": [
         "pre-commit",
         "black",
