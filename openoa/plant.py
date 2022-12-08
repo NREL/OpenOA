@@ -6,6 +6,7 @@ from copy import deepcopy
 from typing import Callable, Optional, Sequence
 from pathlib import Path
 from functools import cached_property
+from time import perf_counter
 
 import yaml
 import attrs
@@ -18,6 +19,7 @@ from shapely.geometry import Point
 
 import openoa.utils.timeseries as ts
 import openoa.utils.met_data_processing as met
+import openoa.utils.entr as entr
 from openoa.utils.metadata_fetch import attach_eia_data
 from openoa.utils.unit_conversion import convert_power_to_energy
 
@@ -1804,8 +1806,10 @@ class PlantData:
 def from_entr(
     cls,
     plant_name:str,
-    connection=None
-):
+    analysis_type:str=None,
+    connection:entr.EntrConnection=None,
+    reanalysis_products:list[str]=["merra2", "era5"]
+)->PlantData:
     """
     from_entr
         Load a PlantData object from data in an entr_warehouse.
@@ -1823,34 +1827,47 @@ def from_entr(
     Returns:
             plant(PlantData): An OpenOA PlantData object.
     """
-    import openoa.utils.entr as entr
+
+    tic = perf_counter()
 
     if connection is None:
         connection = entr.PySparkEntrConnection()
 
+    toc = perf_counter()
+    print(f"{toc-tic} sec\tENTR Connection obtained")
+
+    tic = perf_counter()
     plant_metadata = entr.load_metadata(connection, plant_name)
     asset_df, asset_metadata = entr.load_asset(connection, plant_metadata)
     scada_df, scada_metadata = entr.load_scada(connection, plant_metadata)
     curtail_df, curtail_metadata = entr.load_curtailment(connection, plant_metadata)
     meter_df, meter_metadata = entr.load_meter(connection, plant_metadata)
+    reanalysis_df_dict, reanalysis_metadata_dict = entr.load_reanalysis(connection, plant_metadata, reanalysis_products)
+    toc = perf_counter()
+    print(f"{toc-tic} sec\tData loaded from Warehouse into Python")
+
 
     combined_metadata = plant_metadata.copy()
     combined_metadata["asset"] = asset_metadata
     combined_metadata["scada"] = scada_metadata
     combined_metadata["curtail"] = curtail_metadata
     combined_metadata["meter"] = meter_metadata
+    combined_metadata["reanalysis"] = reanalysis_metadata_dict
 
-    print("Loaded Dataframes")
+    tic = perf_counter()
 
     plant = PlantData(
-        analysis_type=None,  # No validation desired at this point in time
+        analysis_type=analysis_type,  # No validation desired at this point in time
         metadata=combined_metadata,
         scada=scada_df,
         meter=meter_df,
         curtail=curtail_df,
         asset=asset_df,
-        # reanalysis=reanalysis_dict,
+        reanalysis=reanalysis_df_dict,
     )
+
+    toc = perf_counter()
+    print(f"{toc-tic} sec\tPlantData Object Creation")
 
     return plant
 

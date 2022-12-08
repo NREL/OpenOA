@@ -40,7 +40,6 @@ In some cases, check_metadata_row is called to assert properties about a table's
 import pandas as pd
 import openoa.utils.unit_conversion as un
 import openoa.utils.met_data_processing as met
-from dataclasses import dataclass
 
 ## --- DATABASE CONNECTIONS ---
 
@@ -365,14 +364,15 @@ def load_meter(conn:EntrConnection, plant_metadata:dict):
 
 ## --- REANALYSIS ---
 
-def load_reanalysis_meta(conn:EntrConnection, plant_metadata:dict):
-    pass
 
 def load_reanalysis(conn:EntrConnection, plant_metadata:dict, reanalysis_products):
 
     #load_reanalysis_meta(conn, plant)
     if reanalysis_products is None:
         return ## No reanalysis products were requested
+
+    reanalysis_df_dict = {}
+    reanalysis_meta_dict = {}
 
     for product in reanalysis_products:
 
@@ -381,60 +381,39 @@ def load_reanalysis(conn:EntrConnection, plant_metadata:dict, reanalysis_product
         reanalysis_query = f"""
         SELECT
             date_time,
-            `WMETR.HorWdSpdU`,
-            `WMETR.HorWdSpdV`,
-            `WMETR.EnvTmp`,
-            `WMETR.EnvPres`,
-            `WMETR.HorWdSpd`,
-            `WMETR.HorWdDir`,
-            `WMETR.AirDen`
+            float(`WMETR.HorWdSpdU`) as `WMETR.HorWdSpdU`,
+            float(`WMETR.HorWdSpdV`) as `WMETR.HorWdSpdV`,
+            float(`WMETR.EnvTmp`) as `WMETR.EnvTmp`,
+            float(`WMETR.EnvPres`) as `WMETR.EnvPres`,
+            float(`WMETR.HorWdSpd`) as `WMETR.HorWdSpd`,
+            float(`WMETR.HorWdDir`) as `WMETR.HorWdDir`,
+            float(`WMETR.AirDen`) as `WMETR.AirDen`
         FROM
             entr_warehouse.openoa_reanalysis
         WHERE
             plant_id = {plant_metadata['_entr_plant_id']} AND
             reanalysis_dataset_name = "{product_query_string}";
         """
-        plant.reanalysis._product[product.lower()].df = pd.read_sql(reanalysis_query, conn)
+        reanalysis_df = conn.pandas_query(reanalysis_query)
 
-        load_reanalysis_prepare(plant, product=product)
+        reanalysis_df["winddirection_deg"] = met.compute_wind_direction(reanalysis_df["WMETR.HorWdSpdU"], reanalysis_df["WMETR.HorWdSpdV"])
+        reanalysis_df['date_time'] = pd.to_datetime(reanalysis_df['date_time']).dt.tz_localize(None)
+        reanalysis_df.set_index('date_time',inplace=True,drop=False)
 
-def load_reanalysis_prepare(plant, product):
+        reanalysis_metadata = {
+            "frequency": "H", #TODO: Read this from Metadata tables
+            "surface_pressure": "WMETR.EnvPres",
+            "temperature": "WMETR.EnvTmp",
+            "time": "date_time",
+            "windspeed_u": "WMETR.HorWdSpdU",
+            "windspeed_v": "WMETR.HorWdSpdV"
+        }
 
-    # CASE: MERRA2
-    if product.lower() == "merra2":
-        
-        # calculate wind direction from u, v
-        plant._reanalysis._product['merra2'].df["winddirection_deg"] \
-            = met.compute_wind_direction(plant._reanalysis._product['merra2'].df["WMETR.HorWdSpdU"], \
-            plant._reanalysis._product['merra2'].df["WMETR.HorWdSpdV"])
+        reanalysis_df_dict[product] = reanalysis_df
+        reanalysis_meta_dict[product] = reanalysis_metadata
 
-        plant._reanalysis._product['merra2'].rename_columns({"time":"date_time",
-                                    "windspeed_ms": "WMETR.HorWdSpd",
-                                    "u_ms": "WMETR.HorWdSpdU",
-                                    "v_ms": "WMETR.HorWdSpdV",
-                                    "temperature_K": "WMETR.EnvTmp",
-                                    "rho_kgm-3": "WMETR.AirDen"})
-        #plant._reanalysis._product['merra2'].normalize_time_to_datetime("%Y-%m-%d %H:%M:%S")
-        plant._reanalysis._product['merra2'].df['time'] = pd.to_datetime(plant._reanalysis._product['merra2'].df['time']).dt.tz_localize(None)
-        plant._reanalysis._product['merra2'].df.set_index('time',inplace=True,drop=False)
+    return reanalysis_df_dict, reanalysis_meta_dict
 
-    # CASE: ERA5
-    elif product.lower() == 'era5':
-
-        # calculate wind direction from u, v
-        plant._reanalysis._product['era5'].df["winddirection_deg"] \
-            = met.compute_wind_direction(plant._reanalysis._product['era5'].df["WMETR.HorWdSpdU"], \
-            plant._reanalysis._product['era5'].df["WMETR.HorWdSpdV"])
-
-        plant._reanalysis._product['era5'].rename_columns({"time":"date_time",
-                                    "windspeed_ms": "WMETR.HorWdSpd",
-                                    "u_ms": "WMETR.HorWdSpdU",
-                                    "v_ms": "WMETR.HorWdSpdV",
-                                    "temperature_K": "WMETR.EnvTmp",
-                                    "rho_kgm-3": "WMETR.AirDen"})
-        #plant._reanalysis._product['era5'].normalize_time_to_datetime("%Y-%m-%d %H:%M:%S")
-        plant._reanalysis._product['era5'].df['time'] = pd.to_datetime(plant._reanalysis._product['era5'].df['time']).dt.tz_localize(None)
-        plant._reanalysis._product['era5'].df.set_index('time',inplace=True,drop=False)
 
 ### UDFs
 
