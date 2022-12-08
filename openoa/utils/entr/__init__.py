@@ -247,33 +247,6 @@ def load_scada(conn:EntrConnection, plant_metadata:dict):
 
     return scada_df, scada_metadata
 
-    # scada:
-    # frequency: 10T
-    # id: Wind_turbine_name
-    # pitch: Ba_avg
-    # power: P_avg
-    # temperature: Ot_avg
-    # time: time
-    # wind_direction: Wa_avg
-    # windspeed: Ws_avg
-
-
-    # # Note: there is no vane direction variable defined in -25, so
-    # # making one up
-    # scada_map = {
-    #             "date_time"                 : "time",
-    #             "wind_turbine_name"    : "id",
-    #             "WTUR.W"              : "wtur_W_avg",
-
-    #             "WMET.HorWdSpd"          : "wmet_wdspd_avg",
-    #             "WMET.HorWdDirRel"       : "wmet_HorWdDir_avg",
-    #             "WMET.HorWdDir"          : "wmet_VaneDir_avg",
-    #             "WNAC.Dir"               : "wyaw_YwAng_avg",
-    #             "WMET.EnvTmp"            : "wmet_EnvTmp_avg",
-    #             "WROT.BlPthAngVal"       : "wrot_BlPthAngVal1_avg",
-    #             }
-
-    # plant._scada.df.rename(scada_map, axis="columns", inplace=True)
 
 def check_metadata_row(row, allowed_freq=["10T"], allowed_types=["sum"], allowed_units=["kWh"]):
     """
@@ -295,7 +268,7 @@ def check_metadata_row(row, allowed_freq=["10T"], allowed_types=["sum"], allowed
 
 ## --- CURTAILMENT ---
 
-def load_curtailment_meta(conn, plant):
+def load_curtailment_meta(conn:EntrConnection, plant_metadata:dict):
     query = f"""
     SELECT
         interval_s,
@@ -310,7 +283,7 @@ def load_curtailment_meta(conn, plant):
     freq, _, _ = check_metadata_row(meter_meta_df.iloc[0], allowed_freq=['10T'], allowed_types=["sum"], allowed_units=["kWh"])
     plant._curtail_freq = freq
 
-def load_curtailment(conn, plant):
+def load_curtailment(conn:EntrConnection, plant_metadata:dict):
 
     load_curtailment_meta(conn, plant)
 
@@ -347,7 +320,7 @@ def load_curtailment_prepare(plant):
 
 ## --- METER ---
 
-def load_meter_meta(conn, plant):
+def load_meter_meta(conn:EntrConnection, plant_metadata:dict):
     query = f"""
     SELECT
         interval_s,
@@ -364,7 +337,7 @@ def load_meter_meta(conn, plant):
     freq, _, _ = check_metadata_row(meter_meta_df.iloc[0], allowed_freq=['10T'], allowed_types=["sum"], allowed_units=["kWh"])
     plant._meter_freq = freq
 
-def load_meter(conn, plant):
+def load_meter(conn:EntrConnection, plant_metadata:dict):
 
     load_meter_meta(conn, plant)
 
@@ -394,10 +367,10 @@ def load_meter_prepare(plant):
 
 ## --- REANALYSIS ---
 
-def load_reanalysis_meta(conn, plant):
+def load_reanalysis_meta(conn:EntrConnection, plant_metadata:dict):
     pass
 
-def load_reanalysis(conn, plant, reanalysis_products):
+def load_reanalysis(conn:EntrConnection, plant_metadata:dict, reanalysis_products):
 
     #load_reanalysis_meta(conn, plant)
     if reanalysis_products is None:

@@ -1802,15 +1802,9 @@ class PlantData:
 # Todo: Demonstrate working openoav3 constructor with Hive
 # Todo: Add Pyspark constructor with option to preserve pyspark dataframe
 def from_entr(
-    connection_type:str = "pyspark",
-    thrift_server_host: str = "localhost",
-    thrift_server_port: int = 10000,
-    database: str = "entr_warehouse",
-    wind_plant: str = "",
-    aggregation: str = "",
-    date_range: list = None,
-    reanalysis_products=None,
-    conn=None
+    cls,
+    plant_name:str,
+    connection=None
 ):
     """
     from_entr
@@ -1831,20 +1825,27 @@ def from_entr(
     """
     import openoa.utils.entr as entr
 
-    conn = entr.get_connection(thrift_server_host, thrift_server_port)
+    if connection is None:
+        connection = entr.PySparkEntrConnection()
+
+    plant_metadata = entr.load_metadata(connection, plant_name)
+    asset_df, asset_metadata = entr.load_asset(connection, plant_metadata)
+    scada_df, scada_metadata = entr.load_scada(connection, plant_metadata)
+
+    combined_metadata = plant_metadata.copy()
+    combined_metadata["asset"] = asset_metadata
+    combined_metadata["scada"] = scada_metadata
 
     # Todo: convert these to return dataframes and dictionaries that OpenOA PlantData constructor can use
-    metadata = entr.load_metadata(conn, plant)
-    asset_df = entr.load_asset(conn, plant)
-    scada_df = entr.load_scada(conn, plant)
-    curtail_df = entr.load_curtailment(conn, plant)
-    meter_df = entr.load_meter(conn, plant)
-    reanalysis_dict = entr.load_reanalysis(conn, plant, reanalysis_products)
+    # metadata = entr.load_metadata(conn, plant)
+    # asset_df = entr.load_asset(conn, plant)
+    # scada_df = entr.load_scada(conn, plant)
+    # curtail_df = entr.load_curtailment(conn, plant)
+    # meter_df = entr.load_meter(conn, plant)
+    # reanalysis_dict = entr.load_reanalysis(conn, plant, reanalysis_products)
 
     # Todo: Write a prepare funciton in entr.py to replace previous lines
     # metadata, asset_df, scada_df, curtail_df, meter_df, reanalysis_dict = entr.prepare()
-
-    conn.close()
 
     # Todo: Put those data into this constructor
     # scada_df, meter_df, curtail_df, asset_df, reanalysis_dict = project_ENGIE.prepare(
@@ -1854,12 +1855,12 @@ def from_entr(
 
     plant = PlantData(
         analysis_type=None,  # No validation desired at this point in time
-        metadata=metadata,
+        metadata=combined_metadata,
         scada=scada_df,
-        meter=meter_df,
-        curtail=curtail_df,
+        # meter=meter_df,
+        # curtail=curtail_df,
         asset=asset_df,
-        reanalysis=reanalysis_dict,
+        # reanalysis=reanalysis_dict,
     )
 
     return plant
