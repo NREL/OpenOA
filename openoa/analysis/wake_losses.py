@@ -20,7 +20,7 @@ from attrs import field, define
 from sklearn.linear_model import LinearRegression
 
 from openoa.plant import PlantData, FromDictMixin
-from openoa.utils import filters
+from openoa.utils import plot, filters
 from openoa.utils import met_data_processing as met
 from openoa.logging import logging, logged_method_call
 from openoa.utils.plot import set_styling
@@ -1156,8 +1156,9 @@ class WakeLosses(FromDictMixin):
         legend_kwargs: dict = {},
     ):
         """
-        Plots wake losses during the period of record in the form of wind farm efficiency as a function of wind
-        direction as well as normalized wind plant energy production as a function of wind direction.
+        Plots wake losses in the form of wind farm efficiency as well as normalized wind plant energy
+        production for both the period of record and with the long-term correction as a function of
+        wind direction.
 
         Args:
             plot_norm_energy (bool, optional): If True, include a plot of normalized wind plant energy
@@ -1192,214 +1193,46 @@ class WakeLosses(FromDictMixin):
                 returned for further tinkering/saving.
         """
 
-        color_codes = ["#4477AA", "#228833"]
-
         wd_bins = np.arange(0.0, 360.0, self._wd_bin_width_LT_corr)
 
-        plot_kwargs_fill.setdefault("alpha", 0.2)
+        if turbine_id is None:
+            efficiency_data_por = self.wake_losses_por_wd
+            efficiency_data_lt = self.wake_losses_lt_wd
 
-        if xlim == (None, None):
-            xlim = (0, 360.0 - self._wd_bin_width_LT_corr)
+        else:
+            turbine_index = self.turbine_ids.index(turbine_id)
 
-        if figure_kwargs is None:
-            figure_kwargs = {}
+            if self.UQ:
+                efficiency_data_por = self.turbine_wake_losses_por_wd[:, turbine_index, :]
+                efficiency_data_lt = self.turbine_wake_losses_lt_wd[:, turbine_index, :]
+            else:
+                efficiency_data_por = self.turbine_wake_losses_por_wd[turbine_index, :]
+                efficiency_data_lt = self.turbine_wake_losses_lt_wd[turbine_index, :]
 
         if plot_norm_energy:
-            figure_kwargs.setdefault("figsize", (9, 9.1))
-            fig = plt.figure(**figure_kwargs)
-            ax1 = fig.add_subplot(211)
-            ax2 = fig.add_subplot(212, sharex=ax1)
-            axs = (ax1, ax2)
+            energy_data_por = self.energy_por_wd
+            energy_data_lt = self.energy_lt_wd
         else:
-            figure_kwargs.setdefault("figsize", (9, 5))
-            fig = plt.figure(**figure_kwargs)
-            ax1 = fig.add_subplot(111)
-            axs = [ax1]
-        axs[0].plot([0, 360.0 - self._wd_bin_width_LT_corr], [1, 1], "k", linewidth=1.5)
+            energy_data_por = None
+            energy_data_lt = None
 
-        if self.UQ:
-            if turbine_id is None:  # plot wind plant wake losses
-                axs[0].plot(
-                    wd_bins,
-                    np.mean(self.wake_losses_por_wd, axis=0),
-                    color=color_codes[0],
-                    label="Period of Record",
-                    **plot_kwargs_line,
-                )
-                axs[0].fill_between(
-                    wd_bins,
-                    np.percentile(self.wake_losses_por_wd, 2.5, axis=0),
-                    np.percentile(self.wake_losses_por_wd, 97.5, axis=0),
-                    color=color_codes[0],
-                    label="_nolegend_",
-                    **plot_kwargs_fill,
-                )
-
-                axs[0].plot(
-                    wd_bins,
-                    np.mean(self.wake_losses_lt_wd, axis=0),
-                    color=color_codes[1],
-                    label="Long-Term Corrected",
-                    **plot_kwargs_line,
-                )
-                axs[0].fill_between(
-                    wd_bins,
-                    np.percentile(self.wake_losses_lt_wd, 2.5, axis=0),
-                    np.percentile(self.wake_losses_lt_wd, 97.5, axis=0),
-                    color=color_codes[1],
-                    label="_nolegend_",
-                    **plot_kwargs_fill,
-                )
-            else:  # plot wake losses for specific turbine
-                turbine_index = self.turbine_ids.index(turbine_id)
-
-                axs[0].plot(
-                    wd_bins,
-                    np.mean(self.turbine_wake_losses_por_wd[:, turbine_index, :], axis=0),
-                    color=color_codes[0],
-                    label="Period of Record",
-                    **plot_kwargs_line,
-                )
-                axs[0].fill_between(
-                    wd_bins,
-                    np.percentile(
-                        self.turbine_wake_losses_por_wd[:, turbine_index, :], 2.5, axis=0
-                    ),
-                    np.percentile(
-                        self.turbine_wake_losses_por_wd[:, turbine_index, :], 97.5, axis=0
-                    ),
-                    color=color_codes[0],
-                    label="_nolegend_",
-                    **plot_kwargs_fill,
-                )
-
-                axs[0].plot(
-                    wd_bins,
-                    np.mean(self.turbine_wake_losses_lt_wd[:, turbine_index, :], axis=0),
-                    color=color_codes[1],
-                    label="Long-Term Corrected",
-                    **plot_kwargs_line,
-                )
-                axs[0].fill_between(
-                    wd_bins,
-                    np.percentile(self.turbine_wake_losses_lt_wd[:, turbine_index, :], 2.5, axis=0),
-                    np.percentile(
-                        self.turbine_wake_losses_lt_wd[:, turbine_index, :], 97.5, axis=0
-                    ),
-                    color=color_codes[1],
-                    label="_nolegend_",
-                    **plot_kwargs_fill,
-                )
-
-                axs[0].set_title(f"Wind Turbine {turbine_id}")
-
-            if plot_norm_energy:
-                axs[1].plot(
-                    wd_bins,
-                    np.mean(self.energy_por_wd, axis=0),
-                    color=color_codes[0],
-                    label="Period of Record",
-                    **plot_kwargs_line,
-                )
-                axs[1].fill_between(
-                    wd_bins,
-                    np.percentile(self.energy_por_wd, 2.5, axis=0),
-                    np.percentile(self.energy_por_wd, 97.5, axis=0),
-                    color=color_codes[0],
-                    label="_nolegend_",
-                    **plot_kwargs_fill,
-                )
-
-                axs[1].plot(
-                    wd_bins,
-                    np.mean(self.energy_lt_wd, axis=0),
-                    color=color_codes[1],
-                    label="Long-Term Corrected",
-                    **plot_kwargs_line,
-                )
-                axs[1].fill_between(
-                    wd_bins,
-                    np.percentile(self.energy_lt_wd, 2.5, axis=0),
-                    np.percentile(self.energy_lt_wd, 97.5, axis=0),
-                    color=color_codes[1],
-                    label="_nolegend_",
-                    **plot_kwargs_fill,
-                )
-
-        else:  # without UQ
-            if turbine_id is None:  # plot wind plant wake losses
-                axs[0].plot(
-                    wd_bins,
-                    self.wake_losses_por_wd,
-                    color=color_codes[0],
-                    label="Period of Record",
-                    **plot_kwargs_line,
-                )
-
-                axs[0].plot(
-                    wd_bins,
-                    self.wake_losses_lt_wd,
-                    color=color_codes[1],
-                    label="Long-Term Corrected",
-                    **plot_kwargs_line,
-                )
-
-            else:  # plot wake losses for specific turbine
-                turbine_index = self.turbine_ids.index(turbine_id)
-
-                axs[0].plot(
-                    wd_bins,
-                    self.turbine_wake_losses_por_wd[turbine_index, :],
-                    color=color_codes[0],
-                    label="Period of Record",
-                    **plot_kwargs_line,
-                )
-
-                axs[0].plot(
-                    wd_bins,
-                    self.turbine_wake_losses_lt_wd[turbine_index, :],
-                    color=color_codes[1],
-                    label="Long-Term Corrected",
-                    **plot_kwargs_line,
-                )
-
-                axs[0].set_title(f"Wind Turbine {turbine_id}")
-
-            if plot_norm_energy:
-                axs[1].plot(
-                    wd_bins,
-                    self.energy_por_wd,
-                    color=color_codes[0],
-                    label="Period of Record",
-                    **plot_kwargs_line,
-                )
-
-                axs[1].plot(
-                    wd_bins,
-                    self.energy_lt_wd,
-                    color=color_codes[1],
-                    label="Long-Term Corrected",
-                    **plot_kwargs_line,
-                )
-
-        axs[0].set_xlim(xlim)
-        axs[0].set_ylim(ylim_efficiency)
-        axs[len(axs) - 1].set_xlabel(r"Wind Direction ($^\circ$)")
-        axs[0].legend(**legend_kwargs)
-        axs[0].set_ylabel("Wind Plant Efficiency (-)")
-
-        if plot_norm_energy:
-            axs[1].set_ylim(ylim_energy)
-            axs[1].legend(**legend_kwargs)
-            axs[1].set_ylabel("Normalized Wind Plant\nEnergy Production (-)")
-
-            plt.tight_layout()
-            if return_fig:
-                return fig, axs
-        else:
-            plt.tight_layout()
-            if return_fig:
-                return fig, ax1
+        return plot.plot_wake_losses(
+            bins=wd_bins,
+            efficiency_data_por=efficiency_data_por,
+            efficiency_data_lt=efficiency_data_lt,
+            energy_data_por=energy_data_por,
+            energy_data_lt=energy_data_lt,
+            bin_axis_label=r"Wind Direction ($^\circ$)",
+            turbine_id=turbine_id,
+            xlim=xlim,
+            ylim_efficiency=ylim_efficiency,
+            ylim_energy=ylim_energy,
+            return_fig=return_fig,
+            figure_kwargs=figure_kwargs,
+            plot_kwargs_line=plot_kwargs_line,
+            plot_kwargs_fill=plot_kwargs_fill,
+            legend_kwargs=legend_kwargs,
+        )
 
     def plot_wake_losses_by_wind_speed(
         self,
@@ -1415,8 +1248,9 @@ class WakeLosses(FromDictMixin):
         legend_kwargs: dict = {},
     ):
         """
-        Plots wake losses during the period of record in the form of wind farm efficiency as a function of wind
-        speed as well as normalized wind plant energy production as a function of wind speed.
+        Plots wake losses in the form of wind farm efficiency as well as normalized wind plant energy
+        production for both the period of record and with the long-term correction as a function of
+        wind speed.
 
         Args:
             plot_norm_energy (bool, optional): If True, include a plot of normalized wind plant energy
@@ -1451,15 +1285,12 @@ class WakeLosses(FromDictMixin):
                 returned for further tinkering/saving.
         """
 
-        color_codes = ["#4477AA", "#228833"]
-
         ws_bins_orig = np.arange(0.0, 31.0, self._ws_bin_width_LT_corr)
 
         if xlim == (None, None):
             # Default to the range 4 - 20 m/s
             ws_min = 4.0
             ws_max = 20.0
-            xlim = (ws_min, ws_max)
         else:
             ws_min = np.max([0.0, np.floor(xlim[0])])
             ws_max = np.min([ws_bins_orig[-1], np.ceil(xlim[1])])
@@ -1467,207 +1298,49 @@ class WakeLosses(FromDictMixin):
         ws_bins = np.arange(ws_min, ws_max + 1, self._ws_bin_width_LT_corr)
         mask = (ws_bins_orig >= ws_min) & (ws_bins_orig <= ws_max)
 
-        plot_kwargs_fill.setdefault("alpha", 0.2)
+        if turbine_id is None:
+            if self.UQ:
+                efficiency_data_por = self.wake_losses_por_ws[:, mask]
+                efficiency_data_lt = self.wake_losses_lt_ws[:, mask]
+            else:
+                efficiency_data_por = self.wake_losses_por_ws[mask]
+                efficiency_data_lt = self.wake_losses_lt_ws[mask]
 
-        if figure_kwargs is None:
-            figure_kwargs = {}
+        else:
+            turbine_index = self.turbine_ids.index(turbine_id)
+
+            if self.UQ:
+                efficiency_data_por = self.turbine_wake_losses_por_ws[:, turbine_index, mask]
+                efficiency_data_lt = self.turbine_wake_losses_lt_ws[:, turbine_index, mask]
+            else:
+                efficiency_data_por = self.turbine_wake_losses_por_ws[turbine_index, mask]
+                efficiency_data_lt = self.turbine_wake_losses_lt_ws[turbine_index, mask]
 
         if plot_norm_energy:
-            figure_kwargs.setdefault("figsize", (9, 9.1))
-            fig = plt.figure(**figure_kwargs)
-            ax1 = fig.add_subplot(211)
-            ax2 = fig.add_subplot(212, sharex=ax1)
-            axs = (ax1, ax2)
+            if self.UQ:
+                energy_data_por = self.energy_por_ws[:, mask]
+                energy_data_lt = self.energy_lt_ws[:, mask]
+            else:
+                energy_data_por = self.energy_por_ws[mask]
+                energy_data_lt = self.energy_lt_ws[mask]
         else:
-            figure_kwargs.setdefault("figsize", (9, 5))
-            fig = plt.figure(**figure_kwargs)
-            ax1 = fig.add_subplot(111)
-            axs = [ax1]
-        axs[0].plot([xlim[0], xlim[1]], [1, 1], "k", linewidth=1.5)
+            energy_data_por = None
+            energy_data_lt = None
 
-        if self.UQ:
-            if turbine_id is None:  # plot wind plant wake losses
-                axs[0].plot(
-                    ws_bins,
-                    np.mean(self.wake_losses_por_ws[:, mask], axis=0),
-                    color=color_codes[0],
-                    label="Period of Record",
-                    **plot_kwargs_line,
-                )
-                axs[0].fill_between(
-                    ws_bins,
-                    np.percentile(self.wake_losses_por_ws[:, mask], 2.5, axis=0),
-                    np.percentile(self.wake_losses_por_ws[:, mask], 97.5, axis=0),
-                    color=color_codes[0],
-                    label="_nolegend_",
-                    **plot_kwargs_fill,
-                )
-
-                axs[0].plot(
-                    ws_bins,
-                    np.mean(self.wake_losses_lt_ws[:, mask], axis=0),
-                    color=color_codes[1],
-                    label="Long-Term Corrected",
-                    **plot_kwargs_line,
-                )
-                axs[0].fill_between(
-                    ws_bins,
-                    np.percentile(self.wake_losses_lt_ws[:, mask], 2.5, axis=0),
-                    np.percentile(self.wake_losses_lt_ws[:, mask], 97.5, axis=0),
-                    color=color_codes[1],
-                    label="_nolegend_",
-                    **plot_kwargs_fill,
-                )
-
-            else:  # plot wake losses for specific turbine
-                turbine_index = self.turbine_ids.index(turbine_id)
-
-                axs[0].plot(
-                    ws_bins,
-                    np.mean(self.turbine_wake_losses_por_ws[:, turbine_index, mask], axis=0),
-                    color=color_codes[0],
-                    label="Period of Record",
-                    **plot_kwargs_line,
-                )
-                axs[0].fill_between(
-                    ws_bins,
-                    np.percentile(
-                        self.turbine_wake_losses_por_ws[:, turbine_index, mask], 2.5, axis=0
-                    ),
-                    np.percentile(
-                        self.turbine_wake_losses_por_ws[:, turbine_index, mask], 97.5, axis=0
-                    ),
-                    color=color_codes[0],
-                    label="_nolegend_",
-                    **plot_kwargs_fill,
-                )
-
-                axs[0].plot(
-                    ws_bins,
-                    np.mean(self.turbine_wake_losses_lt_ws[:, turbine_index, mask], axis=0),
-                    color=color_codes[1],
-                    label="Long-Term Corrected",
-                    **plot_kwargs_line,
-                )
-                axs[0].fill_between(
-                    ws_bins,
-                    np.percentile(
-                        self.turbine_wake_losses_lt_ws[:, turbine_index, mask], 2.5, axis=0
-                    ),
-                    np.percentile(
-                        self.turbine_wake_losses_lt_ws[:, turbine_index, mask], 97.5, axis=0
-                    ),
-                    color=color_codes[1],
-                    label="_nolegend_",
-                    **plot_kwargs_fill,
-                )
-
-                axs[0].set_title(f"Wind Turbine {turbine_id}")
-
-            if plot_norm_energy:
-                axs[1].plot(
-                    ws_bins,
-                    np.mean(self.energy_por_ws[:, mask], axis=0),
-                    color=color_codes[0],
-                    label="Period of Record",
-                    **plot_kwargs_line,
-                )
-                axs[1].fill_between(
-                    ws_bins,
-                    np.percentile(self.energy_por_ws[:, mask], 2.5, axis=0),
-                    np.percentile(self.energy_por_ws[:, mask], 97.5, axis=0),
-                    color=color_codes[0],
-                    label="_nolegend_",
-                    **plot_kwargs_fill,
-                )
-
-                axs[1].plot(
-                    ws_bins,
-                    np.mean(self.energy_lt_ws[:, mask], axis=0),
-                    color=color_codes[1],
-                    label="Long-Term Corrected",
-                    **plot_kwargs_line,
-                )
-                axs[1].fill_between(
-                    ws_bins,
-                    np.percentile(self.energy_lt_ws[:, mask], 2.5, axis=0),
-                    np.percentile(self.energy_lt_ws[:, mask], 97.5, axis=0),
-                    color=color_codes[1],
-                    label="_nolegend_",
-                    **plot_kwargs_fill,
-                )
-
-        else:  # without UQ
-            if turbine_id is None:  # plot wind plant wake losses
-                axs[0].plot(
-                    ws_bins,
-                    self.wake_losses_por_ws[mask],
-                    color=color_codes[0],
-                    label="Period of Record",
-                    **plot_kwargs_line,
-                )
-
-                axs[0].plot(
-                    ws_bins,
-                    self.wake_losses_lt_ws[mask],
-                    color=color_codes[1],
-                    label="Long-Term Corrected",
-                    **plot_kwargs_line,
-                )
-
-            else:  # plot wake losses for specific turbine
-                turbine_index = self.turbine_ids.index(turbine_id)
-
-                axs[0].plot(
-                    ws_bins,
-                    self.turbine_wake_losses_por_ws[turbine_index, mask],
-                    color=color_codes[0],
-                    label="Period of Record",
-                    **plot_kwargs_line,
-                )
-
-                axs[0].plot(
-                    ws_bins,
-                    self.turbine_wake_losses_lt_ws[turbine_index, mask],
-                    color=color_codes[1],
-                    label="Long-Term Corrected",
-                    **plot_kwargs_line,
-                )
-
-                axs[0].set_title(f"Wind Turbine {turbine_id}")
-
-            if plot_norm_energy:
-                axs[1].plot(
-                    ws_bins,
-                    self.energy_por_ws[mask],
-                    color=color_codes[0],
-                    label="Period of Record",
-                    **plot_kwargs_line,
-                )
-
-                axs[1].plot(
-                    ws_bins,
-                    self.energy_lt_ws[mask],
-                    color=color_codes[1],
-                    label="Long-Term Corrected",
-                    **plot_kwargs_line,
-                )
-
-        axs[0].set_xlim(xlim)
-        axs[0].set_ylim(ylim_efficiency)
-        axs[len(axs) - 1].set_xlabel("Freestream Wind Speed (m/s)")
-        axs[0].legend(**legend_kwargs)
-        axs[0].set_ylabel("Wind Plant Efficiency (-)")
-
-        if plot_norm_energy:
-            axs[1].set_ylim(ylim_energy)
-            axs[1].legend(**legend_kwargs)
-            axs[1].set_ylabel("Normalized Wind Plant\nEnergy Production (-)")
-
-            plt.tight_layout()
-            if return_fig:
-                return fig, axs
-        else:
-            plt.tight_layout()
-            if return_fig:
-                return fig, ax1
+        return plot.plot_wake_losses(
+            bins=ws_bins,
+            efficiency_data_por=efficiency_data_por,
+            efficiency_data_lt=efficiency_data_lt,
+            energy_data_por=energy_data_por,
+            energy_data_lt=energy_data_lt,
+            bin_axis_label=r"Freestream Wind Speed (m/s)",
+            turbine_id=turbine_id,
+            xlim=xlim,
+            ylim_efficiency=ylim_efficiency,
+            ylim_energy=ylim_energy,
+            return_fig=return_fig,
+            figure_kwargs=figure_kwargs,
+            plot_kwargs_line=plot_kwargs_line,
+            plot_kwargs_fill=plot_kwargs_fill,
+            legend_kwargs=legend_kwargs,
+        )
