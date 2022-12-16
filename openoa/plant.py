@@ -1762,10 +1762,7 @@ class PlantData:
         if self.asset_distance_matrix.size == 0:
             self.calculate_asset_distance_matrix()
 
-        row_ix = self.turbine_ids
-        if turbine_id is not None:
-            row_ix = turbine_id
-
+        row_ix = self.turbine_ids if turbine_id is None else turbine_id
         return self.asset_distance_matrix.loc[row_ix, self.turbine_ids]
 
     def tower_distance_matrix(self, tower_id: str = None) -> pd.DataFrame:
@@ -1782,10 +1779,7 @@ class PlantData:
         if self.asset_distance_matrix.size == 0:
             self.calculate_asset_distance_matrix()
 
-        row_ix = self.tower_ids
-        if tower_id is not None:
-            row_ix = tower_id
-
+        row_ix = self.tower_ids if tower_id is None else tower_id
         return self.asset_distance_matrix.loc[row_ix, self.tower_ids]
 
     def calculate_asset_direction_matrix(self) -> pd.DataFrame:
@@ -1847,10 +1841,7 @@ class PlantData:
         if self.asset_direction_matrix.size == 0:
             self.calculate_asset_direction_matrix()
 
-        row_ix = self.turbine_ids
-        if turbine_id is not None:
-            row_ix = turbine_id
-
+        row_ix = self.turbine_ids if turbine_id is None else turbine_id
         return self.asset_direction_matrix.loc[row_ix, self.turbine_ids]
 
     def tower_direction_matrix(self, tower_id: str = None) -> pd.DataFrame:
@@ -1869,10 +1860,7 @@ class PlantData:
         if self.asset_direction_matrix.size == 0:
             self.calculate_asset_direction_matrix()
 
-        row_ix = self.tower_ids
-        if tower_id is not None:
-            row_ix = tower_id
-
+        row_ix = self.tower_ids if tower_id is None else tower_id
         return self.asset_direction_matrix.loc[row_ix, self.tower_ids]
 
     def get_freestream_turbines(
