@@ -14,7 +14,6 @@ import attrs
 import numpy as np
 import pandas as pd
 import numpy.typing as npt
-import matplotlib.pyplot as plt
 from tqdm import tqdm
 from attrs import field, define
 from sklearn.linear_model import LinearRegression
@@ -23,13 +22,11 @@ from openoa.plant import PlantData, FromDictMixin
 from openoa.utils import plot, filters
 from openoa.utils import met_data_processing as met
 from openoa.logging import logging, logged_method_call
-from openoa.utils.plot import set_styling
-from openoa.analysis._analysis_validators import validate_UQ_input
 
 
 logger = logging.getLogger(__name__)
 NDArrayFloat = npt.NDArray[np.float64]
-set_styling()
+plot.set_styling()
 
 
 @define(auto_attribs=True)
