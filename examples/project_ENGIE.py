@@ -258,10 +258,12 @@ def prepare(
     reanalysis_era5_df["datetime"] = reanalysis_era5_df.index
 
     # calculate wind direction from u, v
+    # TODO: added .values to fix an issue where if the u and v arguments have ANY NaN values
+    # reanalysis_era5_df["winddirection_deg"] will be all NaN. Is there a better to fix this?
     reanalysis_era5_df["winddirection_deg"] = met.compute_wind_direction(
         reanalysis_era5_df["u_100"],
         reanalysis_era5_df["v_100"],
-    )
+    ).values
 
     # Drop the fields we don't need
     reanalysis_era5_df.drop(["Unnamed: 0"], axis=1, inplace=True)

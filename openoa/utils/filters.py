@@ -211,7 +211,8 @@ def bin_filter(
         threshold(:obj:`float`): Outlier threshold (multiplicative factor of std of `value_col` in bin)
         bin_min(:obj:`float`): Minimum bin value below which flag should not be applied
         bin_max(:obj:`float`): Maximum bin value above which flag should not be applied
-        threshold_type(:obj:`str`): Option to apply a 'std' or 'scalar' based threshold
+        threshold_type(:obj:`str`): Option to apply a 'std', 'scalar', or 'mad' (median absolute deviation)
+            based threshold
         center_type(:obj:`str`): Option to use a 'mean' or 'median' center for each bin
         direction(:obj:`str`): Option to apply flag only to data 'above' or 'below' the mean, by default 'all'
         data(:obj:`pd.DataFrame`): DataFrame containing both `bin_col` and `value_col`, if data
@@ -222,7 +223,7 @@ def bin_filter(
     """
     if center_type not in ("mean", "median"):
         raise ValueError("Incorrect `center_type` specified; must be one of 'mean' or 'median'.")
-    if threshold_type not in ("std", "scalar"):
+    if threshold_type not in ("std", "scalar", "mad"):
         raise ValueError("Incorrect `threshold_type` specified; must be one of 'std' or 'scalar'.")
     if direction not in ("all", "above", "below"):
         raise ValueError(
@@ -254,7 +255,12 @@ def bin_filter(
         center = y_bin.mean() if center_type == "mean" else y_bin.median()
 
         # Define threshold of data flag
-        deviation = y_bin.std() * threshold if threshold_type == "std" else threshold
+        if threshold_type == "std":
+            deviation = y_bin.std() * threshold
+        elif threshold_type == "scalar":
+            deviation = threshold
+        else: # median absolute deviation (mad)
+            deviation = (y_bin - center).abs().median() * threshold
 
         # Perform flagging depending on specfied direction
         if direction == "above":

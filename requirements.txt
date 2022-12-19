@@ -11,6 +11,7 @@ tqdm==4.62.*
 bokeh==2.3.*
 scikit-learn==0.24.*
 matplotlib==3.5.*
+h5pyd
 
 # Dev requirements
 pytest==6.2.*
