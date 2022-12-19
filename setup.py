@@ -10,7 +10,7 @@ from setuptools import setup, find_packages
 
 REQUIRED = [
     "statsmodels",
-    "scikit_learn>=0.20.1,<1.0",
+    "scikit-learn>=1.0",
     "requests>=2.21.0",
     "eia-python>=1.22",
     "pyproj>=3.3",
