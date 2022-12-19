@@ -95,7 +95,7 @@ class WakeLosses(FromDictMixin):
         plant (:obj:`PlantData`): A :py:attr:`openoa.plant.PlantData` object that has been validated
             with at least :py:attr:`openoa.plant.PlantData.analysis_type` = "WakeLosses".
         wind_direction_col (:obj:`string`, optional): Column name to use for wind direction.
-            Defaults to "wind_direction"
+            Defaults to "WMET_HorWdDir"
         wind_direction_data_type (:obj:`string`, optional): Data type to use for wind directions
             ("scada" for turbine measurements or "tower" for meteorological tower measurements).
             Defaults to "scada".
@@ -118,7 +118,7 @@ class WakeLosses(FromDictMixin):
     """
 
     plant: PlantData = field(validator=attrs.validators.instance_of(PlantData))
-    wind_direction_col: str = field(default="wind_direction", converter=str)
+    wind_direction_col: str = field(default="WMET_HorWdDir", converter=str)
     wind_direction_data_type: str = field(
         default="scada", validator=attrs.validators.in_(("scada", "tower"))
     )
@@ -807,7 +807,7 @@ class WakeLosses(FromDictMixin):
         # (variable name and turbine ID)
 
         # include scada wind direction column only if using scada to determine mean wind direction for wind plant
-        scada_cols = ["windspeed", "power"]
+        scada_cols = ["WMET_HorWdSpd", "WTUR_W"]
         if self.wind_direction_data_type == "scada":
             scada_cols.insert(1, self.wind_direction_col)
 
@@ -858,7 +858,7 @@ class WakeLosses(FromDictMixin):
 
         for product in self.reanal_products:
 
-            df_rean = self.plant.reanalysis[product][["windspeed", "wind_direction"]].copy()
+            df_rean = self.plant.reanalysis[product][["WMETR_HorWdSpd", "WMETR_HorWdDir"]].copy()
 
             # Drop minute field
             df_rean.index = df_rean.index.floor("H")
