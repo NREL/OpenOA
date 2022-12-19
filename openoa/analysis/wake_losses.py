@@ -385,13 +385,13 @@ class WakeLosses(FromDictMixin):
                 valid_inds = ~self.aggregate_df_sample[("derate_flag", t)]
                 self.aggregate_df_sample.loc[
                     valid_inds, ("power_normal", t)
-                ] = self.aggregate_df_sample.loc[valid_inds, ("power", t)]
+                ] = self.aggregate_df_sample.loc[valid_inds, ("WTUR_W", t)]
 
             for t in self.turbine_ids:
                 valid_inds = ~self.aggregate_df_sample[("derate_flag", t)]
                 self.aggregate_df_sample.loc[
                     valid_inds, ("windspeed_normal", t)
-                ] = self.aggregate_df_sample.loc[valid_inds, ("windspeed", t)]
+                ] = self.aggregate_df_sample.loc[valid_inds, ("WMET_HorWdSpd", t)]
 
             # Find freestream turbines for each wind direction. Update the dictionary only when the set of turbines
             # differs from the previous wind direction bin.
@@ -471,7 +471,7 @@ class WakeLosses(FromDictMixin):
             # turbines and the mean power produced by freestream turbines operating normally multiplied by the total
             # number of turbines operating normally
             total_derated_turbine_power = (
-                self.aggregate_df_sample["power"] * self.aggregate_df_sample["derate_flag"]
+                self.aggregate_df_sample["WTUR_W"] * self.aggregate_df_sample["derate_flag"]
             ).sum(axis=1)
 
             total_potential_freestream_power = self.aggregate_df_sample["power_mean_freestream"] * (
@@ -484,7 +484,7 @@ class WakeLosses(FromDictMixin):
             )
 
             # Assign actual total power produced by wind plant
-            self.aggregate_df_sample["actual_plant_power"] = self.aggregate_df_sample["power"].sum(
+            self.aggregate_df_sample["actual_plant_power"] = self.aggregate_df_sample["WTUR_W"].sum(
                 axis=1
             )
 
@@ -522,12 +522,12 @@ class WakeLosses(FromDictMixin):
                 self.aggregate_df_sample.loc[
                     self.aggregate_df_sample[("derate_flag", t)], ("potential_turbine_power", t)
                 ] = self.aggregate_df_sample.loc[
-                    self.aggregate_df_sample[("derate_flag", t)], ("power", t)
+                    self.aggregate_df_sample[("derate_flag", t)], ("WTUR_W", t)
                 ]
 
                 turbine_wake_losses_por[i] = (
                     1
-                    - self.aggregate_df_sample[("power", t)].sum()
+                    - self.aggregate_df_sample[("WTUR_W", t)].sum()
                     / self.aggregate_df_sample[("potential_turbine_power", t)].sum()
                 )
 
@@ -543,7 +543,7 @@ class WakeLosses(FromDictMixin):
             )
             for i, t in enumerate(self.turbine_ids):
                 turbine_wake_losses_por_wd[i, :] = (
-                    df_wd_bin[("power", t)] / df_wd_bin[("potential_turbine_power", t)]
+                    df_wd_bin[("WTUR_W", t)] / df_wd_bin[("potential_turbine_power", t)]
                 ).values
 
             if self.UQ:
@@ -884,10 +884,10 @@ class WakeLosses(FromDictMixin):
             turb_capac = self.plant.asset.loc[t, "rated_power"]
 
             flag_window = filters.window_range_flag(
-                window_col=self.aggregate_df[("windspeed", t)],
+                window_col=self.aggregate_df[("WMET_HorWdSpd", t)],
                 window_start=self._run.derating_filter_wind_speed_start,
                 window_end=40,
-                value_col=self.aggregate_df[("power", t)],
+                value_col=self.aggregate_df[("WTUR_W", t)],
                 value_min=0.01 * turb_capac,
                 value_max=1.2 * turb_capac,
             )
@@ -898,8 +898,8 @@ class WakeLosses(FromDictMixin):
                 self._run.max_power_filter - 0.01
             )  # split into 25 bins TODO: make this an optional argument?
             flag_bin = filters.bin_filter(
-                bin_col=self.aggregate_df[("power", t)],
-                value_col=self.aggregate_df[("windspeed", t)],
+                bin_col=self.aggregate_df[("WTUR_W", t)],
+                value_col=self.aggregate_df[("WMET_HorWdSpd", t)],
                 bin_width=bin_width_frac * turb_capac,
                 threshold=self._run.wind_bin_mad_thresh,  # wind bin thresh
                 center_type="median",
@@ -938,9 +938,9 @@ class WakeLosses(FromDictMixin):
                 ("actual_plant_power", ""),
                 ("potential_plant_power", ""),
             ]
-            + [("power", t) for t in self.turbine_ids]
+            + [("WTUR_W", t) for t in self.turbine_ids]
             + [("potential_turbine_power", t) for t in self.turbine_ids]
-            + [(f"windspeed_{self._run.reanalysis_product}", "")]
+            + [(f"WMETR_HorWdSpd_{self._run.reanalysis_product}", "")]
         ].copy()
 
         df_1hr = df_1hr.resample("H").mean().dropna(how="any")
@@ -959,7 +959,7 @@ class WakeLosses(FromDictMixin):
         # SCADA freestream wind speeds
         reg = LinearRegression().fit(
             df_ws_bin.loc[valid_ws_bins].index.values.reshape(-1, 1),
-            df_ws_bin.loc[valid_ws_bins, f"windspeed_{self._run.reanalysis_product}"].values,
+            df_ws_bin.loc[valid_ws_bins, f"WMETR_HorWdSpd_{self._run.reanalysis_product}"].values,
         )
 
         df_1hr[f"windspeed_mean_freestream_corr_{self._run.reanalysis_product}"] = reg.predict(
@@ -982,11 +982,11 @@ class WakeLosses(FromDictMixin):
         ]
         df_reanal["windspeed_bin"] = (
             self._ws_bin_width_LT_corr
-            * (df_reanal["windspeed"] / self._ws_bin_width_LT_corr).round()
+            * (df_reanal["WMETR_HorWdSpd"] / self._ws_bin_width_LT_corr).round()
         )
         df_reanal["wind_direction_bin"] = (
             self._wd_bin_width_LT_corr
-            * (df_reanal["wind_direction"] / self._wd_bin_width_LT_corr).round()
+            * (df_reanal["WMETR_HorWdDir"] / self._wd_bin_width_LT_corr).round()
         )
         df_reanal.loc[df_reanal["wind_direction_bin"] == 360.0, "wind_direction_bin"] = 0.0
 
@@ -1033,7 +1033,7 @@ class WakeLosses(FromDictMixin):
         )
         for i, t in enumerate(self.turbine_ids):
             turbine_wake_losses_por_ws[i, :] = (
-                df_1hr_ws_por_bin[("power", t)] / df_1hr_ws_por_bin[("potential_turbine_power", t)]
+                df_1hr_ws_por_bin[("WTUR_W", t)] / df_1hr_ws_por_bin[("potential_turbine_power", t)]
             ).values
 
         # Bin variables by wind direction and wind speed
@@ -1052,7 +1052,7 @@ class WakeLosses(FromDictMixin):
             ] = (self.plant.metadata.capacity * 1e3)
             df_1hr_bin.loc[
                 fill_inds,
-                [("power", t) for t in self.turbine_ids]
+                [("WTUR_W", t) for t in self.turbine_ids]
                 + [("potential_turbine_power", t) for t in self.turbine_ids],
             ] = 2 * [self.plant.asset.loc[t, "rated_power"] for t in self.turbine_ids]
 
@@ -1073,7 +1073,7 @@ class WakeLosses(FromDictMixin):
             # determine ideal turbine energy as sum of the power produced by the turbine when it is derated and the
             # mean power produced by all freestream turbines when the turbine is operating normally
 
-            df_1hr_bin[("energy_avg", t)] = df_1hr_bin["freq"] * df_1hr_bin[("power", t)]
+            df_1hr_bin[("energy_avg", t)] = df_1hr_bin["freq"] * df_1hr_bin[("WTUR_W", t)]
             df_1hr_bin[("potential_turbine_energy", t)] = (
                 df_1hr_bin["freq"] * df_1hr_bin[("potential_turbine_power", t)]
             )
