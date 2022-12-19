@@ -106,15 +106,21 @@ class EYAGapAnalysis(FromDictMixin):
     and how they are linked from differences in the three key metrics.
     """
 
+    # plant: PlantData = field(validator=attrs.validators.instance_of((PlantData, type(None))))
+    plant: PlantData
     eya_estimates: EYAEstimate = field(converter=EYAEstimate.from_dict)
     oa_results: OAResults = field(converter=OAResults.from_dict)
-    plant: PlantData = field(
-        default=None, validator=attrs.validators.instance_of((PlantData, type(None)))
-    )
 
     # Internally produced attributes
     data: list = field(factory=list)
     compiled_data: list = field(factory=list)
+
+    # @plant.validator
+    # def check_plant(self, attribute: attrs.Attribute, value: PlantData | None):
+    #     if value is None:
+    #         raise TypeError("The passed argument to `plant` must be a `PlantData` object")
+    #     if not isinstance(value, PlantData):
+    #         raise TypeError(f"The passed argument to `plant` must be a `PlantData` object, not: {type(value)}")
 
     @logged_method_call
     def __attrs_post_init__(self):
