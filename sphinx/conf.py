@@ -38,6 +38,7 @@ new_nb = nbmerge.merge_notebooks(
         "../examples/03_turbine_ideal_energy.ipynb",
         "../examples/04_electrical_losses.ipynb",
         "../examples/05_eya_gap_analysis.ipynb",
+        "../examples/06_wake_loss_analysis.ipynb",
     ),
 )
 nbmerge.write_notebook(new_nb, "./examples/examplesout.ipynb")
@@ -62,6 +63,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.todo",
     "sphinx_design",
+    "sphinxcontrib.bibtex",
     # "m2r2",
     "nbsphinx",
     "bokeh.sphinxext.bokeh_plot",
@@ -169,6 +171,7 @@ html_logo = str(
 # so a file named "default.css" will overwrite the builtin "default.css".
 # html_static_path = ["_static"]
 
+bibtex_bibfiles = ["refs.bib"]
 
 # -- Options for HTMLHelp output ------------------------------------------
 

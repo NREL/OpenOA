@@ -27,6 +27,7 @@ REQUIRED = [
     "pytz",
     "pyspark",  # TODO: confirm if options required [sql] or [pandas_on_spark]
     "pyyaml",
+    "h5pyd",
 ]
 
 TESTS = ["pytest>=5.4.2", "pytest-cov>=2.8.1"]
@@ -40,10 +41,10 @@ EXTRAS = {
         "nbmerge==0.0.4",
         "nbsphinx==0.8.*",
         "sphinx_design==0.3.*",
+        "sphinxcontrib-bibtex",
         "myst-parser",
     ],
     "entr": ["pyhive"],
-    "wtk": ["h5pyd"],
     "develop": [
         "pre-commit",
         "black",
