@@ -41,9 +41,9 @@ import pandas as pd
 
 import openoa.utils.unit_conversion as un
 import openoa.utils.met_data_processing as met
-from openoa.logging import logging
 from openoa.plant import PlantData
 from openoa.utils import filters, timeseries
+from openoa.logging import logging
 
 
 logger = logging.getLogger()
@@ -208,10 +208,12 @@ def prepare(path: str | Path = "data/la_haute_borne", return_value="plantdata"):
     reanalysis_era5_df["datetime"] = reanalysis_era5_df.index
 
     # calculate wind direction from u, v
+    # TODO: added .values to fix an issue where if the u and v arguments have ANY NaN values
+    # reanalysis_era5_df["winddirection_deg"] will be all NaN. Is there a better to fix this?
     reanalysis_era5_df["winddirection_deg"] = met.compute_wind_direction(
         reanalysis_era5_df["u_100"],
         reanalysis_era5_df["v_100"],
-    )
+    ).values
 
     # Drop the fields we don't need
     reanalysis_era5_df.drop(["Unnamed: 0"], axis=1, inplace=True)
