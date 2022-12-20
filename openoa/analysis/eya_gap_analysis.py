@@ -115,13 +115,6 @@ class EYAGapAnalysis(FromDictMixin):
     data: list = field(factory=list)
     compiled_data: list = field(factory=list)
 
-    # @plant.validator
-    # def check_plant(self, attribute: attrs.Attribute, value: PlantData | None):
-    #     if value is None:
-    #         raise TypeError("The passed argument to `plant` must be a `PlantData` object")
-    #     if not isinstance(value, PlantData):
-    #         raise TypeError(f"The passed argument to `plant` must be a `PlantData` object, not: {type(value)}")
-
     @logged_method_call
     def __attrs_post_init__(self):
         """
@@ -136,6 +129,11 @@ class EYAGapAnalysis(FromDictMixin):
                                                     False to not save plot
 
         """
+        if not (isinstance(self.plant, PlantData) or self.plant is None):
+            raise TypeError(
+                f"The passed `plant` object must be of type `PlantData` or `None`, not: {type(self.plant)}"
+            )
+
         logger.info("Initialized EYA Gap Analysis Object")
 
     @logged_method_call
@@ -236,3 +234,12 @@ class EYAGapAnalysis(FromDictMixin):
             plot_kwargs=plot_kwargs,
             figure_kwargs=figure_kwargs,
         )
+
+
+def create_EYAGapAnalysis(
+    project: PlantData, eya_estimates: dict | EYAEstimate, oa_results: dict | OAResults
+) -> EYAGapAnalysis:
+    return EYAGapAnalysis(project, eya_estimates, oa_results)
+
+
+create_EYAGapAnalysis.__doc__ = EYAGapAnalysis.__doc__

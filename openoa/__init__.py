@@ -3,34 +3,23 @@ __version__ = "3.0rc1"
 When bumping version, please be sure to also update parameters in sphinx/conf.py
 """
 
-from types import MethodType
-
 from openoa.plant import PlantData
-from openoa.analysis import (
-    WakeLosses,
-    MonteCarloAEP,
-    EYAGapAnalysis,
-    ElectricalLosses,
-    TurbineLongTermGrossEnergy,
-)
 
 
-# API Shortcuts
+def __attach_methods():
+    from openoa.analysis.aep import create_MonteCarloAEP
+    from openoa.analysis.wake_losses import create_WakeLosses
+    from openoa.analysis.eya_gap_analysis import create_EYAGapAnalysis
+    from openoa.analysis.electrical_losses import create_ElectricalLosses
+    from openoa.analysis.turbine_long_term_gross_energy import create_TurbineLongTermGrossEnergy
+
+    setattr(PlantData, "MonteCarloAEP", create_MonteCarloAEP)
+    setattr(PlantData, "EYAGapAnalysis", create_EYAGapAnalysis)
+    setattr(PlantData, "ElectricalLosses", create_ElectricalLosses)
+    setattr(PlantData, "TurbineLongTermGrossEnergy", create_TurbineLongTermGrossEnergy)
+    setattr(PlantData, "WakeLosses", create_WakeLosses)
 
 
-# Attach analysis classes to PlantData
-setattr(PlantData, "WakeLosses", classmethod(WakeLosses))
-setattr(PlantData, "MonteCarloAEP", classmethod(MonteCarloAEP))
-setattr(PlantData, "EYAGapAnalysis", classmethod(EYAGapAnalysis))
-setattr(PlantData, "ElectricalLosses", classmethod(ElectricalLosses))
-setattr(PlantData, "TurbineLongTermGrossEnergy", classmethod(TurbineLongTermGrossEnergy))
-
+__attach_methods()
 
 # TODO: Add analysis results computation methods to PlantData
-def gap_analysis(project: PlantData, eya_estimates: dict, oa_results: dict):
-    gap = EYAGapAnalysis(project, eya_estimates, oa_results)
-    gap.run()
-    return gap
-
-
-setattr(PlantData, "gap_analysis", classmethod(gap_analysis))
