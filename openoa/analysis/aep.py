@@ -133,7 +133,7 @@ class MonteCarloAEP(FromDictMixin):
         default=["merra2", "ncep2", "era5"],
         validator=attrs.validators.deep_iterable(
             iterable_validator=attrs.validators.instance_of(list),
-            member_validator=attrs.validators.in_(("merra2", "ncep2", "erai", "era5")),
+            member_validator=attrs.validators.instance_of(str),
         ),
     )
     uncertainty_meter: float = field(default=0.005, converter=float)

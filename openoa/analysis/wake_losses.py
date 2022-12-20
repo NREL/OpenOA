@@ -170,13 +170,15 @@ class WakeLosses(FromDictMixin):
     _num_years_LT: float | tuple[float, float] = field(init=False)
     _run: pd.DataFrame = field(init=False)
 
-    @plant.validator
-    def validate_plant_ready_for_anylsis(
-        self, attribute: attrs.Attribute, value: PlantData
-    ) -> None:
-        """Validates that the value has been validated for a wake loss analysis."""
-        if set(("WakeLosses", "all")).intersection(value.analysis_type) == set():
-            raise TypeError("The input to 'plant' must be validated for at least 'WakeLosses'")
+    @reanal_products.validator
+    def check_reanalysis_products(self, attribute: attrs.Attribute, value: list[str]) -> None:
+        """Checks that the provided reanalysis products actually exist in the reanalysis data."""
+        valid = [*self.plant.reanalysis]
+        invalid = list(set(value).difference(valid))
+        if invalid:
+            raise ValueError(
+                f"The following input to `reanal_products`: {invalid} are not contained in `plant.reanalysis`: {valid}"
+            )
 
     @logged_method_call
     def __attrs_post_init__(self):
@@ -184,6 +186,9 @@ class WakeLosses(FromDictMixin):
         Initialize logging and post-initialization setup steps.
         """
         logger.info("Initializing WakeLosses analysis object")
+
+        if set(("WakeLosses", "all")).intersection(self.plant.analysis_type) == set():
+            raise TypeError("The input to 'plant' must be validated for at least 'WakeLosses'")
 
         # Check that selected UQ is allowed and reset num_sim if no UQ
         if self.UQ:
