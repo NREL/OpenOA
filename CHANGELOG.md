@@ -1,6 +1,21 @@
 # Changelog
 All notable changes to this project will be documented in this file. If you make a notable change to the project, please add a line describing the change to the "unreleased" section. The maintainers will make an effort to keep the [Github Releases](https://github.com/NREL/OpenOA/releases) page up to date with this changelog. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## Unreleased
+- Analysis classes are now attached to `PlantData` at the time of import, maintaining the same behavior as a standalone analysis class import. For example, the following two import patters produce the same results
+  ```python
+  from openoa import PlantData
+  from openoa.analysis import WakeLosses
+
+  project = PlantData(<kwargs>)
+
+  # Original pattern
+  wake_classic = WakeLosses(project)
+
+  # New, equivalent pattern
+  wake_new = project.WakeLosses()
+  ```
+
 ## 3.0rc1
 - The package name is changed from `operational_analysis` to `openoa` to be more consistent with how we expect to import OpenOA!
 - `PlantData` is now fully based on attrs dataclasses and utilizing the pandas `DataFrame` for all internal data structures
