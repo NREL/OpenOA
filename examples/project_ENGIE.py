@@ -77,10 +77,10 @@ def clean_scada(scada_file: str | Path) -> pd.DataFrame:
 
     # We know that the timestamps are in local time, so we want to convert them to UTC
     logger.info("Timestamp conversion to datetime and UTC")
-    scada_df["Date_time"] = pd.to_datetime(scada_df["Date_time"], utc=True).dt.tz_localize(None)
+    scada_df["time"] = pd.to_datetime(scada_df["Date_time"], utc=True).dt.tz_localize(None)
 
     # There are duplicated timestamps, so let's ensure we drop the duplicates for each turbine
-    scada_df = scada_df.drop_duplicates(subset=["Date_time", "Wind_turbine_name"], keep="first")
+    scada_df = scada_df.drop_duplicates(subset=["time", "Wind_turbine_name"], keep="first")
 
     # Remove extreme values from the temperature field
     logger.info("Removing out of range of temperature readings")
@@ -116,17 +116,67 @@ def clean_scada(scada_file: str | Path) -> pd.DataFrame:
     return scada_df
 
 
-def prepare(path: str | Path = "data/la_haute_borne", return_value="plantdata"):
+def load_cleansed_data(path: str | Path, return_value="plantdata") -> PlantData:
+    """Loads the already created data in `path`/cleansed, if previously parsed.
+
+    Args:
+        path (str | Path, optional):The file path to the La Haute Borne data. Defaults to
+            "data/la_haute_borne".
+        return_value (str, optional): "plantdata" will return a fully constructed PlantData object.
+            "dataframes" will return a list of dataframes instead. Defaults to "plantdata".
+
+    Returns:
+        PlantData | tuple[pandas.DataFrame, ...]
+    """
+    logger.info("Reading in the previously cleansed data")
+
+    path = path / "cleansed"
+    scada_df = pd.read_csv(path / "scada.csv")
+    meter_df = pd.read_csv(path / "meter.csv")
+    curtail_df = pd.read_csv(path / "curtail.csv")
+    asset_df = pd.read_csv(path / "asset.csv")
+    reanalysis = dict(
+        era5=pd.read_csv(path / "reanalysis_era5.csv"),
+        merra2=pd.read_csv(path / "reanalysis_merra2.csv"),
+    )
+
+    # Return the appropriate data format
+    if return_value == "dataframes":
+        return scada_df, meter_df, curtail_df, asset_df, reanalysis
+    elif return_value == "plantdata":
+        # Build and return PlantData
+        engie_plantdata = PlantData(
+            analysis_type="MonteCarloAEP",  # Choosing a random type that doesn't fail validation
+            metadata=path / "metadata.yml",
+            scada=scada_df,
+            meter=meter_df,
+            curtail=curtail_df,
+            asset=asset_df,
+            reanalysis=reanalysis,
+        )
+        return engie_plantdata
+    else:
+        raise ValueError("`return_value` must be one of 'plantdata' or 'dataframes'.")
+
+
+def prepare(
+    path: str | Path = "data/la_haute_borne", return_value="plantdata", use_cleansed: bool = True
+):
     """
     Do all loading and preparation of the data for this plant.
     args:
     - path (str): Path to la_haute_borne data folder. If it doesn't exist, we will try to extract a zip file of the same name.
     - scada_df (pandas.DataFrame): Override the scada dataframe with one provided by the user.
     - return_value (str): "plantdata" will return a fully constructed PlantData object. "dataframes" will return a list of dataframes instead.
+    - use_cleansed (bool): Use previously prepared data if the the "cleansed" folder exists above the main `path`. Defaults to True.
     """
 
     if type(path) == str:
-        path = Path(path)
+        path = Path(path).resolve()
+
+    # Load the pre-cleaned data, if available
+    if use_cleansed and (path.parent / "cleansed").is_dir():
+        return load_cleansed_data(path=path.parent, return_value=return_value)
 
     # Extract data if necessary
     extract_data(path)
@@ -152,7 +202,10 @@ def prepare(path: str | Path = "data/la_haute_borne", return_value="plantdata"):
     meter_df = pd.read_csv(path / "plant_data.csv")
 
     # Create datetime field
-    meter_df["time_utc"] = pd.to_datetime(meter_df.time_utc).dt.tz_localize(None)
+    meter_df["time"] = pd.to_datetime(meter_df.time_utc).dt.tz_localize(None)
+
+    # Drop the fields we don't need
+    meter_df.drop(["time_utc", "availability_kwh", "curtailment_kwh"], axis=1, inplace=True)
 
     #####################################
     # Availability and Curtailment Data #
@@ -161,7 +214,10 @@ def prepare(path: str | Path = "data/la_haute_borne", return_value="plantdata"):
     curtail_df = pd.read_csv(path / "plant_data.csv")  # Load Availability and Curtail data
 
     # Create datetime field with a UTC base
-    curtail_df["time_utc"] = pd.to_datetime(curtail_df.time_utc).dt.tz_localize(None)
+    curtail_df["time"] = pd.to_datetime(curtail_df.time_utc).dt.tz_localize(None)
+
+    # Drop the fields we don't need
+    curtail_df.drop(["time_utc"], axis=1, inplace=True)
 
     ###################
     # REANALYSIS DATA #
@@ -242,8 +298,9 @@ def prepare(path: str | Path = "data/la_haute_borne", return_value="plantdata"):
             asset=asset_df,
             reanalysis=dict(era5=reanalysis_era5_df, merra2=reanalysis_merra2_df),
         )
-
         return engie_plantdata
+    else:
+        raise ValueError("`return_value` must be one of 'plantdata' or 'dataframes'.")
 
 
 if __name__ == "__main__":
