@@ -357,7 +357,7 @@ class SimpleFilters(unittest.TestCase):
         # Test 1, pass data frame with three highly correlated assets, ensure all NaN data are imputed in
         # final output
         y_test = imputing.impute_all_assets_by_correlation(
-            self.test11_df, "data", "data", 0.7
+            self.test11_df, "data", "data", r2_threshold=0.7
         ).to_frame()
         y = pd.Series([0.440789, 3.401316, 14.3677, 42.8312, 62.887218, 96.734818])
         nptest.assert_array_almost_equal(
@@ -369,14 +369,14 @@ class SimpleFilters(unittest.TestCase):
         # Test 2, 3 highly correlated assets with less data, such that asset 'b' has no data imputed
         y = pd.Series([1.589147, np.nan, np.nan, np.nan, np.nan, np.nan, 123.7000])
         y_test = imputing.impute_all_assets_by_correlation(
-            self.test10_df, "data", "data", 0.7
+            self.test10_df, "data", "data", r2_threshold=0.7
         ).to_frame()
         nan_ind = self.test10_df.loc[self.test10_df["data"].isnull()].index
         nptest.assert_array_almost_equal(y_test.loc[nan_ind, "imputed_data"], y, decimal=4)
 
         # Test 3, 2 poorly correlated data sets, no data should be imputed
         y_test = imputing.impute_all_assets_by_correlation(
-            self.test12_df, "data", "data", 0.7
+            self.test12_df, "data", "data", r2_threshold=0.7
         ).to_frame()
         nptest.assert_array_almost_equal(y_test["imputed_data"], self.test12_df["data"], decimal=4)
 
