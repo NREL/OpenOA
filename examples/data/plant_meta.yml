@@ -10,13 +10,13 @@ curtail:
   IAVL_DnWh: availability_kwh  # availability, kWh
   IAVL_ExtPwrDnWh: curtailment_kwh  # curtailment, kWh
   frequency: 10T  # timestamp frequency
-  time: time_utc  # timestamp
+  time: time  # timestamp
 latitude: 48.4497  # WGS-84 latitudinal plant centroid
 longitude: 5.5896  # WGS-84 longitudinal plant centroid
 capacity: 8.2  # Plant capacity, MW
 meter:
   MMTR_SupWh: net_energy_kwh  # net energy, kWh
-  time: time_utc  # timestamp
+  time: time  # timestamp
 reanalysis:
   era5:  # reanalysis product name/ID
     frequency: H  # timestamp frequency

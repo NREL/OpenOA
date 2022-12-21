@@ -77,10 +77,10 @@ def clean_scada(scada_file: str | Path) -> pd.DataFrame:
 
     # We know that the timestamps are in local time, so we want to convert them to UTC
     logger.info("Timestamp conversion to datetime and UTC")
-    scada_df["time"] = pd.to_datetime(scada_df["Date_time"], utc=True).dt.tz_localize(None)
+    scada_df["Date_time"] = pd.to_datetime(scada_df["Date_time"], utc=True).dt.tz_localize(None)
 
     # There are duplicated timestamps, so let's ensure we drop the duplicates for each turbine
-    scada_df = scada_df.drop_duplicates(subset=["time", "Wind_turbine_name"], keep="first")
+    scada_df = scada_df.drop_duplicates(subset=["Date_time", "Wind_turbine_name"], keep="first")
 
     # Remove extreme values from the temperature field
     logger.info("Removing out of range of temperature readings")
@@ -199,7 +199,8 @@ def prepare(
     # METER DATA #
     ##############
     logger.info("Reading in the meter data")
-    meter_df = pd.read_csv(path / "plant_data.csv")
+    meter_curtail_df = pd.read_csv(path / "plant_data.csv")
+    meter_df = meter_curtail_df.copy()
 
     # Create datetime field
     meter_df["time"] = pd.to_datetime(meter_df.time_utc).dt.tz_localize(None)
@@ -211,7 +212,7 @@ def prepare(
     # Availability and Curtailment Data #
     #####################################
     logger.info("Reading in the curtailment data")
-    curtail_df = pd.read_csv(path / "plant_data.csv")  # Load Availability and Curtail data
+    curtail_df = meter_curtail_df.copy()  # Make another copy for modifying the curtailment data
 
     # Create datetime field with a UTC base
     curtail_df["time"] = pd.to_datetime(curtail_df.time_utc).dt.tz_localize(None)
