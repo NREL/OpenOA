@@ -134,7 +134,7 @@ def impute_all_assets_by_correlation(
     data: pd.DataFrame,
     impute_col: str,
     reference_col: str,
-    asset_id_col: str = "WTUR_TurName",
+    asset_id_col: str = "WTUR_TurNam",
     r2_threshold: float = 0.7,
     method: str = "linear",
     degree: int = 1,
