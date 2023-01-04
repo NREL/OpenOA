@@ -5,7 +5,7 @@ This module provides functions for downloading data, including long-term histori
 data from the MERRA-2 and ERA5 reanalysis products and returning as pandas DataFrames and saving
 data in csv files. Currently by default the module downloads monthly reanalysis data for a time
 period of interest using NASA Goddard Earth Sciences Data and Information Services Center 
-(GES DISC) and the Copernicus Climate Data Store (CDS) API (ERA5), but this can be
+(GES DISC) for MERRA2 and the Copernicus Climate Data Store (CDS) API for ERA5, but this can be
 modified to get hourly data, and indeed other data sources available on GES DISC and CDS. 
 
 To use this module to download data users must first create user accounts. Instructions can be
@@ -25,21 +25,20 @@ In addition you can download data directly from these source:
   tab here: https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-single-levels?tab=overview.
   Instructions for using the CDS Toolbox API to download ERA5 data programatically can be found here:
   https://cds.climate.copernicus.eu/toolbox/doc/how-to/1_how_to_retrieve_data/1_how_to_retrieve_data.html
-  (note that the "reanalysis-era5-single-levels" dataset should be used).
+  (note that the "reanalysis-era5-single-levels" dataset should generally be used).
 """
 
 import re
 import datetime
 from pathlib import Path
 
-import numpy as np
-import pandas as pd
-
 from openoa.logging import logging
 
 logger = logging.getLogger()
 
 from zipfile import ZipFile
+
+import pandas as pd
 
 import cdsapi
 import xarray as xr
@@ -49,17 +48,13 @@ import requests
 import os
 import hashlib
 
-import json
-import yaml
-
-
 def download_file(url,outfile):
     """
     Download a file from the web based on its url
 
     Args:
-        url (str): url of data to download
-        outfile (str): file path to which the download is saved
+        url(:obj:`str`): url of data to download
+        outfile(:obj:`str`): file path to which the download is saved
 
     Returns:
         Downloaded file saved to outfile
@@ -100,8 +95,8 @@ def download_zenodo_data(record_id,outfile_path):
     Download data from zenodo based on the zenodo record_id
     
     Args:
-        record_id (int): the Zenodo record id
-        outfile_path: path to save files to
+        record_id(:obj:`int`): the Zenodo record id
+        outfile_path(:obj:`str`): path to save files to
 
     Returns:
         Files saved to the asset data folder:
@@ -211,13 +206,13 @@ def get_era5(
     but could be amended and other CDS datasets also used (e.g. CERRA for Europe)
 
     Args:
-        lat (:obj:`float`): Latitude in WGS 84 spatial reference system (decimal degrees)
-        lon (:obj:`float`): Longitude in WGS 84 spatial reference system (decimal degrees)
-        save_pathname (:obj:`string`): The path where the downloaded reanalysis data will be saved
-        save_filename (:obj:`string`): The file name used to save the downloaded reanalysis data
+        lat(:obj:`float`): Latitude in WGS 84 spatial reference system (decimal degrees)
+        lon(:obj:`float`): Longitude in WGS 84 spatial reference system (decimal degrees)
+        save_pathname(:obj:`string`): The path where the downloaded reanalysis data will be saved
+        save_filename(:obj:`string`): The file name used to save the downloaded reanalysis data
 
     Returns:
-        :obj:`pandas.DataFrame`: A dataframe containing time series of the requested reanalysis variables
+        df(:obj:`dataframe`): A dataframe containing time series of the requested reanalysis variables
         Saved NetCDF annual ERA5 files
         Saved ERA5 csv file
     """
@@ -315,8 +310,6 @@ def get_era5(
     return df
 
 
-
-
 def get_merra2(
         lat,
         lon,
@@ -333,13 +326,13 @@ def get_merra2(
     and other GES DISC datasets also used (e.g. FLDAS)
 
     Args:
-        lat (:obj:`float`): Latitude in WGS 84 spatial reference system (decimal degrees)
-        lon (:obj:`float`): Longitude in WGS 84 spatial reference system (decimal degrees)
-        save_pathname (:obj:`string`): The path where the downloaded reanalysis data will be saved
-        save_filename (:obj:`string`): The file name used to save the downloaded reanalysis data
+        lat(:obj:`float`): Latitude in WGS 84 spatial reference system (decimal degrees)
+        lon(:obj:`float`): Longitude in WGS 84 spatial reference system (decimal degrees)
+        save_pathname(:obj:`string`): The path where the downloaded reanalysis data will be saved
+        save_filename(:obj:`string`): The file name used to save the downloaded reanalysis data
 
     Returns:
-        :obj:`pandas.DataFrame`: A dataframe containing time series of the requested reanalysis variables
+        df(:obj:`dataframe`): A dataframe containing time series of the requested reanalysis variables
         Saved NetCDF monthly MERRA2 files
         Saved MERRA2 csv file
     """
@@ -387,16 +380,20 @@ def get_merra2(
                     url = base_url+str(year)+"//"+file+r".nc4?PS,SPEEDLML,TLML,time,lat,lon"
                     download_file(url,outfile)
                     ds_nc = xr.open_dataset(outfile)
-                    ds_nc_idx = ds_nc.assign_coords(lon_idx=("lon",range(ds_nc.dims['lon'])),lat_idx=("lat",range(ds_nc.dims['lat'])))
+                    ds_nc_idx = ds_nc.assign_coords(lon_idx=("lon",range(ds_nc.dims['lon'])),
+                                                    lat_idx=("lat",range(ds_nc.dims['lat'])))
                     sel = ds_nc_idx.sel(lat=lat,lon=lon, method="nearest")
                     lon_i = "["+str(sel.lon_idx.values-1)+":"+str(sel.lon_idx.values+1)+"]"
                     lat_i = "["+str(sel.lat_idx.values-1)+":"+str(sel.lat_idx.values+1)+"]"
                     ds_nc.close()
                     os.remove(outfile) 
                     
-                    
-                url = base_url+str(year)+"//"+file+r".nc4?PS[0:0]"+lat_i+lon_i+",SPEEDLML[0:0]"+lat_i+lon_i+",TLML[0:0]"+lat_i+lon_i+",time,lat"+lat_i+",lon"+lon_i
-                
+                # download file with specified coordinates    
+                url = (base_url+str(year)+"//"+file+r".nc4?PS[0:0]"+lat_i+lon_i
+                    +",SPEEDLML[0:0]"+lat_i+lon_i
+                    +",TLML[0:0]"+lat_i+lon_i
+                    +",time,lat"+lat_i+",lon"+lon_i)
+
                 download_file(url,outfile)
                 
 

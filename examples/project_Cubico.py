@@ -2,65 +2,65 @@
 # Data import script for Cubico Projects #
 #################################################
 """
-This is the import script for Cubico's Kelmarsh & Penmanshiel projects. Below
-is a description of data quality for each data frame and an overview of the
-steps taken to correct the raw data for use in the PRUF OA code.
+This is the import script for Cubico's Kelmarsh & Penmanshiel projects. These
+projects are available under a Creative Commons Attribution 4.0 International
+license (CC-BY-4.0), and are cited below:
+    
+*Kelmarsh*
+ Plumley, Charlie. (2022). Kelmarsh wind farm data [Data set]. 
+ Zenodo. https://doi.org/10.5281/zenodo.5841833
 
-1. SCADA dataframe
-- 10-minute SCADA data for each of the four turbines in the project
+*Penmanshiel*
+ Plumley, Charlie. (2022). Penmanshiel Wind Farm Data [Data set]. 
+ Zenodo. https://doi.org/10.5281/zenodo.5946807
+
+Below is a description of the data imported and an overview of the
+steps taken to correct the raw data for use in the OpenOA code.
+
+1. SCADA
+- 10-minute SCADA data for each of the turbines in the project
 - Power, wind speed, wind direction, nacelle position, wind vane, temperature,
   blade pitch
 
-2. Meter data frame
+2. Meter data
 - 10-minute performance data provided in energy units (kWh)
 
-3. Curtailment data frame
+3. Curtailment data
 - 10-minute availability and curtailment data in kwh
 
 4. Reanalysis products
-- Import MERRA-2 and ERA5 1-hour reanalysis data
-- Import ERA-5 and MERRA-2 monthly reanalysis data at ground level
-- Fields cover wind speed, wind direction, temperature, and air density
+- MERRA-2 and ERA5 1-hour reanalysis data where available on Zenodo
+- ERA-5 and MERRA-2 monthly reanalysis data at ground level (10m)
 """
 
 from __future__ import annotations
-from distutils.log import error
 
-import re
 from pathlib import Path
 from zipfile import ZipFile
 
-import numpy as np
 import pandas as pd
 
-import openoa.utils.unit_conversion as un
-import openoa.utils.met_data_processing as met
 from openoa.logging import logging
 from openoa.plant import PlantData
-from openoa.utils import filters, timeseries
-
 
 logger = logging.getLogger()
 
 import openoa.utils.downloader as downloader
 
 import os
-
 import json
 import yaml
 
-import xarray as xr
-
-def download_asset_data(asset="kelmarsh",outfile_path="data/kelmarsh/"):
+def download_asset_data(asset="kelmarsh",outfile_path="data//kelmarsh//"):
     """
-    Simplify downloading of know open data assets from zenodo
+    Simplify downloading of known open data assets from zenodo
     
-    The record_id will need updating as new data versions come out
+    The record_id will need updating as new data versions come out,
     but does mean we have control to avoid any backwards compatibility issues
 
     Args:
-        asset (str): name of asset
-        outfile_path: path to save files to
+        asset(:obj:`string`): name of asset
+        outfile_path(:obj:`string`): path to save files to
 
     Returns:
         Files saved to the outfile_path:
@@ -78,12 +78,12 @@ def download_asset_data(asset="kelmarsh",outfile_path="data/kelmarsh/"):
     downloader.download_zenodo_data(record_id,outfile_path)
 
 
-def extract_all_data(path="data/kelmarsh/"):
+def extract_all_data(path="data//kelmarsh//"):
     """
     Get all zip files in path and extract them
 
     Args:
-        path (str): path to zip files
+        path(:obj:`string`): path to zip files
 
     Returns:
         All zip files extracted into the path
@@ -103,15 +103,22 @@ def get_scada_headers(SCADA_files):
     Get just the headers from the SCADA files
 
     Args:
-        SCADA_files (list of files): list of SCADA files
+        SCADA_files(obj:`list[str]`): list of SCADA file paths
 
     Returns:
-        SCADA_headers (pandas dataframe): containing details of all SCADA files
+        SCADA_headers(:obj:`dataframe`): containing details of all SCADA files
     """
     
-    csv_params = {"index_col":0,"skiprows":2, "nrows":4, "delimiter":": ","header":None, "engine":"python"}
+    csv_params = {"index_col":0,
+                  "skiprows":2,
+                  "nrows":4, 
+                  "delimiter":": ",
+                  "header":None, 
+                  "engine":"python"}
 
-    SCADA_headers = pd.concat((pd.read_csv(f,**csv_params).rename(columns={1:f}) for f in SCADA_files),axis=1)
+    SCADA_headers = pd.concat(
+        (pd.read_csv(f,**csv_params).rename(columns={1:f}) for f in SCADA_files),
+        axis=1)
 
     SCADA_headers.index = SCADA_headers.index.str.replace("# ","")
 
@@ -127,11 +134,11 @@ def get_scada_df(SCADA_headers,usecolumns=None):
     Extract the desired SCADA data
     
     Args:
-        SCADA_headers (pandas dataframe): containing details of all SCADA files
-        usecolumns: selection of columns to be imported from the SCADA files
+        SCADA_headers(:obj:`dataframe`): containing details of all SCADA files
+        usecolumns(obj:`list[str]`): selection of columns to be imported from the SCADA files
 
     Returns:
-        SCADA (pandas dataframe): dataframe with SCADA data
+        SCADA(:obj:`dataframe`): dataframe with SCADA data
     """
     
     if usecolumns is None:
@@ -150,7 +157,9 @@ def get_scada_df(SCADA_headers,usecolumns=None):
 
     SCADA_lst = list()
     for turbine in SCADA_headers["Turbine"].unique():
-        SCADA_wt = pd.concat((pd.read_csv(f,**csv_params) for f in list(SCADA_headers.loc[SCADA_headers["Turbine"] == turbine]["File"])))
+        SCADA_wt = pd.concat(
+            (pd.read_csv(f,**csv_params) for f in list(SCADA_headers.loc[SCADA_headers["Turbine"]==turbine]["File"])))
+            
         SCADA_wt["Turbine"] = turbine
         SCADA_wt.index.names = ["Timestamp"]
         SCADA_lst.append(SCADA_wt.copy())
@@ -165,10 +174,10 @@ def get_curtailment_df(SCADA_headers):
     Get the curtailment and availability data
     
     Args:
-        SCADA_headers (pandas dataframe): containing details of all SCADA files
+        SCADA_headers(:obj:`dataframe`): containing details of all SCADA files
 
     Returns:
-        curtailment_df (pandas dataframe): dataframe with curtailment data
+        curtailment_df(:obj:`dataframe`): dataframe with curtailment data
     """
     
     # Curtailment data is available as a subset of the SCADA data
@@ -182,20 +191,23 @@ def get_curtailment_df(SCADA_headers):
     return curtailment_df
 
 
-def get_meter_data(path="data/kelmarsh/"):
+def get_meter_data(path="data//kelmarsh//"):
     """
     Get the PMU meter data
 
     Args:
-        path (str): path to meter data
+        path(:obj:`str`): path to meter data
 
     Returns:
-        meter_df (pandas dataframe): dataframe with meter data
+        meter_df(:obj:`dataframe`): dataframe with meter data
     """
 
     usecolumns = ["# Date and time","GMS Energy Export (kWh)"]
 
-    csv_params = {"index_col":"# Date and time","parse_dates":True,"skiprows":10,"usecols":usecolumns}
+    csv_params = {"index_col":"# Date and time",
+                "parse_dates":True,
+                "skiprows":10,
+                "usecols":usecolumns}
 
     meter_files = list(Path(path).rglob("*PMU*.csv"))
     
@@ -211,8 +223,10 @@ def prepare(asset="kelmarsh", return_value="plantdata"):
     Do all loading and preparation of the data for this plant.
 
     Args:
-    - asset (pandas.DataFrame): asset name, currently either kelmarsh or penmanshiel
-    - return_value (str): "plantdata" will return a fully constructed PlantData object. "dataframes" will return a list of dataframes instead.
+    - asset(:obj:`dataframe`): asset name, currently either kelmarsh or penmanshiel
+    - return_value(:obj:`str`): 
+        "plantdata" will return a fully constructed PlantData object
+        "dataframes" will return a list of dataframes instead.
 
     Returns:
         Either PlantData object or Dataframes dependent upon return_value
@@ -239,6 +253,7 @@ def prepare(asset="kelmarsh", return_value="plantdata"):
     ###################
     # SCADA DATA #
     ###################
+
     logger.info("Reading in the SCADA data")
     SCADA_files = Path(path).rglob("Turbine_Data*.csv")
     SCADA_headers = get_scada_headers(SCADA_files)
@@ -249,6 +264,7 @@ def prepare(asset="kelmarsh", return_value="plantdata"):
     ##############
     # METER DATA #
     ##############
+
     logger.info("Reading in the meter data")
     meter_df = get_meter_data(path)
     meter_df = meter_df.reset_index()
@@ -257,50 +273,50 @@ def prepare(asset="kelmarsh", return_value="plantdata"):
     #####################################
     # Availability and Curtailment Data #
     #####################################
-    logger.info("Reading in the curtailment data")
-    curtail_df = get_curtailment_df(SCADA_headers)  # Load Availability and Curtail data
+
+    logger.info("Reading in the curtailment and availability losses data")
+    curtail_df = get_curtailment_df(SCADA_headers)
     curtail_df = curtail_df.reset_index()
 
 
     ###################
     # REANALYSIS DATA #
     ###################
+
     logger.info("Reading in the reanalysis data")
 
     # reanalysis datasets are held in a dictionary
     reanalysis_dict = dict()
 
-    # MERRA2
+    # MERRA2 from Zenodo
     if os.path.exists(path+"//"+asset+"_merra2.csv"):
         logger.info("Reading MERRA2")
         reanalysis_merra2_df = pd.read_csv(path+"//"+asset+"_merra2.csv")
         reanalysis_dict.update(dict(merra2=reanalysis_merra2_df))
 
-    # ERA5
+    # ERA5 from Zenodo
     if os.path.exists(path+"//"+asset+"_era5.csv"):
         logger.info("Reading ERA5")
         reanalysis_era5_df = pd.read_csv(path+"//"+asset+"_era5.csv")
         reanalysis_dict.update(dict(era5=reanalysis_era5_df))
 
-    # ERA5 monthly 10m
-    if not os.path.exists(path+"//era5_monthly_10m//"+asset+"_era5_monthly_10m.csv"):
-        logger.info("Downloading ERA5 monthly")
-        downloader.get_era5(lat=asset_df["Latitude"].mean(),
-                            lon=asset_df["Longitude"].mean(),
-                            save_pathname=path+"//era5_monthly_10m//",
-                            save_filename=asset+"_era5_monthly_10m")
+    # ERA5 monthly 10m from CDS
+    logger.info("Downloading ERA5 monthly")
+    downloader.get_era5(lat=asset_df["Latitude"].mean(),
+                        lon=asset_df["Longitude"].mean(),
+                        save_pathname=path+"//era5_monthly_10m//",
+                        save_filename=asset+"_era5_monthly_10m")
 
     logger.info("Reading ERA5 monthly")
     reanalysis_era5_monthly_df = pd.read_csv(path+"//era5_monthly_10m//"+asset+"_era5_monthly_10m.csv")
     reanalysis_dict.update(dict(era5_monthly=reanalysis_era5_monthly_df))
 
-    # MERRA2 monthly 10m
-    if not os.path.exists(path+"//_merra2_monthly_10m//"+asset+"_merra2_monthly_10m.csv"):
-        logger.info("Downloading MERRA2 monthly")
-        downloader.get_merra2(lat=asset_df["Latitude"].mean(),
-                            lon=asset_df["Longitude"].mean(),
-                            save_pathname=path+"//merra2_monthly_10m//",
-                            save_filename=asset+"_merra2_monthly_10m")
+    # MERRA2 monthly 10m from GES DISC
+    logger.info("Downloading MERRA2 monthly")
+    downloader.get_merra2(lat=asset_df["Latitude"].mean(),
+                        lon=asset_df["Longitude"].mean(),
+                        save_pathname=path+"//merra2_monthly_10m//",
+                        save_filename=asset+"_merra2_monthly_10m")
 
     logger.info("Reading MERRA2 monthly")
     reanalysis_merra2_monthly_df = pd.read_csv(path+"//merra2_monthly_10m//"+asset+"_merra2_monthly_10m.csv")
