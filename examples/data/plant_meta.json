@@ -9,44 +9,45 @@
     "rotor_diameter": "Rotor_diameter_m"
   },
   "curtail": {
-    "availability": "availability_kwh",
-    "curtailment": "curtailment_kwh",
+    "IAVL_DnWh": "availability_kwh",
+    "IAVL_ExtPwrDnWh": "curtailment_kwh",
     "frequency": "10T",
-    "net_energy": "net_energy_kwh",
     "time": "time"
   },
   "latitude": 48.4497,
   "longitude": 5.5896,
   "meter": {
-    "energy": "net_energy_kwh",
+    "MMTR_SupWh": "net_energy_kwh",
     "time": "time"
   },
   "reanalysis": {
     "era5": {
+      "WMETR_EnvPres": "surf_pres",
+      "WMETR_EnvTmp": "t_2m",
+      "WMETR_HorWdDir": "winddirection_deg",
+      "WMETR_HorWdSpdU": "u_100",
+      "WMETR_HorWdSpdV": "v_100",
       "frequency": "H",
-      "surface_pressure": "surf_pres",
-      "temperature": "t_2m",
-      "time": "datetime",
-      "windspeed_u": "u_100",
-      "windspeed_v": "v_100"
+      "time": "datetime"
     },
     "merra2": {
+      "WMETR_EnvPres": "surface_pressure",
+      "WMETR_EnvTmp": "temp_2m",
+      "WMETR_HorWdDir": "winddirection_deg",
+      "WMETR_HorWdSpdU": "u_50",
+      "WMETR_HorWdSpdV": "v_50",
       "frequency": "H",
-      "surface_pressure": "surface_pressure",
-      "temperature": "temp_10m",
-      "time": "datetime",
-      "windspeed_u": "u_50",
-      "windspeed_v": "v_50"
+      "time": "datetime"
     }
   },
   "scada": {
+    "WMET_EnvTmp": "Ot_avg",
+    "WMET_HorWdDir": "Wa_avg",
+    "WMET_HorWdSpd": "Ws_avg",
+    "WROT_BlPthAngVal": "Ba_avg",
+    "WTUR_TurNam": "Wind_turbine_name",
+    "WTUR_W": "P_avg",
     "frequency": "10T",
-    "id": "Wind_turbine_name",
-    "pitch": "Ba_avg",
-    "power": "P_avg",
-    "temperature": "Ot_avg",
-    "time": "Date_time",
-    "wind_direction": "Wa_avg",
-    "windspeed": "Ws_avg"
+    "time": "Date_time"
   }
 }

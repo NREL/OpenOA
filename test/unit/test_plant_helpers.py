@@ -244,20 +244,20 @@ def test_SCADAMetaData():
     # Leaving id and power as the default values
     meta_dict = dict(
         time="datetime",
-        windspeed="ws_100",
-        wind_direction="wd_100",
-        status="turb_stat",
-        pitch="rotor_angle",
-        temperature="temp",
+        WMET_HorWdSpd="ws_100",
+        WMET_HorWdDir="wd_100",
+        WTUR_TurSt="turb_stat",
+        WROT_BlPthAngVal="rotor_angle",
+        WMET_EnvTmp="temp",
         frequency="H",
     )
     valid_map = deepcopy(meta_dict)
-    valid_map.update(dict(id="id", power="power"))
+    valid_map.update(dict(WTUR_TurNam="WTUR_TurNam", WTUR_W="WTUR_W"))
     valid_map.pop("frequency")
 
     meta = SCADAMetaData.from_dict(meta_dict)
     cols = deepcopy(meta.col_map)
-    cols.pop("energy")  # need to move the internally-set mapping
+    cols.pop("WTUR_SupWh")  # need to move the internally-set mapping
     assert cols == valid_map
     assert meta.frequency == meta_dict["frequency"]
 
@@ -278,11 +278,10 @@ def test_MeterMetaData():
 
     # Leaving time and energy as the default values
     meta_dict = dict(
-        power="power_production",
         frequency="D",
     )
     valid_map = deepcopy(meta_dict)
-    valid_map.update(dict(time="time", energy="energy"))
+    valid_map.update(dict(time="time", MMTR_SupWh="MMTR_SupWh"))
     valid_map.pop("frequency")
 
     meta = MeterMetaData.from_dict(meta_dict)
@@ -364,8 +363,8 @@ def test_CurtailMetaData():
 
     # Leaving time and net_energy as the default values
     meta_dict = dict(
-        curtailment="curtail",
-        availability="avail",
+        IAVL_ExtPwrDnWh="curtail",
+        IAVL_DnWh="avail",
         frequency="H",
     )
     valid_map = deepcopy(meta_dict)
@@ -424,14 +423,14 @@ def test_ReanalysisMetaData():
     # Leaving temperature, density, and frequency as the default values
     meta_dict = dict(
         time="curtail",
-        windspeed="WS",
-        windspeed_u="ws_U",
-        windspeed_v="ws_V",
-        wind_direction="wdir",
-        surface_pressure="pressure",
+        WMETR_HorWdSpd="WS",
+        WMETR_HorWdSpdU="ws_U",
+        WMETR_HorWdSpdV="ws_V",
+        WMETR_HorWdDir="wdir",
+        WMETR_EnvPres="pressure",
     )
     valid_map = deepcopy(meta_dict)
-    valid_map.update(dict(temperature="temperature", density="density"))
+    valid_map.update(dict(WMETR_EnvTmp="WMETR_EnvTmp", WMETR_AirDen="WMETR_AirDen"))
 
     meta = ReanalysisMetaData.from_dict(meta_dict)
     assert meta.col_map == valid_map
@@ -455,13 +454,13 @@ def test_convert_reanalysis_value():
     # Leaving the merra2 key as all defaults
     era5_meta_dict = dict(
         time="curtail",
-        windspeed="WS",
-        windspeed_u="ws_U",
-        windspeed_v="ws_V",
-        wind_direction="wdir",
-        temperature="temps",
-        density="dens",
-        surface_pressure="pressure",
+        WMETR_HorWdSpd="WS",
+        WMETR_HorWdSpdU="ws_U",
+        WMETR_HorWdSpdV="ws_V",
+        WMETR_HorWdDir="wdir",
+        WMETR_EnvTmp="temps",
+        WMETR_AirDen="dens",
+        WMETR_EnvPres="pressure",
         frequency="5T",
     )
     valid_era5_map = deepcopy(era5_meta_dict)
@@ -470,13 +469,13 @@ def test_convert_reanalysis_value():
     # Copy of the defaults
     valid_merra2_map = dict(
         time="time",
-        windspeed="windspeed",
-        windspeed_u="windspeed_u",
-        windspeed_v="windspeed_v",
-        wind_direction="wind_direction",
-        temperature="temperature",
-        density="density",
-        surface_pressure="surface_pressure",
+        WMETR_HorWdSpd="windspeed",
+        WMETR_HorWdSpdU="windspeed_u",
+        WMETR_HorWdSpdV="windspeed_v",
+        WMETR_HorWdDir="wind_direction",
+        WMETR_EnvTmp="temperature",
+        WMETR_AirDen="density",
+        WMETR_EnvPres="surface_pressure",
     )
 
     meta = convert_reanalysis(value=dict(era5=era5_meta_dict, merra2=dict()))
@@ -487,6 +486,7 @@ def test_convert_reanalysis_value():
     assert meta["era5"].units == attr.fields(ReanalysisMetaData).units.default
     assert meta["era5"].dtypes == attr.fields(ReanalysisMetaData).dtypes.default
 
+    meta = convert_reanalysis(value=dict(era5=dict(), merra2=valid_merra2_map))
     assert meta["merra2"].col_map == valid_merra2_map
     assert meta["merra2"].frequency == attr.fields(ReanalysisMetaData).frequency.default
     assert meta["merra2"].units == attr.fields(ReanalysisMetaData).units.default

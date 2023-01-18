@@ -34,39 +34,39 @@ _at_least_hourly = ("H", "T", "min", "S", "L", "ms", "U", "us", "N")
 ANALYSIS_REQUIREMENTS = {
     "MonteCarloAEP": {
         "meter": {
-            "columns": ["energy"],
+            "columns": ["MMTR_SupWh"],
             "freq": _at_least_monthly,
         },
         "curtail": {
-            "columns": ["availability", "curtailment"],
+            "columns": ["IAVL_DnWh", "IAVL_ExtPwrDnWh"],
             "freq": _at_least_monthly,
         },
         "reanalysis": {
-            "columns": ["windspeed", "density"],
+            "columns": ["WMETR_HorWdSpd", "WMETR_AirDen"],
             "conditional_columns": {
-                "reg_temperature": ["temperature"],
-                "reg_wind_direction": ["windspeed_u", "windspeed_v"],
+                "reg_temperature": ["WMETR_EnvTmp"],
+                "reg_wind_direction": ["WMETR_HorWdSpdU", "WMETR_HorWdSpdV"],
             },
             "freq": _at_least_monthly,
         },
     },
     "TurbineLongTermGrossEnergy": {
         "scada": {
-            "columns": ["id", "windspeed", "power"],
+            "columns": ["id", "WMET_HorWdSpd", "WTUR_W"],
             "freq": _at_least_daily,
         },
         "reanalysis": {
-            "columns": ["windspeed", "wind_direction", "density"],
+            "columns": ["WMETR_HorWdSpd", "WMETR_HorWdDir", "WMETR_AirDen"],
             "freq": _at_least_daily,
         },
     },
     "ElectricalLosses": {
         "scada": {
-            "columns": ["energy"],
+            "columns": ["WTUR_SupWh"],
             "freq": _at_least_daily,
         },
         "meter": {
-            "columns": ["energy"],
+            "columns": ["MMTR_SupWh"],
             "freq": _at_least_monthly,
         },
     },
@@ -422,19 +422,19 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
         time (str): The datetime stamp for the SCADA data, by default "time". This data should be of
             type: `np.datetime64[ns]`, or able to be converted to a pandas DatetimeIndex. Additional
             columns describing the datetime stamps are: `frequency`
-        id (str): The turbine identifier column in the SCADA data, by default "id". This data should be of
+        WTUR_TurNam (str): The turbine identifier column in the SCADA data, by default "id". This data should be of
             type: `str`.
-        power (str): The power produced, in kW, column in the SCADA data, by default "power".
+        WTUR_W (str): The power produced, in kW, column in the SCADA data, by default "WTUR_W".
             This data should be of type: `float`.
-        windspeed (str): The measured windspeed, in m/s, column in the SCADA data, by default "windspeed".
+        WMET_HorWdSpd (str): The measured windspeed, in m/s, column in the SCADA data, by default "WMET_HorWdSpd".
             This data should be of type: `float`.
-        wind_direction (str): The measured wind direction, in degrees, column in the SCADA data, by default
-            "wind_direction". This data should be of type: `float`.
-        status (str): The status code column in the SCADA data, by default "status". This data
+        WMET_HorWdDir (str): The measured wind direction, in degrees, column in the SCADA data, by default
+            "WMET_HorWdDir". This data should be of type: `float`.
+        WTUR_TurSt (str): The status code column in the SCADA data, by default "WTUR_TurSt". This data
             should be of type: `str`.
-        pitch (str): The pitch, in degrees, column in the SCADA data, by default "pitch". This data
+        WROT_BlPthAngVal (str): The pitch, in degrees, column in the SCADA data, by default "WROT_BlPthAngVal". This data
             should be of type: `float`.
-        temperature (str): The temperature column in the SCADA data, by default "temperature". This
+        WMET_EnvTmp (str): The temperature column in the SCADA data, by default "WMET_EnvTmp". This
             data should be of type: `float`.
         frequency (str): The frequency of `time` in the SCADA data, by default "10T". The input
             should align with the `Pandas frequency offset aliases`_.
@@ -447,13 +447,13 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
 
     # DataFrame columns
     time: str = field(default="time")
-    id: str = field(default="id")
-    power: str = field(default="power")
-    windspeed: str = field(default="windspeed")
-    wind_direction: str = field(default="wind_direction")
-    status: str = field(default="status")
-    pitch: str = field(default="pitch")
-    temperature: str = field(default="temperature")
+    WTUR_TurNam: str = field(default="WTUR_TurNam")
+    WTUR_W: str = field(default="WTUR_W")
+    WMET_HorWdSpd: str = field(default="WMET_HorWdSpd")
+    WMET_HorWdDir: str = field(default="WMET_HorWdDir")
+    WTUR_TurSt: str = field(default="WTUR_TurSt")
+    WROT_BlPthAngVal: str = field(default="WROT_BlPthAngVal")
+    WMET_EnvTmp: str = field(default="WMET_EnvTmp")
 
     # Data about the columns
     frequency: str = field(default="10T")
@@ -461,33 +461,33 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
     # Parameterizations that should not be changed
     # Prescribed mappings, datatypes, and units for in-code reference.
     name: str = field(default="scada", init=False)
-    energy: str = field(default="energy", init=False)  # calculated in PlantData
+    WTUR_SupWh: str = field(default="WTUR_SupWh", init=False)  # calculated in PlantData
     col_map: dict = field(init=False)
     dtypes: dict = field(
         default=dict(
             time=np.datetime64,
-            id=str,
-            power=float,
-            windspeed=float,
-            wind_direction=float,
-            status=str,
-            pitch=float,
-            temperature=float,
-            energy=float,
+            WTUR_TurNam=str,
+            WTUR_W=float,
+            WMET_HorWdSpd=float,
+            WMET_HorWdDir=float,
+            WTUR_TurSt=str,
+            WROT_BlPthAngVal=float,
+            WMET_EnvTmp=float,
+            WTUR_SupWh=float,
         ),
         init=False,  # don't allow for user input
     )
     units: dict = field(
         default=dict(
             time="datetim64[ns]",
-            id=None,
-            power="kW",
-            windspeed="m/s",
-            wind_direction="deg",
-            status=None,
-            pitch="deg",
-            temperature="C",
-            energy="kWh",
+            WTUR_TurNam=None,
+            WTUR_W="kW",
+            WMET_HorWdSpd="m/s",
+            WMET_HorWdDir="deg",
+            WTUR_TurSt=None,
+            WROT_BlPthAngVal="deg",
+            WMET_EnvTmp="C",
+            WTUR_SupWh="kWh",
         ),
         init=False,  # don't allow for user input
     )
@@ -495,14 +495,14 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
     def __attrs_post_init__(self) -> None:
         self.col_map = dict(
             time=self.time,
-            id=self.id,
-            power=self.power,
-            windspeed=self.windspeed,
-            wind_direction=self.wind_direction,
-            status=self.status,
-            pitch=self.pitch,
-            temperature=self.temperature,
-            energy=self.energy,
+            WTUR_TurNam=self.WTUR_TurNam,
+            WTUR_W=self.WTUR_W,
+            WMET_HorWdSpd=self.WMET_HorWdSpd,
+            WMET_HorWdDir=self.WMET_HorWdDir,
+            WTUR_TurSt=self.WTUR_TurSt,
+            WROT_BlPthAngVal=self.WROT_BlPthAngVal,
+            WMET_EnvTmp=self.WMET_EnvTmp,
+            WTUR_SupWh=self.WTUR_SupWh,
         )
 
 
@@ -516,10 +516,8 @@ class MeterMetaData(FromDictMixin):  # noqa: F821
         time (str): The datetime stamp for the meter data, by default "time". This data should
             be of type: `np.datetime64[ns]`, or able to be converted to a pandas DatetimeIndex.
             Additional columns describing the datetime stamps are: `frequency`
-        power (str): The power produced, in kW, column in the meter data, by default "power".
-            This data should be of type: `float`.
-        energy (str): The energy produced, in kWh, column in the meter data, by default
-            "temperature". This data should be of type: `float`.
+        MMTR_SupWh (str): The energy produced, in kWh, column in the meter data, by default
+            "MMTR_SupWh". This data should be of type: `float`.
         frequency (str): The frequency of `time` in the meter data, by default "10T". The input
             should align with the `Pandas frequency offset aliases`_.
 
@@ -531,8 +529,7 @@ class MeterMetaData(FromDictMixin):  # noqa: F821
 
     # DataFrame columns
     time: str = field(default="time")
-    power: str = field(default="power")
-    energy: str = field(default="energy")
+    MMTR_SupWh: str = field(default="MMTR_SupWh")
 
     # Data about the columns
     frequency: str = field(default="10T")
@@ -544,16 +541,14 @@ class MeterMetaData(FromDictMixin):  # noqa: F821
     dtypes: dict = field(
         default=dict(
             time=np.datetime64,
-            power=float,
-            energy=float,
+            MMTR_SupWh=float,
         ),
         init=False,  # don't allow for user input
     )
     units: dict = field(
         default=dict(
             time="datetim64[ns]",
-            power="kW",
-            energy="kWh",
+            MMTR_SupWh="kWh",
         ),
         init=False,  # don't allow for user input
     )
@@ -561,8 +556,7 @@ class MeterMetaData(FromDictMixin):  # noqa: F821
     def __attrs_post_init__(self) -> None:
         self.col_map = dict(
             time=self.time,
-            power=self.power,
-            energy=self.energy,
+            MMTR_SupWh=self.MMTR_SupWh,
         )
 
 
@@ -700,10 +694,10 @@ class CurtailMetaData(FromDictMixin):  # noqa: F821
         time (str): The datetime stamp for the curtailment data, by default "time". This data should
             be of type: `np.datetime64[ns]`, or able to be converted to a pandas DatetimeIndex.
             Additional columns describing the datetime stamps are: `frequency`
-        curtailment (str): The curtailment, in kWh, column in the curtailment data, by default
-            "curtailment". This data should be of type: `float`.
-        availability (str): The availability, in kWh, column in the curtailment data, by default
-            "availability". This data should be of type: `float`.
+        IAVL_ExtPwrDnWh (str): The curtailment, in kWh, column in the curtailment data, by default
+            "IAVL_ExtPwrDnWh". This data should be of type: `float`.
+        IAVL_DnWh (str): The availability, in kWh, column in the curtailment data, by default
+            "IAVL_DnWh". This data should be of type: `float`.
         frequency (str): The frequency of `time` in the met tower data, by default "10T". The input
             should align with the `Pandas frequency offset aliases`_.
 
@@ -714,8 +708,8 @@ class CurtailMetaData(FromDictMixin):  # noqa: F821
 
     # DataFrame columns
     time: str = field(default="time")
-    curtailment: str = field(default="curtailment")
-    availability: str = field(default="availability")
+    IAVL_ExtPwrDnWh: str = field(default="IAVL_ExtPwrDnWh")
+    IAVL_DnWh: str = field(default="IAVL_DnWh")
 
     # Data about the columns
     frequency: str = field(default="10T")
@@ -727,16 +721,16 @@ class CurtailMetaData(FromDictMixin):  # noqa: F821
     dtypes: dict = field(
         default=dict(
             time=np.datetime64,
-            curtailment=float,
-            availability=float,
+            IAVL_ExtPwrDnWh=float,
+            IAVL_DnWh=float,
         ),
         init=False,  # don't allow for user input
     )
     units: dict = field(
         default=dict(
             time="datetim64[ns]",
-            curtailment="kWh",
-            availability="kWh",
+            IAVL_ExtPwrDnWh="kWh",
+            IAVL_DnWh="kWh",
         ),
         init=False,  # don't allow for user input
     )
@@ -744,8 +738,8 @@ class CurtailMetaData(FromDictMixin):  # noqa: F821
     def __attrs_post_init__(self) -> None:
         self.col_map = dict(
             time=self.time,
-            curtailment=self.curtailment,
-            availability=self.availability,
+            IAVL_ExtPwrDnWh=self.IAVL_ExtPwrDnWh,
+            IAVL_DnWh=self.IAVL_DnWh,
         )
 
 
@@ -828,15 +822,40 @@ class AssetMetaData(FromDictMixin):  # noqa: F821
 
 @define(auto_attribs=True)
 class ReanalysisMetaData(FromDictMixin):  # noqa: F821
-    # DataFrame columns
+    """A metadata schematic for each of the reanalsis products to be used for operationa analyses
+    to create the necessary column mappings and other validation components, or other data about
+    the site's asset metadata, that will contribute to a larger plant metadata schema/routine.
+
+    Args:
+        time (str): The datetime stamp for the curtailment data, by default "time". This data should
+            be of type: `np.datetime64[ns]`, or able to be converted to a pandas DatetimeIndex.
+            Additional columns describing the datetime stamps are: `frequency`
+        WMETR_HorWdSpd (:obj:`str`): The reanalysis non-directional windspeed data column name, in
+            m/s, by default "WMETR_HorWdSpd".
+        WMETR_HorWdSpdU (:obj:`str`): The reanalysis u-direction windspeed data column name, in m/s,
+            by default "WMETR_HorWdSpdU".
+        WMETR_HorWdSpdV (:obj:`str`): The reanalysis v-directional windspeed data column name, in
+            m/s, by default "WMETR_HorWdSpdV".
+        WMETR_HorWdDir (:obj:`str`): The reanalysis windspeed horizontal direction data column name,
+            in degrees, by default "WMETR_HorWdDir".
+        WMETR_EnvTmp (:obj:`str`): The temperature data column name in the renalysis data, in
+            degrees Kelvin, by default "WMETR_EnvTmp".
+        WMETR_AirDen (:obj:`str`): The air density reanalysis data column name, in kg/m^3, by
+            default "WMETR_AirDen".
+        WMETR_EnvPres (:obj:`str`): The surface air pressure reanalysis data column name, in Pa, by
+            default "WMETR_EnvPres".
+        frequency (:obj:`str`): The frequency of the timestamps in the :py:attr:`time` column, by
+            default "10T".
+    """
+
     time: str = field(default="time")
-    windspeed: str = field(default="windspeed")
-    windspeed_u: str = field(default="windspeed_u")
-    windspeed_v: str = field(default="windspeed_v")
-    wind_direction: str = field(default="wind_direction")
-    temperature: str = field(default="temperature")
-    density: str = field(default="density")
-    surface_pressure: str = field(default="surface_pressure")
+    WMETR_HorWdSpd: str = field(default="WMETR_HorWdSpd")
+    WMETR_HorWdSpdU: str = field(default="WMETR_HorWdSpdU")
+    WMETR_HorWdSpdV: str = field(default="WMETR_HorWdSpdV")
+    WMETR_HorWdDir: str = field(default="WMETR_HorWdDir")
+    WMETR_EnvTmp: str = field(default="WMETR_EnvTmp")
+    WMETR_AirDen: str = field(default="WMETR_AirDen")
+    WMETR_EnvPres: str = field(default="surface_pressure")
 
     # Data about the columns
     frequency: str = field(default="10T")
@@ -848,26 +867,26 @@ class ReanalysisMetaData(FromDictMixin):  # noqa: F821
     dtypes: dict = field(
         default=dict(
             time=np.datetime64,
-            windspeed=float,
-            windspeed_u=float,
-            windspeed_v=float,
-            wind_direction=float,
-            temperature=float,
-            density=float,
-            surface_pressure=float,
+            WMETR_HorWdSpd=float,
+            WMETR_HorWdSpdU=float,
+            WMETR_HorWdSpdV=float,
+            WMETR_HorWdDir=float,
+            WMETR_EnvTmp=float,
+            WMETR_AirDen=float,
+            WMETR_EnvPres=float,
         ),
         init=False,  # don't allow for user input
     )
     units: dict = field(
         default=dict(
             time="datetim64[ns]",
-            windspeed="m/s",
-            windspeed_u="m/s",
-            windspeed_v="m/s",
-            wind_direction="deg",
-            temperature="K",
-            density="kg/m^3",
-            surface_pressure="Pa",
+            WMETR_HorWdSpd="m/s",
+            WMETR_HorWdSpdU="m/s",
+            WMETR_HorWdSpdV="m/s",
+            WMETR_HorWdDir="deg",
+            WMETR_EnvTmp="K",
+            WMETR_AirDen="kg/m^3",
+            WMETR_EnvPres="Pa",
         ),
         init=False,  # don't allow for user input
     )
@@ -875,13 +894,13 @@ class ReanalysisMetaData(FromDictMixin):  # noqa: F821
     def __attrs_post_init__(self) -> None:
         self.col_map = dict(
             time=self.time,
-            windspeed=self.windspeed,
-            windspeed_u=self.windspeed_u,
-            windspeed_v=self.windspeed_v,
-            wind_direction=self.wind_direction,
-            temperature=self.temperature,
-            density=self.density,
-            surface_pressure=self.surface_pressure,
+            WMETR_HorWdSpd=self.WMETR_HorWdSpd,
+            WMETR_HorWdSpdU=self.WMETR_HorWdSpdU,
+            WMETR_HorWdSpdV=self.WMETR_HorWdSpdV,
+            WMETR_HorWdDir=self.WMETR_HorWdDir,
+            WMETR_EnvTmp=self.WMETR_EnvTmp,
+            WMETR_AirDen=self.WMETR_AirDen,
+            WMETR_EnvPres=self.WMETR_EnvPres,
         )
 
 
@@ -1222,7 +1241,7 @@ class PlantData:
     @asset.validator
     @reanalysis.validator
     def data_validator(
-        self, instance: attrs.Attribute, value: pd.DataFrame | dict[pd.DataFrame] | None
+        self, instance: attrs.Attribute, value: pd.DataFrame | dict[str | pd.DataFrame] | None
     ) -> None:
         """Validator function for each of the data buckets in `PlantData` that checks
         that the appropriate columns exist for each dataframe, each column is of the
@@ -1252,10 +1271,10 @@ class PlantData:
         """Sets the index value for each of the `PlantData` objects that are not `None`."""
         if self.scada is not None:
             time_col = self.metadata.scada.col_map["time"]
-            id_col = self.metadata.scada.col_map["id"]
+            id_col = self.metadata.scada.col_map["WTUR_TurNam"]
             self.scada[time_col] = pd.DatetimeIndex(self.scada[time_col])
             self.scada = self.scada.set_index([time_col, id_col])
-            self.scada.index.names = ["time", "id"]
+            self.scada.index.names = ["time", "WTUR_TurNam"]
 
         if self.meter is not None:
             time_col = self.metadata.meter.col_map["time"]
@@ -1294,6 +1313,27 @@ class PlantData:
                 self.reanalysis[name][time_col] = pd.DatetimeIndex(self.reanalysis[name][time_col])
                 self.reanalysis[name] = self.reanalysis[name].set_index([time_col])
                 self.reanalysis[name].index.name = "time"
+
+    def _unset_index_columns(self) -> None:
+        """Resets the index for each of the data types. This is intended solely for the use with
+        the :py:meth:`validate` to ensure the validation methods are able to find the index columns
+        in the column space
+        """
+        if self.scada is not None:
+            self.scada.reset_index(drop=False, inplace=True)
+        if self.meter is not None:
+            self.meter.reset_index(drop=False, inplace=True)
+        if self.status is not None:
+            self.status.reset_index(drop=False, inplace=True)
+        if self.tower is not None:
+            self.tower.reset_index(drop=False, inplace=True)
+        if self.curtail is not None:
+            self.curtail.reset_index(drop=False, inplace=True)
+        if self.asset is not None:
+            self.asset.reset_index(drop=False, inplace=True)
+        if self.reanalysis is not None:
+            for name in self.reanalysis:
+                self.reanalysis[name].reset_index(drop=False, inplace=True)
 
     @property
     def data_dict(self) -> dict[str, pd.DataFrame]:
@@ -1368,21 +1408,33 @@ class PlantData:
         with open((save_path / metadata).with_suffix(".yml"), "w") as f:
             yaml.safe_dump(meta, f, default_flow_style=False, sort_keys=False)
         if self.scada is not None:
-            self.scada.to_csv((save_path / scada).with_suffix(".csv"), index_label=["time", "id"])
+            self.scada.reset_index(drop=False).to_csv(
+                (save_path / scada).with_suffix(".csv"), index=False
+            )
         if self.status is not None:
-            self.status.to_csv((save_path / status).with_suffix(".csv"), index_label=["time", "id"])
+            self.status.reset_index(drop=False).to_csv(
+                (save_path / status).with_suffix(".csv"), index=False
+            )
         if self.tower is not None:
-            self.tower.to_csv((save_path / tower).with_suffix(".csv"), index_label=["time", "id"])
+            self.tower.reset_index(drop=False).to_csv(
+                (save_path / tower).with_suffix(".csv"), index=False
+            )
         if self.meter is not None:
-            self.meter.to_csv((save_path / meter).with_suffix(".csv"), index_label=["time"])
+            self.meter.reset_index(drop=False).to_csv(
+                (save_path / meter).with_suffix(".csv"), index=False
+            )
         if self.curtail is not None:
-            self.curtail.to_csv((save_path / curtail).with_suffix(".csv"), index_label=["time"])
+            self.curtail.reset_index(drop=False).to_csv(
+                (save_path / curtail).with_suffix(".csv"), index=False
+            )
         if self.asset is not None:
-            self.asset.to_csv((save_path / asset).with_suffix(".csv"), index_label=["id"])
+            self.asset.reset_index(drop=False).to_csv(
+                (save_path / asset).with_suffix(".csv"), index=False
+            )
         if self.reanalysis is not None:
             for name, df in self.reanalysis.items():
-                df.to_csv(
-                    (save_path / f"{reanalysis}_{name}").with_suffix(".csv"), index_label=["time"]
+                df.reset_index(drop=False).to_csv(
+                    (save_path / f"{reanalysis}_{name}").with_suffix(".csv"), index=False
                 )
 
     def _validate_column_names(self, category: str = "all") -> dict[str, list[str]]:
@@ -1522,6 +1574,9 @@ class PlantData:
         Raises:
             ValueError: Raised at the end if errors are caught in the validation steps.
         """
+        # Put the index columns back into the column space to ensure success of re-validation
+        self._unset_index_columns()
+
         # Initialization will have converted the column naming convention, but an updated
         # metadata should account for the renaming of the columns
         if metadata is None:
@@ -1529,11 +1584,15 @@ class PlantData:
         else:
             self.metadata = metadata
 
+        # Reset the index columns to be part of the columns space so the validations still work
+
         self._errors = {
             "missing": self._validate_column_names(),
             "dtype": self._validate_dtypes(),
-            "frequency": self._validate_frequency(),
         }
+
+        self._set_index_columns()
+        self._errors["frequency"] = self._validate_frequency()
 
         # TODO: Check for extra columns?
         # TODO: Define other checks?
@@ -1541,11 +1600,10 @@ class PlantData:
         error_message = _compose_error_message(self._errors, self.analysis_type)
         if error_message:
             raise ValueError(error_message)
-
         self.update_column_names()
 
     def _calculate_reanalysis_columns(self) -> None:
-        """Calculates extra variables such as wind_direction from the provided
+        """Calculates extra variables such as wind direction from the provided
         reanalysis data if they don't already exist.
         """
         if self.reanalysis is None:
@@ -1553,23 +1611,23 @@ class PlantData:
         reanalysis = {}
         for name, df in self.reanalysis.items():
             col_map = self.metadata.reanalysis[name].col_map
-            u = col_map["windspeed_u"]
-            v = col_map["windspeed_v"]
+            u = col_map["WMETR_HorWdSpdU"]
+            v = col_map["WMETR_HorWdSpdV"]
             has_u_v = (u in df) & (v in df)
 
-            ws = col_map["windspeed"]
+            ws = col_map["WMETR_HorWdSpd"]
             if ws not in df and has_u_v:
                 df[ws] = np.sqrt(df[u].values ** 2 + df[v].values ** 2)
 
-            wd = col_map["wind_direction"]
+            wd = col_map["WMETR_HorWdDir"]
             if wd not in df and has_u_v:
                 # TODO: added .values to fix an issue where df[u] and df[v] with ANY NaN values would cause df[wd]
                 # to be all NaN. Is there a better to fix this?
                 df[wd] = met.compute_wind_direction(df[u], df[v]).values
 
-            dens = col_map["density"]
-            sp = col_map["surface_pressure"]
-            temp = col_map["temperature"]
+            dens = col_map["WMETR_AirDen"]
+            sp = col_map["WMETR_EnvPres"]
+            temp = col_map["WMETR_EnvTmp"]
             has_sp_temp = (sp in df) & (temp in df)
             if dens not in df and has_sp_temp:
                 df[dens] = met.compute_air_density(df[temp], df[sp])
@@ -1652,8 +1710,8 @@ class PlantData:
             self.reanalysis = reanalysis
 
     def _calculate_turbine_energy(self) -> None:
-        energy_col = self.metadata.scada.energy
-        power_col = self.metadata.scada.power
+        energy_col = self.metadata.scada.WTUR_SupWh
+        power_col = self.metadata.scada.WTUR_W
         frequency = self.metadata.scada.frequency
         self.scada[energy_col] = convert_power_to_energy(self.scada[power_col], frequency)
 
