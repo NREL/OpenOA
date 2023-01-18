@@ -917,8 +917,8 @@ def plot_windfarm(
 
     # Create a bokeh figure with tiles
     plot_map = figure(
-        plot_width=plot_width,
-        plot_height=plot_height,
+        width=plot_width,
+        height=plot_height,
         x_axis_type="mercator",
         y_axis_type="mercator",
         **figure_options,

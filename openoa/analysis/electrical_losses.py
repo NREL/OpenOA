@@ -179,11 +179,11 @@ class ElectricalLosses(FromDictMixin):
 
         # Sum up SCADA data power and energy and count number of entries
         ix_time = self.plant.scada.index.get_level_values("time")
-        self.scada_sum = scada_df.groupby(ix_time)[["energy"]].sum()
-        self.scada_sum["count"] = scada_df.groupby(ix_time)[["energy"]].count()
+        self.scada_sum = scada_df.groupby(ix_time)[["WTUR_SupWh"]].sum()
+        self.scada_sum["count"] = scada_df.groupby(ix_time)[["WTUR_SupWh"]].count()
 
         # Calculate daily sum of all turbine energy production and count number of entries
-        self.scada_daily = self.scada_sum.resample("D")["energy"].sum().to_frame()
+        self.scada_daily = self.scada_sum.resample("D")["WTUR_SupWh"].sum().to_frame()
         self.scada_daily["count"] = self.scada_sum.resample("D")["count"].sum()
 
         # Specify expected count provided all turbines reporting
@@ -196,7 +196,7 @@ class ElectricalLosses(FromDictMixin):
 
         # Correct sum of turbine energy for cases with missing reported data
         self.scada_daily["corrected_energy"] = (
-            self.scada_daily["energy"] * expected_count / self.scada_daily["count"]
+            self.scada_daily["WTUR_SupWh"] * expected_count / self.scada_daily["count"]
         )
         self.scada_daily["percent"] = self.scada_daily["count"] / expected_count
 
@@ -214,7 +214,7 @@ class ElectricalLosses(FromDictMixin):
 
         # Sum up meter data to daily
         self.meter_daily = meter_df.resample("D").sum()
-        self.meter_daily["count"] = meter_df.resample("D")["energy"].count()
+        self.meter_daily["count"] = meter_df.resample("D")["MMTR_SupWh"].count()
 
         # Specify expected count provided all timestamps reporting
         expected_count = (
@@ -243,7 +243,7 @@ class ElectricalLosses(FromDictMixin):
             if self.monthly_meter:
 
                 scada_monthly = self.scada_daily.resample("MS")["corrected_energy"].sum().to_frame()
-                scada_monthly.columns = ["energy"]
+                scada_monthly.columns = ["WTUR_SupWh"]
 
                 # Determine availability for each month represented
                 scada_monthly["count"] = self.scada_sum.resample("MS")["count"].sum()
@@ -278,8 +278,8 @@ class ElectricalLosses(FromDictMixin):
             merge_sum = self.combined_energy.sum(axis=0)
 
             # Calculate electrical loss from difference of sum of turbine and meter energy
-            self.total_turbine_energy = merge_sum["energy_scada"] * _run.scada_data_fraction
-            self.total_meter_energy = merge_sum["energy_meter"] * _run.meter_data_fraction
+            self.total_turbine_energy = merge_sum["WTUR_SupWh"] * _run.scada_data_fraction
+            self.total_meter_energy = merge_sum["MMTR_SupWh"] * _run.meter_data_fraction
 
             self.electrical_losses[n] = 1 - self.total_meter_energy / self.total_turbine_energy
 
@@ -318,7 +318,7 @@ class ElectricalLosses(FromDictMixin):
 
         monthly_energy = self.combined_energy.resample("MS").sum()
         losses = (
-            monthly_energy["corrected_energy"] - monthly_energy["energy_meter"]
+            monthly_energy["corrected_energy"] - monthly_energy["MMTR_SupWh"]
         ) / monthly_energy["corrected_energy"]
 
         mean = losses.mean()
