@@ -35,8 +35,6 @@ logger = logging.getLogger(__name__)
 
 NDArrayFloat = npt.NDArray[np.float64]
 
-plot.set_styling()
-
 
 def get_annual_values(data):
     """
@@ -1147,6 +1145,7 @@ class MonteCarloAEP(FromDictMixin):
             None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes]: If `return_fig` is True, then
                 the figure and axes objects are returned for further tinkering/saving.
         """
+        plot.set_styling()
         return plot.plot_monthly_reanalysis_windspeed(
             data=self.plant.reanalysis,
             windspeed_col="ws_dens_corr",
@@ -1194,6 +1193,7 @@ class MonteCarloAEP(FromDictMixin):
             None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes]: If `return_fig` is True, then
                 the figure and axes objects are returned for further tinkering/saving.
         """
+        plot.set_styling()
         figure_kwargs.setdefault("figsize", (9, 9))
         figure_kwargs.setdefault("dpi", 200)
         fig = plt.figure(**figure_kwargs)
@@ -1318,6 +1318,7 @@ class MonteCarloAEP(FromDictMixin):
                 If `return_fig` is True, then the figure and axes objects are returned for further
                 tinkering/saving.
         """
+        plot.set_styling()
         return plot.plot_plant_energy_losses_timeseries(
             data=self.aggregate,
             energy_col="gross_energy_gwh",
@@ -1374,6 +1375,7 @@ class MonteCarloAEP(FromDictMixin):
             None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes]: If `return_fig` is True, then
                 the figure and axes objects are returned for further tinkering/saving.
         """
+        plot.set_styling()
         plot_results = self.results.copy()
         plot_results[["avail_pct", "curt_pct"]] = plot_results[["avail_pct", "curt_pct"]] * 100
         return plot.plot_distributions(
@@ -1426,6 +1428,7 @@ class MonteCarloAEP(FromDictMixin):
                 True, then the figure object, axes object, and a dictionary of the boxplot objects are
                 returned for further tinkering/saving.
         """
+        plot.set_styling()
         return plot.plot_boxplot(
             x=x,
             xlabel=xlabel,
