@@ -29,7 +29,7 @@ reanalysis:
   merra2:  # reanalysis product name/ID
     frequency: H  # timestamp frequency
     WMETR_EnvPres: surface_pressure  # surface pressure, Pa
-    WMETR_EnvTmp: temp_10m  # temperature, K
+    WMETR_EnvTmp: temp_2m  # temperature, K
     time: datetime  # timestamps
     WMETR_HorWdSpdU: u_50  # u-direction windspeed, m/s
     WMETR_HorWdSpdV: v_50  # v-direction windspeed, m/s

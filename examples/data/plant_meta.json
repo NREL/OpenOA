@@ -32,7 +32,7 @@
     },
     "merra2": {
       "WMETR_EnvPres": "surface_pressure",
-      "WMETR_EnvTmp": "temp_10m",
+      "WMETR_EnvTmp": "temp_2m",
       "WMETR_HorWdDir": "winddirection_deg",
       "WMETR_HorWdSpdU": "u_50",
       "WMETR_HorWdSpdV": "v_50",
