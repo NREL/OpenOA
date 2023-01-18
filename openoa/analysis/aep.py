@@ -36,6 +36,9 @@ logger = logging.getLogger(__name__)
 NDArrayFloat = npt.NDArray[np.float64]
 
 
+plot.set_styling()
+
+
 def get_annual_values(data):
     """
     This function returns annual summations of values in a pandas Series (or each column of a pandas DataFrame) with a
@@ -230,9 +233,9 @@ class MonteCarloAEP(FromDictMixin):
         # Build list of regression variables
         # self.reanalysis_vars = []  # Recreate because of data persistency bug
         if self.reg_temperature:
-            self.reanalysis_vars.append("temperature")
+            self.reanalysis_vars.append("WMETR_EnvTmp")
         if self.reg_wind_direction:
-            self.reanalysis_vars.extend(["windspeed_u", "windspeed_v"])
+            self.reanalysis_vars.extend(["WMETR_HorWdSpdU", "WMETR_HorWdSpdV"])
 
         # Monthly data can only use robust linear regression because of limited number of data
         if (self.time_resolution == "M") & (self.reg_model != "lin"):
@@ -347,12 +350,12 @@ class MonteCarloAEP(FromDictMixin):
         df = self.plant.meter  # Get the meter data frame
 
         # Create the monthly/daily data frame by summing meter energy, in GWh
-        self.aggregate = df.resample(self.resample_freq)["energy"].sum().to_frame() / 1e6
-        self.aggregate.rename(columns={"energy": "energy_gwh"}, inplace=True)
+        self.aggregate = df.resample(self.resample_freq)["MMTR_SupWh"].sum().to_frame() / 1e6
+        self.aggregate.rename(columns={"MMTR_SupWh": "energy_gwh"}, inplace=True)
 
         # Determine how much 10-min data was missing for each year-month/daily energy value. Flag accordigly if any is missing
         # Get percentage of meter data that were NaN when summing to monthly/daily
-        self.aggregate["energy_nan_perc"] = df.resample(self.resample_freq)["energy"].apply(
+        self.aggregate["energy_nan_perc"] = df.resample(self.resample_freq)["MMTR_SupWh"].apply(
             tm.percent_nan
         )
 
@@ -368,7 +371,9 @@ class MonteCarloAEP(FromDictMixin):
             if self.plant.metadata.meter.frequency in ("1M", "1MS"):
                 self.aggregate["num_days_actual"] = self.aggregate["num_days_expected"]
             else:
-                self.aggregate["num_days_actual"] = df.resample("MS")["energy"].apply(tm.num_days)
+                self.aggregate["num_days_actual"] = df.resample("MS")["MMTR_SupWh"].apply(
+                    tm.num_days
+                )
 
     @logged_method_call
     def process_loss_estimates(self):
@@ -384,11 +389,11 @@ class MonteCarloAEP(FromDictMixin):
         df = self.plant.curtail.copy()
 
         curt_aggregate = np.divide(
-            df.resample(self.resample_freq)[["availability", "curtailment"]].sum(), 1e6
+            df.resample(self.resample_freq)[["IAVL_DnWh", "IAVL_ExtPwrDnWh"]].sum(), 1e6
         )  # Get sum of avail and curt losses in GWh
 
         curt_aggregate.rename(
-            columns={"availability": "availability_gwh", "curtailment": "curtailment_gwh"},
+            columns={"IAVL_DnWh": "availability_gwh", "IAVL_ExtPwrDnWh": "curtailment_gwh"},
             inplace=True,
         )
         # Merge with revenue meter monthly/daily data
@@ -412,10 +417,10 @@ class MonteCarloAEP(FromDictMixin):
         )
 
         # Get percentage of 10-min meter data that were NaN when summing to monthly/daily
-        self.aggregate["avail_nan_perc"] = df.resample(self.resample_freq)["availability"].apply(
+        self.aggregate["avail_nan_perc"] = df.resample(self.resample_freq)["IAVL_DnWh"].apply(
             tm.percent_nan
         )
-        self.aggregate["curt_nan_perc"] = df.resample(self.resample_freq)["curtailment"].apply(
+        self.aggregate["curt_nan_perc"] = df.resample(self.resample_freq)["IAVL_ExtPwrDnWh"].apply(
             tm.percent_nan
         )
 
@@ -526,7 +531,7 @@ class MonteCarloAEP(FromDictMixin):
             rean_df = self.plant.reanalysis[key]
             # rean_df = rean_df.rename(self.plant.metadata[key].col_map)
             rean_df["ws_dens_corr"] = mt.air_density_adjusted_wind_speed(
-                rean_df["windspeed"], rean_df["density"]
+                rean_df["WMETR_HorWdSpd"], rean_df["WMETR_AirDen"]
             )
             self._reanalysis_aggregate[key] = rean_df.resample(self.resample_freq)[
                 "ws_dens_corr"
@@ -539,12 +544,12 @@ class MonteCarloAEP(FromDictMixin):
                 )
 
             if self.reg_wind_direction:
-                self._reanalysis_aggregate[key + "_winddirection"] = np.rad2deg(
+                self._reanalysis_aggregate[key + "_WMETR_HorWdDir"] = np.rad2deg(
                     np.pi
                     - (
                         np.arctan2(
-                            -self._reanalysis_aggregate[key + "_windspeed_u"],
-                            self._reanalysis_aggregate[key + "_windspeed_v"],
+                            -self._reanalysis_aggregate[key + "_WMETR_HorWdSpdU"],
+                            self._reanalysis_aggregate[key + "_WMETR_HorWdSpdV"],
                         )
                     )
                 )  # Calculate wind direction
@@ -686,7 +691,7 @@ class MonteCarloAEP(FromDictMixin):
             # Apply range filter to temperature, in Kelvin
             df_sub = df_sub.assign(
                 flag_range_T=filters.range_flag(
-                    df_sub[f"{reanal}_temperature"], lower=200, upper=320
+                    df_sub[f"{reanal}_WMETR_EnvTmp"], lower=200, upper=320
                 )
             )
         # Apply window range filter
@@ -746,12 +751,14 @@ class MonteCarloAEP(FromDictMixin):
             [reanal, "energy_gwh", "availability_gwh", "curtailment_gwh"],
         ]
         if self.reg_wind_direction:
-            add_cols = [f"{reanal}_{x}" for x in ("winddirection", "windspeed_u", "windspeed_v")]
+            add_cols = [
+                f"{reanal}_{x}" for x in ("WMETR_HorWdDir", "WMETR_HorWdSpdU", "WMETR_HorWdSpdV")
+            ]
             valid_data_to_add = df_sub.loc[~df_sub.loc[:, "flag_final"], add_cols]
             valid_data = pd.concat([valid_data, valid_data_to_add], axis=1)
 
         if self.reg_temperature:
-            valid_data_to_add = df_sub.loc[~df_sub.loc[:, "flag_final"], [f"{reanal}_temperature"]]
+            valid_data_to_add = df_sub.loc[~df_sub.loc[:, "flag_final"], [f"{reanal}_WMETR_EnvTmp"]]
             valid_data = pd.concat([valid_data, valid_data_to_add], axis=1)
 
         if self.time_resolution == "M":
@@ -807,11 +814,11 @@ class MonteCarloAEP(FromDictMixin):
         reg_inputs = reg_data[self._run.reanalysis_product]
 
         if self.reg_temperature:  # if temperature is considered as regression variable
-            mc_temperature = reg_data[f"{self._run.reanalysis_product}_temperature"]
+            mc_temperature = reg_data[f"{self._run.reanalysis_product}_WMETR_EnvTmp"]
             reg_inputs = pd.concat([reg_inputs, mc_temperature], axis=1)
 
         if self.reg_wind_direction:  # if wind direction is considered as regression variable
-            mc_wind_direction = reg_data[f"{self._run.reanalysis_product}_winddirection"]
+            mc_wind_direction = reg_data[f"{self._run.reanalysis_product}_WMETR_HorWdDir"]
             reg_inputs = pd.concat([reg_inputs, np.sin(np.deg2rad(mc_wind_direction))], axis=1)
             reg_inputs = pd.concat([reg_inputs, np.cos(np.deg2rad(mc_wind_direction))], axis=1)
 
@@ -931,20 +938,20 @@ class MonteCarloAEP(FromDictMixin):
             reg_inputs_por = [self.reanalysis_por[self._run.reanalysis_product]]
             if self.reg_temperature:
                 reg_inputs_por += [
-                    self.reanalysis_por[self._run.reanalysis_product + "_temperature"]
+                    self.reanalysis_por[self._run.reanalysis_product + "_WMETR_EnvTmp"]
                 ]
             if self.reg_wind_direction:
                 reg_inputs_por += [
                     np.sin(
                         np.deg2rad(
-                            self.reanalysis_por[self._run.reanalysis_product + "_winddirection"]
+                            self.reanalysis_por[self._run.reanalysis_product + "_WMETR_HorWdDir"]
                         )
                     )
                 ]
                 reg_inputs_por += [
                     np.cos(
                         np.deg2rad(
-                            self.reanalysis_por[self._run.reanalysis_product + "_winddirection"]
+                            self.reanalysis_por[self._run.reanalysis_product + "_WMETR_HorWdDir"]
                         )
                     )
                 ]
@@ -1052,7 +1059,7 @@ class MonteCarloAEP(FromDictMixin):
             long_term_reg_inputs = pd.concat(
                 [
                     long_term_reg_inputs,
-                    long_term_temp[f"{self._run.reanalysis_product}_temperature"],
+                    long_term_temp[f"{self._run.reanalysis_product}_WMETR_EnvTmp"],
                 ],
                 axis=1,
             )
@@ -1060,8 +1067,8 @@ class MonteCarloAEP(FromDictMixin):
             wd_aggregate = np.rad2deg(
                 np.pi
                 - np.arctan2(
-                    -long_term_temp[f"{self._run.reanalysis_product}_windspeed_u"],
-                    long_term_temp[f"{self._run.reanalysis_product}_windspeed_v"],
+                    -long_term_temp[f"{self._run.reanalysis_product}_WMETR_HorWdSpdU"],
+                    long_term_temp[f"{self._run.reanalysis_product}_WMETR_HorWdSpdV"],
                 )
             )  # Calculate wind direction
             long_term_reg_inputs = pd.concat(
@@ -1188,7 +1195,6 @@ class MonteCarloAEP(FromDictMixin):
             None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes]: If `return_fig` is True, then
                 the figure and axes objects are returned for further tinkering/saving.
         """
-
         figure_kwargs.setdefault("figsize", (9, 9))
         figure_kwargs.setdefault("dpi", 200)
         fig = plt.figure(**figure_kwargs)
@@ -1232,7 +1238,7 @@ class MonteCarloAEP(FromDictMixin):
                     **plot_kwargs,
                 )
 
-            ax.set_ylabel("30-day normalized gross energy (GWh)")
+            ax.set_ylabel("30-day Normalized Gross Energy (GWh)")
 
         # Daily/hourly case: apply bin filter for outliers detection
         else:
@@ -1263,8 +1269,6 @@ class MonteCarloAEP(FromDictMixin):
             elif self.time_resolution == "H":
                 ax.set_ylabel("Hourly gross energy (GWh)")
 
-        ax.grid()
-        ax.set_axisbelow(True)
         ax.legend(**legend_kwargs)
         ax.set_xlabel("Wind speed (m/s)")
 

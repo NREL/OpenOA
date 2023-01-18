@@ -121,7 +121,6 @@ class TestPlantData(unittest.TestCase):
             scada=f"{data_path}/scada.csv",
             meter=f"{data_path}/meter.csv",
             curtail=f"{data_path}/curtail.csv",
-            status=f"{data_path}/scada.csv",
             asset=f"{data_path}/asset.csv",
             reanalysis={
                 "era5": f"{data_path}/reanalysis_era5.csv",

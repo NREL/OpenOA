@@ -29,9 +29,7 @@ class TestWakeLosses(unittest.TestCase):
         self.project.validate()
 
         # Apply estimated northing calibration to SCADA wind directions
-        self.project.scada["wind_direction"] = (
-            self.project.scada["wind_direction"] + 15.85
-        ) % 360.0
+        self.project.scada["WMET_HorWdDir"] = (self.project.scada["WMET_HorWdDir"] + 15.85) % 360.0
 
     def test_wake_losses_without_UQ(self):
         reset_prng()

@@ -49,9 +49,9 @@ of the other metadata types.
 
 .. literalinclude:: ../../examples/data/plant_meta.yml
     :language: yaml
-    :lines: 35-43
+    :lines: 34-42
     :linenos:
-    :lineno-start: 35
+    :lineno-start: 34
 
 
 
@@ -89,18 +89,18 @@ data's column names in their SCADA data, plus the "freq" field. Users just have 
 columns are already using the specified units, and that each column is already using the listed
 data type or can be converted to that type.
 
-==================== ==================================   =============================
- Field Name           Data Type (SCADAMetaData.dtypes)     Units (SCADAMetaData.units)
-==================== ==================================   =============================
- time                 datetime64[ns]                       datetime64[ns]
- id                   string                               None
- power                float                                kW
- windspeed            float                                m/s
- winddirection        float                                degrees
- status               string                               None
- pitch                float                                degrees
- temp                 float                                Celsius
-==================== ==================================   =============================
+==================== ================= ================================== =============================
+ Field Name          Descriptive Name   Data Type (SCADAMetaData.dtypes)   Units (SCADAMetaData.units)
+==================== ================= ================================== =============================
+ time                 time stamp        datetime64[ns]                     datetime64[ns]
+ WTUR_TurNam          id                string                             None
+ WTUR_W               power             float                              kW
+ WMET_HorWdSpd        windspeed         float                              m/s
+ WMET_HorWdDir        winddirection     float                              degrees
+ WTUR_TurSt           status            string                             None
+ WROT_BlPthAngVal     pitch             float                              degrees
+ WMET_EnvTmp          temp              float                              Celsius
+==================== ================= ================================== =============================
 
 .. literalinclude:: ../../examples/data/plant_meta.yml
     :language: yaml
@@ -117,13 +117,12 @@ data's column names in their SCADA data, plus the "freq" field. Users just have 
 columns are already using the specified units, and that each column is already using the listed
 data type or can be converted to that type.
 
-==================== ==================================   =============================
- Field Name           Data Type (MeterMetaData.dtypes)     Units (MeterMetaData.units)
-==================== ==================================   =============================
- time                 datetime64[ns]                       datetime64[ns]
- power                float                                kW
- energy               float                                kWh
-==================== ==================================   =============================
+==================== =================== ================================== =============================
+ Field Name           Descriptive Name    Data Type (MeterMetaData.dtypes)   Units (MeterMetaData.units)
+==================== =================== ================================== =============================
+ time                 time stamp          datetime64[ns]                     datetime64[ns]
+ MMTR_SupWh           energy              float                              kWh
+==================== =================== ================================== =============================
 
 .. literalinclude:: ../../examples/data/plant_meta.yml
     :language: yaml
@@ -140,12 +139,12 @@ data's column names in their met tower data, plus the "freq" field. Users just h
 the columns are already using the specified units, and that each column is already using the listed
 data type or can be converted to that type.
 
-==================== ==================================   =============================
- Field Name           Data Type (TowerMetaData.dtypes)     Units (TowerMetaData.units)
-==================== ==================================   =============================
- time                 datetime64[ns]                       datetime64[ns]
- id                   string                               None
-==================== ==================================   =============================
+==================== ================== ================================== =============================
+ Field Name           Descriptive Name   Data Type (TowerMetaData.dtypes)   Units (TowerMetaData.units)
+==================== ================== ================================== =============================
+ time                 time               datetime64[ns]                     datetime64[ns]
+ id                   id                 string                             None
+==================== ================== ================================== =============================
 
 Curtail
 =======
@@ -156,13 +155,13 @@ data's column names in their curtailment data, plus the "freq" field. Users just
 the columns are already using the specified units, and that each column is already using the listed
 data type or can be converted to that type.
 
-==================== ====================================   ===============================
- Field Name           Data Type (CurtailMetaData.dtypes)     Units (CurtailMetaData.units)
-==================== ====================================   ===============================
- time                 datetime64[ns]                         datetime64[ns]
- curtailment          float                                  kWh
- availability         float                                  kWh
-==================== ====================================   ===============================
+==================== ================== ==================================== ===============================
+ Field Name           Descriptive Name   Data Type (CurtailMetaData.dtypes)   Units (CurtailMetaData.units)
+==================== ================== ==================================== ===============================
+ time                 time stamp         datetime64[ns]                       datetime64[ns]
+ IAVL_ExtPwrDnWh      curtailment        float                                kWh
+ IAVL_DnWh            availability       float                                kWh
+==================== ================== ==================================== ===============================
 
 .. literalinclude:: ../../examples/data/plant_meta.yml
     :language: yaml
@@ -183,15 +182,15 @@ listed data type or can be converted to that type.
     This section does not get used by OpenOA internally, though it is expected to be used in the future.
 
 
-==================== ===================================   ==============================
- Field Name           Data Type (StatusMetaData.dtypes)     Units (StatusMetaData.units)
-==================== ===================================   ==============================
- time                 datetime64[ns]                        datetime64[ns]
- id                   string                                None
- status_id            int                                   None
- status_code          int                                   None
- status_text          string                                None
-==================== ===================================   ==============================
+==================== ================== =================================== ==============================
+ Field Name           Descriptive Name   Data Type (StatusMetaData.dtypes)   Units (StatusMetaData.units)
+==================== ================== =================================== ==============================
+ time                 time stamp         datetime64[ns]                      datetime64[ns]
+ id                   id                 string                              None
+ status_id            status id          int                                 None
+ status_code          status code        int                                 None
+ status_text          status text        string                              None
+==================== ================== =================================== ==============================
 
 Asset
 =====
@@ -202,22 +201,22 @@ data's column names in their turbine and met tower asset data. Users just have t
 columns are already using the specified units, and that each column is already using the listed data
 type or can be converted to that type.
 
-==================== ==================================   =============================
- Field Name           Data Type (AssetMetaData.dtypes)     Units (AssetMetaData.units)
-==================== ==================================   =============================
- id                   string                               None
- latitude             float                                WGS-84
- longitude            float                                WGS-84
- rated_power          float                                kW
- hub_height           float                                m
- rotor_diameter       float                                m
- elevation            float                                m
- type                 string                               None
-==================== ==================================   =============================
+==================== ================== ================================== =============================
+ Field Name           Descriptive Name   Data Type (AssetMetaData.dtypes)   Units (AssetMetaData.units)
+==================== ================== ================================== =============================
+ id                   id                 string                             None
+ latitude             latitude           float                              WGS-84
+ longitude            longitude          float                              WGS-84
+ rated_power          rated power        float                              kW
+ hub_height           hub height         float                              m
+ rotor_diameter       rotor diameter     float                              m
+ elevation            elevation          float                              m
+ type                 type               string                             None
+==================== ================== ================================== =============================
 
 .. literalinclude:: ../../examples/data/plant_meta.yml
     :language: yaml
-    :lines: 1-9
+    :lines: 1-8
     :linenos:
     :lineno-start: 1
 
@@ -271,18 +270,18 @@ data. Air density at the 58th model level is calculated using temperature data e
 of pressure at that level using the ideal gas law. Pressure at the 58th model level is extrapolated from surface pressure
 data provided in this dataset using the hypsometric equation.
 
-==================== =======================================   ==================================
- Field Name           Data Type (ReanalysisMetaData.dtypes)     Units (ReanalysisMetaData.units)
-==================== =======================================   ==================================
- time                 datetime64[ns]                            datetime64[ns]
- windspeed            float                                     m/s
- windspeed_u          float                                     m/s
- windspeed_v          float                                     m/s
- wind_direction       float                                     degrees
- temperature          float                                     Kelvin
- density              float                                     kg/m^3
- surface_pressure     float                                     Pa
-==================== =======================================   ==================================
+==================== ===================== ======================================= ==================================
+ Field Name           Descriptive Name      Data Type (ReanalysisMetaData.dtypes)   Units (ReanalysisMetaData.units)
+==================== ===================== ======================================= ==================================
+ time                 time stamp            datetime64[ns]                          datetime64[ns]
+ WMETR_HorWdSpd       windspeed             float                                   m/s
+ WMETR_HorWdSpdU      eastward windspeed    float                                   m/s
+ WMETR_HorWdSpdV      northward windspeed   float                                   m/s
+ WMETR_HorWdDir       wind direction        float                                   degrees
+ WMETR_EnvTmp         temperature           float                                   Kelvin
+ WMETR_AirDen         air density           float                                   kg/m^3
+ WMEsTR_EnvPres       surface pressure      float                                   Pa
+==================== ===================== ======================================= ==================================
 
 .. literalinclude:: ../../examples/data/plant_meta.yml
     :language: yaml
