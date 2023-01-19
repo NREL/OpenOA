@@ -10,9 +10,9 @@ jobs:
         name: Build and publish Python package to PyPi
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@main
+            - uses: actions/checkout@v3
             - name: Set up Python 3.9
-              uses: actions/setup-python@v1
+              uses: actions/setup-python@v4
               with:
                 python-version: 3.9
             - name: Build tarballs
@@ -21,7 +21,7 @@ jobs:
                 python setup.py bdist_wheel
                 python setup.py sdist --formats=gztar
             - name: Publish artifacts to PyPI
-              uses: pypa/gh-action-pypi-publish@master
+              uses: pypa/gh-action-pypi-publish@release/v1
               with:
                 password: ${{ secrets.PYPI_PASSWORD }}
                 repository_url: https://upload.pypi.org/legacy/
