@@ -37,6 +37,7 @@ from pathlib import Path
 from zipfile import ZipFile
 
 import cdsapi
+import pandas as pd
 import xarray as xr
 
 from openoa.logging import logging
@@ -45,7 +46,7 @@ from openoa.logging import logging
 logger = logging.getLogger()
 
 
-def download_file(url,outfile):
+def download_file(url: str, outfile: str) -> None:
     """
     Download a file from the web based on its url
 
@@ -87,7 +88,7 @@ def download_file(url,outfile):
         logger.error(url)
 
 
-def download_zenodo_data(record_id,outfile_path):
+def download_zenodo_data(record_id: int, outfile_path: str | Path) -> None:
     """
     Download data from zenodo based on the zenodo record_id
     
@@ -190,11 +191,11 @@ def download_zenodo_data(record_id,outfile_path):
 
 
 def get_era5(
-        lat,
-        lon,
-        save_pathname,
-        save_filename,
-        ):
+        lat: float,
+        lon: float,
+        save_pathname: str | Path,
+        save_filename: str,
+        ) -> pd.DataFrame:
     """
     Get ERA5 data directly from the CDS service
     This requires registration on the CDS service
@@ -309,11 +310,11 @@ def get_era5(
 
 
 def get_merra2(
-        lat,
-        lon,
-        save_pathname,
-        save_filename,
-        ):
+        lat: float,
+        lon: float,
+        save_pathname: str | Path,
+        save_filename: str,
+        ) -> pd.DataFrame:
     """
     Get MERRA2 data directly from the NASA GES DISC service
     This requires registration on the GES DISC service
