@@ -32,21 +32,21 @@ steps taken to correct the raw data for use in the OpenOA code.
 
 from __future__ import annotations
 
+import os
+import json
+import yaml
 from pathlib import Path
 from zipfile import ZipFile
 
 import pandas as pd
 
+import openoa.utils.downloader as downloader
 from openoa.logging import logging
 from openoa.plant import PlantData
 
+
 logger = logging.getLogger()
 
-import openoa.utils.downloader as downloader
-
-import os
-import json
-import yaml
 
 def download_asset_data(asset: str = "kelmarsh", outfile_path: str = "data//kelmarsh//") -> None:
     """
