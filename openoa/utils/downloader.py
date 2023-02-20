@@ -97,8 +97,9 @@ def download_zenodo_data(record_id,outfile_path):
 
     Returns:
         Files saved to the asset data folder:
-         1. record_details.json, which details the zenodo api details
-         2. all files available for the record_id
+
+          1. record_details.json, which details the zenodo api details
+          2. all files available for the record_id
     """
     
     
