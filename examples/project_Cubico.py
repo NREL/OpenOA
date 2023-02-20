@@ -120,9 +120,7 @@ def get_scada_headers(SCADA_files: list[str]) -> pd.DataFrame:
 
     SCADA_headers.index = SCADA_headers.index.str.replace("# ","")
 
-    SCADA_headers = SCADA_headers.transpose()
-
-    SCADA_headers = SCADA_headers.reset_index().rename(columns={"index":"File"})
+    SCADA_headers = SCADA_headers.transpose().reset_index().rename(columns={"index":"File"})
     
     return SCADA_headers
 
