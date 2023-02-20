@@ -32,7 +32,6 @@ steps taken to correct the raw data for use in the OpenOA code.
 
 from __future__ import annotations
 
-import os
 import json
 import yaml
 from pathlib import Path
@@ -292,13 +291,14 @@ def prepare(asset: str = "kelmarsh", return_value: str = "plantdata") -> PlantDa
     reanalysis_dict = dict()
 
     # MERRA2 from Zenodo
-    if os.path.exists(path+"//"+asset+"_merra2.csv"):
+    asset_path = Path(path).resolve()
+    if (asset_path / f"{asset}_merra2.csv").exists():
         logger.info("Reading MERRA2")
         reanalysis_merra2_df = pd.read_csv(path+"//"+asset+"_merra2.csv")
         reanalysis_dict.update(dict(merra2=reanalysis_merra2_df))
 
     # ERA5 from Zenodo
-    if os.path.exists(path+"//"+asset+"_era5.csv"):
+    if (asset_path / f"{asset}_era5.csv").exists():
         logger.info("Reading ERA5")
         reanalysis_era5_df = pd.read_csv(path+"//"+asset+"_era5.csv")
         reanalysis_dict.update(dict(era5=reanalysis_era5_df))
