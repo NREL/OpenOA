@@ -244,7 +244,7 @@ def prepare(asset: str = "kelmarsh", return_value: str = "plantdata") -> PlantDa
     ##############
 
     logger.info("Reading in the asset data")
-    asset_df = pd.read_csv(path+"//"+asset+"_WT_static.csv")
+    asset_df = pd.read_csv(f"{path}/{asset}_WT_static.csv")
 
     # Assign type to turbine for all assets
     asset_df["type"] = "turbine"
@@ -292,35 +292,35 @@ def prepare(asset: str = "kelmarsh", return_value: str = "plantdata") -> PlantDa
     asset_path = Path(path).resolve()
     if (asset_path / f"{asset}_merra2.csv").exists():
         logger.info("Reading MERRA2")
-        reanalysis_merra2_df = pd.read_csv(path+"//"+asset+"_merra2.csv")
+        reanalysis_merra2_df = pd.read_csv(f"{path}/{asset}_merra2.csv")
         reanalysis_dict.update(dict(merra2=reanalysis_merra2_df))
 
     # ERA5 from Zenodo
     if (asset_path / f"{asset}_era5.csv").exists():
         logger.info("Reading ERA5")
-        reanalysis_era5_df = pd.read_csv(path+"//"+asset+"_era5.csv")
+        reanalysis_era5_df = pd.read_csv(f"{path}/{asset}_era5.csv")
         reanalysis_dict.update(dict(era5=reanalysis_era5_df))
 
     # ERA5 monthly 10m from CDS
     logger.info("Downloading ERA5 monthly")
     downloader.get_era5(lat=asset_df["Latitude"].mean(),
                         lon=asset_df["Longitude"].mean(),
-                        save_pathname=path+"//era5_monthly_10m//",
-                        save_filename=asset+"_era5_monthly_10m")
+                        save_pathname=f"{path}/era5_monthly_10m/",
+                        save_filename=f"{asset}_era5_monthly_10m")
 
     logger.info("Reading ERA5 monthly")
-    reanalysis_era5_monthly_df = pd.read_csv(path+"//era5_monthly_10m//"+asset+"_era5_monthly_10m.csv")
+    reanalysis_era5_monthly_df = pd.read_csv(f"{path}/era5_monthly_10m/{asset}_era5_monthly_10m.csv")
     reanalysis_dict.update(dict(era5_monthly=reanalysis_era5_monthly_df))
 
     # MERRA2 monthly 10m from GES DISC
     logger.info("Downloading MERRA2 monthly")
     downloader.get_merra2(lat=asset_df["Latitude"].mean(),
                         lon=asset_df["Longitude"].mean(),
-                        save_pathname=path+"//merra2_monthly_10m//",
-                        save_filename=asset+"_merra2_monthly_10m")
+                        save_pathname=f"{path}/merra2_monthly_10m/",
+                        save_filename=f"{asset}_merra2_monthly_10m")
 
     logger.info("Reading MERRA2 monthly")
-    reanalysis_merra2_monthly_df = pd.read_csv(path+"//merra2_monthly_10m//"+asset+"_merra2_monthly_10m.csv")
+    reanalysis_merra2_monthly_df = pd.read_csv(f"{path}/merra2_monthly_10m/{asset}_merra2_monthly_10m.csv")
     reanalysis_dict.update(dict(merra2_monthly=reanalysis_merra2_monthly_df))
 
 
@@ -411,10 +411,10 @@ def prepare(asset: str = "kelmarsh", return_value: str = "plantdata") -> PlantDa
       }
     }
 
-    with open(path+"//plant_meta.json", "w") as outfile:
+    with open(f"{path}/plant_meta.json", "w") as outfile:
         json.dump(asset_json, outfile, indent=2)
         
-    with open(path+"//plant_meta.yml", "w") as outfile:
+    with open(f"{path}/plant_meta.yml", "w") as outfile:
         yaml.dump(asset_json, outfile, default_flow_style=False)
 
     
@@ -431,7 +431,7 @@ def prepare(asset: str = "kelmarsh", return_value: str = "plantdata") -> PlantDa
         # Build and return PlantData
         plantdata = PlantData(
             analysis_type="MonteCarloAEP",  # Choosing a random type that doesn't fail validation
-            metadata=path+"//plant_meta.yml",
+            metadata=f"{path}/plant_meta.yml",
             scada=scada_df,
             meter=meter_df,
             curtail=curtail_df,
