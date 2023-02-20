@@ -1,36 +1,33 @@
-#################################################
-# Data import script for Cubico Projects #
-#################################################
 """
 This is the import script for Cubico's Kelmarsh & Penmanshiel projects. These
 projects are available under a Creative Commons Attribution 4.0 International
 license (CC-BY-4.0), and are cited below:
-    
-*Kelmarsh*
- Plumley, Charlie. (2022). Kelmarsh wind farm data [Data set]. 
- Zenodo. https://doi.org/10.5281/zenodo.5841833
 
-*Penmanshiel*
- Plumley, Charlie. (2022). Penmanshiel Wind Farm Data [Data set]. 
- Zenodo. https://doi.org/10.5281/zenodo.5946807
+*Kelmarsh*:
+
+    Plumley, Charlie. (2022). Kelmarsh wind farm data [Data set].
+    Zenodo. https://doi.org/10.5281/zenodo.5841833
+
+*Penmanshiel*:
+
+    Plumley, Charlie. (2022). Penmanshiel Wind Farm Data [Data set].
+    Zenodo. https://doi.org/10.5281/zenodo.5946807
 
 Below is a description of the data imported and an overview of the
 steps taken to correct the raw data for use in the OpenOA code.
 
 1. SCADA
-- 10-minute SCADA data for each of the turbines in the project
-- Power, wind speed, wind direction, nacelle position, wind vane, temperature,
-  blade pitch
-
+   - 10-minute SCADA data for each of the turbines in the project
+   - Power, wind speed, wind direction, nacelle position, wind vane, temperature,
+   blade pitch
 2. Meter data
-- 10-minute performance data provided in energy units (kWh)
+   - 10-minute performance data provided in energy units (kWh)
 
 3. Curtailment data
-- 10-minute availability and curtailment data in kwh
-
+   - 10-minute availabilitya and curtailment data in kwh
 4. Reanalysis products
-- MERRA-2 and ERA5 1-hour reanalysis data where available on Zenodo
-- ERA-5 and MERRA-2 monthly reanalysis data at ground level (10m)
+   - MERRA-2 and ERA5 1-hour reanalysis data where available on Zenodo
+   - ERA-5 and MERRA-2 monthly reanalysis data at ground level (10m)
 """
 
 from __future__ import annotations
