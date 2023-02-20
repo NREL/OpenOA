@@ -50,19 +50,21 @@ logger = logging.getLogger()
 
 def download_asset_data(asset: str = "kelmarsh", outfile_path: str = "data//kelmarsh//") -> None:
     """
-    Simplify downloading of known open data assets from zenodo
+    Simplify downloading of known open data assets from zenodo.
     
     The record_id will need updating as new data versions come out,
-    but does mean we have control to avoid any backwards compatibility issues
+    but does mean we have control to avoid any backwards compatibility issues.
 
     Args:
-        asset(:obj:`string`): name of asset
-        outfile_path(:obj:`string`): path to save files to
+        asset(:obj:`string`): Name of asset. Defaults to "kelmarsh".
+        outfile_path(:obj:`string`): Path to save project asset files to. Defaults to
+            "data/kelmarsh".
 
     Returns:
         Files saved to the outfile_path:
-         1. record_details.json, which details the zenodo api details
-         2. all files available for the record_id
+
+          1. "record_details.json", which details the Zenodo API details.
+          2. All files available for the ``record_id``
     """
     
     if asset.lower() == "kelmarsh":
@@ -77,13 +79,13 @@ def download_asset_data(asset: str = "kelmarsh", outfile_path: str = "data//kelm
 
 def extract_all_data(path: str = "data//kelmarsh//") -> None:
     """
-    Get all zip files in path and extract them
+    Get all zip files in path and extract them.
 
     Args:
-        path(:obj:`string`): path to zip files
+        path(:obj:`string`): Path to zip files. Defaults to "data/kelmarsh"
 
     Returns:
-        All zip files extracted into the path
+        All zip files extracted into the path.
     """
 
     logger.info("Extracting compressed data files")
@@ -97,13 +99,13 @@ def extract_all_data(path: str = "data//kelmarsh//") -> None:
 
 def get_scada_headers(SCADA_files: list[str]) -> pd.DataFrame:
     """
-    Get just the headers from the SCADA files
+    Get just the headers from the SCADA files.
 
     Args:
-        SCADA_files(obj:`list[str]`): list of SCADA file paths
+        SCADA_files(obj:`list[str]`): List of SCADA file paths.
 
     Returns:
-        SCADA_headers(:obj:`dataframe`): containing details of all SCADA files
+        SCADA_headers(:obj:`dataframe`): Dataframe containing details of all the SCADA files.
     """
     
     csv_params = {"index_col":0,
@@ -128,14 +130,15 @@ def get_scada_headers(SCADA_files: list[str]) -> pd.DataFrame:
 
 def get_scada_df(SCADA_headers: pd.DataFrame, usecolumns: list[str] | None = None) -> pd.DataFrame:
     """
-    Extract the desired SCADA data
+    Extract the desired SCADA data.
     
     Args:
-        SCADA_headers(:obj:`dataframe`): containing details of all SCADA files
-        usecolumns(obj:`list[str]`): selection of columns to be imported from the SCADA files
+        SCADA_headers(:obj:`dataframe`): Dataframe containing details of all SCADA files.
+        usecolumns(obj:`list[str]`): Selection of columns to be imported from the SCADA files.
+            Defaults to None.
 
     Returns:
-        SCADA(:obj:`dataframe`): dataframe with SCADA data
+        SCADA(:obj:`dataframe`): Dataframe with SCADA data.
     """
     
     if usecolumns is None:
@@ -168,13 +171,13 @@ def get_scada_df(SCADA_headers: pd.DataFrame, usecolumns: list[str] | None = Non
 
 def get_curtailment_df(SCADA_headers: pd.DataFrame) -> pd.DataFrame:
     """
-    Get the curtailment and availability data
+    Get the curtailment and availability data.
     
     Args:
-        SCADA_headers(:obj:`dataframe`): containing details of all SCADA files
+        SCADA_headers(:obj:`dataframe`): Dataframe containing details of all SCADA files.
 
     Returns:
-        curtailment_df(:obj:`dataframe`): dataframe with curtailment data
+        curtailment_df(:obj:`dataframe`): Dataframe with curtailment data.
     """
     
     # Curtailment data is available as a subset of the SCADA data
@@ -190,13 +193,13 @@ def get_curtailment_df(SCADA_headers: pd.DataFrame) -> pd.DataFrame:
 
 def get_meter_data(path: str = "data//kelmarsh//") -> pd.DataFrame:
     """
-    Get the PMU meter data
+    Get the PMU meter data.
 
     Args:
-        path(:obj:`str`): path to meter data
+        path(:obj:`str`): Path to meter data. Defaults to "data/kelmarsh".
 
     Returns:
-        meter_df(:obj:`dataframe`): dataframe with meter data
+        meter_df(:obj:`dataframe`): Dataframe with meter data.
     """
 
     usecolumns = ["# Date and time","GMS Energy Export (kWh)"]
@@ -220,13 +223,16 @@ def prepare(asset: str = "kelmarsh", return_value: str = "plantdata") -> PlantDa
     Do all loading and preparation of the data for this plant.
 
     Args:
-    - asset(:obj:`dataframe`): asset name, currently either kelmarsh or penmanshiel
-    - return_value(:obj:`str`): 
-        "plantdata" will return a fully constructed PlantData object
-        "dataframes" will return a list of dataframes instead.
+        asset(:obj:`dataframe`): Asset name, currently either "kelmarsh" or "penmanshiel". Defaults
+            to "kelmarsh".
+        return_value(:obj:`str`):  One of "plantdata" or "dataframes" with the below behavior.
+            Defaults to "plantdata".
+        
+            - "plantdata" will return a fully constructed PlantData object.
+            - "dataframes" will return a list of dataframes instead.
 
     Returns:
-        Either PlantData object or Dataframes dependent upon return_value
+        Either PlantData object or Dataframes dependent upon return_value.
     """
 
     # Set the path to store and access all the data
