@@ -48,7 +48,7 @@ import os
 import json
 import yaml
 
-def download_asset_data(asset="kelmarsh",outfile_path="data//kelmarsh//"):
+def download_asset_data(asset: str = "kelmarsh", outfile_path: str = "data//kelmarsh//") -> None:
     """
     Simplify downloading of known open data assets from zenodo
     
@@ -75,7 +75,7 @@ def download_asset_data(asset="kelmarsh",outfile_path="data//kelmarsh//"):
     downloader.download_zenodo_data(record_id,outfile_path)
 
 
-def extract_all_data(path="data//kelmarsh//"):
+def extract_all_data(path: str = "data//kelmarsh//") -> None:
     """
     Get all zip files in path and extract them
 
@@ -95,7 +95,7 @@ def extract_all_data(path="data//kelmarsh//"):
             zipfile.extractall(path)
 
 
-def get_scada_headers(SCADA_files):
+def get_scada_headers(SCADA_files: list[str]) -> pd.DataFrame:
     """
     Get just the headers from the SCADA files
 
@@ -126,7 +126,7 @@ def get_scada_headers(SCADA_files):
     return SCADA_headers
 
 
-def get_scada_df(SCADA_headers,usecolumns=None):
+def get_scada_df(SCADA_headers: pd.DataFrame, usecolumns: list[str] | None = None) -> pd.DataFrame:
     """
     Extract the desired SCADA data
     
@@ -166,7 +166,7 @@ def get_scada_df(SCADA_headers,usecolumns=None):
     return SCADA
 
 
-def get_curtailment_df(SCADA_headers):
+def get_curtailment_df(SCADA_headers: pd.DataFrame) -> pd.DataFrame:
     """
     Get the curtailment and availability data
     
@@ -188,7 +188,7 @@ def get_curtailment_df(SCADA_headers):
     return curtailment_df
 
 
-def get_meter_data(path="data//kelmarsh//"):
+def get_meter_data(path: str = "data//kelmarsh//") -> pd.DataFrame:
     """
     Get the PMU meter data
 
@@ -215,7 +215,7 @@ def get_meter_data(path="data//kelmarsh//"):
     return meter_df 
                     
                     
-def prepare(asset="kelmarsh", return_value="plantdata"):
+def prepare(asset: str = "kelmarsh", return_value: str = "plantdata") -> PlantData | pd.DataFrame:
     """
     Do all loading and preparation of the data for this plant.
 
