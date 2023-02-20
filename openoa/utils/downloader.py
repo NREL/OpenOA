@@ -28,25 +28,22 @@ In addition you can download data directly from these source:
   (note that the "reanalysis-era5-single-levels" dataset should generally be used).
 """
 
+import os
 import re
+import hashlib
+import requests
 import datetime
 from pathlib import Path
-
-from openoa.logging import logging
-
-logger = logging.getLogger()
-
 from zipfile import ZipFile
-
-import pandas as pd
 
 import cdsapi
 import xarray as xr
-import datetime
 
-import requests
-import os
-import hashlib
+from openoa.logging import logging
+
+
+logger = logging.getLogger()
+
 
 def download_file(url,outfile):
     """
