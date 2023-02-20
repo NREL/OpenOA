@@ -47,7 +47,7 @@ from openoa.plant import PlantData
 logger = logging.getLogger()
 
 
-def download_asset_data(asset: str = "kelmarsh", outfile_path: str = "data//kelmarsh//") -> None:
+def download_asset_data(asset: str = "kelmarsh", outfile_path: str | Path = "data//kelmarsh//") -> None:
     """
     Simplify downloading of known open data assets from zenodo.
     
@@ -56,8 +56,8 @@ def download_asset_data(asset: str = "kelmarsh", outfile_path: str = "data//kelm
 
     Args:
         asset(:obj:`string`): Name of asset. Defaults to "kelmarsh".
-        outfile_path(:obj:`string`): Path to save project asset files to. Defaults to
-            "data/kelmarsh".
+        outfile_path(:obj:`str` | :obj:`pathlib.Path`): Path to save project asset files to.
+            Defaults to "data/kelmarsh".
 
     Returns:
         Files saved to the outfile_path:
@@ -233,7 +233,7 @@ def prepare(asset: str = "kelmarsh", return_value: str = "plantdata") -> PlantDa
     """
 
     # Set the path to store and access all the data
-    path = "data//"+asset+"//"
+    path = f"data/{asset}"
 
     # Download and extract data if necessary
     download_asset_data(asset=asset,outfile_path=path)
