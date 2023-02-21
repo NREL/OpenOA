@@ -46,7 +46,7 @@ from openoa.logging import logging
 logger = logging.getLogger()
 
 
-def download_file(url: str, outfile: str) -> None:
+def download_file(url: str, outfile: str | Path) -> None:
     """
     Download a file from the web based on its url
 
@@ -58,6 +58,7 @@ def download_file(url: str, outfile: str) -> None:
         Downloaded file saved to outfile
     """
     
+    outfile = Path(outfile).resolve()
     result = requests.get(url,stream=True)
     
     try:
@@ -66,7 +67,7 @@ def download_file(url: str, outfile: str) -> None:
         chunk_number = 0
         
         try:
-            with open(outfile, "wb") as f:
+            with outfile.open("wb") as f:
                 
                 for chunk in result.iter_content(chunk_size=1024*1024):
                     
@@ -105,10 +106,7 @@ def download_zenodo_data(record_id: int, outfile_path: str | Path) -> None:
     
     
     url_zenodo = r"https://zenodo.org/api/records/"
-
-    record_id = str(record_id)
-    
-    r = requests.get(url_zenodo + record_id)
+    r = requests.get(f"{url_zenodo}{record_id}")
     
     r_json = r.json()
     
