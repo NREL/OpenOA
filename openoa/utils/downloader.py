@@ -78,14 +78,14 @@ def download_file(url: str, outfile: str | Path) -> None:
                     if chunk: # filter out keep-alive new chunks
                         f.write(chunk)
                         
-            logger.info('Contents of '+url+' written to '+outfile)
+            logger.info(f"Contents of {url} written to {outfile}")
             
         except:
-            logger.error('Error writing to '+outfile)
+            logger.error(f"Error writing to {outfile}")
             
            
     except:
-        logger.error('Requests.get() returned an error code '+str(result.status_code))
+        logger.error(f"Requests.get() returned an error code: {result.status_code}")
         logger.error(url)
 
 
@@ -138,10 +138,8 @@ def download_zenodo_data(record_id: int, outfile_path: str | Path) -> None:
     for f in files:
         
         url_file = f["links"]["self"]
-        
-        file_name = f["key"]
                 
-        outfile = outfile_path / file_name
+        outfile = outfile_path / (file_name := f["key"])
         
         
         # check if file exists
@@ -155,7 +153,7 @@ def download_zenodo_data(record_id: int, outfile_path: str | Path) -> None:
                     file_hash.update(chunk)
         
             if f["checksum"][4:]==file_hash.hexdigest():
-                logger.info("File already exists: " + file_name)
+                logger.info(f"File already exists: {file_name}")
             
             
             # download and unzip if the checksum isn't correct
@@ -196,8 +194,7 @@ def get_era5(
         save_filename: str,
         ) -> pd.DataFrame:
     """
-    Get ERA5 data directly from the CDS service
-    This requires registration on the CDS service
+    Get ERA5 data directly from the CDS service, which requires registration on the CDS service.
     See: https://cds.climate.copernicus.eu/api-how-to
 
     Monthly 10m height data is demonstrated here, as hourly data takes too long to download, 
