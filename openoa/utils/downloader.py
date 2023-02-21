@@ -370,7 +370,7 @@ def get_merra2(
         # download each of the files and save them
         for file in files:
             
-            outfile = save_pathname / f"{save_filename}_{file.split('.')[-2]+}.nc"
+            outfile = save_pathname / f"{save_filename}_{file.split('.')[-2]}.nc"
 
             if not outfile.is_file():
 
