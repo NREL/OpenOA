@@ -29,7 +29,6 @@ In addition you can download data directly from these source:
 """
 from __future__ import annotations
 
-import os
 import re
 import hashlib
 import requests
