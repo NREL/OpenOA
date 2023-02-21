@@ -278,7 +278,7 @@ def get_era5(
 
 
     # get the saved data
-    ds_nc = xr.open_mfdataset(save_pathname / f"{save_filename}*.nc")
+    ds_nc = xr.open_mfdataset(f"{save_pathname / f'{save_filename}*.nc'}")
 
     # rename variables to conform with OpenOA
     ds_nc = ds_nc.rename_vars({"si10":"windspeed_ms","t2m":"temperature_K","sp":"surf_pres_Pa"})
@@ -401,7 +401,7 @@ def get_merra2(
                 
 
     # get the saved data
-    ds_nc = xr.open_mfdataset(save_pathname / f"{save_filename}*.nc")
+    ds_nc = xr.open_mfdataset(f"{save_pathname / f'{save_filename}*.nc'}")
 
     # renamce variables to conform with OpenOA
     ds_nc = ds_nc.rename_vars({"SPEEDLML":"windspeed_ms","TLML":"temperature_K","PS":"surf_pres_Pa"})
