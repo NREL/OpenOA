@@ -1187,8 +1187,8 @@ class PlantData:
         # Post-validation data manipulations
         # TODO: Need to have a class level input for the user-preferred projection system
         # TODO: Why does the non-WGS84 projection matter?
-        self.parse_asset_geometry()
-        self._calculate_turbine_energy()
+        #self.parse_asset_geometry() # JP Commenting this out because asset  table may be unavailable in instances where we are using MonteCarloAEP analysis type
+        #self._calculate_turbine_energy() # JP Commenting this out because asset  table may be unavailable in instances where we are using MonteCarloAEP analysis type
 
         # Change the column names to the -25 convention for easier use in the rest of the code base
         self.update_column_names()
