@@ -66,6 +66,9 @@ def download_asset_data(
 
           1. "record_details.json", which details the Zenodo API details.
           2. All files available for the ``record_id``
+
+    Raises:
+        NameError: if `asset` is not kelmarsh or penmanshiel.
     """
 
     if asset.lower() == "kelmarsh":
