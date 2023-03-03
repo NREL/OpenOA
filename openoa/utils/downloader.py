@@ -195,6 +195,9 @@ def get_era5(
         df(:obj:`dataframe`): A dataframe containing time series of the requested reanalysis variables
         Saved NetCDF annual ERA5 files
         Saved ERA5 csv file
+
+    Raises:
+        NameError: if unable to connect to the cdsapi client.
     """
 
     logger.info("Please note access to ERA5 data requires registration")
@@ -204,7 +207,7 @@ def get_era5(
     try:
         c = cdsapi.Client()
     except Exception as e:
-        logger.error("Failed to make connection to cds: " + str(e))
+        logger.error(f"Failed to make connection to cds: {e}")
         logger.error("Please see: https://cds.climate.copernicus.eu/api-how-to")
         raise NameError(e)
 
