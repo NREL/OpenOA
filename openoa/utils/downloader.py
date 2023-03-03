@@ -1,15 +1,15 @@
 """
 This module provides functions for downloading files, including reanalysis data
 
-This module provides functions for downloading data, including long-term historical atmospheric 
+This module provides functions for downloading data, including long-term historical atmospheric
 data from the MERRA-2 and ERA5 reanalysis products and returning as pandas DataFrames and saving
 data in csv files. Currently by default the module downloads monthly reanalysis data for a time
-period of interest using NASA Goddard Earth Sciences Data and Information Services Center 
+period of interest using NASA Goddard Earth Sciences Data and Information Services Center
 (GES DISC) for MERRA2 and the Copernicus Climate Data Store (CDS) API for ERA5, but this can be
-modified to get hourly data, and indeed other data sources available on GES DISC and CDS. 
+modified to get hourly data, and indeed other data sources available on GES DISC and CDS.
 
 To use this module to download data users must first create user accounts. Instructions can be
-found at https://disc.gsfc.nasa.gov/data-access#python-requests and 
+found at https://disc.gsfc.nasa.gov/data-access#python-requests and
 https://cds.climate.copernicus.eu/api-how-to
 
 In addition you can download data directly from these source:
@@ -31,7 +31,6 @@ from __future__ import annotations
 
 import re
 import hashlib
-import requests
 import datetime
 from pathlib import Path
 from zipfile import ZipFile
@@ -39,6 +38,7 @@ from zipfile import ZipFile
 import cdsapi
 import pandas as pd
 import xarray as xr
+import requests
 
 from openoa.logging import logging
 
@@ -57,42 +57,40 @@ def download_file(url: str, outfile: str | Path) -> None:
     Returns:
         Downloaded file saved to outfile
     """
-    
+
     outfile = Path(outfile).resolve()
-    result = requests.get(url,stream=True)
-    
+    result = requests.get(url, stream=True)
+
     try:
         result.raise_for_status()
-        
+
         chunk_number = 0
-        
+
         try:
             with outfile.open("wb") as f:
-                
-                for chunk in result.iter_content(chunk_size=1024*1024):
-                    
+                for chunk in result.iter_content(chunk_size=1024 * 1024):
                     chunk_number = chunk_number + 1
-                    
+
                     print(str(chunk_number) + " MB downloaded", end="\r")
-                    
-                    if chunk: # filter out keep-alive new chunks
+
+                    if chunk:  # filter out keep-alive new chunks
                         f.write(chunk)
-                        
+
             logger.info(f"Contents of {url} written to {outfile}")
-            
-        except:
+
+        except IOError:
             logger.error(f"Error writing to {outfile}")
-            
-           
-    except:
-        logger.error(f"Requests.get() returned an error code: {result.status_code}")
-        logger.error(url)
+
+    except requests.exceptions.HTTPError as eh:
+        logger.error(eh)
+    except requests.exceptions.RequestException as er:
+        logger.error(er)
 
 
 def download_zenodo_data(record_id: int, outfile_path: str | Path) -> None:
     """
     Download data from zenodo based on the zenodo record_id
-    
+
     Args:
         record_id(:obj:`int`): the Zenodo record id
         outfile_path(:obj:`str` | :obj:`Path`): path to save files to
@@ -103,14 +101,12 @@ def download_zenodo_data(record_id: int, outfile_path: str | Path) -> None:
           1. record_details.json, which details the zenodo api details
           2. all files available for the record_id
     """
-    
-    
+
     url_zenodo = r"https://zenodo.org/api/records/"
     r = requests.get(f"{url_zenodo}{record_id}")
-    
+
     r_json = r.json()
-    
-    
+
     logger.info("======")
     logger.info("Title: " + r_json["metadata"]["title"])
     logger.info("Version: " + r_json["metadata"]["version"])
@@ -118,66 +114,55 @@ def download_zenodo_data(record_id: int, outfile_path: str | Path) -> None:
     logger.info("Record DOI: " + r_json["doi"])
     logger.info("License: " + r_json["metadata"]["license"]["id"])
     logger.info("======\n")
-    
-       
+
     # create outfile_path if it does not exist
     outfile_path = Path(outfile_path).resolve()
     if not outfile_path.exists():
         outfile_path.mkdir()
-    
-    
+
     # save record details to json file
     outfile = outfile_path / "record_details.json"
-    
+
     with outfile.open("wb") as f:
         f.write(r.content)
 
-        
     # download all files
     files = r_json["files"]
     for f in files:
-        
         url_file = f["links"]["self"]
-                
+
         outfile = outfile_path / (file_name := f["key"])
-        
-        
+
         # check if file exists
         if outfile.exists():
-            
-            
             # if it does check the checksum is correct
             with outfile.open("rb") as f_check:
                 file_hash = hashlib.md5()
                 while chunk := f_check.read(8192):
                     file_hash.update(chunk)
-        
-            if f["checksum"][4:]==file_hash.hexdigest():
+
+            if f["checksum"][4:] == file_hash.hexdigest():
                 logger.info(f"File already exists: {file_name}")
-            
-            
+
             # download and unzip if the checksum isn't correct
             else:
-                
                 logger.info(f"Downloading: {file_name}")
                 logger.info(f"File size: {f['size']/(1024*1024):,.2f} MB")
 
-                download_file(url_file,outfile)
+                download_file(url_file, outfile)
 
                 logger.info(f"Saved to: {outfile}\n")
 
                 if outfile.suffix == ".zip":
                     with ZipFile(outfile) as zipfile:
                         zipfile.extractall(outfile_path)
-        
-        
+
         # download and unzip if the file doesn't exist
         else:
-            
             logger.info(f"\nDownloading: {file_name}")
             logger.info(f"File size: {f['size']/(1024*1024):,.2f} MB")
 
-            download_file(url_file,outfile)
+            download_file(url_file, outfile)
 
             logger.info(f"Saved to: {outfile}\n")
 
@@ -186,18 +171,17 @@ def download_zenodo_data(record_id: int, outfile_path: str | Path) -> None:
                     zipfile.extractall(outfile_path)
 
 
-
 def get_era5(
-        lat: float,
-        lon: float,
-        save_pathname: str | Path,
-        save_filename: str,
-        ) -> pd.DataFrame:
+    lat: float,
+    lon: float,
+    save_pathname: str | Path,
+    save_filename: str,
+) -> pd.DataFrame:
     """
     Get ERA5 data directly from the CDS service, which requires registration on the CDS service.
     See: https://cds.climate.copernicus.eu/api-how-to
 
-    Monthly 10m height data is demonstrated here, as hourly data takes too long to download, 
+    Monthly 10m height data is demonstrated here, as hourly data takes too long to download,
     but could be amended and other CDS datasets also used (e.g. CERRA for Europe)
 
     Args:
@@ -220,8 +204,8 @@ def get_era5(
     try:
         c = cdsapi.Client()
     except Exception as e:
-        logger.error('Failed to make connection to cds: '+ str(e))
-        logger.error('Please see: https://cds.climate.copernicus.eu/api-how-to')
+        logger.error("Failed to make connection to cds: " + str(e))
+        logger.error("Please see: https://cds.climate.copernicus.eu/api-how-to")
         raise NameError(e)
 
     # create save_pathname if it does not exist
@@ -231,69 +215,71 @@ def get_era5(
 
     # downloads all years from today back to the year 2000
     now = datetime.datetime.now()
-    years = list(range(2000,now.year+1,1))
+    years = list(range(2000, now.year + 1, 1))
 
     # get the data for the closest 9 nodes to the coordinates
-    node_spacing = 0.250500001*1
+    node_spacing = 0.250500001 * 1
 
     # download the data
     for year in years:
-
         outfile = save_pathname / f"{save_filename}_{year}.nc"
 
         if year == now.year:
-            months = list(range(1,now.month,1))
+            months = list(range(1, now.month, 1))
         else:
-            months = list(range(1,12+1,1))
+            months = list(range(1, 12 + 1, 1))
 
         # See: https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-single-levels-monthly-means?tab=form
         # for formulating other requests from cds
-        if not outfile.is_file() or year==now.year:
-
+        if not outfile.is_file() or year == now.year:
             logger.info(f"Downloading ERA5: {outfile}")
 
             try:
                 c.retrieve(
                     "reanalysis-era5-single-levels-monthly-means",
                     {
-                        "product_type": "reanalysis",
+                        "product_type": "monthly_averaged_reanalysis",
                         "format": "netcdf",
                         "variable": [
-                            "10m_wind_speed", "2m_temperature", "surface_pressure",
+                            "10m_wind_speed",
+                            "2m_temperature",
+                            "surface_pressure",
                         ],
                         "year": year,
                         "month": months,
-                        "product_type": "monthly_averaged_reanalysis",
-                        "time": [
-                            "00:00"
-                        ],
+                        "time": ["00:00"],
                         "area": [
-                            lat+node_spacing, lon-node_spacing, 
-                            lat-node_spacing, lon+node_spacing,
+                            lat + node_spacing,
+                            lon - node_spacing,
+                            lat - node_spacing,
+                            lon + node_spacing,
                         ],
                     },
-                    outfile)
-            except:
+                    outfile,
+                )
+            except Exception as e:
                 logger.error(f"Failed to download ERA5: {outfile}")
-
+                logger.error(e)
 
     # get the saved data
     ds_nc = xr.open_mfdataset(f"{save_pathname / f'{save_filename}*.nc'}")
 
     # rename variables to conform with OpenOA
-    ds_nc = ds_nc.rename_vars({"si10":"windspeed_ms","t2m":"temperature_K","sp":"surf_pres_Pa"})
-    
+    ds_nc = ds_nc.rename_vars(
+        {"si10": "windspeed_ms", "t2m": "temperature_K", "sp": "surf_pres_Pa"}
+    )
+
     # select the central node only for now
-    if 'expver' in ds_nc.dims:
-        sel = ds_nc.sel(expver=1,latitude=lat,longitude=lon, method="nearest")
+    if "expver" in ds_nc.dims:
+        sel = ds_nc.sel(expver=1, latitude=lat, longitude=lon, method="nearest")
     else:
-        sel = ds_nc.sel(latitude=lat,longitude=lon, method="nearest")   
+        sel = ds_nc.sel(latitude=lat, longitude=lon, method="nearest")
 
     # convert to a pandas dataframe
     df = sel.to_dataframe()
 
     # select required columns
-    df = df[["windspeed_ms","temperature_K","surf_pres_Pa"]]
+    df = df[["windspeed_ms", "temperature_K", "surf_pres_Pa"]]
 
     # rename the index to match other datasets
     df.index.name = "datetime"
@@ -308,11 +294,11 @@ def get_era5(
 
 
 def get_merra2(
-        lat: float,
-        lon: float,
-        save_pathname: str | Path,
-        save_filename: str,
-        ) -> pd.DataFrame:
+    lat: float,
+    lon: float,
+    save_pathname: str | Path,
+    save_filename: str,
+) -> pd.DataFrame:
     """
     Get MERRA2 data directly from the NASA GES DISC service
     This requires registration on the GES DISC service
@@ -334,7 +320,7 @@ def get_merra2(
         Saved NetCDF monthly MERRA2 files
         Saved MERRA2 csv file
     """
-    
+
     logger.info("Please note access to MERRA2 data requires registration")
     logger.info("Please see: https://disc.gsfc.nasa.gov/data-access#python-requests")
 
@@ -346,48 +332,43 @@ def get_merra2(
     if not save_pathname.exists():
         save_pathname.mkdir()
 
-
     now = datetime.datetime.now()
-    years = list(range(2000,now.year+1,1))
+    years = list(range(2000, now.year + 1, 1))
 
-    
-    
     # download the data
     for year in years:
-        
         # get the file names from the GES DISC site for the year
         result = requests.get(f"{base_url}{year}")
-        
+
         files = re.findall(r"(>MERRA2_\S+.nc4)", result.text)
         files = list(dict.fromkeys(files))
         files = [x[1:] for x in files]
-        
-        
+
         # coordinate indexes
         lat_i = ""
         lon_i = ""
-        
+
         # download each of the files and save them
         for file in files:
-            
             outfile = save_pathname / f"{save_filename}_{file.split('.')[-2]}.nc"
 
             if not outfile.is_file():
-
                 # download one file for determining coordinate indicies
-                if lat_i=="":
-                    url = f"{base_url}{year}//{file}"+r".nc4?PS,SPEEDLML,TLML,time,lat,lon"
-                    download_file(url,outfile)
+                if lat_i == "":
+                    url = f"{base_url}{year}//{file}" + r".nc4?PS,SPEEDLML,TLML,time,lat,lon"
+                    download_file(url, outfile)
                     ds_nc = xr.open_dataset(outfile)
-                    ds_nc_idx = ds_nc.assign_coords(lon_idx=("lon",range(ds_nc.dims['lon'])),
-                                                    lat_idx=("lat",range(ds_nc.dims['lat'])))
-                    sel = ds_nc_idx.sel(lat=lat,lon=lon, method="nearest")
+                    ds_nc_idx = ds_nc.assign_coords(
+                        lon_idx=("lon", range(ds_nc.dims["lon"])),
+                        lat_idx=("lat", range(ds_nc.dims["lat"])),
+                    )
+                    sel = ds_nc_idx.sel(lat=lat, lon=lon, method="nearest")
                     lon_i = f"[{sel.lon_idx.values-1}:{sel.lon_idx.values+1}]"
                     lat_i = f"[{sel.lat_idx.values-1}:{sel.lat_idx.values+1}]"
                     ds_nc.close()
-                    outfile.unlink() 
-                    
-                # download file with specified coordinates    
+                    outfile.unlink()
+
+                # download file with specified coordinates
                 url = (
                     f"{base_url}{year}//{file}"
                     r".nc4?PS[0:0]"
@@ -397,32 +378,32 @@ def get_merra2(
                     f",time,lat{lat_i},lon{lon_i}"
                 )
 
-                download_file(url,outfile)
-                
+                download_file(url, outfile)
 
     # get the saved data
     ds_nc = xr.open_mfdataset(f"{save_pathname / f'{save_filename}*.nc'}")
 
     # renamce variables to conform with OpenOA
-    ds_nc = ds_nc.rename_vars({"SPEEDLML":"windspeed_ms","TLML":"temperature_K","PS":"surf_pres_Pa"})
-    
+    ds_nc = ds_nc.rename_vars(
+        {"SPEEDLML": "windspeed_ms", "TLML": "temperature_K", "PS": "surf_pres_Pa"}
+    )
+
     # select the central node only for now
-    sel = ds_nc.sel(lat=lat,lon=lon, method="nearest")   
+    sel = ds_nc.sel(lat=lat, lon=lon, method="nearest")
 
     # convert to a pandas dataframe
     df = sel.to_dataframe()
 
     # select required columns
-    df = df[["windspeed_ms","temperature_K","surf_pres_Pa"]]
+    df = df[["windspeed_ms", "temperature_K", "surf_pres_Pa"]]
 
     # rename the index to match other datasets
     df.index.name = "datetime"
 
     # drop any empty rows
     df = df.dropna()
-    
+
     if save_filename is not None:
         df.to_csv(save_pathname / f"{save_filename}.csv", index=True)
 
     return df
-

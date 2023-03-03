@@ -33,24 +33,26 @@ steps taken to correct the raw data for use in the OpenOA code.
 from __future__ import annotations
 
 import json
-import yaml
 from pathlib import Path
 from zipfile import ZipFile
 
+import yaml
 import pandas as pd
 
 import openoa.utils.downloader as downloader
-from openoa.logging import logging
 from openoa.plant import PlantData
+from openoa.logging import logging
 
 
 logger = logging.getLogger()
 
 
-def download_asset_data(asset: str = "kelmarsh", outfile_path: str | Path = "data//kelmarsh//") -> None:
+def download_asset_data(
+    asset: str = "kelmarsh", outfile_path: str | Path = "data//kelmarsh//"
+) -> None:
     """
     Simplify downloading of known open data assets from zenodo.
-    
+
     The record_id will need updating as new data versions come out,
     but does mean we have control to avoid any backwards compatibility issues.
 
@@ -65,15 +67,15 @@ def download_asset_data(asset: str = "kelmarsh", outfile_path: str | Path = "dat
           1. "record_details.json", which details the Zenodo API details.
           2. All files available for the ``record_id``
     """
-    
+
     if asset.lower() == "kelmarsh":
         record_id = 7212475
     elif asset.lower() == "penmanshiel":
         record_id = 5946808
     else:
         raise NameError("Zenodo record id undefined for: " + asset)
-        
-    downloader.download_zenodo_data(record_id,outfile_path)
+
+    downloader.download_zenodo_data(record_id, outfile_path)
 
 
 def extract_all_data(path: str = "data//kelmarsh//") -> None:
@@ -88,9 +90,9 @@ def extract_all_data(path: str = "data//kelmarsh//") -> None:
     """
 
     logger.info("Extracting compressed data files")
-    
+
     zipFiles = Path(path).rglob("*.zip")
-    
+
     for file in zipFiles:
         with ZipFile(file) as zipfile:
             zipfile.extractall(path)
@@ -106,29 +108,31 @@ def get_scada_headers(SCADA_files: list[str]) -> pd.DataFrame:
     Returns:
         SCADA_headers(:obj:`dataframe`): Dataframe containing details of all the SCADA files.
     """
-    
-    csv_params = {"index_col":0,
-                  "skiprows":2,
-                  "nrows":4, 
-                  "delimiter":": ",
-                  "header":None, 
-                  "engine":"python"}
+
+    csv_params = {
+        "index_col": 0,
+        "skiprows": 2,
+        "nrows": 4,
+        "delimiter": ": ",
+        "header": None,
+        "engine": "python",
+    }
 
     SCADA_headers = pd.concat(
-        (pd.read_csv(f,**csv_params).rename(columns={1:f}) for f in SCADA_files),
-        axis=1)
+        (pd.read_csv(f, **csv_params).rename(columns={1: f}) for f in SCADA_files), axis=1
+    )
 
-    SCADA_headers.index = SCADA_headers.index.str.replace("# ","")
+    SCADA_headers.index = SCADA_headers.index.str.replace("# ", "")
 
-    SCADA_headers = SCADA_headers.transpose().reset_index().rename(columns={"index":"File"})
-    
+    SCADA_headers = SCADA_headers.transpose().reset_index().rename(columns={"index": "File"})
+
     return SCADA_headers
 
 
 def get_scada_df(SCADA_headers: pd.DataFrame, usecolumns: list[str] | None = None) -> pd.DataFrame:
     """
     Extract the desired SCADA data.
-    
+
     Args:
         SCADA_headers(:obj:`dataframe`): Dataframe containing details of all SCADA files.
         usecolumns(obj:`list[str]`): Selection of columns to be imported from the SCADA files.
@@ -137,54 +141,64 @@ def get_scada_df(SCADA_headers: pd.DataFrame, usecolumns: list[str] | None = Non
     Returns:
         SCADA(:obj:`dataframe`): Dataframe with SCADA data.
     """
-    
+
     if usecolumns is None:
-        usecolumns = ["# Date and time", 
-            "Power (kW)", 
+        usecolumns = [
+            "# Date and time",
+            "Power (kW)",
             "Wind speed (m/s)",
             "Wind direction (°)",
             "Nacelle position (°)",
             "Nacelle ambient temperature (°C)",
-            "Blade angle (pitch position) A (°)"]
+            "Blade angle (pitch position) A (°)",
+        ]
 
-    csv_params = {"index_col":"# Date and time",
-        "parse_dates":True,
-        "skiprows":9,
-        "usecols":usecolumns}
+    csv_params = {
+        "index_col": "# Date and time",
+        "parse_dates": True,
+        "skiprows": 9,
+        "usecols": usecolumns,
+    }
 
     SCADA_lst = list()
     for turbine in SCADA_headers["Turbine"].unique():
         SCADA_wt = pd.concat(
-            (pd.read_csv(f,**csv_params) for f in list(SCADA_headers.loc[SCADA_headers["Turbine"]==turbine]["File"])))
-            
+            (
+                pd.read_csv(f, **csv_params)
+                for f in list(SCADA_headers.loc[SCADA_headers["Turbine"] == turbine]["File"])
+            )
+        )
+
         SCADA_wt["Turbine"] = turbine
         SCADA_wt.index.names = ["Timestamp"]
         SCADA_lst.append(SCADA_wt.copy())
 
     SCADA = pd.concat(SCADA_lst)
-    
+
     return SCADA
 
 
 def get_curtailment_df(SCADA_headers: pd.DataFrame) -> pd.DataFrame:
     """
     Get the curtailment and availability data.
-    
+
     Args:
         SCADA_headers(:obj:`dataframe`): Dataframe containing details of all SCADA files.
 
     Returns:
         curtailment_df(:obj:`dataframe`): Dataframe with curtailment data.
     """
-    
-    # Curtailment data is available as a subset of the SCADA data
-    usecolumns = ["# Date and time", 
-        "Lost Production to Curtailment (Total) (kWh)", 
-        "Lost Production to Downtime (kWh)", 
-        "Energy Export (kWh)"]
 
-    curtailment_df = get_scada_df(SCADA_headers,usecolumns)
-    
+    # Curtailment data is available as a subset of the SCADA data
+    usecolumns = [
+        "# Date and time",
+        "Lost Production to Curtailment (Total) (kWh)",
+        "Lost Production to Downtime (kWh)",
+        "Energy Export (kWh)",
+    ]
+
+    curtailment_df = get_scada_df(SCADA_headers, usecolumns)
+
     return curtailment_df
 
 
@@ -199,22 +213,24 @@ def get_meter_data(path: str = "data//kelmarsh//") -> pd.DataFrame:
         meter_df(:obj:`dataframe`): Dataframe with meter data.
     """
 
-    usecolumns = ["# Date and time","GMS Energy Export (kWh)"]
+    usecolumns = ["# Date and time", "GMS Energy Export (kWh)"]
 
-    csv_params = {"index_col":"# Date and time",
-                "parse_dates":True,
-                "skiprows":10,
-                "usecols":usecolumns}
+    csv_params = {
+        "index_col": "# Date and time",
+        "parse_dates": True,
+        "skiprows": 10,
+        "usecols": usecolumns,
+    }
 
     meter_files = list(Path(path).rglob("*PMU*.csv"))
-    
-    meter_df = pd.read_csv(meter_files[0],**csv_params)
-    
+
+    meter_df = pd.read_csv(meter_files[0], **csv_params)
+
     meter_df.index.names = ["Timestamp"]
-    
-    return meter_df 
-                    
-                    
+
+    return meter_df
+
+
 def prepare(asset: str = "kelmarsh", return_value: str = "plantdata") -> PlantData | pd.DataFrame:
     """
     Do all loading and preparation of the data for this plant.
@@ -224,7 +240,7 @@ def prepare(asset: str = "kelmarsh", return_value: str = "plantdata") -> PlantDa
             to "kelmarsh".
         return_value(:obj:`str`):  One of "plantdata" or "dataframes" with the below behavior.
             Defaults to "plantdata".
-        
+
             - "plantdata" will return a fully constructed PlantData object.
             - "dataframes" will return a list of dataframes instead.
 
@@ -236,8 +252,7 @@ def prepare(asset: str = "kelmarsh", return_value: str = "plantdata") -> PlantDa
     path = f"data/{asset}"
 
     # Download and extract data if necessary
-    download_asset_data(asset=asset,outfile_path=path)
-
+    download_asset_data(asset=asset, outfile_path=path)
 
     ##############
     # ASSET DATA #
@@ -249,7 +264,6 @@ def prepare(asset: str = "kelmarsh", return_value: str = "plantdata") -> PlantDa
     # Assign type to turbine for all assets
     asset_df["type"] = "turbine"
 
-
     ###################
     # SCADA DATA #
     ###################
@@ -260,7 +274,6 @@ def prepare(asset: str = "kelmarsh", return_value: str = "plantdata") -> PlantDa
     scada_df = get_scada_df(SCADA_headers)
     scada_df = scada_df.reset_index()
 
-
     ##############
     # METER DATA #
     ##############
@@ -269,7 +282,6 @@ def prepare(asset: str = "kelmarsh", return_value: str = "plantdata") -> PlantDa
     meter_df = get_meter_data(path)
     meter_df = meter_df.reset_index()
 
-    
     #####################################
     # Availability and Curtailment Data #
     #####################################
@@ -277,7 +289,6 @@ def prepare(asset: str = "kelmarsh", return_value: str = "plantdata") -> PlantDa
     logger.info("Reading in the curtailment and availability losses data")
     curtail_df = get_curtailment_df(SCADA_headers)
     curtail_df = curtail_df.reset_index()
-
 
     ###################
     # REANALYSIS DATA #
@@ -303,26 +314,33 @@ def prepare(asset: str = "kelmarsh", return_value: str = "plantdata") -> PlantDa
 
     # ERA5 monthly 10m from CDS
     logger.info("Downloading ERA5 monthly")
-    downloader.get_era5(lat=asset_df["Latitude"].mean(),
-                        lon=asset_df["Longitude"].mean(),
-                        save_pathname=f"{path}/era5_monthly_10m/",
-                        save_filename=f"{asset}_era5_monthly_10m")
+    downloader.get_era5(
+        lat=asset_df["Latitude"].mean(),
+        lon=asset_df["Longitude"].mean(),
+        save_pathname=f"{path}/era5_monthly_10m/",
+        save_filename=f"{asset}_era5_monthly_10m",
+    )
 
     logger.info("Reading ERA5 monthly")
-    reanalysis_era5_monthly_df = pd.read_csv(f"{path}/era5_monthly_10m/{asset}_era5_monthly_10m.csv")
+    reanalysis_era5_monthly_df = pd.read_csv(
+        f"{path}/era5_monthly_10m/{asset}_era5_monthly_10m.csv"
+    )
     reanalysis_dict.update(dict(era5_monthly=reanalysis_era5_monthly_df))
 
     # MERRA2 monthly 10m from GES DISC
     logger.info("Downloading MERRA2 monthly")
-    downloader.get_merra2(lat=asset_df["Latitude"].mean(),
-                        lon=asset_df["Longitude"].mean(),
-                        save_pathname=f"{path}/merra2_monthly_10m/",
-                        save_filename=f"{asset}_merra2_monthly_10m")
+    downloader.get_merra2(
+        lat=asset_df["Latitude"].mean(),
+        lon=asset_df["Longitude"].mean(),
+        save_pathname=f"{path}/merra2_monthly_10m/",
+        save_filename=f"{asset}_merra2_monthly_10m",
+    )
 
     logger.info("Reading MERRA2 monthly")
-    reanalysis_merra2_monthly_df = pd.read_csv(f"{path}/merra2_monthly_10m/{asset}_merra2_monthly_10m.csv")
+    reanalysis_merra2_monthly_df = pd.read_csv(
+        f"{path}/merra2_monthly_10m/{asset}_merra2_monthly_10m.csv"
+    )
     reanalysis_dict.update(dict(merra2_monthly=reanalysis_merra2_monthly_df))
-
 
     ###################
     # PLANT DATA #
@@ -330,94 +348,80 @@ def prepare(asset: str = "kelmarsh", return_value: str = "plantdata") -> PlantDa
 
     # Create plant_meta.json
     asset_json = {
-        
-      "asset": {
-        "elevation": "Elevation (m)",
-        "hub_height": "Hub Height (m)",
-        "id": "Title",
-        "latitude": "Latitude",
-        "longitude": "Longitude",
-        "rated_power": "Rated power (kW)",
-        "rotor_diameter": "Rotor Diameter (m)"
-      },
-        
-      "curtail": {
-        "availability": "Lost Production to Downtime (kWh)",
-        "curtailment": "Lost Production to Curtailment (Total) (kWh)",
-        "frequency": "10T",
-        "net_energy": "Energy Export (kWh)",
-        "time": "Timestamp"
-      },
-        
-      "latitude": str(asset_df["Latitude"].mean()),
-      "longitude": str(asset_df["Longitude"].mean()),
-      "capacity":str(asset_df["Rated power (kW)"].sum()/1000),
-        
-      "meter": {
-        "energy": "GMS Energy Export (kWh)",
-        "time": "Timestamp"
-      },
-        
-      "reanalysis": {
-        "era5": {
-          "frequency": "H",
-          "surface_pressure": "surf_pres_Pa",
-          "temperature": "temperature_K",
-          "time": "datetime",
-          "windspeed_u": "u_ms",
-          "windspeed_v": "v_ms",
-          "windspeed":"windspeed_ms",
-          "wind_direction":"winddirection_deg",
+        "asset": {
+            "elevation": "Elevation (m)",
+            "hub_height": "Hub Height (m)",
+            "id": "Title",
+            "latitude": "Latitude",
+            "longitude": "Longitude",
+            "rated_power": "Rated power (kW)",
+            "rotor_diameter": "Rotor Diameter (m)",
         },
-          
-        "merra2": {
-          "frequency": "H",
-          "surface_pressure": "surf_pres_Pa",
-          "temperature": "temperature_K",
-          "time": "datetime",
-          "windspeed_u": "u_ms",
-          "windspeed_v": "v_ms",
-          "windspeed":"windspeed_ms",
-          "wind_direction":"winddirection_deg",
+        "curtail": {
+            "availability": "Lost Production to Downtime (kWh)",
+            "curtailment": "Lost Production to Curtailment (Total) (kWh)",
+            "frequency": "10T",
+            "net_energy": "Energy Export (kWh)",
+            "time": "Timestamp",
         },
-
-        "era5_monthly": {
-          "frequency": "1MS",
-          "surface_pressure": "surf_pres_Pa",
-          "temperature": "temperature_K",
-          "time": "datetime",
-          "windspeed":"windspeed_ms",
+        "latitude": str(asset_df["Latitude"].mean()),
+        "longitude": str(asset_df["Longitude"].mean()),
+        "capacity": str(asset_df["Rated power (kW)"].sum() / 1000),
+        "meter": {"energy": "GMS Energy Export (kWh)", "time": "Timestamp"},
+        "reanalysis": {
+            "era5": {
+                "frequency": "H",
+                "surface_pressure": "surf_pres_Pa",
+                "temperature": "temperature_K",
+                "time": "datetime",
+                "windspeed_u": "u_ms",
+                "windspeed_v": "v_ms",
+                "windspeed": "windspeed_ms",
+                "wind_direction": "winddirection_deg",
+            },
+            "merra2": {
+                "frequency": "H",
+                "surface_pressure": "surf_pres_Pa",
+                "temperature": "temperature_K",
+                "time": "datetime",
+                "windspeed_u": "u_ms",
+                "windspeed_v": "v_ms",
+                "windspeed": "windspeed_ms",
+                "wind_direction": "winddirection_deg",
+            },
+            "era5_monthly": {
+                "frequency": "1MS",
+                "surface_pressure": "surf_pres_Pa",
+                "temperature": "temperature_K",
+                "time": "datetime",
+                "windspeed": "windspeed_ms",
+            },
+            "merra2_monthly": {
+                "frequency": "1MS",
+                "surface_pressure": "surf_pres_Pa",
+                "temperature": "temperature_K",
+                "time": "datetime",
+                "windspeed": "windspeed_ms",
+            },
         },
-        
-        "merra2_monthly": {
-          "frequency": "1MS",
-          "surface_pressure": "surf_pres_Pa",
-          "temperature": "temperature_K",
-          "time": "datetime",
-          "windspeed":"windspeed_ms",
+        "scada": {
+            "frequency": "10T",
+            "id": "Turbine",
+            "pitch": "Blade angle (pitch position) A (°)",
+            "power": "Power (kW)",
+            "temperature": "Nacelle ambient temperature (°C)",
+            "time": "Timestamp",
+            "wind_direction": "Wind direction (°)",
+            "windspeed": "Wind speed (m/s)",
         },
-
-      },
-        
-      "scada": {
-        "frequency": "10T",
-        "id": "Turbine",
-        "pitch": "Blade angle (pitch position) A (°)",
-        "power": "Power (kW)",
-        "temperature": "Nacelle ambient temperature (°C)",
-        "time": "Timestamp",
-        "wind_direction": "Wind direction (°)",
-        "windspeed": "Wind speed (m/s)"
-      }
     }
 
     with open(f"{path}/plant_meta.json", "w") as outfile:
         json.dump(asset_json, outfile, indent=2)
-        
+
     with open(f"{path}/plant_meta.yml", "w") as outfile:
         yaml.dump(asset_json, outfile, default_flow_style=False)
 
-    
     # Return the appropriate data format
     if return_value == "dataframes":
         return (
