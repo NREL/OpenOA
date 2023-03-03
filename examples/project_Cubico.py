@@ -48,7 +48,7 @@ logger = logging.getLogger()
 
 
 def download_asset_data(
-    asset: str = "kelmarsh", outfile_path: str | Path = "data//kelmarsh//"
+    asset: str = "kelmarsh", outfile_path: str | Path = "data/kelmarsh"
 ) -> None:
     """
     Simplify downloading of known open data assets from zenodo.
@@ -78,7 +78,7 @@ def download_asset_data(
     downloader.download_zenodo_data(record_id, outfile_path)
 
 
-def extract_all_data(path: str = "data//kelmarsh//") -> None:
+def extract_all_data(path: str = "data/kelmarsh") -> None:
     """
     Get all zip files in path and extract them.
 
@@ -202,7 +202,7 @@ def get_curtailment_df(SCADA_headers: pd.DataFrame) -> pd.DataFrame:
     return curtailment_df
 
 
-def get_meter_data(path: str = "data//kelmarsh//") -> pd.DataFrame:
+def get_meter_data(path: str = "data/kelmarsh") -> pd.DataFrame:
     """
     Get the PMU meter data.
 

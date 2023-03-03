@@ -355,7 +355,7 @@ def get_merra2(
             if not outfile.is_file():
                 # download one file for determining coordinate indicies
                 if lat_i == "":
-                    url = f"{base_url}{year}//{file}" + r".nc4?PS,SPEEDLML,TLML,time,lat,lon"
+                    url = f"{base_url}{year}/{file}" + r".nc4?PS,SPEEDLML,TLML,time,lat,lon"
                     download_file(url, outfile)
                     ds_nc = xr.open_dataset(outfile)
                     ds_nc_idx = ds_nc.assign_coords(
@@ -370,7 +370,7 @@ def get_merra2(
 
                 # download file with specified coordinates
                 url = (
-                    f"{base_url}{year}//{file}"
+                    f"{base_url}{year}/{file}"
                     r".nc4?PS[0:0]"
                     f"{lat_i}{lon_i}"
                     f",SPEEDLML[0:0]{lat_i}{lon_i}"
