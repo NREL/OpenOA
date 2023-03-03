@@ -2,7 +2,7 @@
 This module provides functions for downloading files, including reanalysis data
 
 This module provides functions for downloading data, including long-term historical atmospheric
-data from the MERRA-2 and ERA5 reanalysis products and returning as pandas DataFrames and saving
+data from the MERRA2 and ERA5 reanalysis products and returning as pandas DataFrames and saving
 data in csv files. Currently by default the module downloads monthly reanalysis data for a time
 period of interest using NASA Goddard Earth Sciences Data and Information Services Center
 (GES DISC) for MERRA2 and the Copernicus Climate Data Store (CDS) API for ERA5, but this can be
@@ -14,7 +14,7 @@ https://cds.climate.copernicus.eu/api-how-to
 
 In addition you can download data directly from these source:
 
-* Hourly MERRA-2 data can be downloaded directly from NASA GES DISC by selecting the
+* Hourly MERRA2 data can be downloaded directly from NASA GES DISC by selecting the
   "Subset / Get Data" link on the following webpage:
   https://disc.gsfc.nasa.gov/datasets/M2T1NXSLV_5.12.4/summary. Specific dates, variables, and
   coordinates can be selected using the OPeNDAP or GES DISC Subsetter download methods.
@@ -386,7 +386,7 @@ def get_merra2(
     # get the saved data
     ds_nc = xr.open_mfdataset(f"{save_pathname / f'{save_filename}*.nc'}")
 
-    # renamce variables to conform with OpenOA
+    # rename variables to conform with OpenOA
     ds_nc = ds_nc.rename_vars(
         {"SPEEDLML": "windspeed_ms", "TLML": "temperature_K", "PS": "surf_pres_Pa"}
     )

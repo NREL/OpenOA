@@ -24,10 +24,10 @@ steps taken to correct the raw data for use in the OpenOA code.
    - 10-minute performance data provided in energy units (kWh)
 
 3. Curtailment data
-   - 10-minute availabilitya and curtailment data in kwh
+   - 10-minute availability and curtailment data in kwh
 4. Reanalysis products
-   - MERRA-2 and ERA5 1-hour reanalysis data where available on Zenodo
-   - ERA-5 and MERRA-2 monthly reanalysis data at ground level (10m)
+   - MERRA2 and ERA5 1-hour reanalysis data where available on Zenodo
+   - ERA5 and MERRA2 monthly reanalysis data at ground level (10m)
 """
 
 from __future__ import annotations
@@ -94,22 +94,22 @@ def extract_all_data(path: str = "data/kelmarsh") -> None:
 
     logger.info("Extracting compressed data files")
 
-    zipFiles = Path(path).rglob("*.zip")
+    zip_files = Path(path).rglob("*.zip")
 
-    for file in zipFiles:
+    for file in zip_files:
         with ZipFile(file) as zipfile:
             zipfile.extractall(path)
 
 
-def get_scada_headers(SCADA_files: list[str]) -> pd.DataFrame:
+def get_scada_headers(scada_files: list[str]) -> pd.DataFrame:
     """
     Get just the headers from the SCADA files.
 
     Args:
-        SCADA_files(obj:`list[str]`): List of SCADA file paths.
+        scada_files(obj:`list[str]`): List of SCADA file paths.
 
     Returns:
-        SCADA_headers(:obj:`dataframe`): Dataframe containing details of all the SCADA files.
+        scada_headers(:obj:`dataframe`): Dataframe containing details of all the SCADA files.
     """
 
     csv_params = {
@@ -121,32 +121,32 @@ def get_scada_headers(SCADA_files: list[str]) -> pd.DataFrame:
         "engine": "python",
     }
 
-    SCADA_headers = pd.concat(
-        (pd.read_csv(f, **csv_params).rename(columns={1: f}) for f in SCADA_files), axis=1
+    scada_headers = pd.concat(
+        (pd.read_csv(f, **csv_params).rename(columns={1: f}) for f in scada_files), axis=1
     )
 
-    SCADA_headers.index = SCADA_headers.index.str.replace("# ", "")
+    scada_headers.index = scada_headers.index.str.replace("# ", "")
 
-    SCADA_headers = SCADA_headers.transpose().reset_index().rename(columns={"index": "File"})
+    scada_headers = scada_headers.transpose().reset_index().rename(columns={"index": "File"})
 
-    return SCADA_headers
+    return scada_headers
 
 
-def get_scada_df(SCADA_headers: pd.DataFrame, usecolumns: list[str] | None = None) -> pd.DataFrame:
+def get_scada_df(scada_headers: pd.DataFrame, use_columns: list[str] | None = None) -> pd.DataFrame:
     """
     Extract the desired SCADA data.
 
     Args:
-        SCADA_headers(:obj:`dataframe`): Dataframe containing details of all SCADA files.
+        scada_headers(:obj:`dataframe`): Dataframe containing details of all SCADA files.
         usecolumns(obj:`list[str]`): Selection of columns to be imported from the SCADA files.
             Defaults to None.
 
     Returns:
-        SCADA(:obj:`dataframe`): Dataframe with SCADA data.
+        scada(:obj:`dataframe`): Dataframe with SCADA data.
     """
 
-    if usecolumns is None:
-        usecolumns = [
+    if use_columns is None:
+        use_columns = [
             "# Date and time",
             "Power (kW)",
             "Wind speed (m/s)",
@@ -160,47 +160,47 @@ def get_scada_df(SCADA_headers: pd.DataFrame, usecolumns: list[str] | None = Non
         "index_col": "# Date and time",
         "parse_dates": True,
         "skiprows": 9,
-        "usecols": usecolumns,
+        "usecols": use_columns,
     }
 
-    SCADA_lst = list()
-    for turbine in SCADA_headers["Turbine"].unique():
-        SCADA_wt = pd.concat(
+    scada_lst = list()
+    for turbine in scada_headers["Turbine"].unique():
+        scada_wt = pd.concat(
             (
                 pd.read_csv(f, **csv_params)
-                for f in list(SCADA_headers.loc[SCADA_headers["Turbine"] == turbine]["File"])
+                for f in list(scada_headers.loc[scada_headers["Turbine"] == turbine]["File"])
             )
         )
 
-        SCADA_wt["Turbine"] = turbine
-        SCADA_wt.index.names = ["Timestamp"]
-        SCADA_lst.append(SCADA_wt.copy())
+        scada_wt["Turbine"] = turbine
+        scada_wt.index.names = ["Timestamp"]
+        scada_lst.append(scada_wt.copy())
 
-    SCADA = pd.concat(SCADA_lst)
+    scada = pd.concat(scada_lst)
 
-    return SCADA
+    return scada
 
 
-def get_curtailment_df(SCADA_headers: pd.DataFrame) -> pd.DataFrame:
+def get_curtailment_df(scada_headers: pd.DataFrame) -> pd.DataFrame:
     """
     Get the curtailment and availability data.
 
     Args:
-        SCADA_headers(:obj:`dataframe`): Dataframe containing details of all SCADA files.
+        scada_headers(:obj:`dataframe`): Dataframe containing details of all SCADA files.
 
     Returns:
         curtailment_df(:obj:`dataframe`): Dataframe with curtailment data.
     """
 
     # Curtailment data is available as a subset of the SCADA data
-    usecolumns = [
+    use_columns = [
         "# Date and time",
         "Lost Production to Curtailment (Total) (kWh)",
         "Lost Production to Downtime (kWh)",
         "Energy Export (kWh)",
     ]
 
-    curtailment_df = get_scada_df(SCADA_headers, usecolumns)
+    curtailment_df = get_scada_df(scada_headers, use_columns)
 
     return curtailment_df
 
@@ -216,13 +216,13 @@ def get_meter_data(path: str = "data/kelmarsh") -> pd.DataFrame:
         meter_df(:obj:`dataframe`): Dataframe with meter data.
     """
 
-    usecolumns = ["# Date and time", "GMS Energy Export (kWh)"]
+    use_columns = ["# Date and time", "GMS Energy Export (kWh)"]
 
     csv_params = {
         "index_col": "# Date and time",
         "parse_dates": True,
         "skiprows": 10,
-        "usecols": usecolumns,
+        "usecols": use_columns,
     }
 
     meter_files = list(Path(path).rglob("*PMU*.csv"))
@@ -272,9 +272,9 @@ def prepare(asset: str = "kelmarsh", return_value: str = "plantdata") -> PlantDa
     ###################
 
     logger.info("Reading in the SCADA data")
-    SCADA_files = Path(path).rglob("Turbine_Data*.csv")
-    SCADA_headers = get_scada_headers(SCADA_files)
-    scada_df = get_scada_df(SCADA_headers)
+    scada_files = Path(path).rglob("Turbine_Data*.csv")
+    scada_headers = get_scada_headers(scada_files)
+    scada_df = get_scada_df(scada_headers)
     scada_df = scada_df.reset_index()
 
     ##############
@@ -290,7 +290,7 @@ def prepare(asset: str = "kelmarsh", return_value: str = "plantdata") -> PlantDa
     #####################################
 
     logger.info("Reading in the curtailment and availability losses data")
-    curtail_df = get_curtailment_df(SCADA_headers)
+    curtail_df = get_curtailment_df(scada_headers)
     curtail_df = curtail_df.reset_index()
 
     ###################
