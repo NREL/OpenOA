@@ -76,8 +76,9 @@ def download_file(url: str, outfile: str | Path) -> None:
 
             logger.info(f"Contents of {url} written to {outfile}")
 
-        except IOError:
+        except IOError as ei:
             logger.error(f"Error writing to {outfile}")
+            logger.error(ei)
 
     except requests.exceptions.HTTPError as eh:
         logger.error(eh)
