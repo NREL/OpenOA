@@ -19,14 +19,16 @@ In addition you can download data directly from these source:
   https://disc.gsfc.nasa.gov/datasets/M2T1NXSLV_5.12.4/summary. Specific dates, variables, and
   coordinates can be selected using the OPeNDAP or GES DISC Subsetter download methods.
 
-* Hourly ERA5 data can be downloaded using either the CDS web interface or the CDS API, as explained
-  here: https://confluence.ecmwf.int/display/CKB/How+to+download+ERA5. Data for specific dates,
-  variables, and coordinates can be downloaded using the CDS web interface via the "Download data"
-  tab here: https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-single-levels?tab=overview.
-  Instructions for using the CDS Toolbox API to download ERA5 data programatically can be found here:
+* Hourly ERA5 data can be downloaded using either the CDS web interface or the CDS API, as
+  explained here: https://confluence.ecmwf.int/display/CKB/How+to+download+ERA5. Data for specific
+  dates, variables, and coordinates can be downloaded using the CDS web interface via the "Download
+  data" tab here:
+  https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-single-levels?tab=overview.
+  Instructions for using the CDS Toolbox API to download ERA5 data programatically is found here:
   https://cds.climate.copernicus.eu/toolbox/doc/how-to/1_how_to_retrieve_data/1_how_to_retrieve_data.html
   (note that the "reanalysis-era5-single-levels" dataset should generally be used).
 """
+
 from __future__ import annotations
 
 import re
@@ -48,14 +50,14 @@ logger = logging.getLogger()
 
 def download_file(url: str, outfile: str | Path) -> None:
     """
-    Download a file from the web based on its url
+    Download a file from the web, based on its url.
 
     Args:
-        url(:obj:`str`): url of data to download
-        outfile(:obj:`str` | :obj:`Path`): file path to which the download is saved
+        url(:obj:`str`): Url of data to download.
+        outfile(:obj:`str` | :obj:`Path`): File path to which the download is saved.
 
     Returns:
-        Downloaded file saved to outfile
+        Downloaded file saved to outfile.
     """
 
     outfile = Path(outfile).resolve()
@@ -89,17 +91,17 @@ def download_file(url: str, outfile: str | Path) -> None:
 
 def download_zenodo_data(record_id: int, outfile_path: str | Path) -> None:
     """
-    Download data from zenodo based on the zenodo record_id
+    Download data from Zenodo based on the Zenodo record_id.
 
     Args:
-        record_id(:obj:`int`): the Zenodo record id
-        outfile_path(:obj:`str` | :obj:`Path`): path to save files to
+        record_id(:obj:`int`): The Zenodo record id.
+        outfile_path(:obj:`str` | :obj:`Path`): Path to save files to.
 
     Returns:
         Files saved to the asset data folder:
 
-          1. record_details.json, which details the zenodo api details
-          2. all files available for the record_id
+          1. record_details.json, which details the Zenodo api details.
+          2. all files available for the record_id.
     """
 
     url_zenodo = r"https://zenodo.org/api/records/"
@@ -182,22 +184,23 @@ def get_era5(
     See: https://cds.climate.copernicus.eu/api-how-to
 
     Monthly 10m height data is demonstrated here, as hourly data takes too long to download,
-    but could be amended and other CDS datasets also used (e.g. CERRA for Europe)
+    but this could be amended and other CDS datasets also used (e.g. CERRA for Europe).
 
     Args:
-        lat(:obj:`float`): Latitude in WGS 84 spatial reference system (decimal degrees)
-        lon(:obj:`float`): Longitude in WGS 84 spatial reference system (decimal degrees)
+        lat(:obj:`float`): Latitude in WGS 84 spatial reference system (decimal degrees).
+        lon(:obj:`float`): Longitude in WGS 84 spatial reference system (decimal degrees).
         save_pathname(:obj:`str` | :obj:`Path`): The path where the downloaded reanalysis data will
-            be saved
-        save_filename(:obj:`str`): The file name used to save the downloaded reanalysis data
+            be saved.
+        save_filename(:obj:`str`): The file name used to save the downloaded reanalysis data.
 
     Returns:
-        df(:obj:`dataframe`): A dataframe containing time series of the requested reanalysis variables
-        Saved NetCDF annual ERA5 files
-        Saved ERA5 csv file
+        df(:obj:`dataframe`): A dataframe containing time series of the requested reanalysis
+            variables.
+        Saved NetCDF annual ERA5 files.
+        Saved ERA5 csv file.
 
     Raises:
-        NameError: if unable to connect to the cdsapi client.
+        NameError: If unable to connect to the cdsapi client.
     """
 
     logger.info("Please note access to ERA5 data requires registration")
@@ -303,25 +306,24 @@ def get_merra2(
     save_filename: str,
 ) -> pd.DataFrame:
     """
-    Get MERRA2 data directly from the NASA GES DISC service
-    This requires registration on the GES DISC service
-    See: https://disc.gsfc.nasa.gov/data-access#python-requests
+    Get MERRA2 data directly from the NASA GES DISC service, which requires registration on the
+    GES DISC service. See: https://disc.gsfc.nasa.gov/data-access#python-requests.
 
-    Monthly 10m height data is demonstrated here,
-    as hourly data takes too long to download, but could be amended
-    and other GES DISC datasets also used (e.g. FLDAS)
+    Monthly 10m height data is demonstrated here, as hourly data takes too long to download, but
+    could be amended and other GES DISC datasets also used (e.g. FLDAS).
 
     Args:
-        lat(:obj:`float`): Latitude in WGS 84 spatial reference system (decimal degrees)
-        lon(:obj:`float`): Longitude in WGS 84 spatial reference system (decimal degrees)
+        lat(:obj:`float`): Latitude in WGS 84 spatial reference system (decimal degrees).
+        lon(:obj:`float`): Longitude in WGS 84 spatial reference system (decimal degrees).
         save_pathname(:obj:`str` | :obj:`Path`): The path where the downloaded reanalysis data will
-            be saved
-        save_filename(:obj:`str`): The file name used to save the downloaded reanalysis data
+            be saved.
+        save_filename(:obj:`str`): The file name used to save the downloaded reanalysis data.
 
     Returns:
-        df(:obj:`dataframe`): A dataframe containing time series of the requested reanalysis variables
-        Saved NetCDF monthly MERRA2 files
-        Saved MERRA2 csv file
+        df(:obj:`dataframe`): A dataframe containing time series of the requested reanalysis
+            variables.
+        Saved NetCDF monthly MERRA2 files.
+        Saved MERRA2 csv file.
     """
 
     logger.info("Please note access to MERRA2 data requires registration")
