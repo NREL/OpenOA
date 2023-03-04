@@ -51,7 +51,7 @@ def download_asset_data(
     asset: str = "kelmarsh", outfile_path: str | Path = "data/kelmarsh"
 ) -> None:
     """
-    Simplify downloading of known open data assets from zenodo.
+    Simplify downloading of known open data assets from Zenodo.
 
     The record_id will need updating as new data versions come out,
     but does mean we have control to avoid any backwards compatibility issues.
@@ -96,8 +96,8 @@ def extract_all_data(path: str = "data/kelmarsh") -> None:
 
     zip_files = Path(path).rglob("*.zip")
 
-    for file in zip_files:
-        with ZipFile(file) as zipfile:
+    for f in zip_files:
+        with ZipFile(f) as zipfile:
             zipfile.extractall(path)
 
 
