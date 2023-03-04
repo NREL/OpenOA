@@ -59,6 +59,10 @@ def download_file(url: str, outfile: str | Path) -> None:
 
     Returns:
         Downloaded file saved to outfile.
+
+    Raises:
+        HTTPError: If unable to access url.
+        Exception: If the request failed for another reason.
     """
 
     outfile = Path(outfile).resolve()
@@ -76,14 +80,17 @@ def download_file(url: str, outfile: str | Path) -> None:
 
             logger.info(f"Contents of {url} written to {outfile}")
 
-        except IOError as ei:
-            logger.error(f"Error writing to {outfile}")
-            logger.error(ei)
+        except Exception as e:
+            logger.error(e)
+            raise
 
     except requests.exceptions.HTTPError as eh:
         logger.error(eh)
-    except requests.exceptions.RequestException as er:
-        logger.error(er)
+        raise
+
+    except Exception as e:
+        logger.error(e)
+        raise
 
 
 def download_zenodo_data(record_id: int, outfile_path: str | Path) -> None:
@@ -197,7 +204,7 @@ def get_era5(
         Saved ERA5 csv file.
 
     Raises:
-        NameError: If unable to connect to the cdsapi client.
+        Exception: If unable to connect to the cdsapi client.
     """
 
     logger.info("Please note access to ERA5 data requires registration")
@@ -207,9 +214,10 @@ def get_era5(
     try:
         c = cdsapi.Client()
     except Exception as e:
-        logger.error(f"Failed to make connection to cds: {e}")
-        logger.error("Please see: https://cds.climate.copernicus.eu/api-how-to")
-        raise NameError(e)
+        logger.error("Failed to make connection to cds")
+        logger.error("Please see https://cds.climate.copernicus.eu/api-how-to for help")
+        logger.error(e)
+        raise
 
     # create save_pathname if it does not exist
     save_pathname = Path(save_pathname).resolve()
