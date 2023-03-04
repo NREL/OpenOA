@@ -41,6 +41,7 @@ import cdsapi
 import pandas as pd
 import xarray as xr
 import requests
+from tqdm import tqdm
 
 from openoa.logging import logging
 
@@ -65,17 +66,12 @@ def download_file(url: str, outfile: str | Path) -> None:
 
     try:
         result.raise_for_status()
-
-        chunk_number = 0
-
         try:
             with outfile.open("wb") as f:
-                for chunk in result.iter_content(chunk_size=1024 * 1024):
-                    chunk_number = chunk_number + 1
-
-                    print(str(chunk_number) + " MB downloaded", end="\r")
-
-                    if chunk:  # filter out keep-alive new chunks
+                for chunk in tqdm(
+                    result.iter_content(chunk_size=1024 * 1024), desc="MB downloaded"
+                ):
+                    if chunk:
                         f.write(chunk)
 
             logger.info(f"Contents of {url} written to {outfile}")
