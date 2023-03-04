@@ -182,6 +182,8 @@ def get_era5(
     lon: float,
     save_pathname: str | Path,
     save_filename: str,
+    start_year: int = 2000,
+    end_year: int = None,
 ) -> pd.DataFrame:
     """
     Get ERA5 data directly from the CDS service, which requires registration on the CDS service.
@@ -196,6 +198,8 @@ def get_era5(
         save_pathname(:obj:`str` | :obj:`Path`): The path where the downloaded reanalysis data will
             be saved.
         save_filename(:obj:`str`): The file name used to save the downloaded reanalysis data.
+        start_year(:obj:`int`): The first year data is downloaded for (YYYY). Defaults to 2000.
+        end_year(:obj:`int`): The last year data is downloaded for (YYYY). Defaults to current year.
 
     Returns:
         df(:obj:`dataframe`): A dataframe containing time series of the requested reanalysis
@@ -204,6 +208,7 @@ def get_era5(
         Saved ERA5 csv file.
 
     Raises:
+        ValueError: If the start_year is greater than the end_year.
         Exception: If unable to connect to the cdsapi client.
     """
 
@@ -224,9 +229,21 @@ def get_era5(
     if not save_pathname.exists():
         save_pathname.mkdir()
 
-    # downloads all years from today back to the year 2000
+    # get the current date
     now = datetime.datetime.now()
-    years = list(range(2000, now.year + 1, 1))
+
+    # assign end_year to current year if not provided by the user
+    if end_year is None:
+        end_year = now.year
+
+    # check that the start and end years are reasonable
+    if start_year > end_year:
+        logger.error("The start_year should be less than or equal to the end_year")
+        logger.error(f"start_year = {start_year}, end_year = {end_year}")
+        raise ValueError("The start_year should be less than or equal to the end_year")
+
+    # list all years that will be downloaded
+    years = list(range(start_year, end_year + 1, 1))
 
     # get the data for the closest 9 nodes to the coordinates
     node_spacing = 0.250500001 * 1
@@ -309,6 +326,8 @@ def get_merra2(
     lon: float,
     save_pathname: str | Path,
     save_filename: str,
+    start_year: int = 2000,
+    end_year: int = None,
 ) -> pd.DataFrame:
     """
     Get MERRA2 data directly from the NASA GES DISC service, which requires registration on the
@@ -323,12 +342,17 @@ def get_merra2(
         save_pathname(:obj:`str` | :obj:`Path`): The path where the downloaded reanalysis data will
             be saved.
         save_filename(:obj:`str`): The file name used to save the downloaded reanalysis data.
+        start_year(:obj:`int`): The first year data is downloaded for (YYYY). Defaults to 2000.
+        end_year(:obj:`int`): The last year data is downloaded for (YYYY). Defaults to current year.
 
     Returns:
         df(:obj:`dataframe`): A dataframe containing time series of the requested reanalysis
             variables.
         Saved NetCDF monthly MERRA2 files.
         Saved MERRA2 csv file.
+
+    Raises:
+        ValueError: If the start_year is greater than the end_year.
     """
 
     logger.info("Please note access to MERRA2 data requires registration")
@@ -342,8 +366,21 @@ def get_merra2(
     if not save_pathname.exists():
         save_pathname.mkdir()
 
+    # get the current date
     now = datetime.datetime.now()
-    years = list(range(2000, now.year + 1, 1))
+
+    # assign end_year to current year if not provided by the user
+    if end_year is None:
+        end_year = now.year
+
+    # check that the start and end years are reasonable
+    if start_year > end_year:
+        logger.error("The start_year should be less than or equal to the end_year")
+        logger.error(f"start_year = {start_year}, end_year = {end_year}")
+        raise ValueError("The start_year should be less than or equal to the end_year")
+
+    # list all years that will be downloaded
+    years = list(range(start_year, end_year + 1, 1))
 
     # download the data
     for year in years:
