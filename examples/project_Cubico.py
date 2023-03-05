@@ -20,11 +20,13 @@ steps taken to correct the raw data for use in the OpenOA code.
    - 10-minute SCADA data for each of the turbines in the project
    - Power, wind speed, wind direction, nacelle position, wind vane, temperature,
    blade pitch
+
 2. Meter data
    - 10-minute performance data provided in energy units (kWh)
 
 3. Curtailment data
    - 10-minute availability and curtailment data in kwh
+
 4. Reanalysis products
    - MERRA2 and ERA5 1-hour reanalysis data where available on Zenodo
    - ERA5 and MERRA2 monthly reanalysis data at ground level (10m)
@@ -317,7 +319,7 @@ def prepare(asset: str = "kelmarsh", return_value: str = "plantdata") -> PlantDa
 
     # ERA5 monthly 10m from CDS
     logger.info("Downloading ERA5 monthly")
-    downloader.get_era5(
+    downloader.get_era5_monthly(
         lat=asset_df["Latitude"].mean(),
         lon=asset_df["Longitude"].mean(),
         save_pathname=f"{path}/era5_monthly_10m/",
@@ -332,7 +334,7 @@ def prepare(asset: str = "kelmarsh", return_value: str = "plantdata") -> PlantDa
 
     # MERRA2 monthly 10m from GES DISC
     logger.info("Downloading MERRA2 monthly")
-    downloader.get_merra2(
+    downloader.get_merra2_monthly(
         lat=asset_df["Latitude"].mean(),
         lon=asset_df["Longitude"].mean(),
         save_pathname=f"{path}/merra2_monthly_10m/",

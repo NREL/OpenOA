@@ -177,7 +177,7 @@ def download_zenodo_data(record_id: int, outfile_path: str | Path) -> None:
                     zipfile.extractall(outfile_path)
 
 
-def get_era5(
+def get_era5_monthly(
     lat: float,
     lon: float,
     save_pathname: str | Path,
@@ -321,7 +321,7 @@ def get_era5(
     return df
 
 
-def get_merra2(
+def get_merra2_monthly(
     lat: float,
     lon: float,
     save_pathname: str | Path,
