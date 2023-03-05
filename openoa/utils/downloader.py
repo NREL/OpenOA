@@ -255,6 +255,28 @@ def get_era5_monthly(
     # get the data for the closest 9 nodes to the coordinates
     node_spacing = 0.250500001 * 1
 
+    # See: https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-single-levels-monthly-means?tab=form
+    # for formulating other requests from cds
+    cds_dataset = "reanalysis-era5-single-levels-monthly-means"
+    cds_request = {
+        "product_type": "monthly_averaged_reanalysis",
+        "format": "netcdf",
+        "variable": [
+            "10m_wind_speed",
+            "2m_temperature",
+            "surface_pressure",
+        ],
+        "year": None,
+        "month": None,
+        "time": ["00:00"],
+        "area": [
+            lat + node_spacing,
+            lon - node_spacing,
+            lat - node_spacing,
+            lon + node_spacing,
+        ],
+    }
+
     # download the data
     for year in years:
         outfile = save_pathname / f"{save_filename}_{year}.nc"
@@ -264,34 +286,13 @@ def get_era5_monthly(
         else:
             months = list(range(1, 12 + 1, 1))
 
-        # See: https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-single-levels-monthly-means?tab=form
-        # for formulating other requests from cds
         if not outfile.is_file() or year == now.year:
             logger.info(f"Downloading ERA5: {outfile}")
 
             try:
-                c.retrieve(
-                    "reanalysis-era5-single-levels-monthly-means",
-                    {
-                        "product_type": "monthly_averaged_reanalysis",
-                        "format": "netcdf",
-                        "variable": [
-                            "10m_wind_speed",
-                            "2m_temperature",
-                            "surface_pressure",
-                        ],
-                        "year": year,
-                        "month": months,
-                        "time": ["00:00"],
-                        "area": [
-                            lat + node_spacing,
-                            lon - node_spacing,
-                            lat - node_spacing,
-                            lon + node_spacing,
-                        ],
-                    },
-                    outfile,
-                )
+                cds_request.update({"year": year, "month": months})
+                c.retrieve(cds_dataset, cds_request, outfile)
+
             except Exception as e:
                 logger.error(f"Failed to download ERA5: {outfile}")
                 logger.error(e)
