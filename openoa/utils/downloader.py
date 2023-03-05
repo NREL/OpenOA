@@ -186,11 +186,17 @@ def get_era5_monthly(
     end_year: int = None,
 ) -> pd.DataFrame:
     """
-    Get ERA5 data directly from the CDS service, which requires registration on the CDS service.
-    See: https://cds.climate.copernicus.eu/api-how-to
+    Get ERA5 data directly from the CDS service. This requires registration on the CDS service.
+    See registration details at: https://cds.climate.copernicus.eu/api-how-to
 
-    Monthly 10m height data is demonstrated here, as hourly data takes too long to download,
-    but this could be amended and other CDS datasets also used (e.g. CERRA for Europe).
+    This function returns monthly ERA5 data from the "ERA5 monthly averaged data on single levels
+    from 1959 to present" dataset. See further details regarding the dataset at:
+    https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-single-levels-monthly-means.
+    Only 10m wind speed, the temperature at 2m, and the surface pressure are downloaded here.
+
+    As well as returning the data as a dataframe, the data is also saved as annual NetCDF files and
+    a csv file with the concatenated data. These are located in the "save_pathname" directory, with
+    "save_filename" prefix. This allows future loading without download from the CDS service.
 
     Args:
         lat(:obj:`float`): Latitude in WGS 84 spatial reference system (decimal degrees).
@@ -203,9 +209,10 @@ def get_era5_monthly(
 
     Returns:
         df(:obj:`dataframe`): A dataframe containing time series of the requested reanalysis
-            variables.
-        Saved NetCDF annual ERA5 files.
-        Saved ERA5 csv file.
+            variables:
+            1. windspeed_ms: the wind speed in m/s at 10m height.
+            2. temperature_K: air temperature in Kelvin at 2m height.
+            3. surf_pres_Pa: surface pressure in Pascals.
 
     Raises:
         ValueError: If the start_year is greater than the end_year.
@@ -333,8 +340,13 @@ def get_merra2_monthly(
     Get MERRA2 data directly from the NASA GES DISC service, which requires registration on the
     GES DISC service. See: https://disc.gsfc.nasa.gov/data-access#python-requests.
 
-    Monthly 10m height data is demonstrated here, as hourly data takes too long to download, but
-    could be amended and other GES DISC datasets also used (e.g. FLDAS).
+    This function returns monthly MERRA2 data from the "M2IMNXLFO" dataset. See further details
+    regarding the dataset at: https://disc.gsfc.nasa.gov/datasets/M2IMNXLFO_5.12.4/summary.
+    Only surface wind speed, temperature and surface pressure are downloaded here.
+
+    As well as returning the data as a dataframe, the data is also saved as monthly NetCDF files
+    and a csv file with the concatenated data. These are located in the "save_pathname" directory,
+    with "save_filename" prefix. This allows future loading without download from the CDS service.
 
     Args:
         lat(:obj:`float`): Latitude in WGS 84 spatial reference system (decimal degrees).
@@ -347,9 +359,10 @@ def get_merra2_monthly(
 
     Returns:
         df(:obj:`dataframe`): A dataframe containing time series of the requested reanalysis
-            variables.
-        Saved NetCDF monthly MERRA2 files.
-        Saved MERRA2 csv file.
+            variables:
+            1. windspeed_ms: the surface wind speed in m/s.
+            2. temperature_K: surface air temperature in Kelvin.
+            3. surf_pres_Pa: surface pressure in Pascals.
 
     Raises:
         ValueError: If the start_year is greater than the end_year.
