@@ -55,19 +55,17 @@ def download_asset_data(
     """
     Simplify downloading of known open data assets from Zenodo.
 
-    The record_id will need updating as new data versions come out,
-    but does mean we have control to avoid any backwards compatibility issues.
+    Saves the following files to the outfile_path:
+          1. "record_details.json", which details the Zenodo API details.
+          2. All files available for the ``record_id``
+
+    Note the record_id in this function will need updating as new data versions come out, but does
+    mean we have control to avoid any backwards compatibility issues.
 
     Args:
         asset(:obj:`string`): Name of asset. Defaults to "kelmarsh".
         outfile_path(:obj:`str` | :obj:`pathlib.Path`): Path to save project asset files to.
             Defaults to "data/kelmarsh".
-
-    Returns:
-        Files saved to the outfile_path:
-
-          1. "record_details.json", which details the Zenodo API details.
-          2. All files available for the ``record_id``
 
     Raises:
         NameError: if `asset` is not kelmarsh or penmanshiel.
