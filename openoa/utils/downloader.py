@@ -182,8 +182,8 @@ def get_era5_monthly(
     lon: float,
     save_pathname: str | Path,
     save_filename: str,
-    start_year: int = 2000,
-    end_year: int = None,
+    start_date: str = "2000-01",
+    end_date: str = None,
 ) -> pd.DataFrame:
     """
     Get ERA5 data directly from the CDS service. This requires registration on the CDS service.
@@ -194,7 +194,7 @@ def get_era5_monthly(
     https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-single-levels-monthly-means.
     Only 10m wind speed, the temperature at 2m, and the surface pressure are downloaded here.
 
-    As well as returning the data as a dataframe, the data is also saved as annual NetCDF files and
+    As well as returning the data as a dataframe, the data is also saved as monthly NetCDF files and
     a csv file with the concatenated data. These are located in the "save_pathname" directory, with
     "save_filename" prefix. This allows future loading without download from the CDS service.
 
@@ -204,8 +204,12 @@ def get_era5_monthly(
         save_pathname(:obj:`str` | :obj:`Path`): The path where the downloaded reanalysis data will
             be saved.
         save_filename(:obj:`str`): The file name used to save the downloaded reanalysis data.
-        start_year(:obj:`int`): The first year data is downloaded for (YYYY). Defaults to 2000.
-        end_year(:obj:`int`): The last year data is downloaded for (YYYY). Defaults to current year.
+        start_date(:obj:`str`): The starting year and month that data is downloaded for. This
+            should be provided as a string in the format "YYYY-MM". Defaults to "2000-01".
+        end_date(:obj:`str`): The final year and month that data is downloaded for. This should be
+            provided as a string in the format "YYYY-MM". Defaults to current year and most recent
+            month with full data, accounting for the fact that the ERA5 monthly dataset is released
+            around the the 6th of the month.
 
     Returns:
         df(:obj:`dataframe`): A dataframe containing time series of the requested reanalysis
@@ -215,7 +219,7 @@ def get_era5_monthly(
             3. surf_pres_Pa: surface pressure in Pascals.
 
     Raises:
-        ValueError: If the start_year is greater than the end_year.
+        ValueError: If the start_date is greater than the end_date.
         Exception: If unable to connect to the cdsapi client.
     """
 
@@ -236,21 +240,25 @@ def get_era5_monthly(
     if not save_pathname.exists():
         save_pathname.mkdir()
 
-    # get the current date
-    now = datetime.datetime.now()
+    # get the current date minus 37 days to find the most recent full month of data
+    now = datetime.datetime.now() - datetime.timedelta(days=37)
 
     # assign end_year to current year if not provided by the user
-    if end_year is None:
-        end_year = now.year
+    if end_date is None:
+        end_date = f"{now.year}-{now.month:02}"
 
-    # check that the start and end years are reasonable
-    if start_year > end_year:
-        logger.error("The start_year should be less than or equal to the end_year")
-        logger.error(f"start_year = {start_year}, end_year = {end_year}")
-        raise ValueError("The start_year should be less than or equal to the end_year")
+    # convert dates to datetime objects
+    start_date = datetime.datetime.strptime(start_date, "%Y-%m")
+    end_date = datetime.datetime.strptime(end_date, "%Y-%m")
 
-    # list all years that will be downloaded
-    years = list(range(start_year, end_year + 1, 1))
+    # check that the start and end dates are the right way around
+    if start_date > end_date:
+        logger.error("The start_date should be less than or equal to the end_date")
+        logger.error(f"start_date = {start_date.date()}, end_date = {end_date.date()}")
+        raise ValueError("The start_date should be less than or equal to the end_date")
+
+    # list all dates that will be downloaded
+    dates = pd.date_range(start=start_date, end=end_date, freq="MS", inclusive="both")
 
     # get the data for the closest 9 nodes to the coordinates
     node_spacing = 0.250500001 * 1
@@ -278,19 +286,14 @@ def get_era5_monthly(
     }
 
     # download the data
-    for year in years:
-        outfile = save_pathname / f"{save_filename}_{year}.nc"
+    for date in dates:
+        outfile = save_pathname / f"{save_filename}_{date.year}{date.month:02}.nc"
 
-        if year == now.year:
-            months = list(range(1, now.month, 1))
-        else:
-            months = list(range(1, 12 + 1, 1))
-
-        if not outfile.is_file() or year == now.year:
+        if not outfile.is_file():
             logger.info(f"Downloading ERA5: {outfile}")
 
             try:
-                cds_request.update({"year": year, "month": months})
+                cds_request.update({"year": date.year, "month": date.month})
                 c.retrieve(cds_dataset, cds_request, outfile)
 
             except Exception as e:
@@ -323,8 +326,11 @@ def get_era5_monthly(
     # drop any empty rows
     df = df.dropna()
 
-    if save_filename is not None:
-        df.to_csv(save_pathname / f"{save_filename}.csv", index=True)
+    # crop time series to only the selected time period
+    df = df.loc[start_date:end_date]
+
+    # save to csv for easy loading as required
+    df.to_csv(save_pathname / f"{save_filename}.csv", index=True)
 
     return df
 
@@ -334,8 +340,8 @@ def get_merra2_monthly(
     lon: float,
     save_pathname: str | Path,
     save_filename: str,
-    start_year: int = 2000,
-    end_year: int = None,
+    start_date: str = "2000-01",
+    end_date: str = None,
 ) -> pd.DataFrame:
     """
     Get MERRA2 data directly from the NASA GES DISC service, which requires registration on the
@@ -355,8 +361,11 @@ def get_merra2_monthly(
         save_pathname(:obj:`str` | :obj:`Path`): The path where the downloaded reanalysis data will
             be saved.
         save_filename(:obj:`str`): The file name used to save the downloaded reanalysis data.
-        start_year(:obj:`int`): The first year data is downloaded for (YYYY). Defaults to 2000.
-        end_year(:obj:`int`): The last year data is downloaded for (YYYY). Defaults to current year.
+        start_date(:obj:`str`): The starting year and month that data is downloaded for. This
+            should be provided as a string in the format "YYYY-MM". Defaults to "2000-01".
+        end_date(:obj:`str`): The final year and month that data is downloaded for. This should be
+            provided as a string in the format "YYYY-MM". Defaults to current year and most recent
+            month.
 
     Returns:
         df(:obj:`dataframe`): A dataframe containing time series of the requested reanalysis
@@ -380,21 +389,25 @@ def get_merra2_monthly(
     if not save_pathname.exists():
         save_pathname.mkdir()
 
-    # get the current date
-    now = datetime.datetime.now()
+    # get the current date minus 37 days to find the most recent full month of data
+    now = datetime.datetime.now() - datetime.timedelta(days=37)
 
     # assign end_year to current year if not provided by the user
-    if end_year is None:
-        end_year = now.year
+    if end_date is None:
+        end_date = f"{now.year}-{now.month:02}"
 
-    # check that the start and end years are reasonable
-    if start_year > end_year:
-        logger.error("The start_year should be less than or equal to the end_year")
-        logger.error(f"start_year = {start_year}, end_year = {end_year}")
-        raise ValueError("The start_year should be less than or equal to the end_year")
+    # convert dates to datetime objects
+    start_date = datetime.datetime.strptime(start_date, "%Y-%m")
+    end_date = datetime.datetime.strptime(end_date, "%Y-%m")
+
+    # check that the start and end dates are the right way around
+    if start_date > end_date:
+        logger.error("The start_date should be less than or equal to the end_date")
+        logger.error(f"start_date = {start_date.date()}, end_date = {end_date.date()}")
+        raise ValueError("The start_date should be less than or equal to the end_date")
 
     # list all years that will be downloaded
-    years = list(range(start_year, end_year + 1, 1))
+    years = list(range(start_date.year, end_date.year + 1, 1))
 
     # download the data
     for year in years:
@@ -464,6 +477,10 @@ def get_merra2_monthly(
     # drop any empty rows
     df = df.dropna()
 
+    # crop time series to only the selected time period
+    df = df.loc[start_date:end_date]
+
+    # save to csv for easy loading as required
     if save_filename is not None:
         df.to_csv(save_pathname / f"{save_filename}.csv", index=True)
 
