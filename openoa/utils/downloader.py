@@ -51,14 +51,11 @@ logger = logging.getLogger()
 
 def download_file(url: str, outfile: str | Path) -> None:
     """
-    Download a file from the web, based on its url.
+    Download a file from the web, based on its url, and save to the outfile.
 
     Args:
         url(:obj:`str`): Url of data to download.
         outfile(:obj:`str` | :obj:`Path`): File path to which the download is saved.
-
-    Returns:
-        Downloaded file saved to outfile.
 
     Raises:
         HTTPError: If unable to access url.
@@ -97,15 +94,15 @@ def download_zenodo_data(record_id: int, outfile_path: str | Path) -> None:
     """
     Download data from Zenodo based on the Zenodo record_id.
 
+    The following files will be saved to the asset data folder:
+
+        1. record_details.json, which details the Zenodo api details.
+        2. all files available for the record_id.
+
     Args:
         record_id(:obj:`int`): The Zenodo record id.
         outfile_path(:obj:`str` | :obj:`Path`): Path to save files to.
 
-    Returns:
-        Files saved to the asset data folder:
-
-          1. record_details.json, which details the Zenodo api details.
-          2. all files available for the record_id.
     """
 
     url_zenodo = r"https://zenodo.org/api/records/"
