@@ -83,26 +83,6 @@ def download_asset_data(
     downloader.download_zenodo_data(record_id, outfile_path)
 
 
-def extract_all_data(path: str = "data/kelmarsh") -> None:
-    """
-    Get all zip files in path and extract them.
-
-    Args:
-        path(:obj:`string`): Path to zip files. Defaults to "data/kelmarsh"
-
-    Returns:
-        All zip files extracted into the path.
-    """
-
-    logger.info("Extracting compressed data files")
-
-    zip_files = Path(path).rglob("*.zip")
-
-    for f in zip_files:
-        with ZipFile(f) as zipfile:
-            zipfile.extractall(path)
-
-
 def get_scada_headers(scada_files: list[str]) -> pd.DataFrame:
     """
     Get just the headers from the SCADA files.
