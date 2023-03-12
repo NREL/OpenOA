@@ -1,7 +1,7 @@
 """
-This is the import script for Cubico's Kelmarsh & Penmanshiel projects. These
-projects are available under a Creative Commons Attribution 4.0 International
-license (CC-BY-4.0), and are cited below:
+This is the import script for Cubico's Kelmarsh & Penmanshiel projects. These projects are
+available under a Creative Commons Attribution 4.0 International license (CC-BY-4.0), and are cited
+below:
 
 *Kelmarsh*:
 
@@ -13,13 +13,12 @@ license (CC-BY-4.0), and are cited below:
     Plumley, Charlie. (2022). Penmanshiel Wind Farm Data [Data set].
     Zenodo. https://doi.org/10.5281/zenodo.5946807
 
-Below is a description of the data imported and an overview of the
-steps taken to correct the raw data for use in the OpenOA code.
+Below is a description of the data imported and an overview of the steps taken to correct the raw
+data for use in the OpenOA code.
 
 1. SCADA
    - 10-minute SCADA data for each of the turbines in the project
-   - Power, wind speed, wind direction, nacelle position, wind vane, temperature,
-   blade pitch
+   - Power, wind speed, wind direction, nacelle position, wind vane, temperature, blade pitch
 
 2. Meter data
    - 10-minute performance data provided in energy units (kWh)
