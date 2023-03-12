@@ -1,6 +1,11 @@
 # Changelog
 All notable changes to this project will be documented in this file. If you make a notable change to the project, please add a line describing the change to the "unreleased" section. The maintainers will make an effort to keep the [Github Releases](https://github.com/NREL/OpenOA/releases) page up to date with this changelog. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## 3.0rc2
+- Everything from release candidate 1
+- IEC 61400-25 tag names are now used throughout the code base for column naming/calling conventions
+- Wake Loss Method now released(!) and available via: `from openoa.analysis import WakeLosses`.
+
 ## 3.0rc1
 - The package name is changed from `operational_analysis` to `openoa` to be more consistent with how we expect to import OpenOA!
 - `PlantData` is now fully based on attrs dataclasses and utilizing the pandas `DataFrame` for all internal data structures
@@ -18,6 +23,8 @@ All notable changes to this project will be documented in this file. If you make
   - methods -> analysis via `from openoa.analysis import xx`
 - Convenience methods such as `PlantData.turbine_ids` or `PlantData.tower_df(tower_id="x")` have been added to address commonly used code patters
 - Analysis methods are now available through `from openoa.analysis import <AnalysisClass>`
+- A wake loss analysis class `WakeLosses` has been added to estimate operational wake losses using turbine-level SCADA data
+  - The new `06_wake_loss_analyis` example notebook demonstrates how to use the wake loss analysis method
 - Renamed `compute_shear_v3` to `compute_shear` and deleted old version of `compute_shear`.
 - The `utils` subpackage has been cleaned up to take both pandas `DataFrame` and `Series` objects where appropriate, refactors pandas code to be much cleaner for both performance and readability, has more user-friendly error messages, and has more consist outputs
 - `openoa.utils.imputing.correlation_matrix_by_id_column` has been renamed to `openoa.utils.imputing.asset_correlation_matrix`

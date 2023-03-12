@@ -13,7 +13,7 @@ REQUIRED = [
     "scikit_learn>=0.20.1,<1.0",
     "requests>=2.21.0",
     "eia-python>=1.22",
-    "pyproj>=3.3",
+    "pyproj>=3.3,<3.4",  # 3.4 has incorrect use of importlib.metadata
     "shapely>=1.7.1",
     "numpy>=1.15.4",
     "pandas>=0.23.4,<1.3",
@@ -22,11 +22,12 @@ REQUIRED = [
     "statsmodels>=0.11",
     "tqdm>=4.28.1",
     "matplotlib>=3.6.*",
-    "bokeh>=2.3.*",
+    "bokeh>=2.4.*",
     "attrs>=22",
     "pytz",
     "pyspark",  # TODO: confirm if options required [sql] or [pandas_on_spark]
     "pyyaml",
+    "h5pyd",
 ]
 
 TESTS = ["pytest>=5.4.2", "pytest-cov>=2.8.1"]
@@ -40,10 +41,10 @@ EXTRAS = {
         "nbmerge==0.0.4",
         "nbsphinx==0.8.*",
         "sphinx_design==0.3.*",
+        "sphinxcontrib-bibtex",
         "myst-parser",
     ],
     "entr": ["pyhive"],
-    "wtk": ["h5pyd"],
     "develop": [
         "pre-commit",
         "black",

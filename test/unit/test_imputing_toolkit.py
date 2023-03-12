@@ -15,10 +15,10 @@ class SimpleFilters(unittest.TestCase):
             data={
                 "time": ["01", "02", "03", "04", "05", "01", "02", "03", "04", "05"],
                 "data": [0, np.nan, 4, 5, 8, 13, 18, 20, 20, 30],
-                "id": ["a", "a", "a", "a", "a", "b", "b", "b", "b", "b"],
+                "WTUR_TurNam": ["a", "a", "a", "a", "a", "b", "b", "b", "b", "b"],
             },
             index=np.arange(10),
-        ).set_index(["time", "id"])
+        ).set_index(["time", "WTUR_TurNam"])
 
         # Test dataframe #2: two assets, first asset as 2 NaN entries, 2nd asset as one NaN entry overlapping with
         # first asset
@@ -26,7 +26,7 @@ class SimpleFilters(unittest.TestCase):
             data={
                 "time": ["01", "02", "03", "04", "05", "01", "02", "03", "04", "05"],
                 "data": [0, np.nan, np.nan, 5, 8, 13, np.nan, 20, 20, 30],
-                "id": ["a", "a", "a", "a", "a", "b", "b", "b", "b", "b"],
+                "WTUR_TurNam": ["a", "a", "a", "a", "a", "b", "b", "b", "b", "b"],
             },
             index=["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"],
         )
@@ -68,10 +68,10 @@ class SimpleFilters(unittest.TestCase):
             data={
                 "time": ["01", "02", "03", "04", "05", "01", "02", "03", "04", "05"],
                 "data": [0, np.nan, np.nan, 5, 8, np.nan, 20, 20, np.nan, np.nan],
-                "id": ["a", "a", "a", "a", "a", "b", "b", "b", "b", "b"],
+                "WTUR_TurNam": ["a", "a", "a", "a", "a", "b", "b", "b", "b", "b"],
             },
             index=["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"],
-        ).set_index(["time", "id"])
+        ).set_index(["time", "WTUR_TurNam"])
 
         # Data frame of 3 assets with overlapping NaN occurrences and highly correlated data
         # Asset 'b' in particular shouldn't be able to get imputed
@@ -111,10 +111,26 @@ class SimpleFilters(unittest.TestCase):
                     85,
                     np.nan,
                 ],
-                "id": ["a", "a", "a", "a", "a", "b", "b", "b", "b", "b", "c", "c", "c", "c", "c"],
+                "WTUR_TurNam": [
+                    "a",
+                    "a",
+                    "a",
+                    "a",
+                    "a",
+                    "b",
+                    "b",
+                    "b",
+                    "b",
+                    "b",
+                    "c",
+                    "c",
+                    "c",
+                    "c",
+                    "c",
+                ],
             },
             index=np.arange(15),
-        ).set_index(["time", "id"])
+        ).set_index(["time", "WTUR_TurNam"])
 
         # Data farme of 3 assets with overlapping NaN occurrences and highly correlated data
         # All data should be imputed
@@ -166,7 +182,7 @@ class SimpleFilters(unittest.TestCase):
                     120,
                     145,
                 ],
-                "id": [
+                "WTUR_TurNam": [
                     "a",
                     "a",
                     "a",
@@ -190,7 +206,7 @@ class SimpleFilters(unittest.TestCase):
                     "c",
                 ],
             },
-        ).set_index(["time", "id"])
+        ).set_index(["time", "WTUR_TurNam"])
 
         # Data frame of two assets that are poorly correlated
         # No data should be imputed
@@ -213,10 +229,25 @@ class SimpleFilters(unittest.TestCase):
                     "07",
                 ],
                 "data": [0, np.nan, np.nan, 5, 8, 11, 14, 40, 40, np.nan, 20, np.nan, 80, 10],
-                "id": ["a", "a", "a", "a", "a", "a", "a", "c", "c", "c", "c", "c", "c", "c"],
+                "WTUR_TurNam": [
+                    "a",
+                    "a",
+                    "a",
+                    "a",
+                    "a",
+                    "a",
+                    "a",
+                    "c",
+                    "c",
+                    "c",
+                    "c",
+                    "c",
+                    "c",
+                    "c",
+                ],
             },
             index=np.arange(14),
-        ).set_index(["time", "id"])
+        ).set_index(["time", "WTUR_TurNam"])
 
     def test_asset_correlation_matrix(self):
         # Test 1, make sure a simple correlation of two assets works
@@ -253,8 +284,8 @@ class SimpleFilters(unittest.TestCase):
         y_test = imputing.impute_data(
             "data",
             "data",
-            self.test2_df.loc[self.test2_df.id == "a"],
-            self.test2_df.loc[self.test2_df.id == "b"],
+            self.test2_df.loc[self.test2_df.WTUR_TurNam == "a"],
+            self.test2_df.loc[self.test2_df.WTUR_TurNam == "b"],
             "time",
         )
         nptest.assert_almost_equal(np.float64(y_test.loc["c"]), np.float64(3.874429), decimal=4)
@@ -264,8 +295,11 @@ class SimpleFilters(unittest.TestCase):
         # NOTE: This test shouldn't have ever worked, but for some reason does, but open to
         # other amendments that don't just get rid of a test case
         y_test = imputing.impute_data(
-            target_col="data1", reference_col="data2",
-            target_data=self.test3_df, reference_data=self.test4_df, align_col="align"
+            target_col="data1",
+            reference_col="data2",
+            target_data=self.test3_df,
+            reference_data=self.test4_df,
+            align_col="align",
         )
         nptest.assert_array_almost_equal(y_test.to_numpy(), self.test3_df["data1"].to_numpy())
 
@@ -323,7 +357,7 @@ class SimpleFilters(unittest.TestCase):
         # Test 1, pass data frame with three highly correlated assets, ensure all NaN data are imputed in
         # final output
         y_test = imputing.impute_all_assets_by_correlation(
-            self.test11_df, "data", "data", 0.7
+            self.test11_df, "data", "data", r2_threshold=0.7
         ).to_frame()
         y = pd.Series([0.440789, 3.401316, 14.3677, 42.8312, 62.887218, 96.734818])
         nptest.assert_array_almost_equal(
@@ -335,14 +369,14 @@ class SimpleFilters(unittest.TestCase):
         # Test 2, 3 highly correlated assets with less data, such that asset 'b' has no data imputed
         y = pd.Series([1.589147, np.nan, np.nan, np.nan, np.nan, np.nan, 123.7000])
         y_test = imputing.impute_all_assets_by_correlation(
-            self.test10_df, "data", "data", 0.7
+            self.test10_df, "data", "data", r2_threshold=0.7
         ).to_frame()
         nan_ind = self.test10_df.loc[self.test10_df["data"].isnull()].index
         nptest.assert_array_almost_equal(y_test.loc[nan_ind, "imputed_data"], y, decimal=4)
 
         # Test 3, 2 poorly correlated data sets, no data should be imputed
         y_test = imputing.impute_all_assets_by_correlation(
-            self.test12_df, "data", "data", 0.7
+            self.test12_df, "data", "data", r2_threshold=0.7
         ).to_frame()
         nptest.assert_array_almost_equal(y_test["imputed_data"], self.test12_df["data"], decimal=4)
 

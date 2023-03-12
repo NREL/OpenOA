@@ -134,6 +134,7 @@ def impute_all_assets_by_correlation(
     data: pd.DataFrame,
     impute_col: str,
     reference_col: str,
+    asset_id_col: str = "WTUR_TurNam",
     r2_threshold: float = 0.7,
     method: str = "linear",
     degree: int = 1,
@@ -157,6 +158,8 @@ def impute_all_assets_by_correlation(
             MultiIndex with a timestamp and ID column for indices, in that order.
         impute_col(:obj:`str`): the name of the column in `data` to be imputed.
         reference_col(:obj:`str`): the name of the column in `data` to be used in imputation.
+        asset_id_col(:obj:`str): The name of the ID column, should be one of the turinbe or tower
+            index column names. Defaults to the turbine column name "WTUR_TurName".
         r2_threshold(:obj:`float`): the correlation threshold for a neighboring assets to be considered valid
             for use in imputation, by default 0.7.
         method(:obj:`str`): The imputation method, should be one of "linear" or "polynomial", by default "linear".
@@ -176,7 +179,6 @@ def impute_all_assets_by_correlation(
     sort_df = pd.DataFrame(corr_df.columns.to_numpy()[ix_sort], index=corr_df.index)
     # Loop over the assets and impute missing data
     for target_id in corr_df.columns:
-
         # If there are no NaN values, then skip the asset altogether, otherwise
         # keep track of the number we need to continue checking for
         ix_target = impute_df.index.get_level_values(1) == target_id
@@ -194,18 +196,17 @@ def impute_all_assets_by_correlation(
 
         num_neighbors = corr_df.shape[0] - 1
         while (ix_nan.sum() > 0) & (num_neighbors > 0) & (r2_neighbor > r2_threshold):
-
             # Get the imputed data based on the correlation-based next nearest neighbor
             imputed_data = impute_data(
                 # target_data=data.xs(target_id, level=1).loc[:, [impute_col]],
                 target_data=data.loc[
                     data.index.get_level_values(1) == target_id, [impute_col]
-                ].droplevel("id"),
+                ].droplevel(asset_id_col),
                 target_col=impute_col,
                 # reference_data=data.xs(id_neighbor, level=1).loc[:, [reference_col]],
                 reference_data=data.loc[
                     data.index.get_level_values(1) == id_neighbor, [reference_col]
-                ].droplevel("id"),
+                ].droplevel(asset_id_col),
                 reference_col=impute_col,
                 method=method,
                 degree=degree,

@@ -18,3 +18,6 @@ together to create reproducible analysis workflows.
 
 .. autoclass:: openoa.analysis.eya_gap_analysis.EYAGapAnalysis
     :members:
+
+.. autoclass:: openoa.analysis.wake_losses.WakeLosses
+    :members:
