@@ -176,7 +176,6 @@ def get_curtailment_df(scada_headers: pd.DataFrame) -> pd.DataFrame:
         "# Date and time",
         "Lost Production to Curtailment (Total) (kWh)",
         "Lost Production to Downtime (kWh)",
-        "Energy Export (kWh)",
     ]
 
     curtailment_df = get_scada_df(scada_headers, use_columns)
@@ -242,6 +241,9 @@ def prepare(asset: str = "kelmarsh", return_value: str = "plantdata") -> PlantDa
 
     logger.info("Reading in the asset data")
     asset_df = pd.read_csv(f"{path}/{asset}_WT_static.csv")
+
+    # Remove any empty lines
+    asset_df = asset_df.dropna(how="all")
 
     # Assign type to turbine for all assets
     asset_df["type"] = "turbine"
