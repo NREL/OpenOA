@@ -478,7 +478,6 @@ def get_merra2_monthly(
     df = df.loc[start_date:end_date]
 
     # save to csv for easy loading as required
-    if save_filename is not None:
-        df.to_csv(save_pathname / f"{save_filename}.csv", index=True)
+    df.to_csv(save_pathname / f"{save_filename}.csv", index=True)
 
     return df
