@@ -36,3 +36,5 @@ sphinx/examplesout.ipynb
 .local
 
 .ipython
+
+*derby.log

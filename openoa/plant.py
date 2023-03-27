@@ -1187,9 +1187,13 @@ class PlantData:
         # Post-validation data manipulations
         # TODO: Need to have a class level input for the user-preferred projection system
         # TODO: Why does the non-WGS84 projection matter?
-        self.parse_asset_geometry()
-        self._calculate_turbine_energy()
 
+        if self.asset is not None:
+            self.parse_asset_geometry()
+
+        if self.scada is not None:
+            self._calculate_turbine_energy()
+        
         # Change the column names to the -25 convention for easier use in the rest of the code base
         self.update_column_names()
 
