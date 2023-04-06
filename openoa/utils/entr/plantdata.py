@@ -93,13 +93,13 @@ def load_scada_meta(conn:EntrConnection, plant_metadata:dict):
     # Build the metadata dictionary
     scada_metadata = {
         "frequency": freq,
-        "id": "wind_turbine_name",
-        "power": "WTUR.W",
-        "pitch": "WROT.BlPthAngVal",
-        "temperature": "WMET.EnvTmp",
+        "WTUR_TurNam": "wind_turbine_name",
+        "WTUR_W": "WTUR.W",
+        "WROT_BlPthAngVal": "WROT.BlPthAngVal",
+        "WMET_EnvTmp": "WMET.EnvTmp",
         "time": "time",
-        "wind_direction": "WMET.HorWdDir",
-        "windspeed": "WMET.HorWdSpd"
+        "WMET_HorWdDir": "WMET.HorWdDir",
+        "WMET_HorWdSpd": "WMET.HorWdSpd"
     }
 
     return scada_metadata
@@ -185,8 +185,8 @@ def load_curtailment_meta(conn:EntrConnection, plant_metadata:dict) -> dict:
     # Build the metadata dictionary
     curtail_metadata = {
         "frequency": freq,
-        "availability": 'IAVL.DnWh',
-        "curtailment": 'IAVL.ExtPwrDnWh',
+        "IAVL_DnWh": 'IAVL.DnWh',
+        "IAVL_ExtPwrDnWh": 'IAVL.ExtPwrDnWh',
         "time": "date_time"
     }
 
@@ -239,7 +239,7 @@ def load_meter_meta(conn:EntrConnection, plant_metadata:dict) -> dict:
     # Build the metadata dictionary
     meter_metadata = {
         "frequency": freq,
-        "energy": "MMTR.SupWh",
+        "MMTR_SupWh": "MMTR.SupWh",
         "time": "date_time"
     }
 
@@ -305,11 +305,11 @@ def load_reanalysis(conn:EntrConnection, plant_metadata:dict, reanalysis_product
 
         reanalysis_metadata = {
             "frequency": "H", #TODO: Read this from Metadata tables
-            "surface_pressure": "WMETR.EnvPres",
-            "temperature": "WMETR.EnvTmp",
+            "WMETR_EnvPres": "WMETR.EnvPres",
+            "WMETR_EnvTmp": "WMETR.EnvTmp",
             "time": "date_time",
-            "windspeed_u": "WMETR.HorWdSpdU",
-            "windspeed_v": "WMETR.HorWdSpdV"
+            "WMETR_HorWdSpdU": "WMETR.HorWdSpdU",
+            "WMETR_HorWdSpdV": "WMETR.HorWdSpdV"
         }
 
         reanalysis_df_dict[product] = reanalysis_df
