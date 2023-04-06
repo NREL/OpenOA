@@ -18,6 +18,58 @@ R = 287.058  # Gas constant for dry air, units of J/kg/K
 Rw = 461.5  # Gas constant of water vapour, unit J/kg/K
 
 
+def wrap_180(x: float | np.ndarray | pd.Series | pd.DataFrame):
+    """
+    Converts an angle, an array of angles, or a pandas Series or DataFrame of angles in degrees to
+    the range -180 to +180 degrees.
+
+    Args:
+        x (float | np.ndarray | pd.Series | pd.DataFrame): Input angle(s) (degrees)
+    Returns:
+        float | np.ndarray: The input angle(s) converted to the range -180 to +180 degrees, returned
+            as a float or numpy array (degrees)
+    """
+    input_type = type(x)
+    if (input_type == pd.core.series.Series) | (input_type == pd.core.frame.DataFrame):
+        x = x.values
+
+    input_size = np.size(x)
+
+    x = x % 360.0
+    x = np.where(x > 180.0, x - 360.0, x)
+
+    return x if input_size > 1 else float(x)
+
+
+def circular_mean(x: pd.DataFrame | pd.Series | np.ndarray, axis: int = 0):
+    """
+    Compute circular mean of wind direction data for a pandas Series or 1-dimensional numpy array,
+    or along any dimension of a multi-dimensional pandas DataFrame or numpy array
+
+    Args:
+        x(pd.DataFrame | pd.Series | np.ndarray): A pandas DataFrame or Series, or a numpy array
+            containing wind direction data in degrees.
+        axis(int): The axis to which the circular mean will be applied. This value must be less than
+            the number of dimensions in x. Defaults to 0.
+
+    Returns:
+        pd.Series | float | np.ndarray: The circular mean of the wind directions along the specified
+            axis between 0 and 360 degrees (degrees).
+    """
+    if axis >= x.ndim:
+        raise ValueError("The axis argument cannot be greater than the dimension of the data (x).")
+
+    return (
+        np.degrees(
+            np.arctan2(
+                np.sin(np.radians(x)).mean(axis=axis),
+                np.cos(np.radians(x)).mean(axis=axis),
+            )
+        )
+        % 360.0
+    )
+
+
 @series_method(data_cols=["u", "v"])
 def compute_wind_direction(
     u: pd.Series | str, v: pd.Series | str, data: pd.DataFrame = None

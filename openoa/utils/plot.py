@@ -917,8 +917,8 @@ def plot_windfarm(
 
     # Create a bokeh figure with tiles
     plot_map = figure(
-        plot_width=plot_width,
-        plot_height=plot_height,
+        width=plot_width,
+        height=plot_height,
         x_axis_type="mercator",
         y_axis_type="mercator",
         **figure_options,
@@ -1686,3 +1686,252 @@ def plot_power_curves(
     plt.show()
     if return_fig:
         return fig, ax
+
+
+def plot_wake_losses(
+    bins: NDArrayFloat,
+    efficiency_data_por: NDArrayFloat,
+    efficiency_data_lt: NDArrayFloat,
+    energy_data_por: NDArrayFloat = None,
+    energy_data_lt: NDArrayFloat = None,
+    bin_axis_label: str = "wd",
+    turbine_id: str = None,
+    xlim: tuple[float, float] = (None, None),
+    ylim_efficiency: tuple[float, float] = (None, None),
+    ylim_energy: tuple[float, float] = (None, None),
+    return_fig: bool = False,
+    figure_kwargs: dict = None,
+    plot_kwargs_line: dict = {},
+    plot_kwargs_fill: dict = {},
+    legend_kwargs: dict = {},
+):
+    """Plots wake losses in the form of wind farm efficiency as well as normalized wind plant energy
+    production for both the period of record and with the long-term correction as a function of either
+    wind direction or wind speed. If the data arguments contain two dimensions, 95% confidence intervals
+    will be plotted for each variable.
+
+    Args:
+        bins (:obj:`np.ndarray`): Wind direction or wind speed bin values representing the x-axis in
+            the plots.
+        efficiency_data_por (:obj:`np.ndarray`): 1D or 2D array containing wind farm or wind turbine
+            efficiency for the period of record for each bin in the `bins` argument. If a 2D array is
+            provided, the second dimension should contain results from different Monte Carlo iterations
+            and 95% confidence intervals will be plotted.
+        efficiency_data_lt (:obj:`np.ndarray`): 1D or 2D array containing long-term corrected wind farm
+            or wind turbine efficiency for each bin in the `bins` argument. If a 2D array is provided,
+            the second dimension should contain results from different Monte Carlo iterations and 95%
+            confidence intervals will be plotted.
+        energy_data_por (:obj:`np.ndarray`, optional): Optional 1D or 2D array containing normalized
+            energy production for the period of record for each bin in the `bins` argument. If a 2D
+            array is provided, the second dimension should contain results from different Monte Carlo
+            iterations and 95% confidence intervals will be plotted. If a value of None is provided,
+            normalized energy will not be plotted. Defaults to None.
+        energy_data_lt (:obj:`np.ndarray`, optional): Optional 1D or 2D array containing normalized
+            long-term corrected energy production for each bin in the `bins` argument. If a 2D array
+            is provided, the second dimension should contain results from different Monte Carlo
+            iterations and 95% confidence intervals will be plotted. If a value of None is provided,
+            normalized energy will not be plotted. Defaults to None.
+        bin_axis_label (str, optional): The label to use for the bin variable (x) axis. Defaults to None.
+        turbine_id (str, optional): Name of turbine if data are provided for a single wind turbine.
+            Used to determine title and plot axis labels. Defaults to None.
+        xlim (:obj:`tuple[float, float]`, optional): A tuple of floats representing the x-axis
+            wind direction plotting display limits (degrees). Defaults to (None, None).
+        ylim_efficiency (:obj:`tuple[float, float]`, optional): A tuple of the y-axis plotting display
+            limits for the wind farm efficiency plot (top plot). Defaults to (None, None).
+        ylim_energy (:obj:`tuple[float, float]`, optional): If `energy_data_por` and `energy_data_lt`
+            arguments are provided, a tuple of the y-axis plotting display limits for the wind farm
+            energy distribution plot (bottom plot). Defaults to (None, None).
+        return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
+        figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
+            that are passed to `plt.figure()`. Defaults to None.
+        plot_kwargs_line (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
+            `ax.plot()` for plotting lines for the wind farm efficiency and, if `energy_data_por` and
+            `energy_data_lt` arguments are provided, energy distributions subplots. Defaults to {}.
+        plot_kwargs_fill (:obj:`dict`, optional): If `UQ` is True, additional plotting keyword arguments
+            that are passed to `ax.fill_between()` for plotting shading regions for 95% confidence
+            intervals for the wind farm efficiency and, if `energy_data_por` and `energy_data_lt` arguments
+            are provided, energy distributions subplots. Defaults to {}.
+        legend_kwargs (:obj:`dict`, optional): Additional legend keyword arguments that are passed to
+            `ax.legend()` for the wind farm efficiency and, if `energy_data_por` and `energy_data_lt`
+            arguments are provided, energy distributions subplots. Defaults to {}.
+    Returns:
+        None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes] | tuple[matplotlib.pyplot.Figure, tuple [matplotlib.pyplot.Axes, matplotlib.pyplot.Axes]]:
+            If `return_fig` is True, then the figure and axes object(s), corresponding to the wake
+            loss plot or, if `energy_data_por` and `energy_data_lt` arguments are provided, wake loss
+            and normalized energy plots, are returned for further tinkering/saving.
+    """
+    color_codes = ["#4477AA", "#228833"]
+
+    plot_kwargs_fill.setdefault("alpha", 0.2)
+
+    if xlim == (None, None):
+        xlim = (bins[0], bins[-1])
+
+    if figure_kwargs is None:
+        figure_kwargs = {}
+
+    # determine if confidence intervals should be plotted (i.e., UQ) based on dimension of data
+    if (efficiency_data_por.ndim == 1) & (efficiency_data_lt.ndim == 1):
+        UQ = False
+    elif (efficiency_data_por.ndim == 2) & (efficiency_data_lt.ndim == 2):
+        UQ = True
+    else:
+        raise ValueError(
+            "The inputs `efficiency_data_por` and `efficiency_data_por` must have the same dimensions."
+        )
+
+    # determine if normalized energy should be plotted
+    if (energy_data_por is not None) & (energy_data_lt is not None):
+        if (not UQ) & (energy_data_por.ndim == 1) & (energy_data_lt.ndim == 1):
+            plot_norm_energy = True
+        elif UQ & (energy_data_por.ndim == 2) & (energy_data_lt.ndim == 2):
+            plot_norm_energy = True
+        else:
+            raise ValueError(
+                (
+                    "The inputs `energy_data_por` and `energy_data_lt` must both have the same dimensions"
+                    "as `efficiency_data_por` and `efficiency_data_lt`."
+                )
+        )
+    elif (energy_data_por is None) & (energy_data_lt is None):
+        plot_norm_energy = False
+    else:
+        raise TypeError(
+            "The inputs `energy_data_por` and `energy_data_lt` must either both be provided or both be None."
+        )
+
+    if plot_norm_energy:
+        figure_kwargs.setdefault("figsize", (9, 9.1))
+        fig = plt.figure(**figure_kwargs)
+        ax1 = fig.add_subplot(211)
+        ax2 = fig.add_subplot(212, sharex=ax1)
+        axs = (ax1, ax2)
+    else:
+        figure_kwargs.setdefault("figsize", (9, 5))
+        fig = plt.figure(**figure_kwargs)
+        ax1 = fig.add_subplot(111)
+        axs = [ax1]
+    axs[0].plot(xlim, [1, 1], "k", linewidth=1.5)
+
+    if UQ:
+        axs[0].plot(
+            bins,
+            np.mean(efficiency_data_por, axis=0),
+            color=color_codes[0],
+            label="Period of Record",
+            **plot_kwargs_line,
+        )
+        axs[0].fill_between(
+            bins,
+            np.percentile(efficiency_data_por, 2.5, axis=0),
+            np.percentile(efficiency_data_por, 97.5, axis=0),
+            color=color_codes[0],
+            label="_nolegend_",
+            **plot_kwargs_fill,
+        )
+
+        axs[0].plot(
+            bins,
+            np.mean(efficiency_data_lt, axis=0),
+            color=color_codes[1],
+            label="Long-Term Corrected",
+            **plot_kwargs_line,
+        )
+        axs[0].fill_between(
+            bins,
+            np.percentile(efficiency_data_lt, 2.5, axis=0),
+            np.percentile(efficiency_data_lt, 97.5, axis=0),
+            color=color_codes[1],
+            label="_nolegend_",
+            **plot_kwargs_fill,
+        )
+
+        if plot_norm_energy:
+            axs[1].plot(
+                bins,
+                np.mean(energy_data_por, axis=0),
+                color=color_codes[0],
+                label="Period of Record",
+                **plot_kwargs_line,
+            )
+            axs[1].fill_between(
+                bins,
+                np.percentile(energy_data_por, 2.5, axis=0),
+                np.percentile(energy_data_por, 97.5, axis=0),
+                color=color_codes[0],
+                label="_nolegend_",
+                **plot_kwargs_fill,
+            )
+
+            axs[1].plot(
+                bins,
+                np.mean(energy_data_lt, axis=0),
+                color=color_codes[1],
+                label="Long-Term Corrected",
+                **plot_kwargs_line,
+            )
+            axs[1].fill_between(
+                bins,
+                np.percentile(energy_data_lt, 2.5, axis=0),
+                np.percentile(energy_data_lt, 97.5, axis=0),
+                color=color_codes[1],
+                label="_nolegend_",
+                **plot_kwargs_fill,
+            )
+
+    else:  # without UQ
+        axs[0].plot(
+            bins,
+            efficiency_data_por,
+            color=color_codes[0],
+            label="Period of Record",
+            **plot_kwargs_line,
+        )
+
+        axs[0].plot(
+            bins,
+            efficiency_data_lt,
+            color=color_codes[1],
+            label="Long-Term Corrected",
+            **plot_kwargs_line,
+        )
+
+        if plot_norm_energy:
+            axs[1].plot(
+                bins,
+                energy_data_por,
+                color=color_codes[0],
+                label="Period of Record",
+                **plot_kwargs_line,
+            )
+
+            axs[1].plot(
+                bins,
+                energy_data_lt,
+                color=color_codes[1],
+                label="Long-Term Corrected",
+                **plot_kwargs_line,
+            )
+
+    axs[0].set_xlim(xlim)
+    axs[0].set_ylim(ylim_efficiency)
+    axs[len(axs) - 1].set_xlabel(bin_axis_label)
+    axs[0].legend(**legend_kwargs)
+    if turbine_id is not None:
+        axs[0].set_title(f"Wind Turbine {turbine_id}")
+        axs[0].set_ylabel("Wind Turbine Efficiency (-)")
+    else:
+        axs[0].set_ylabel("Wind Plant Efficiency (-)")
+
+    if plot_norm_energy:
+        axs[1].set_ylim(ylim_energy)
+        axs[1].legend(**legend_kwargs)
+        axs[1].set_ylabel("Normalized Wind Plant\nEnergy Production (-)")
+
+        plt.tight_layout()
+        if return_fig:
+            return fig, axs
+    else:
+        plt.tight_layout()
+        if return_fig:
+            return fig, ax1

@@ -416,10 +416,10 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         expected = {
             "merra2": [5.42523278, 6.86883337, 5.02690892],
             "era5": [5.20508049, 6.71586744, 5.23824611],
-            "merra2_winddirection": [11.74700241, 250.90081133, 123.70142025],
-            "era5_winddirection": [23.4291153, 253.14150601, 121.25886916],
-            "merra2_temperature": [289.87128364, 275.26493716, 281.72562887],
-            "era5_temperature": [290.82110632, 276.62490053, 282.71629935],
+            "merra2_WMETR_HorWdDir": [11.74700241, 250.90081133, 123.70142025],
+            "era5_WMETR_HorWdDir": [23.4291153, 253.14150601, 121.25886916],
+            "merra2_WMETR_EnvTmp": [289.87128364, 275.26493716, 281.72562887],
+            "era5_WMETR_EnvTmp": [290.82110632, 276.62490053, 282.71629935],
         }
 
         date_ind = pd.to_datetime(["2014-06-01", "2014-12-01", "2015-10-01"])
@@ -471,10 +471,10 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         expected = {
             "merra2": np.array([11.02459231, 7.04306896, 8.41880152]),
             "era5": np.array([10.47942319, 7.71069617, 9.60864791]),
-            "merra2_winddirection": np.array([213.81683361, 129.08053181, 170.39815032]),
-            "era5_winddirection": np.array([212.23854097, 127.75317448, 170.33488958]),
-            "merra2_temperature": np.array([279.67922333, 285.69317833, 278.15574917]),
-            "era5_temperature": np.array([281.14880642, 285.81961816, 280.42017656]),
+            "merra2_WMETR_HorWdDir": np.array([213.81683361, 129.08053181, 170.39815032]),
+            "era5_WMETR_HorWdDir": np.array([212.23854097, 127.75317448, 170.33488958]),
+            "merra2_WMETR_EnvTmp": np.array([279.67922333, 285.69317833, 278.15574917]),
+            "era5_WMETR_EnvTmp": np.array([281.14880642, 285.81961816, 280.42017656]),
         }
 
         date_ind = pd.to_datetime(["2014-01-02", "2014-10-12", "2015-12-28"])
