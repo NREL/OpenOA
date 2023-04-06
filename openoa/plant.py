@@ -19,7 +19,6 @@ from shapely.geometry import Point
 
 import openoa.utils.timeseries as ts
 import openoa.utils.met_data_processing as met
-import openoa.utils.entr as entr
 from openoa.utils.metadata_fetch import attach_eia_data
 from openoa.utils.unit_conversion import convert_power_to_energy
 
@@ -1800,81 +1799,15 @@ class PlantData:
             self.calculate_nearest_neighbor()
         return self.asset.loc[id, "nearest_tower_id"].values[0]
 
+    @classmethod
+    def from_entr(cls, *args, **kwargs):
+        from openoa.utils.entr.plantdata import from_entr
+        return from_entr(cls, *args, **kwargs)
+
 
 # **********************************************************
 # Define additional class methods for custom loading methods
 # **********************************************************
 
-# Todo: Demonstrate working openoav3 constructor with Hive
-# Todo: Add Pyspark constructor with option to preserve pyspark dataframe
-def from_entr(
-    cls,
-    plant_name:str,
-    analysis_type:str=None,
-    connection:entr.EntrConnection=None,
-    reanalysis_products:list[str]=["merra2", "era5"]
-)->PlantData:
-    """
-    from_entr
-        Load a PlantData object from data in an entr_warehouse.
-    
-    Args:
-            connection_type(str): pyspark|pyhive
-            thrift_server_host(str): URL of the Apache Thrift server
-            thrift_server_port(int): Port of the Apache Thrift server
-            database(str): Name of the Hive database
-            wind_plant(str): Name of the wind plant you'd like to load
-            reanalysis_products(list[str]): Reanalysis products to load from the warehouse.
-            aggregation: Not yet implemented
-            date_range: Not yet implemented
-    
-    Returns:
-            plant(PlantData): An OpenOA PlantData object.
-    """
-
-    tic = perf_counter()
-
-    if connection is None:
-        connection = entr.PySparkEntrConnection()
-
-    toc = perf_counter()
-    print(f"{toc-tic} sec\tENTR Connection obtained")
-
-    tic = perf_counter()
-    plant_metadata = entr.load_metadata(connection, plant_name)
-    asset_df, asset_metadata = entr.load_asset(connection, plant_metadata)
-    scada_df, scada_metadata = entr.load_scada(connection, plant_metadata)
-    curtail_df, curtail_metadata = entr.load_curtailment(connection, plant_metadata)
-    meter_df, meter_metadata = entr.load_meter(connection, plant_metadata)
-    reanalysis_df_dict, reanalysis_metadata_dict = entr.load_reanalysis(connection, plant_metadata, reanalysis_products)
-    toc = perf_counter()
-    print(f"{toc-tic} sec\tData loaded from Warehouse into Python")
-
-
-    combined_metadata = plant_metadata.copy()
-    combined_metadata["asset"] = asset_metadata
-    combined_metadata["scada"] = scada_metadata
-    combined_metadata["curtail"] = curtail_metadata
-    combined_metadata["meter"] = meter_metadata
-    combined_metadata["reanalysis"] = reanalysis_metadata_dict
-
-    tic = perf_counter()
-
-    plant = PlantData(
-        analysis_type=analysis_type,  # No validation desired at this point in time
-        metadata=combined_metadata,
-        scada=scada_df,
-        meter=meter_df,
-        curtail=curtail_df,
-        asset=asset_df,
-        reanalysis=reanalysis_df_dict,
-    )
-
-    toc = perf_counter()
-    print(f"{toc-tic} sec\tPlantData Object Creation")
-
-    return plant
-
-
-setattr(PlantData, "from_entr", classmethod(from_entr))
+# TODO: Document this
 setattr(PlantData, "attach_eia_data", attach_eia_data)
