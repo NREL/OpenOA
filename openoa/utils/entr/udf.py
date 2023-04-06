@@ -1,5 +1,6 @@
 import pandas as pd
-from openoa.utils.entr.connection import PysparkEntrConnection
+import pickle
+from openoa.utils.entr.connection import PySparkEntrConnection
 
 ### Multi-Plant AEP Map
 
@@ -90,34 +91,34 @@ def aep_spark_map_build_metadata(conn:PySparkEntrConnection, plants:list):
 
         metadata_dict[plant]["reanalysis"]["era5"] =  {
             "frequency": "H", #TODO: Read this from Metadata tables
-            "surface_pressure": "WMETR.EnvPres",
-            "temperature": "WMETR.EnvTmp",
+            "WMETR_EnvPres": "WMETR.EnvPres",
+            "WMETR_EnvTmp": "WMETR.EnvTmp",
             "time": "date_time",
-            "windspeed_u": "WMETR.HorWdSpdU",
-            "windspeed_v": "WMETR.HorWdSpdV",
-            "density":  "WMETR.AirDen"
+            "WMETR_HorWdSpdU": "WMETR.HorWdSpdU",
+            "WMETR_HorWdSpdV": "WMETR.HorWdSpdV",
+            "WMETR_AirDen":  "WMETR.AirDen"
         }
 
         metadata_dict[plant]["reanalysis"]["merra2"] =  {
             "frequency": "H", #TODO: Read this from Metadata tables
-            "surface_pressure": "WMETR.EnvPres",
-            "temperature": "WMETR.EnvTmp",
+            "WMETR_EnvPres": "WMETR.EnvPres",
+            "WMETR_EnvTmp": "WMETR.EnvTmp",
             "time": "date_time",
-            "windspeed_u": "WMETR.HorWdSpdU",
-            "windspeed_v": "WMETR.HorWdSpdV",
-            "density":  "WMETR.AirDen"
+            "WMETR_HorWdSpdU": "WMETR.HorWdSpdU",
+            "WMETR_HorWdSpdV": "WMETR.HorWdSpdV",
+            "WMETR_AirDen":  "WMETR.AirDen"
         }
 
         metadata_dict[plant]["curtail"] = {
             "frequency": "1M", #TODO: Read this from Metadata tables
-            "availability": 'IAVL.DnWh',
-            "curtailment": 'IAVL.ExtPwrDnWh',
+            "IAVL_DnWh": 'IAVL.DnWh',
+            "IAVL_ExtPwrDnWh": 'IAVL.ExtPwrDnWh',
             "time": "date_time"
         }
 
         metadata_dict[plant]["meter"] = {
             "frequency": "10T", #TODO: Read this from Metadata tables
-            "energy": "MMTR.SupWh",
+            "MMTR_SupWh": "MMTR.SupWh",
             "time": "date_time"
         }
 
