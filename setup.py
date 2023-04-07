@@ -16,16 +16,15 @@ REQUIRED = [
     "pyproj>=3.3,<3.4",  # 3.4 has incorrect use of importlib.metadata
     "shapely>=1.7.1",
     "numpy>=1.15.4",
-    "pandas>=0.23.4,<1.3",
-    "pygam>=0.8.0",
+    "pandas>=2.0",
+    "pygam>=0.9.0",
     "scipy>=1.7",
     "statsmodels>=0.11",
     "tqdm>=4.28.1",
-    "matplotlib>=3.6.*",
-    "bokeh>=2.4.*",
+    "matplotlib>=3.6",
+    "bokeh>=2.4",  # 3.0???
     "attrs>=22",
     "pytz",
-    "pyspark",  # TODO: confirm if options required [sql] or [pandas_on_spark]
     "pyyaml",
     "h5pyd",
 ]
@@ -34,13 +33,13 @@ TESTS = ["pytest>=5.4.2", "pytest-cov>=2.8.1"]
 
 EXTRAS = {
     "docs": [
-        "ipython==8.5.*",
-        "m2r2>=0.3.*",
+        "ipython==8.5",
+        "m2r2>=0.3",
         "Sphinx>=5.0",
-        "pydata-sphinx-theme==0.10.*",
+        "pydata-sphinx-theme==0.10",
         "nbmerge==0.0.4",
-        "nbsphinx==0.8.*",
-        "sphinx_design==0.3.*",
+        "nbsphinx==0.8",
+        "sphinx_design==0.3",
         "sphinxcontrib-bibtex",
         "myst-parser",
     ],
