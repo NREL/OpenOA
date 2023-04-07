@@ -14,7 +14,7 @@ REQUIRED = [
     "requests>=2.21.0",
     "eia-python>=1.22",
     "pyproj>=3.5",
-    "shapely>=1.7.1",
+    "shapely>=1.8",
     "numpy>=1.24",
     "pandas>=2.0",
     "pygam>=0.9.0",
@@ -22,7 +22,7 @@ REQUIRED = [
     "statsmodels>=0.11",
     "tqdm>=4.28.1",
     "matplotlib>=3.6",
-    "bokeh>=2.4",  # 3.0???
+    "bokeh>=2.4",
     "attrs>=22",
     "pytz",
     "pyyaml",
