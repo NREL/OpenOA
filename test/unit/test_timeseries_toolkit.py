@@ -18,10 +18,14 @@ class SimpleTimeseriesTests(unittest.TestCase):
         self.day_of_data = pd.Series(
             pd.date_range(start="1/1/2018 00:00:00", end="1/1/2018 23:59:59", freq="10min")
         )
-        self.two_days_of_data = self.day_of_data.append(
-            pd.Series(
-                pd.date_range(start="2/1/2018 00:00:00", end="2/1/2018 23:59:59", freq="10min")
-            )
+        self.two_days_of_data = pd.concat(
+            [
+                self.day_of_data,
+                pd.Series(
+                    pd.date_range(start="2/1/2018 00:00:00", end="2/1/2018 23:59:59", freq="10min")
+                ),
+            ],
+            axis=0,
         )
 
     def test_convert_local_to_utc(self):
