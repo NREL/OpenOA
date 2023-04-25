@@ -5,6 +5,7 @@ from openoa.plant import ANALYSIS_REQUIREMENTS
 from openoa.utils.entr.connection import EntrConnection, PySparkEntrConnection
 from time import perf_counter
 import pandas as pd
+from typing import Union
 
 import logging
 
@@ -84,10 +85,10 @@ def load_plant_assets(conn:EntrConnection, plant_id):
 ## --- OpenOA Report Table and Metadata
 
 entr_tables_dict = {
-    "curtail": "entr_warehouse.openoa_curtailment_and_availability",
-    "reanalysis": "entr_warehouse.openoa_reanalysis",
-    "meter": "entr_warehouse.openoa_revenue_meter",
-    "scada", "entr_warehouse.openoa_wtg_scada"
+    "curtail": "openoa_curtailment_and_availability",
+    "reanalysis": "openoa_reanalysis",
+    "meter": "openoa_revenue_meter",
+    "scada": "openoa_wtg_scada"
  }
 
 def load_openoa_rpt_table(conn:EntrConnection, entr_plant_id:str, table_name:str, columns:list[str], reanalysis=None) -> pd.DataFrame:
@@ -96,21 +97,22 @@ def load_openoa_rpt_table(conn:EntrConnection, entr_plant_id:str, table_name:str
     table_query_fragment = entr_tables_dict[table_name]
 
     # Column projection query fragment
-    column_query_fragment = ",".join([f"float(`{column.replace("_", ".")}` as {column})" for column in columns])
-    column_query_fragment += "date_time as time,"
+    column_query_fragment = ",".join([f"float(`{column.replace('_','.')}`) as {column} " for column in columns])
+    column_query_fragment += ", date_time as time"
     if table_name == "scada": ## Only scada has Turbine Name column
         column_query_fragment += ",entr_warehouse.openoa_wtg_scada.wind_turbine_name as WTUR_TurNam"
 
     # Filter query fragment
     filter_query_fragment = f"plant_id = {entr_plant_id}"
     if table_name == "reanalysis":
-        filter_query_fragment += f" AND reanalysis_dataset_name = \"{reanalysis}\""
+        filter_query_fragment += f" AND reanalysis_dataset_name = \"{reanalysis.upper()}\""
 
     # Build full query from fragments
     query = f"SELECT {column_query_fragment} FROM {table_query_fragment} WHERE {filter_query_fragment} ORDER BY time;"
     logging.debug(query)
 
     # Execute query in database, return pandas dataframe
+    print(query)
     df = conn.pandas_query(query)
 
     return df
@@ -120,17 +122,18 @@ def load_openoa_rpt_table_tag_metadata(conn:EntrConnection, plant_name:str, tabl
     # TODO: What about filtering by plant id? The current schema assumes all plants will have the same metadata.
 
     # Always the same three metadata columns
-    column_query_fragment = ["interval_s", "value_type", "value_units"]
+    column_query_fragment = "interval_s, value_type, value_units"
 
     # Metadata table name
-    table_query_fragment = entr_tables_dict[table_name] + "_tag_meta"
+    table_query_fragment = entr_tables_dict[table_name] + "_tag_metadata"
 
     # Filter by tags of interest
-    tag_names_sql = ",".join([f'`{column}`' for column in columns])
+    tag_names_sql = ",".join([f'"{column}"' for column in columns])
+    print(tag_names_sql)
 
     filter_query_fragment = f"entr_tag_name in ({tag_names_sql})"
     if table_name == "reanalysis":
-        filter_query_fragment += f"AND reanalysis_dataset_name == \"{reanalysis}\""
+        filter_query_fragment += f"AND reanalysis_dataset_name == \"{reanalysis.upper()}\""
 
     # Build simple select query
     query = f"SELECT {column_query_fragment} FROM {table_query_fragment} WHERE {filter_query_fragment};"
@@ -151,7 +154,7 @@ def load_plant_reanalysis():
 
 def from_entr(
     plant_name:str,
-    schema:str|dict=None,
+    schema:Union[str,dict]=None,
     connection:EntrConnection=None,
     reanalysis_products:list[str]=["merra2", "era5"]
 )->PlantData:
@@ -174,7 +177,7 @@ def from_entr(
         connection = PySparkEntrConnection()
 
     toc = perf_counter()
-    loggigng.debug(f"{toc-tic} sec\tENTR Connection obtained"))
+    logging.debug(f"{toc-tic} sec\tENTR Connection obtained")
     tic = perf_counter()
 
     # Get plant level metadata, including the plant_id, from the plant name string.
@@ -182,28 +185,40 @@ def from_entr(
     plant_id = plant_metadata["_entr_plant_id"]
 
     # Grab schema from openoa.plant if it was provided as a string
-    if schema is str:
+    if type(schema) == str:
+        analysis_type = schema
         schema = ANALYSIS_REQUIREMENTS[schema]
-    assert schema is dict, "schema must be a dictionary, or the name of an openoa analysis"
+    assert type(schema) == dict, "schema must be a dictionary, or the name of an openoa analysis"
 
     combined_metadata = plant_metadata.copy()
     combined_tables = {}
     # Load meter, scada, availability, and curtailment tables into combined_tables and combined_metadata
-    for table,spec in schema:
+    print(schema)
+    for table,spec in schema.items():
+        print(table)
         columns = spec["columns"]
         if table == "reanalysis":
-            combined_tables[table], combined_metadata[table] = load_plant_reanalysis(...)
-        if table == "asset":
-            combined_tables[table], combined_metadata[table] = load_plant_assets(...)
+            combined_tables["reanalysis"] = {}
+            combined_metadata["reanalysis"] = {}
+            for reanalysis_product in reanalysis_products:
+                combined_tables["reanalysis"][reanalysis_product] = load_openoa_rpt_table(connection, plant_id, "reanalysis", spec["columns"], reanalysis=reanalysis_product)
+                combined_metadata["reanalysis"][reanalysis_product] = load_openoa_rpt_table_tag_metadata(connection, plant_id, "reanalysis", spec["columns"], reanalysis=reanalysis_product)
+        elif table == "asset":
+            combined_tables[table], combined_metadata[table] = load_plant_assets(connection, plant_id)
         else:
-            combined_metadata[table] = load_openoa_rpt_table_tag_metadata(...)
-            combined_tables[table] = load_openoa_rpt_table(...)
+            combined_metadata[table] = load_openoa_rpt_table_tag_metadata(connection, plant_id, table, spec["columns"])
+            combined_tables[table] = load_openoa_rpt_table(connection, plant_id, table, spec["columns"])
 
     ## TODO: Any pre-processing?
 
     toc = perf_counter()
     logging.debug(f"{toc-tic} sec\tData loaded from Warehouse into Python")
     tic = perf_counter()
+
+    print("METADATA:")
+    print(combined_metadata)
+    print("TABLES:")
+    print(combined_tables)
 
     plant = PlantData(
         analysis_type=analysis_type,
