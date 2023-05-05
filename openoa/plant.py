@@ -62,7 +62,7 @@ ANALYSIS_REQUIREMENTS = {
     },
     "ElectricalLosses": {
         "scada": {
-            "columns": ["WTUR_SupWh"],
+            "columns": ["id", "WMET_HorWdSpd", "WTUR_W"],
             "freq": _at_least_daily,
         },
         "meter": {
@@ -72,11 +72,11 @@ ANALYSIS_REQUIREMENTS = {
     },
     "WakeLosses": {
         "scada": {
-            "columns": ["id", "windspeed", "power"],
+            "columns": ["id", "WMET_HorWdSpd", "WTUR_W"],
             "freq": _at_least_hourly,
         },
         "reanalysis": {
-            "columns": ["windspeed", "wind_direction"],
+            "columns": ["WMETR_HorWdSpd", "WMETR_HorWdDir"],
             "freq": _at_least_hourly,
         },
     },
@@ -129,6 +129,7 @@ class FromDictMixin:
             raise AttributeError(
                 f"The class defintion for {cls.__name__} is missing the following inputs: {undefined}"
             )
+        print(f"FromDict called for class {cls} with data = {data}")
         return cls(**kwargs)  # type: ignore
 
 
@@ -385,6 +386,7 @@ def load_to_pandas_dict(
 
 
 def convert_reanalysis(value: dict[str, dict]):
+    print("Convert reanalysis")
     return {k: ReanalysisMetaData.from_dict(v) for k, v in value.items()}
 
 
@@ -941,7 +943,9 @@ class PlantMetaData(FromDictMixin):  # noqa: F821
     curtail: CurtailMetaData = field(default={}, converter=CurtailMetaData.from_dict)
     asset: AssetMetaData = field(default={}, converter=AssetMetaData.from_dict)
     reanalysis: dict[str, ReanalysisMetaData] = field(
-        default={}, converter=convert_reanalysis  # noqa: F821
+        default={
+            "product": {}
+        }, converter=convert_reanalysis  # noqa: F821
     )  # noqa: F821
 
     @property
@@ -1257,12 +1261,23 @@ class PlantData:
         if None in self.analysis_type:
             return
         name = instance.name
-        if value is None:
+        if value is None and name != "reanalysis":
+            metadata_object = getattr(self.metadata, name)
             self._errors["missing"].update(
-                {name: list(getattr(self.metadata, name).col_map.values())}
+                {name: list(metadata_object.col_map.values())}
             )
-            self._errors["dtype"].update({name: list(getattr(self.metadata, name).dtypes.keys())})
+            self._errors["dtype"].update({name: list(metadata_object.dtypes.keys())})
+        elif value is None and name == "reanalysis":
 
+            self._errors["missing"].update(
+                {
+                    name: {
+                        sub_name: list(meta_class.col_map.values())
+                        for sub_name, meta_class in getattr(self.metadata, name).items()
+                    }
+                }
+            )
+            
         else:
             self._errors["missing"].update(self._validate_column_names(category=name))
             self._errors["dtype"].update(self._validate_dtypes(category=name))
@@ -1451,10 +1466,10 @@ class PlantData:
 
         missing_cols = {}
         for name, df in self.data_dict.items():
-            if category != "all" and category != "name":
+            if category != "all" and category != name:
                 # Skip any irrelevant columns if not processing all data types
                 continue
-
+            print("validate:", name)
             if name == "reanalysis":
                 for sub_name, df in df.items():
                     missing_cols[f"{name}-{sub_name}"] = column_validator(
@@ -1574,6 +1589,7 @@ class PlantData:
         Raises:
             ValueError: Raised at the end if errors are caught in the validation steps.
         """
+        x()
         # Put the index columns back into the column space to ensure success of re-validation
         self._unset_index_columns()
 
@@ -1585,7 +1601,7 @@ class PlantData:
             self.metadata = metadata
 
         # Reset the index columns to be part of the columns space so the validations still work
-
+        z()
         self._errors = {
             "missing": self._validate_column_names(),
             "dtype": self._validate_dtypes(),
@@ -1721,7 +1737,7 @@ class PlantData:
         SCADA data, if `asset` is undefined.
         """
         if self.asset is None:
-            return self.scada.index.get_level_values("id").unique()
+            return self.scada.index.get_level_values("WTUR_TurNam").unique()
         return self.asset.loc[self.asset["type"] == "turbine"].index.values
 
     @property

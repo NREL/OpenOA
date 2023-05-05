@@ -5,9 +5,15 @@ from openoa.plant import ANALYSIS_REQUIREMENTS
 from openoa.utils.entr.connection import EntrConnection, PySparkEntrConnection
 from time import perf_counter
 import pandas as pd
+import numpy as np
 from typing import Union
 
 import logging
+
+## TODO: Pass thru units to OpenOA, make sure it fails if units are wrong
+## TODO: Update example notebooks.
+## TODO: Bring in Engie data cleaning steps.
+## TODO: Merge into entr openoa dev and rebuild entr image.
 
 ## --- PLANT LEVEL METADATA ---
 
@@ -61,6 +67,8 @@ def load_plant_assets(conn:EntrConnection, plant_id):
         plant_id = {plant_id};
     """
     asset_df = conn.pandas_query(asset_query)
+
+    asset_df["type"] = "turbine" # Only wind turbines in asset table for now.
 
     asset_metadata = {
         "elevation":"elevation",
@@ -128,7 +136,7 @@ def load_openoa_rpt_table_tag_metadata(conn:EntrConnection, plant_name:str, tabl
     table_query_fragment = entr_tables_dict[table_name] + "_tag_metadata"
 
     # Filter by tags of interest
-    tag_names_sql = ",".join([f'"{column}"' for column in columns])
+    tag_names_sql = ",".join([f"'{column.replace('_','.')}'" for column in columns])
     print(tag_names_sql)
 
     filter_query_fragment = f"entr_tag_name in ({tag_names_sql})"
@@ -138,19 +146,24 @@ def load_openoa_rpt_table_tag_metadata(conn:EntrConnection, plant_name:str, tabl
     # Build simple select query
     query = f"SELECT {column_query_fragment} FROM {table_query_fragment} WHERE {filter_query_fragment};"
 
+    print(query)
     # Execute query in database, return pandas dataframe
     df = conn.pandas_query(query)
 
-    return df
+    print(df)
 
-def load_plant_reanalysis():
-    reanalysis_metadata_dict = {}
-    reanalysis_table_dict = {}
-    for product in reanalysis_products:
-        reanalysis_metadata_dict[product] = load_openoa_rpt_table_tag_metadata(...)
-        reanalysis_table_dict[product] = load_openoa_rpt_table(...)
-    return reanalysis_table_dict, reanalysis_metadata_dict
+    # All tags in table should be at the same time resolution
+    assert len(df["interval_s"].unique())==1, "Not all tags are at the same time resolution."
 
+    metadata = {
+        "frequency": pd.Timedelta(seconds=float(df["interval_s"][0])),
+        "time": "time"
+    }
+
+    for column in columns:
+        metadata[column] = column
+
+    return metadata
 
 def from_entr(
     plant_name:str,
@@ -196,7 +209,14 @@ def from_entr(
     print(schema)
     for table,spec in schema.items():
         print(table)
+
         columns = spec["columns"]
+
+        try:
+            columns.remove("id") # We handle ID and Time separately
+        except ValueError:
+            pass
+
         if table == "reanalysis":
             combined_tables["reanalysis"] = {}
             combined_metadata["reanalysis"] = {}
@@ -209,8 +229,6 @@ def from_entr(
             combined_metadata[table] = load_openoa_rpt_table_tag_metadata(connection, plant_id, table, spec["columns"])
             combined_tables[table] = load_openoa_rpt_table(connection, plant_id, table, spec["columns"])
 
-    ## TODO: Any pre-processing?
-
     toc = perf_counter()
     logging.debug(f"{toc-tic} sec\tData loaded from Warehouse into Python")
     tic = perf_counter()
@@ -220,11 +238,18 @@ def from_entr(
     print("TABLES:")
     print(combined_tables)
 
-    plant = PlantData(
-        analysis_type=analysis_type,
-        metadata=combined_metadata,
-        **combined_tables
-    )
+    combined_tables["metadata"] = combined_metadata
+
+    if "analysis_type" in locals():
+        combined_tables["analysis_type"] = analysis_type
+
+    print(combined_tables.keys())
+
+    ## TODO: Any pre-processing?
+    if "scada" in combined_tables.keys() and "WTUR_W" in combined_tables["scada"].columns:
+        combined_tables["scada"]["WTUR_W"] /= 1000.0 #ENTR warehouse is in W, but OpenOA expects kW.
+
+    plant = PlantData(**combined_tables)
 
     toc = perf_counter()
     logging.debug(f"{toc-tic} sec\tPlantData Object Created")
