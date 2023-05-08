@@ -1459,6 +1459,12 @@ class PlantData:
                 continue
 
             if name == "reanalysis":
+                if df is None:
+                    sub_name = "product"
+                    missing_cols[f"{name}-{sub_name}"] = column_validator(
+                        df, column_names=column_map[name][sub_name]
+                    )
+                    continue
                 for sub_name, df in df.items():
                     missing_cols[f"{name}-{sub_name}"] = column_validator(
                         df, column_names=column_map[name][sub_name]
