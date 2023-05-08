@@ -151,8 +151,11 @@ def _analysis_filter(error_dict: dict, analysis_types: list[str] = ["all"]) -> d
     if "all" in analysis_types:
         return error_dict
 
-    if None in analysis_types:
+    if analysis_types == [None]:
         return {}
+
+    if None in analysis_types:
+        _ = analysis_types.pop(analysis_types.index(None))
 
     categories = ("scada", "meter", "tower", "curtail", "reanalysis", "asset")
     requirements = {key: ANALYSIS_REQUIREMENTS[key] for key in analysis_types}
@@ -165,13 +168,13 @@ def _analysis_filter(error_dict: dict, analysis_types: list[str] = ["all"]) -> d
 
     # Filter the missing columns, so only analysis-specific columns are provided
     error_dict["missing"] = {
-        key: values.intersection(error_dict["missing"].get(key, []))
+        key: values.difference(error_dict["missing"].get(key, []))
         for key, values in column_requirements.items()
     }
 
     # Filter the bad dtype columns, so only analysis-specific columns are provided
     error_dict["dtype"] = {
-        key: values.intersection(error_dict["dtype"].get(key, []))
+        key: values.difference(error_dict["dtype"].get(key, []))
         for key, values in column_requirements.items()
     }
 
@@ -191,11 +194,11 @@ def _compose_error_message(error_dict: dict, analysis_types: list[str] = ["all"]
     Returns:
         str: The human-readable error message breakdown.
     """
+    if analysis_types == [None]:
+        return ""
+
     if "all" not in analysis_types:
         error_dict = _analysis_filter(error_dict, analysis_types)
-
-    if None in analysis_types:
-        return ""
 
     messages = [
         f"`{name}` data is missing the following columns: {cols}"
@@ -1226,7 +1229,8 @@ class PlantData:
             self.calculate_asset_distance_matrix()
             self.calculate_asset_direction_matrix()
 
-        self._calculate_turbine_energy()
+        if self.scada is not None:
+            self.calculate_turbine_energy()
 
         # Change the column names to the -25 convention for easier use in the rest of the code base
         self.update_column_names()
@@ -1450,6 +1454,7 @@ class PlantData:
         Returns:
             dict[str, list[str]]: _description_
         """
+        print("validating column names for:", category)
         column_map = self.metadata.column_map
 
         missing_cols = {}
@@ -1459,8 +1464,9 @@ class PlantData:
                 continue
 
             if name == "reanalysis":
+                # If no reanalysis data, get the default key from ReanalysisMetaData
                 if df is None:
-                    sub_name = "product"
+                    sub_name = [*column_map[name]][0]
                     missing_cols[f"{name}-{sub_name}"] = column_validator(
                         df, column_names=column_map[name][sub_name]
                     )
@@ -1513,6 +1519,13 @@ class PlantData:
                 continue
 
             if name == "reanalysis":
+                if df is None:
+                    # If no reanalysis data, get the default key from ReanalysisMetaData
+                    sub_name = [*column_map[name]][0]
+                    error_cols[f"{name}-{sub_name}"] = dtype_converter(
+                        df, column_types=column_map[name][sub_name]
+                    )
+                    continue
                 for sub_name, df in df.items():
                     error_cols[f"{name}-{sub_name}"] = dtype_converter(
                         df, column_types=column_map[name][sub_name]
@@ -1718,7 +1731,7 @@ class PlantData:
                 )
             self.reanalysis = reanalysis
 
-    def _calculate_turbine_energy(self) -> None:
+    def calculate_turbine_energy(self) -> None:
         energy_col = self.metadata.scada.WTUR_SupWh
         power_col = self.metadata.scada.WTUR_W
         frequency = self.metadata.scada.frequency
