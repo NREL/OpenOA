@@ -1246,10 +1246,7 @@ class PlantData:
     @status.validator
     @curtail.validator
     @asset.validator
-    @reanalysis.validator
-    def data_validator(
-        self, instance: attrs.Attribute, value: pd.DataFrame | dict[str | pd.DataFrame] | None
-    ) -> None:
+    def data_validator(self, instance: attrs.Attribute, value: pd.DataFrame | None) -> None:
         """Validator function for each of the data buckets in `PlantData` that checks
         that the appropriate columns exist for each dataframe, each column is of the
         right type, and that the timestamp frequencies are appropriate for the given
@@ -1257,9 +1254,8 @@ class PlantData:
 
         Args:
             instance (attrs.Attribute): The `attr` attribute details
-            value (pd.DataFrame | dict[pd.DataFrame] | None): The attribute's
-                user-provided value. A dictionary of dataframes is expected for
-                reanalysis data only.
+            value (pd.DataFrame | None): The attribute's user-provided value. A
+                dictionary of dataframes is expected for reanalysis data only.
         """
         if None in self.analysis_type:
             return
@@ -1269,6 +1265,45 @@ class PlantData:
                 {name: list(getattr(self.metadata, name).col_map.values())}
             )
             self._errors["dtype"].update({name: list(getattr(self.metadata, name).dtypes.keys())})
+
+        else:
+            self._errors["missing"].update(self._validate_column_names(category=name))
+            self._errors["dtype"].update(self._validate_dtypes(category=name))
+
+    @reanalysis.validator
+    def reanalysis_validator(
+        self, instance: attrs.Attribute, value: dict[str, pd.DataFrame] | None
+    ) -> None:
+        """Validator function for the reanalysis data that checks for both matching reanalysis
+        product keys in the ``PlantMetaData.reanalysis`` metadata definition, and the following:
+        appropriate columns exist for each dataframe, each column is of the right type,
+        and that the timestamp frequencies are appropriate for the given
+        `analysis_type`.
+
+        Args:
+            instance (attrs.Attribute): The `attr` attribute details
+            value (dict[str, pd.DataFrame] | None): The attribute's
+                user-provided value. A dictionary of dataframes is expected for
+                reanalysis data only.
+        """
+        name = instance.name
+        metadata = getattr(self.metadata, name)
+
+        if value is not None:
+            meta_products = [*metadata]
+            data_products = [*value]
+            if missing := set(data_products).difference(meta_products):
+                raise KeyError(
+                    f"Reanalysis meta data definitions were not provided for the following"
+                    f" reanalysis data products: {missing}"
+                )
+
+        if None in self.analysis_type:
+            return
+
+        if value is None:
+            self._errors["missing"].update({name: list(metadata.col_map.values())})
+            self._errors["dtype"].update({name: list(metadata.dtypes.keys())})
 
         else:
             self._errors["missing"].update(self._validate_column_names(category=name))
