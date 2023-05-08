@@ -62,7 +62,7 @@ ANALYSIS_REQUIREMENTS = {
     },
     "ElectricalLosses": {
         "scada": {
-            "columns": ["WTUR_SupWh"],
+            "columns": ["id", "WMET_HorWdSpd", "WTUR_W"],
             "freq": _at_least_daily,
         },
         "meter": {
@@ -72,11 +72,11 @@ ANALYSIS_REQUIREMENTS = {
     },
     "WakeLosses": {
         "scada": {
-            "columns": ["id", "windspeed", "power"],
+            "columns": ["id", "WMET_HorWdSpd", "WTUR_W"],
             "freq": _at_least_hourly,
         },
         "reanalysis": {
-            "columns": ["windspeed", "wind_direction"],
+            "columns": ["WMETR_HorWdSpd", "WMETR_HorWdDir"],
             "freq": _at_least_hourly,
         },
     },
@@ -1220,10 +1220,12 @@ class PlantData:
         # Post-validation data manipulations
         # TODO: Need to have a class level input for the user-preferred projection system
         # TODO: Why does the non-WGS84 projection matter?
+        self.calculate_asset_geometries()
         if self.asset is not None:
             self.parse_asset_geometry()
             self.calculate_asset_distance_matrix()
             self.calculate_asset_direction_matrix()
+
         self._calculate_turbine_energy()
 
         # Change the column names to the -25 convention for easier use in the rest of the code base
@@ -1923,6 +1925,15 @@ class PlantData:
 
         row_ix = self.tower_ids if tower_id is None else tower_id
         return self.asset_direction_matrix.loc[row_ix, self.tower_ids]
+
+    def calculate_asset_geometries(self) -> None:
+        """Calculates the asset distances and parses the asset geometries. This is intended for use
+        during initialization and for when asset data is added after initialization
+        """
+        if self.asset is not None:
+            self.parse_asset_geometry()
+            self.calculate_asset_distance_matrix()
+            self.calculate_asset_direction_matrix()
 
     def get_freestream_turbines(
         self, wd: float, freestream_method: str = "sector", sector_width: float = 90.0
