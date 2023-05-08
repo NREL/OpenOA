@@ -52,7 +52,7 @@ ANALYSIS_REQUIREMENTS = {
     },
     "TurbineLongTermGrossEnergy": {
         "scada": {
-            "columns": ["id", "WMET_HorWdSpd", "WTUR_W"],
+            "columns": ["WTUR_TurNam", "WMET_HorWdSpd", "WTUR_W"],
             "freq": _at_least_daily,
         },
         "reanalysis": {
@@ -62,7 +62,7 @@ ANALYSIS_REQUIREMENTS = {
     },
     "ElectricalLosses": {
         "scada": {
-            "columns": ["id", "WMET_HorWdSpd", "WTUR_W"],
+            "columns": ["WTUR_TurNam", "WMET_HorWdSpd", "WTUR_W"],
             "freq": _at_least_daily,
         },
         "meter": {
@@ -72,7 +72,7 @@ ANALYSIS_REQUIREMENTS = {
     },
     "WakeLosses": {
         "scada": {
-            "columns": ["id", "WMET_HorWdSpd", "WTUR_W"],
+            "columns": ["WTUR_TurName", "WMET_HorWdSpd", "WTUR_W"],
             "freq": _at_least_hourly,
         },
         "reanalysis": {
@@ -132,12 +132,16 @@ class FromDictMixin:
         return cls(**kwargs)  # type: ignore
 
 
-def _analysis_filter(error_dict: dict, analysis_types: list[str] = ["all"]) -> dict:
+def _analysis_filter(
+    error_dict: dict, metadata: PlantMetaData, analysis_types: list[str] = ["all"]
+) -> dict:
     """Filters the errors found by the analysis requirements  provided by the `analysis_types`.
 
     Args:
         error_dict (`dict`): The dictionary of errors separated by the keys:
             "missing", "dtype", and "frequency".
+        metadata (PlantMetaData): The ``PlantMetaData`` object containing the column
+            mappings for each data type.
         analysis_types (`list[str]`, optional): The list of analysis types to
             consider for validation. If "all" is contained in the list, then all errors
             are returned back, and if `None` is contained in the list, then no errors
@@ -165,29 +169,45 @@ def _analysis_filter(error_dict: dict, analysis_types: list[str] = ["all"]) -> d
         )
         for cat in categories
     }
+    for key, value in column_requirements.items():
+        if key == "reanalysis":
+            reanalysis_keys = [k for k in error_dict["missing"] if k.startswith(key)]
+            _add = {}
+            for k in reanalysis_keys:
+                name = k.split("-")[1]
+                col_map = getattr(metadata, key)[name].col_map
+                _add[k] = set([col_map[v] for v in value])
+        else:
+            col_map = getattr(metadata, key).col_map
+            column_requirements.update({key: set([col_map[v] for v in value])})
+    column_requirements.update(_add)
 
     # Filter the missing columns, so only analysis-specific columns are provided
     error_dict["missing"] = {
-        key: values.difference(error_dict["missing"].get(key, []))
+        key: values.intersection(error_dict["missing"].get(key, []))
         for key, values in column_requirements.items()
     }
 
     # Filter the bad dtype columns, so only analysis-specific columns are provided
     error_dict["dtype"] = {
-        key: values.difference(error_dict["dtype"].get(key, []))
+        key: values.intersection(error_dict["dtype"].get(key, []))
         for key, values in column_requirements.items()
     }
 
     return error_dict
 
 
-def _compose_error_message(error_dict: dict, analysis_types: list[str] = ["all"]) -> str:
+def _compose_error_message(
+    error_dict: dict, metadata: PlantMetaData, analysis_types: list[str] = ["all"]
+) -> str:
     """Takes a dictionary of error messages from the `PlantData` validation routines,
     filters out errors unrelated to the intended analysis types, and creates a
     human-readable error message.
 
     Args:
         error_dict (dict): See `PlantData._errors` for more details.
+        metadata (PlantMetaData): The ``PlantMetaData`` object containing the column
+            mappings for each data type.
         analysis_types (list[str], optional): The user-input analysis types, which are
             used to filter out unlreated errors. Defaults to ["all"].
 
@@ -198,7 +218,7 @@ def _compose_error_message(error_dict: dict, analysis_types: list[str] = ["all"]
         return ""
 
     if "all" not in analysis_types:
-        error_dict = _analysis_filter(error_dict, analysis_types)
+        error_dict = _analysis_filter(error_dict, metadata, analysis_types)
 
     messages = [
         f"`{name}` data is missing the following columns: {cols}"
@@ -466,6 +486,7 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
     name: str = field(default="scada", init=False)
     WTUR_SupWh: str = field(default="WTUR_SupWh", init=False)  # calculated in PlantData
     col_map: dict = field(init=False)
+    col_map_reversed: dict = field(init=False)
     dtypes: dict = field(
         default=dict(
             time=np.datetime64,
@@ -507,6 +528,7 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
             WMET_EnvTmp=self.WMET_EnvTmp,
             WTUR_SupWh=self.WTUR_SupWh,
         )
+        self.col_map_reversed = {v: k for k, v in self.col_map.items()}
 
 
 @define(auto_attribs=True)
@@ -1216,7 +1238,9 @@ class PlantData:
         self._validate_frequency()
 
         # Check the errors againts the analysis requirements
-        error_message = _compose_error_message(self._errors, analysis_types=self.analysis_type)
+        error_message = _compose_error_message(
+            self._errors, metadata=self.metadata, analysis_types=self.analysis_type
+        )
         if error_message != "":
             raise ValueError(error_message)
 
@@ -1261,10 +1285,9 @@ class PlantData:
             return
         name = instance.name
         if value is None:
-            self._errors["missing"].update(
-                {name: list(getattr(self.metadata, name).col_map.values())}
-            )
-            self._errors["dtype"].update({name: list(getattr(self.metadata, name).dtypes.keys())})
+            columns = list(getattr(self.metadata, name).col_map.values())
+            self._errors["missing"].update({name: columns})
+            self._errors["dtype"].update({name: columns})
 
         else:
             self._errors["missing"].update(self._validate_column_names(category=name))
@@ -1287,10 +1310,8 @@ class PlantData:
                 reanalysis data only.
         """
         name = instance.name
-        metadata = getattr(self.metadata, name)
-
         if value is not None:
-            meta_products = [*metadata]
+            meta_products = [*self.metadata.reanalysis]
             data_products = [*value]
             if missing := set(data_products).difference(meta_products):
                 raise KeyError(
@@ -1302,8 +1323,11 @@ class PlantData:
             return
 
         if value is None:
-            self._errors["missing"].update({name: list(metadata.col_map.values())})
-            self._errors["dtype"].update({name: list(metadata.dtypes.keys())})
+            for product, metadata in self.metadata.reanalysis.items():
+                _name = f"{name}-{product}"
+                columns = list(metadata.col_map.values())
+                self._errors["missing"].update({_name: columns})
+                self._errors["dtype"].update({_name: columns})
 
         else:
             self._errors["missing"].update(self._validate_column_names(category=name))
@@ -1489,7 +1513,6 @@ class PlantData:
         Returns:
             dict[str, list[str]]: _description_
         """
-        print("validating column names for:", category)
         column_map = self.metadata.column_map
 
         missing_cols = {}
@@ -1654,7 +1677,7 @@ class PlantData:
         # TODO: Check for extra columns?
         # TODO: Define other checks?
 
-        error_message = _compose_error_message(self._errors, self.analysis_type)
+        error_message = _compose_error_message(self._errors, self.metadata, self.analysis_type)
         if error_message:
             raise ValueError(error_message)
         self.update_column_names()
