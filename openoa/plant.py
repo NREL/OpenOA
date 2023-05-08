@@ -941,7 +941,7 @@ class PlantMetaData(FromDictMixin):  # noqa: F821
     curtail: CurtailMetaData = field(default={}, converter=CurtailMetaData.from_dict)
     asset: AssetMetaData = field(default={}, converter=AssetMetaData.from_dict)
     reanalysis: dict[str, ReanalysisMetaData] = field(
-        default={}, converter=convert_reanalysis  # noqa: F821
+        default={"product": {}}, converter=convert_reanalysis  # noqa: F821
     )  # noqa: F821
 
     @property
