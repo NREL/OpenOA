@@ -1222,8 +1222,8 @@ class PlantData:
         # TODO: Why does the non-WGS84 projection matter?
         if self.asset is not None:
             self.parse_asset_geometry()
-        self.calculate_asset_distance_matrix()
-        self.calculate_asset_direction_matrix()
+            self.calculate_asset_distance_matrix()
+            self.calculate_asset_direction_matrix()
         self._calculate_turbine_energy()
 
         # Change the column names to the -25 convention for easier use in the rest of the code base
