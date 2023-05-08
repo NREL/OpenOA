@@ -9,7 +9,7 @@ scipy==1.7.*
 statsmodels==0.13.*
 tqdm==4.62.*
 bokeh==2.3.*
-scikit-learn>=1.0*
+scikit_learn==0.24.*
 matplotlib==3.5.*
 h5pyd
 

@@ -2,6 +2,7 @@ import unittest
 
 import numpy as np
 import numpy.testing as npt
+from examples import project_ENGIE, example_data_path_str
 
 from openoa.analysis.eya_gap_analysis import EYAGapAnalysis
 
@@ -28,11 +29,14 @@ class EYAGAPAnalysis(unittest.TestCase):
             blade_degradation_losses=0.011,
             wake_losses=0.087,
         )
+
+        self.project = project_ENGIE.prepare(example_data_path_str)
+
         # AEP (GWh/yr), gross energy (GWh/yr), availability loss (fraction), electrical loss (fraction),
         # turbine performance loss (fraction), blade degradation loss (fraction), wake loss (fraction)
 
         # Creat gap analysis method object and run
-        self.analysis = EYAGapAnalysis(
+        self.analysis = self.project.EYAGapAnalysis(
             eya_estimates=eya_data, oa_results=oa_data
         )  # make_fig=False)
         self.analysis.run()
