@@ -22,7 +22,7 @@ REQUIRED = [
     "statsmodels>=0.11",
     "tqdm>=4.28.1",
     "matplotlib>=3.6",
-    "bokeh>=2.3",
+    "bokeh>=2.4",
     "attrs>=22",
     "pytz",
     "pyyaml",
