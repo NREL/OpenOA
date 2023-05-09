@@ -129,7 +129,6 @@ class FromDictMixin:
             raise AttributeError(
                 f"The class defintion for {cls.__name__} is missing the following inputs: {undefined}"
             )
-        print(f"FromDict called for class {cls} with data = {data}")
         return cls(**kwargs)  # type: ignore
 
 
@@ -386,7 +385,6 @@ def load_to_pandas_dict(
 
 
 def convert_reanalysis(value: dict[str, dict]):
-    print("Convert reanalysis")
     return {k: ReanalysisMetaData.from_dict(v) for k, v in value.items()}
 
 
@@ -1469,7 +1467,6 @@ class PlantData:
             if category != "all" and category != name:
                 # Skip any irrelevant columns if not processing all data types
                 continue
-            print("validate:", name)
             if name == "reanalysis":
                 for sub_name, df in df.items():
                     missing_cols[f"{name}-{sub_name}"] = column_validator(
@@ -1589,7 +1586,6 @@ class PlantData:
         Raises:
             ValueError: Raised at the end if errors are caught in the validation steps.
         """
-        x()
         # Put the index columns back into the column space to ensure success of re-validation
         self._unset_index_columns()
 
@@ -1601,7 +1597,6 @@ class PlantData:
             self.metadata = metadata
 
         # Reset the index columns to be part of the columns space so the validations still work
-        z()
         self._errors = {
             "missing": self._validate_column_names(),
             "dtype": self._validate_dtypes(),
