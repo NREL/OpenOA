@@ -45,6 +45,7 @@ EXTRAS = {
         "myst-parser",
     ],
     "entr": ["pyhive"],
+    "era5": ["cdsapi", "xarray"],
     "develop": [
         "pre-commit",
         "black",
