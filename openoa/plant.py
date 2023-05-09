@@ -1251,7 +1251,6 @@ class PlantData:
         # Post-validation data manipulations
         # TODO: Need to have a class level input for the user-preferred projection system
         # TODO: Why does the non-WGS84 projection matter?
-
         self.calculate_asset_geometries()
         if self.asset is not None:
             self.parse_asset_geometry()

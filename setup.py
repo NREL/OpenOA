@@ -25,6 +25,7 @@ REQUIRED = [
     "bokeh>=2.4",
     "attrs>=22",
     "pytz",
+    "pyspark",
     "pyyaml",
     "h5pyd",
 ]
@@ -43,8 +44,6 @@ EXTRAS = {
         "sphinxcontrib-bibtex",
         "myst-parser",
     ],
-    "entr": ["pyhive", "pyspark"],
-    "wtk": ["h5pyd"],
     "develop": [
         "pre-commit",
         "black",
