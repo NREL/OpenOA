@@ -1237,6 +1237,10 @@ class PlantData:
         self._set_index_columns()
         self._validate_frequency()
 
+        # Remove the non-product-specific reanalysis key if it exists
+        # TODO: Find where this is actually entering the missing/dtype dictionaries
+        [d.pop("reanalysis") for d in self._errors.values() if "reanalysis" in d]
+
         # Check the errors againts the analysis requirements
         error_message = _compose_error_message(
             self._errors, metadata=self.metadata, analysis_types=self.analysis_type
@@ -1281,7 +1285,7 @@ class PlantData:
             value (pd.DataFrame | None): The attribute's user-provided value. A
                 dictionary of dataframes is expected for reanalysis data only.
         """
-        if None in self.analysis_type:
+        if self.analysis_type == [None]:
             return
         name = instance.name
         if value is None:
@@ -1319,7 +1323,7 @@ class PlantData:
                     f" reanalysis data products: {missing}"
                 )
 
-        if None in self.analysis_type:
+        if self.analysis_type == [None]:
             return
 
         if value is None:
@@ -1517,7 +1521,7 @@ class PlantData:
 
         missing_cols = {}
         for name, df in self.data_dict.items():
-            if category != "all" and category != "name":
+            if category != "all" and category != name:
                 # Skip any irrelevant columns if not processing all data types
                 continue
 
