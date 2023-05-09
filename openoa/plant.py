@@ -72,7 +72,7 @@ ANALYSIS_REQUIREMENTS = {
     },
     "WakeLosses": {
         "scada": {
-            "columns": ["WTUR_TurName", "WMET_HorWdSpd", "WTUR_W"],
+            "columns": ["WTUR_TurNam", "WMET_HorWdSpd", "WTUR_W"],
             "freq": _at_least_hourly,
         },
         "reanalysis": {
