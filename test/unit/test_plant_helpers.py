@@ -506,7 +506,7 @@ def test_PlantMetaData_defaults():
     assert meta.status == StatusMetaData()
     assert meta.curtail == CurtailMetaData()
     assert meta.asset == AssetMetaData()
-    assert meta.reanalysis == {}
+    assert meta.reanalysis == {"product": ReanalysisMetaData()}
 
     # Test the coordinates property
     assert meta.coordinates == (0.0, 0.0)
@@ -519,7 +519,7 @@ def test_PlantMetaData_defaults():
     assert vals["status"] == StatusMetaData().col_map
     assert vals["curtail"] == CurtailMetaData().col_map
     assert vals["asset"] == AssetMetaData().col_map
-    assert vals["reanalysis"] == {}
+    assert vals["reanalysis"] == {"product": ReanalysisMetaData().col_map}
 
     # Check the defaults for an empty reanalysis input
     meta = PlantMetaData(reanalysis=dict(era5=ReanalysisMetaData().col_map))
