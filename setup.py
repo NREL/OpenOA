@@ -21,8 +21,8 @@ REQUIRED = [
     "scipy>=1.1.0",
     "statsmodels>=0.11",
     "tqdm>=4.28.1",
-    "matplotlib>=3.6.*",
-    "bokeh>=2.4.*",
+    "matplotlib>=3.6",
+    "bokeh>=2.4",
     "attrs>=22",
     "pytz",
     "pyspark",  # TODO: confirm if options required [sql] or [pandas_on_spark]
@@ -34,18 +34,18 @@ TESTS = ["pytest>=5.4.2", "pytest-cov>=2.8.1"]
 
 EXTRAS = {
     "docs": [
-        "ipython==8.5.*",
-        "m2r2>=0.3.*",
+        "ipython==8.5",
+        "m2r2>=0.3",
         "Sphinx>=5.0",
-        "pydata-sphinx-theme==0.10.*",
+        "pydata-sphinx-theme==0.10",
         "nbmerge==0.0.4",
-        "nbsphinx==0.8.*",
-        "sphinx_design==0.3.*",
+        "nbsphinx==0.8",
+        "sphinx_design==0.3",
         "sphinxcontrib-bibtex",
         "myst-parser",
     ],
     "entr": ["pyhive"],
-    "era5": ["cdsapi", "xarray"],
+    "era5": ["cdsapi", "xarray[parallel]"],
     "develop": [
         "pre-commit",
         "black",
