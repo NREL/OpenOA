@@ -1289,15 +1289,6 @@ class PlantData:
         if self.analysis_type == [None]:
             return
         name = instance.name
-        # <<<<<<< HEAD
-        #         if value is None and name != "reanalysis":
-        #             metadata_object = getattr(self.metadata, name)
-        #             self._errors["missing"].update(
-        #                 {name: list(metadata_object.col_map.values())}
-        #             )
-        #             self._errors["dtype"].update({name: list(metadata_object.dtypes.keys())})
-        #         elif value is None and name == "reanalysis":
-        # =======
         if value is None:
             columns = list(getattr(self.metadata, name).col_map.values())
             self._errors["missing"].update({name: columns})
@@ -1343,15 +1334,6 @@ class PlantData:
                 self._errors["missing"].update({_name: columns})
                 self._errors["dtype"].update({_name: columns})
 
-            self._errors["missing"].update(
-                {
-                    name: {
-                        sub_name: list(meta_class.col_map.values())
-                        for sub_name, meta_class in getattr(self.metadata, name).items()
-                    }
-                }
-            )
-            
         else:
             self._errors["missing"].update(self._validate_column_names(category=name))
             self._errors["dtype"].update(self._validate_dtypes(category=name))
