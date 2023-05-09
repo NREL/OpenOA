@@ -2068,7 +2068,7 @@ class PlantData:
 
     @classmethod
     def from_entr(cls, *args, **kwargs):
-        from openoa.utils.entr.plantdata import from_entr
+        from entr.plantdata import from_entr
         return from_entr(*args, **kwargs)
 
 
