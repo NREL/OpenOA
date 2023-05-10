@@ -37,7 +37,7 @@ EXTRAS = {
         "ipython==8.5",
         "m2r2>=0.3",
         "Sphinx>=5.0",
-        "pydata-sphinx-theme>=0.10,<=0.11",
+        "pydata-sphinx-theme",
         "nbmerge==0.0.4",
         "nbsphinx>=0.8,<=0.9",
         "sphinx_design>=0.3,<=0.4",
