@@ -171,7 +171,6 @@ html_theme_options = {
         ),
     },
 }
-html_sidebars = {"**": []}  # ["search-field.html", "sidebar-nav-bs", "sidebar-ethical-ads"]
 
 html_context = {
     "default_mode": "light",
