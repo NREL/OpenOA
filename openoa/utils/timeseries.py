@@ -14,12 +14,13 @@ from dateutil.parser import parse
 from openoa.utils._converters import series_method
 
 
-def offset_to_seconds(offset: str | np.datetime64) -> int | float:
+def offset_to_seconds(offset: int | float | str | np.datetime64) -> int | float:
     """Converts pandas datetime offset alias to its corresponding number of seconds.
 
     Args:
-        offset(:obj:`str` | `numpy.datetime64`): The pandas offset alias or numpy timestamp to be
-            converted to seconds.
+        offset(:obj:`int` | `float` | `str` | `numpy.datetime64`): The pandas offset
+            alias or numpy timestamp to be converted to seconds. If a number (int or
+            float) is passed, then it must be in nanoseconds, the Pandas default.
 
     Returns:
         :obj:`int` | `float`: The number of seconds corresponding to :py:attr:`offset`.
