@@ -297,7 +297,7 @@ def prepare(
             meter=meter_df,
             curtail=curtail_df,
             asset=asset_df,
-            reanalysis=dict(era5=reanalysis_era5_df, merra2=reanalysis_merra2_df),
+            reanalysis={"era5": reanalysis_era5_df, "merra2": reanalysis_merra2_df},
         )
         return engie_plantdata
     else:
