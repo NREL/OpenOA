@@ -16,6 +16,7 @@ All notable changes to this project will be documented in this file. If you make
   # New, equivalent pattern
   wake_new = project.WakeLosses()
   ```
+- Scikit-Learn 1.0 and Pandas 2.0 are now supported! More generally, all of the dependencies have been unpinned from their maximum versions in prior releases to allow for more flexible and up to date coding environments. Notably, this has changed a small number of regression testing results slightly.
 
 ## 3.0rc2
 - Everything from release candidate 1
