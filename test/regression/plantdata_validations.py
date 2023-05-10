@@ -1,13 +1,15 @@
+import copy
 import tempfile
 import unittest
 from pathlib import Path
 
+import yaml
 from examples import project_ENGIE
 from numpy.testing import assert_array_equal
 from pandas.testing import assert_frame_equal
 
 from openoa import PlantData
-from openoa.plant import ANALYSIS_REQUIREMENTS
+from openoa.plant import ANALYSIS_REQUIREMENTS, ReanalysisMetaData
 
 
 example_data_path = Path(__file__).parents[2].resolve() / "examples" / "data" / "la_haute_borne"
@@ -131,8 +133,86 @@ class TestPlantData(unittest.TestCase):
         assert_frame_equal(
             self.plant.scada,
             plant_loaded.scada,
-            "Scada dataframe did not survive CSV save/loading process",
+            "SCADA dataframe did not survive CSV save/loading process",
         )
-        # TODO, add more comprehensive checking.
-        # - Check metadata
-        # - Check all DFs equal
+        assert_frame_equal(
+            self.plant.meter,
+            plant_loaded.meter,
+            "Meter dataframe did not survive CSV save/loading process",
+        )
+        assert_frame_equal(
+            self.plant.curtail,
+            plant_loaded.curtail,
+            "Curtail dataframe did not survive CSV save/loading process",
+        )
+        assert_frame_equal(
+            self.plant.asset,
+            plant_loaded.asset,
+            "Asset dataframe did not survive CSV save/loading process",
+        )
+        assert_frame_equal(
+            self.plant.reanalysis["era5"],
+            plant_loaded.reanalysis["era5"],
+            "ERA5 dataframe did not survive CSV save/loading process",
+        )
+        assert_frame_equal(
+            self.plant.reanalysis["merra2"],
+            plant_loaded.reanalysis["merra2"],
+            "MERRA2 dataframe did not survive CSV save/loading process",
+        )
+
+
+class TestPlantDatPartial(unittest.TestCase):
+    """
+    TestPlantData
+
+    Tests the construction, validation, and methods of PlantData using La Haute Born wind plant data
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        (
+            cls.scada_df,
+            cls.meter_df,
+            cls.curtail_df,
+            cls.asset_df,
+            cls.reanalysis_dict,
+        ) = project_ENGIE.prepare(path=example_data_path_str, return_value="dataframes")
+
+    def setUp(self):
+        """
+        Create the plantdata object
+        """
+        with open(example_data_path_str + "/../plant_meta.yml", "r") as f:
+            meta_partial = yaml.safe_load(f)
+        meta_partial.pop("reanalysis")
+        self.plant = PlantData(
+            analysis_type=None,  # No validation desired at this point in time
+            metadata=meta_partial,
+            scada=self.scada_df,
+            meter=self.meter_df,
+            curtail=self.curtail_df,
+            asset=self.asset_df,
+        )
+
+    def test_reanalysis_defaults(self):
+        assert self.plant.metadata.reanalysis == {"product": ReanalysisMetaData()}
+
+    def test_reanalysis_missing_metadata(self):
+        """Tests that when there are missing products in the reanalysis metadata, that
+        a KeyError is raised early.
+        """
+        with open(example_data_path_str + "/../plant_meta.yml", "r") as f:
+            metadata = yaml.safe_load(f)
+
+        # Raised when all missing
+        meta_partial = copy.deepcopy(metadata)
+        meta_partial.pop("reanalysis")
+        with self.assertRaises(KeyError):
+            PlantData(scada=self.scada_df, meter=self.meter_df, reanalysis=self.reanalysis_dict)
+
+        # Raised when there is only some missing
+        meta_partial = copy.deepcopy(metadata)
+        meta_partial["reanalysis"].pop("merra2")
+        with self.assertRaises(KeyError):
+            PlantData(scada=self.scada_df, meter=self.meter_df, reanalysis=self.reanalysis_dict)

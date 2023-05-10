@@ -83,7 +83,7 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
         num_sim(:obj:`int`): Number of simulations to run when `UQ` is True, otherwise set to 1. Defaults to 20000.
     """
 
-    plant: PlantData = field(validator=attrs.validators.instance_of(PlantData))
+    plant: PlantData
     UQ: bool = field(default=True, converter=bool)
     wind_bin_threshold: NDArrayFloat = field(
         default=(1.0, 3.0), validator=validate_UQ_input, on_setattr=None
@@ -121,22 +121,24 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
     summary_results: pd.DataFrame = field(init=False)
     plant_gross: dict[int, pd.DataFrame] = field(factory=dict, init=False)
 
-    @plant.validator
-    def validate_plant_ready_for_anylsis(
-        self, attribute: attrs.Attribute, value: PlantData
-    ) -> None:
-        """Validates that the value has been validated for a turbine long term gross energy analysis."""
-        if set(("TurbineLongTermGrossEnergy", "all")).intersection(value.analysis_type) == set():
+    @logged_method_call
+    def __attrs_post_init__(self):
+        """
+        Runs any non-automated setup steps for the analysis class.
+        """
+        if not isinstance(self.plant, PlantData):
+            raise TypeError(
+                f"The passed `plant` object must be of type `PlantData`, not: {type(self.plant)}"
+            )
+
+        if (
+            set(("TurbineLongTermGrossEnergy", "all")).intersection(self.plant.analysis_type)
+            == set()
+        ):
             raise TypeError(
                 "The input to 'plant' must be validated for at least the 'TurbineLongTermGrossEnergy'"
             )
 
-    @logged_method_call
-    def __attrs_post_init__(self):
-
-        """
-        Runs any non-automated setup steps for the analysis class.
-        """
         logger.info("Initializing TurbineLongTermGrossEnergy Object")
 
         # Check that selected UQ is allowed
@@ -690,3 +692,38 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
         plt.show()
         if return_fig:
             return fig, ax
+
+
+__defaults_UQ = TurbineLongTermGrossEnergy.__attrs_attrs__.UQ.default
+__defaults_wind_bin_threshold = (
+    TurbineLongTermGrossEnergy.__attrs_attrs__.wind_bin_threshold.default
+)
+__defaults_max_power_filter = TurbineLongTermGrossEnergy.__attrs_attrs__.max_power_filter.default
+__defaults_correction_threshold = (
+    TurbineLongTermGrossEnergy.__attrs_attrs__.correction_threshold.default
+)
+__defaults_uncertainty_scada = TurbineLongTermGrossEnergy.__attrs_attrs__.uncertainty_scada.default
+__defaults_num_sim = TurbineLongTermGrossEnergy.__attrs_attrs__.num_sim.default
+
+
+def create_TurbineLongTermGrossEnergy(
+    project: PlantData,
+    UQ: bool = __defaults_UQ,
+    wind_bin_threshold: NDArrayFloat = __defaults_wind_bin_threshold,
+    max_power_filter: NDArrayFloat = __defaults_max_power_filter,
+    correction_threshold: NDArrayFloat = __defaults_correction_threshold,
+    uncertainty_scada: float = __defaults_uncertainty_scada,
+    num_sim: int = __defaults_num_sim,
+) -> TurbineLongTermGrossEnergy:
+    return TurbineLongTermGrossEnergy(
+        project,
+        UQ,
+        wind_bin_threshold,
+        max_power_filter,
+        correction_threshold,
+        uncertainty_scada,
+        num_sim,
+    )
+
+
+create_TurbineLongTermGrossEnergy.__doc__ = TurbineLongTermGrossEnergy.__doc__

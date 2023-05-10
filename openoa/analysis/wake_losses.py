@@ -170,13 +170,15 @@ class WakeLosses(FromDictMixin):
     _num_years_LT: float | tuple[float, float] = field(init=False)
     _run: pd.DataFrame = field(init=False)
 
-    @plant.validator
-    def validate_plant_ready_for_anylsis(
-        self, attribute: attrs.Attribute, value: PlantData
-    ) -> None:
-        """Validates that the value has been validated for a wake loss analysis."""
-        if set(("WakeLosses", "all")).intersection(value.analysis_type) == set():
-            raise TypeError("The input to 'plant' must be validated for at least 'WakeLosses'")
+    @reanal_products.validator
+    def check_reanalysis_products(self, attribute: attrs.Attribute, value: list[str]) -> None:
+        """Checks that the provided reanalysis products actually exist in the reanalysis data."""
+        valid = [*self.plant.reanalysis]
+        invalid = list(set(value).difference(valid))
+        if invalid:
+            raise ValueError(
+                f"The following input to `reanal_products`: {invalid} are not contained in `plant.reanalysis`: {valid}"
+            )
 
     @logged_method_call
     def __attrs_post_init__(self):
@@ -184,6 +186,9 @@ class WakeLosses(FromDictMixin):
         Initialize logging and post-initialization setup steps.
         """
         logger.info("Initializing WakeLosses analysis object")
+
+        if set(("WakeLosses", "all")).intersection(self.plant.analysis_type) == set():
+            raise TypeError("The input to 'plant' must be validated for at least 'WakeLosses'")
 
         # Check that selected UQ is allowed and reset num_sim if no UQ
         if self.UQ:
@@ -1341,3 +1346,40 @@ class WakeLosses(FromDictMixin):
             plot_kwargs_fill=plot_kwargs_fill,
             legend_kwargs=legend_kwargs,
         )
+
+
+__defaults_wind_direction_col = WakeLosses.__attrs_attrs__.wind_direction_col.default
+__defaults_wind_direction_data_type = WakeLosses.__attrs_attrs__.wind_direction_data_type.default
+__defaults_wind_direction_asset_ids = WakeLosses.__attrs_attrs__.wind_direction_asset_ids.default
+__defaults_UQ = WakeLosses.__attrs_attrs__.UQ.default
+__defaults_start_date = WakeLosses.__attrs_attrs__.start_date.default
+__defaults_end_date = WakeLosses.__attrs_attrs__.end_date.default
+__defaults_reanal_products = WakeLosses.__attrs_attrs__.reanal_products.default
+__defaults_end_date_lt = WakeLosses.__attrs_attrs__.end_date_lt.default
+
+
+def create_WakeLosses(
+    project: PlantData,
+    wind_direction_col: str = __defaults_wind_direction_col,
+    wind_direction_data_type: str = __defaults_wind_direction_data_type,
+    wind_direction_asset_ids: list[str] = __defaults_wind_direction_asset_ids,
+    UQ: bool = __defaults_UQ,
+    start_date: str | pd.Timestamp = __defaults_start_date,
+    end_date: str | pd.Timestamp = __defaults_end_date,
+    reanal_products: list[str] = __defaults_reanal_products,
+    end_date_lt: str | pd.Timestamp = __defaults_end_date_lt,
+) -> WakeLosses:
+    return WakeLosses(
+        project,
+        wind_direction_col,
+        wind_direction_data_type,
+        wind_direction_asset_ids,
+        UQ,
+        start_date,
+        end_date,
+        reanal_products,
+        end_date_lt,
+    )
+
+
+create_WakeLosses.__doc__ = WakeLosses.__doc__
