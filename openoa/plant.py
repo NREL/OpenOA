@@ -2143,7 +2143,12 @@ class PlantData:
 
     @classmethod
     def from_entr(cls, *args, **kwargs):
-        from entr.plantdata import from_entr
+        try:
+            from entr.plantdata import from_entr
+        except ModuleNotFoundError:
+            raise NotImplementedError(
+                "The entr python package was not found. Please install py-entr by visiting https://github.com/entralliance/py-entr and following the instructions."
+            )
 
         return from_entr(*args, **kwargs)
 

@@ -1284,7 +1284,7 @@ def plot_distributions(
     figure_kwargs: dict = {},
     plot_kwargs: dict = {},
     annotate_kwargs: dict = {},
-    title: str = None,
+    title: str | None = None,
 ) -> None | tuple[plt.Figure, plt.Axes]:
     """
     Plot a distribution of AEP values from the Monte-Carlo OA method
