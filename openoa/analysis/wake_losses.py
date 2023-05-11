@@ -362,7 +362,6 @@ class WakeLosses(FromDictMixin):
         self._setup_monte_carlo_inputs()
 
         for n in tqdm(range(self.num_sim)):
-
             self._run = self.inputs.loc[n].copy()
 
             # Estimate periods when each turbine is unavailable, derated, or curtailed, based on power curve filtering
@@ -404,7 +403,6 @@ class WakeLosses(FromDictMixin):
             freestream_turbine_ids_prev = []
 
             for wd in wd_bins:
-
                 # identify freestream turbines
                 freestream_turbine_ids = self.plant.get_freestream_turbines(
                     wd, sector_width=self._run.freestream_sector_width
@@ -514,7 +512,6 @@ class WakeLosses(FromDictMixin):
             # Calculate turbine-level wake losses during period of record
             turbine_wake_losses_por = len(self.turbine_ids) * [0.0]
             for i, t in enumerate(self.turbine_ids):
-
                 # Determine ideal turbine energy as sum of the power produced by the turbine when it
                 # is derated and the mean power produced by all freestream turbines when the turbine
                 # is operating normally
@@ -862,7 +859,6 @@ class WakeLosses(FromDictMixin):
         # combine all wind speed and wind direction reanalysis variables into aggregate data frame
 
         for product in self.reanal_products:
-
             df_rean = self.plant.reanalysis[product][["WMETR_HorWdSpd", "WMETR_HorWdDir"]].copy()
 
             # Drop minute field

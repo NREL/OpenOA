@@ -736,7 +736,6 @@ def turbine_polar_contour(
 
 
 def luminance(rgb):
-
     """Calculates the brightness of an rgb 255 color. See https://en.wikipedia.org/wiki/Relative_luminance
 
     Args:
@@ -764,7 +763,6 @@ def luminance(rgb):
 
 
 def color_to_rgb(color):
-
     """Converts named colors, hex and normalised RGB to 255 RGB values
 
     Args:
@@ -807,7 +805,6 @@ def plot_windfarm(
     kwargs_for_figure={},
     kwargs_for_marker={},
 ):
-
     """Plot the windfarm spatially on a map using the Bokeh plotting libaray.
 
     Args:
@@ -1287,7 +1284,7 @@ def plot_distributions(
     figure_kwargs: dict = {},
     plot_kwargs: dict = {},
     annotate_kwargs: dict = {},
-    title: str=None,
+    title: str = None,
 ) -> None | tuple[plt.Figure, plt.Axes]:
     """
     Plot a distribution of AEP values from the Monte-Carlo OA method
@@ -1792,7 +1789,7 @@ def plot_wake_losses(
                     "The inputs `energy_data_por` and `energy_data_lt` must both have the same dimensions"
                     "as `efficiency_data_por` and `efficiency_data_lt`."
                 )
-        )
+            )
     elif (energy_data_por is None) & (energy_data_lt is None):
         plot_norm_energy = False
     else:

@@ -237,7 +237,6 @@ def series_method(data_cols: list[str] = None):
         def wrapper(*args: Any, **kwargs: Any):
             if no_df := (df := kwargs.get("data", None)) is None:
                 if arg_ix_list == []:
-
                     # Let the original method handle the provided arguments if unconfigured
                     return func(*args, *kwargs)
 
@@ -281,7 +280,6 @@ def dataframe_method(data_cols: list[str] = None):
             args = list(args)
             arg_list = _get_arguments(args, kwargs, arg_ix_list, data_cols)
             if (df := kwargs.get("data", None)) is not None:
-
                 # If a DataFrame is provided and the wrapper is unconfigured, then pass straight to the function
                 if arg_ix_list == []:
                     return func(*args, *kwargs)

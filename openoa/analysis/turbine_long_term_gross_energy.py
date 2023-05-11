@@ -176,7 +176,6 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
 
         # Loop through number of simulations, store TIE results
         for i in tqdm(np.arange(self.num_sim)):
-
             self._run = self._inputs.loc[i]
 
             self.filter_turbine_data()  # Filter turbine data

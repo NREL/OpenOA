@@ -1259,7 +1259,7 @@ class PlantData:
 
         if self.scada is not None:
             self.calculate_turbine_energy()
-        
+
         # Change the column names to the -25 convention for easier use in the rest of the code base
         self.update_column_names()
 
@@ -2144,6 +2144,7 @@ class PlantData:
     @classmethod
     def from_entr(cls, *args, **kwargs):
         from entr.plantdata import from_entr
+
         return from_entr(*args, **kwargs)
 
 
