@@ -217,7 +217,7 @@ def prepare(asset: str = "kelmarsh", return_value: str = "plantdata") -> PlantDa
     Do all loading and preparation of the data for this plant.
 
     Args:
-        asset(:obj:`dataframe`): Asset name, currently either "kelmarsh" or "penmanshiel". Defaults
+        asset(:obj:`str`): Asset name, currently either "kelmarsh" or "penmanshiel". Defaults
             to "kelmarsh".
         return_value(:obj:`str`):  One of "plantdata" or "dataframes" with the below behavior.
             Defaults to "plantdata".
