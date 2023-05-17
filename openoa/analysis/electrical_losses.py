@@ -70,7 +70,7 @@ class ElectricalLosses(FromDictMixin):
             should be given, otherwise, a scalar value should be provided.
     """
 
-    plant: PlantData = field(validator=attrs.validators.instance_of(PlantData))
+    plant: PlantData
     UQ: bool = field(default=False, converter=bool)
     num_sim: int = field(default=20000, converter=int)
     uncertainty_correction_threshold: NDArrayFloat | tuple[float, float] | float = field(
@@ -95,21 +95,21 @@ class ElectricalLosses(FromDictMixin):
     total_turbine_energy: pd.DataFrame = field(init=False)
     total_meter_energy: pd.DataFrame = field(init=False)
 
-    @plant.validator
-    def validate_plant_ready_for_anylsis(
-        self, attribute: attrs.Attribute, value: PlantData
-    ) -> None:
-        """Validates that the value has been validated for an electrical losses analysis."""
-        if set(("ElectricalLosses", "all")).intersection(value.analysis_type) == set():
-            raise TypeError(
-                "The input to 'plant' must be validated for at least the 'ElectricalLosses'"
-            )
-
     @logged_method_call
     def __attrs_post_init__(self):
         """
         Initialize logging and post-initialization setup steps.
         """
+        if not isinstance(self.plant, PlantData):
+            raise TypeError(
+                f"The passed `plant` object must be of type `PlantData`, not: {type(self.plant)}"
+            )
+
+        if set(("ElectricalLosses", "all")).intersection(self.plant.analysis_type) == set():
+            raise TypeError(
+                "The input to 'plant' must be validated for at least the 'ElectricalLosses'"
+            )
+
         logger.info("Initializing Electrical Losses Object")
 
         # Check that selected UQ is allowed and reset num_sim if no UQ
@@ -339,3 +339,35 @@ class ElectricalLosses(FromDictMixin):
         plt.show()
         if return_fig:
             return fig, ax
+
+
+__defaults_UQ = ElectricalLosses.__attrs_attrs__.UQ.default
+__defaults_num_sim = ElectricalLosses.__attrs_attrs__.num_sim.default
+__defaults_uncertainty_correction_threshold = (
+    ElectricalLosses.__attrs_attrs__.uncertainty_correction_threshold.default
+)
+__defaults_uncertainty_meter = ElectricalLosses.__attrs_attrs__.uncertainty_meter.default
+__defaults_uncertainty_scada = ElectricalLosses.__attrs_attrs__.uncertainty_scada.default
+
+
+def create_ElectricalLosses(
+    project: PlantData,
+    UQ: bool = __defaults_UQ,
+    num_sim: int = __defaults_num_sim,
+    uncertainty_correction_threshold: NDArrayFloat
+    | tuple[float, float]
+    | float = __defaults_uncertainty_correction_threshold,
+    uncertainty_meter: NDArrayFloat | tuple[float, float] | float = __defaults_uncertainty_meter,
+    uncertainty_scada: NDArrayFloat | tuple[float, float] | float = __defaults_uncertainty_scada,
+) -> ElectricalLosses:
+    return ElectricalLosses(
+        project,
+        UQ,
+        num_sim,
+        uncertainty_correction_threshold,
+        uncertainty_meter,
+        uncertainty_scada,
+    )
+
+
+create_ElectricalLosses.__doc__ = ElectricalLosses.__doc__

@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file. If you make
 ## Unreleased
 - Added downloader utils module containing functions for downloading generic files from the web, downloading files from Zenodo, and downloading monthly-resolution ERA5 and MERRA2 data
 - Added example notebook "02c_plant_aep_analysis_cubico.ipynb" that demonstrates creating a `PlantData` object and running AEP analysis for two Cubico wind plants (Kelmarsh and Penmanshiel) using open data downloaded from Zenodo
+- Hard-coded reanalyis product abbreviation requirements in the analysis classes have been moved to check that the provided abbreviations match the reanalysis abbreviations used for the `PlantData.reanalysis` dictionary keys.
+- Analysis classes are now attached to `PlantData` at the time of import, maintaining the same behavior as a standalone analysis class import. For example, the following two import patters produce the same results
+  ```python
+  from openoa import PlantData
+  from openoa.analysis import WakeLosses
+
+  project = PlantData(<kwargs>)
+
+  # Original pattern
+  wake_classic = WakeLosses(project)
+
+  # New, equivalent pattern
+  wake_new = project.WakeLosses()
+  ```
 
 ## 3.0rc2
 - Everything from release candidate 1

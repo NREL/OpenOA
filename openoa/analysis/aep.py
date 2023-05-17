@@ -131,7 +131,7 @@ class MonteCarloAEP(FromDictMixin):
             a regression input. Defaults to False.
     """
 
-    plant: PlantData = field(validator=attrs.validators.instance_of(PlantData))
+    plant: PlantData
     reanalysis_products: list[str] = field(
         default=["merra2", "ncep2", "era5"],
         validator=attrs.validators.deep_iterable(
@@ -205,21 +205,31 @@ class MonteCarloAEP(FromDictMixin):
     _run: pd.DataFrame = field(init=False)
     results: pd.DataFrame = field(init=False)
 
-    @plant.validator
-    def validate_plant_ready_for_anylsis(
-        self, attribute: attrs.Attribute, value: PlantData
-    ) -> None:
-        """Validates that the value has been validated for an electrical losses analysis."""
-        if set(("MonteCarloAEP", "all")).intersection(value.analysis_type) == set():
-            raise TypeError(
-                "The input to 'plant' must be validated for at least the 'MonteCarloAEP'"
+    @reanalysis_products.validator
+    def check_reanalysis_products(self, attribute: attrs.Attribute, value: list[str]) -> None:
+        """Checks that the provided reanalysis products actually exist in the reanalysis data."""
+        valid = [*self.plant.reanalysis]
+        invalid = list(set(value).difference(valid))
+        if invalid:
+            raise ValueError(
+                f"The following input to `reanalysis_products`: {invalid} are not contained in `plant.reanalysis`: {valid}"
             )
 
-    # @logged_method_call
+    @logged_method_call
     def __attrs_post_init__(self):
         """
         Initialize APE_MC analysis with data and parameters.
         """
+        if not isinstance(self.plant, PlantData):
+            raise TypeError(
+                f"The passed `plant` object must be of type `PlantData`, not: {type(self.plant)}"
+            )
+
+        if set(("MonteCarloAEP", "all")).intersection(self.plant.analysis_type) == set():
+            raise TypeError(
+                "The input to 'plant' must be validated for at least the 'MonteCarloAEP'"
+            )
+
         logger.info("Initializing MonteCarloAEP Analysis Object")
 
         self.resample_freq = {"M": "MS", "D": "D", "H": "H"}[self.time_resolution]
@@ -1440,3 +1450,58 @@ class MonteCarloAEP(FromDictMixin):
             plot_kwargs_points=plot_kwargs_points,
             legend_kwargs=legend_kwargs,
         )
+
+
+__defaults_reanalysis_products = MonteCarloAEP.__attrs_attrs__.reanalysis_products.default
+__defaults_uncertainty_meter = MonteCarloAEP.__attrs_attrs__.uncertainty_meter.default
+__defaults_uncertainty_losses = MonteCarloAEP.__attrs_attrs__.uncertainty_losses.default
+__defaults_uncertainty_windiness = MonteCarloAEP.__attrs_attrs__.uncertainty_windiness.default
+__defaults_uncertainty_loss_max = MonteCarloAEP.__attrs_attrs__.uncertainty_loss_max.default
+__defaults_outlier_detection = MonteCarloAEP.__attrs_attrs__.outlier_detection.default
+__defaults_uncertainty_outlier = MonteCarloAEP.__attrs_attrs__.uncertainty_outlier.default
+__defaults_uncertainty_nan_energy = MonteCarloAEP.__attrs_attrs__.uncertainty_nan_energy.default
+__defaults_time_resolution = MonteCarloAEP.__attrs_attrs__.time_resolution.default
+__defaults_end_date_lt = MonteCarloAEP.__attrs_attrs__.end_date_lt.default
+__defaults_reg_model = MonteCarloAEP.__attrs_attrs__.reg_model.default
+__defaults_ml_setup_kwargs = MonteCarloAEP.__attrs_attrs__.ml_setup_kwargs.default
+__defaults_reg_temperature = MonteCarloAEP.__attrs_attrs__.reg_temperature.default
+__defaults_reg_wind_direction = MonteCarloAEP.__attrs_attrs__.reg_wind_direction.default
+
+
+def create_MonteCarloAEP(
+    project: PlantData,
+    reanalysis_products: list[str] = __defaults_reanalysis_products,
+    uncertainty_meter: float = __defaults_uncertainty_meter,
+    uncertainty_losses: float = __defaults_uncertainty_losses,
+    uncertainty_windiness: NDArrayFloat = __defaults_uncertainty_windiness,
+    uncertainty_loss_max: NDArrayFloat = __defaults_uncertainty_loss_max,
+    outlier_detection: bool = __defaults_outlier_detection,
+    uncertainty_outlier: NDArrayFloat = __defaults_uncertainty_outlier,
+    uncertainty_nan_energy: float = __defaults_uncertainty_nan_energy,
+    time_resolution: str = __defaults_time_resolution,
+    end_date_lt: str | pd.Timestamp = __defaults_end_date_lt,
+    reg_model: str = __defaults_reg_model,
+    ml_setup_kwargs: dict = __defaults_ml_setup_kwargs,
+    reg_temperature: bool = __defaults_reg_temperature,
+    reg_wind_direction: bool = __defaults_reg_wind_direction,
+) -> MonteCarloAEP:
+    return MonteCarloAEP(
+        project,
+        reanalysis_products,
+        uncertainty_meter,
+        uncertainty_losses,
+        uncertainty_windiness,
+        uncertainty_loss_max,
+        outlier_detection,
+        uncertainty_outlier,
+        uncertainty_nan_energy,
+        time_resolution,
+        end_date_lt,
+        reg_model,
+        ml_setup_kwargs,
+        reg_temperature,
+        reg_wind_direction,
+    )
+
+
+create_MonteCarloAEP.__doc__ = MonteCarloAEP.__doc__

@@ -106,11 +106,10 @@ class EYAGapAnalysis(FromDictMixin):
     and how they are linked from differences in the three key metrics.
     """
 
+    # plant: PlantData = field(validator=attrs.validators.instance_of((PlantData, type(None))))
+    plant: PlantData
     eya_estimates: EYAEstimate = field(converter=EYAEstimate.from_dict)
     oa_results: OAResults = field(converter=OAResults.from_dict)
-    plant: PlantData = field(
-        default=None, validator=attrs.validators.instance_of((PlantData, type(None)))
-    )
 
     # Internally produced attributes
     data: list = field(factory=list)
@@ -130,6 +129,11 @@ class EYAGapAnalysis(FromDictMixin):
                                                     False to not save plot
 
         """
+        if not (isinstance(self.plant, PlantData) or self.plant is None):
+            raise TypeError(
+                f"The passed `plant` object must be of type `PlantData` or `None`, not: {type(self.plant)}"
+            )
+
         logger.info("Initialized EYA Gap Analysis Object")
 
     @logged_method_call
@@ -230,3 +234,12 @@ class EYAGapAnalysis(FromDictMixin):
             plot_kwargs=plot_kwargs,
             figure_kwargs=figure_kwargs,
         )
+
+
+def create_EYAGapAnalysis(
+    project: PlantData, eya_estimates: dict | EYAEstimate, oa_results: dict | OAResults
+) -> EYAGapAnalysis:
+    return EYAGapAnalysis(project, eya_estimates, oa_results)
+
+
+create_EYAGapAnalysis.__doc__ = EYAGapAnalysis.__doc__

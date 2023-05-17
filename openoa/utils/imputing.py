@@ -159,7 +159,7 @@ def impute_all_assets_by_correlation(
         impute_col(:obj:`str`): the name of the column in `data` to be imputed.
         reference_col(:obj:`str`): the name of the column in `data` to be used in imputation.
         asset_id_col(:obj:`str): The name of the ID column, should be one of the turinbe or tower
-            index column names. Defaults to the turbine column name "WTUR_TurName".
+            index column names. Defaults to the turbine column name "WTUR_TurNam".
         r2_threshold(:obj:`float`): the correlation threshold for a neighboring assets to be considered valid
             for use in imputation, by default 0.7.
         method(:obj:`str`): The imputation method, should be one of "linear" or "polynomial", by default "linear".
