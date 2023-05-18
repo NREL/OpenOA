@@ -77,6 +77,39 @@ def create_schema() -> dict:
         cls = meta()
         meta_dict = asdict(cls, filter=_attrs_meta_filter, value_serializer=_attrs_meta_serializer)
         schema[cls.name] = {"""broken out by column into name, dtype, and units"""}
+        for key, value in meta_dict:
+            if key in ("dtypes", "units", "frequency"):
+                continue
+            schema[cls.name][key] = {
+                "name": meta_dict[key],
+                "dtype": meta_dict["dtypes"][key],
+                "units": meta_dict["units"][key],
+            }
+            schema[cls.name].pop("units")
+            schema[cls.name].pop("dtypes")
+    return schema
+
+
+def create_analysis_schema(analysis_types: str | list[str]) -> dict:
+    """Creates a dictionary of the metadata input requirements.
+
+    Returns:
+        dict: The compiled metadata dictionary specifying the required data definitions.
+    """
+    meta_classes = (
+        SCADAMetaData,
+        MeterMetaData,
+        TowerMetaData,
+        StatusMetaData,
+        CurtailMetaData,
+        AssetMetaData,
+        ReanalysisMetaData,
+    )
+    schema = {}
+    for meta in meta_classes:
+        cls = meta()
+        meta_dict = asdict(cls, filter=_attrs_meta_filter, value_serializer=_attrs_meta_serializer)
+        schema[cls.name] = {"""broken out by column into name, dtype, and units"""}
     return schema
 
 
