@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 from typing import Any
 from pathlib import Path
 
@@ -17,10 +18,21 @@ from openoa.schema.metadata import (
     StatusMetaData,
     CurtailMetaData,
     ReanalysisMetaData,
+    determine_analysis_requirements,
 )
 
 
 HERE = Path(__file__).resolve().parent
+
+meta_class_map = {
+    "scada": SCADAMetaData,
+    "meter": MeterMetaData,
+    "tower": TowerMetaData,
+    "status": StatusMetaData,
+    "curtail": CurtailMetaData,
+    "asset": AssetMetaData,
+    "reanalysis": ReanalysisMetaData,
+}
 
 
 def _attrs_meta_filter(inst: Attribute, value: Any) -> bool:
@@ -65,30 +77,22 @@ def create_schema() -> dict:
     Returns:
         dict: The compiled metadata dictionary specifying the required data definitions.
     """
-    meta_classes = (
-        SCADAMetaData,
-        MeterMetaData,
-        TowerMetaData,
-        StatusMetaData,
-        CurtailMetaData,
-        AssetMetaData,
-        ReanalysisMetaData,
-    )
-    schema = {}
-    for meta in meta_classes:
-        cls = meta()
-        meta_dict = asdict(cls, filter=_attrs_meta_filter, value_serializer=_attrs_meta_serializer)
-        schema[cls.name] = {"""broken out by column into name, dtype, and units"""}
-        for key, value in meta_dict:
-            if key in ("dtypes", "units", "frequency"):
+    schema = {name: {} for name in meta_class_map}
+    for name, meta in meta_class_map.items():
+        meta_dict = asdict(
+            meta(), filter=_attrs_meta_filter, value_serializer=_attrs_meta_serializer
+        )
+        for key, value in meta_dict.items():
+            if key in ("dtypes", "units"):
                 continue
-            schema[cls.name][key] = {
+            if key == "frequency":
+                schema[name][key] = meta_dict[key]
+                continue
+            schema[name][key] = {
                 "name": meta_dict[key],
                 "dtype": meta_dict["dtypes"][key],
                 "units": meta_dict["units"][key],
             }
-            schema[cls.name].pop("units")
-            schema[cls.name].pop("dtypes")
     return schema
 
 
@@ -98,20 +102,21 @@ def create_analysis_schema(analysis_types: str | list[str]) -> dict:
     Returns:
         dict: The compiled metadata dictionary specifying the required data definitions.
     """
-    meta_classes = (
-        SCADAMetaData,
-        MeterMetaData,
-        TowerMetaData,
-        StatusMetaData,
-        CurtailMetaData,
-        AssetMetaData,
-        ReanalysisMetaData,
+    schema = create_schema()
+    schema_copy = deepcopy(schema)
+    column_requirements, frequnency_requirements = determine_analysis_requirements(
+        which="both", analysis_type=analysis_types
     )
-    schema = {}
-    for meta in meta_classes:
-        cls = meta()
-        meta_dict = asdict(cls, filter=_attrs_meta_filter, value_serializer=_attrs_meta_serializer)
-        schema[cls.name] = {"""broken out by column into name, dtype, and units"""}
+    for name, meta in schema_copy.items():
+        if name not in column_requirements:
+            schema.pop(name)
+            continue
+        for col in meta:
+            if col == "frequency":
+                schema[name][col] = list(frequnency_requirements[name])
+                continue
+            if col not in column_requirements[name]:
+                schema[name].pop(col)
     return schema
 
 
@@ -122,10 +127,33 @@ def create_analysis_schema(analysis_types: str | list[str]) -> dict:
 if __name__ == "__main__":
     # Get the schemas
     full_schema = create_schema()
+    base_mc_aep_schema = create_analysis_schema("MonteCarloAEP")
+    base_wake_schema = create_analysis_schema("WakeLosses")
+    base_tie_schema = create_analysis_schema("TurbineLongTermGrossEnergy")
+    base_electric_schema = create_analysis_schema("ElectricalLosses")
 
     # Save the analysis schemass
     with open(HERE / "full_schema.yml", "w") as f:
         yaml.dump(full_schema, f, default_flow_style=False, sort_keys=False)
-
     with open(HERE / "full_schema.json", "w") as f:
         json.dump(full_schema, f, sort_keys=False, indent=2)
+
+    with open(HERE / "base_monthe_carlo_aep_schema.yml", "w") as f:
+        yaml.dump(base_mc_aep_schema, f, default_flow_style=False, sort_keys=False)
+    with open(HERE / "base_monthe_carlo_aep_schema.json", "w") as f:
+        json.dump(base_mc_aep_schema, f, sort_keys=False, indent=2)
+
+    with open(HERE / "base_wake_losses_schema.yml", "w") as f:
+        yaml.dump(base_wake_schema, f, default_flow_style=False, sort_keys=False)
+    with open(HERE / "base_wake_losses_schema.json", "w") as f:
+        json.dump(base_wake_schema, f, sort_keys=False, indent=2)
+
+    with open(HERE / "base_tie_schema.yml", "w") as f:
+        yaml.dump(base_tie_schema, f, default_flow_style=False, sort_keys=False)
+    with open(HERE / "base_tie_schema.json", "w") as f:
+        json.dump(base_tie_schema, f, sort_keys=False, indent=2)
+
+    with open(HERE / "base_electrical_losses_schema.yml", "w") as f:
+        yaml.dump(base_electric_schema, f, default_flow_style=False, sort_keys=False)
+    with open(HERE / "base_electric_losses_schema.json", "w") as f:
+        json.dump(base_electric_schema, f, sort_keys=False, indent=2)

@@ -1,0 +1,53 @@
+{
+  "reanalysis": {
+    "WMETR_HorWdDir": {
+      "dtype": "float",
+      "name": "WMETR_HorWdDir",
+      "units": "deg"
+    },
+    "WMETR_HorWdSpd": {
+      "dtype": "float",
+      "name": "WMETR_HorWdSpd",
+      "units": "m/s"
+    },
+    "frequency": [
+      "L",
+      "S",
+      "ms",
+      "T",
+      "min",
+      "N",
+      "us",
+      "U",
+      "H"
+    ]
+  },
+  "scada": {
+    "WMET_HorWdSpd": {
+      "dtype": "float",
+      "name": "WMET_HorWdSpd",
+      "units": "m/s"
+    },
+    "WTUR_TurNam": {
+      "dtype": "str",
+      "name": "WTUR_TurNam",
+      "units": null
+    },
+    "WTUR_W": {
+      "dtype": "float",
+      "name": "WTUR_W",
+      "units": "kW"
+    },
+    "frequency": [
+      "L",
+      "S",
+      "ms",
+      "T",
+      "min",
+      "N",
+      "us",
+      "U",
+      "H"
+    ]
+  }
+}

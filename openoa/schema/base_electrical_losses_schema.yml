@@ -1,0 +1,43 @@
+scada:
+  WTUR_TurNam:
+    name: WTUR_TurNam
+    dtype: str
+    units: null
+  WTUR_W:
+    name: WTUR_W
+    dtype: float
+    units: kW
+  WMET_HorWdSpd:
+    name: WMET_HorWdSpd
+    dtype: float
+    units: m/s
+  frequency:
+  - S
+  - L
+  - D
+  - ms
+  - T
+  - min
+  - N
+  - us
+  - U
+  - H
+meter:
+  MMTR_SupWh:
+    name: MMTR_SupWh
+    dtype: float
+    units: kWh
+  frequency:
+  - S
+  - L
+  - D
+  - M
+  - MS
+  - ms
+  - W
+  - T
+  - min
+  - N
+  - us
+  - U
+  - H
