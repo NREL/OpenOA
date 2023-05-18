@@ -1,0 +1,138 @@
+scada:
+  time: time
+  WTUR_TurNam: WTUR_TurNam
+  WTUR_W: WTUR_W
+  WMET_HorWdSpd: WMET_HorWdSpd
+  WMET_HorWdDir: WMET_HorWdDir
+  WTUR_TurSt: WTUR_TurSt
+  WROT_BlPthAngVal: WROT_BlPthAngVal
+  WMET_EnvTmp: WMET_EnvTmp
+  frequency: 10T
+  WTUR_SupWh: WTUR_SupWh
+  dtypes:
+    time: numpy.datetime64
+    WTUR_TurNam: str
+    WTUR_W: float
+    WMET_HorWdSpd: float
+    WMET_HorWdDir: float
+    WTUR_TurSt: str
+    WROT_BlPthAngVal: float
+    WMET_EnvTmp: float
+    WTUR_SupWh: float
+  units:
+    time: datetim64[ns]
+    WTUR_TurNam: null
+    WTUR_W: kW
+    WMET_HorWdSpd: m/s
+    WMET_HorWdDir: deg
+    WTUR_TurSt: null
+    WROT_BlPthAngVal: deg
+    WMET_EnvTmp: C
+    WTUR_SupWh: kWh
+meter:
+  time: time
+  MMTR_SupWh: MMTR_SupWh
+  frequency: 10T
+  dtypes:
+    time: numpy.datetime64
+    MMTR_SupWh: float
+  units:
+    time: datetim64[ns]
+    MMTR_SupWh: kWh
+tower:
+  time: time
+  id: id
+  frequency: 10T
+  dtypes:
+    time: numpy.datetime64
+    id: str
+  units:
+    time: datetim64[ns]
+    id: null
+status:
+  time: time
+  id: id
+  status_id: status_id
+  status_code: status_code
+  status_text: status_text
+  frequency: 10T
+  dtypes:
+    time: numpy.datetime64
+    id: str
+    status_id: numpy.int64
+    status_code: numpy.int64
+    status_text: str
+  units:
+    time: datetim64[ns]
+    id: null
+    status_id: null
+    status_code: null
+    status_text: null
+curtail:
+  time: time
+  IAVL_ExtPwrDnWh: IAVL_ExtPwrDnWh
+  IAVL_DnWh: IAVL_DnWh
+  frequency: 10T
+  dtypes:
+    time: numpy.datetime64
+    IAVL_ExtPwrDnWh: float
+    IAVL_DnWh: float
+  units:
+    time: datetim64[ns]
+    IAVL_ExtPwrDnWh: kWh
+    IAVL_DnWh: kWh
+asset:
+  id: id
+  latitude: latitude
+  longitude: longitude
+  rated_power: rated_power
+  hub_height: hub_height
+  rotor_diameter: rotor_diameter
+  elevation: elevation
+  type: type
+  dtypes:
+    id: str
+    latitude: float
+    longitude: float
+    rated_power: float
+    hub_height: float
+    rotor_diameter: float
+    elevation: float
+    type: str
+  units:
+    id: null
+    latitude: WGS84
+    longitude: WGS84
+    rated_power: kW
+    hub_height: m
+    rotor_diameter: m
+    elevation: m
+    type: null
+reanalysis:
+  time: time
+  WMETR_HorWdSpd: WMETR_HorWdSpd
+  WMETR_HorWdSpdU: WMETR_HorWdSpdU
+  WMETR_HorWdSpdV: WMETR_HorWdSpdV
+  WMETR_HorWdDir: WMETR_HorWdDir
+  WMETR_EnvTmp: WMETR_EnvTmp
+  WMETR_AirDen: WMETR_AirDen
+  WMETR_EnvPres: surface_pressure
+  frequency: 10T
+  dtypes:
+    time: numpy.datetime64
+    WMETR_HorWdSpd: float
+    WMETR_HorWdSpdU: float
+    WMETR_HorWdSpdV: float
+    WMETR_HorWdDir: float
+    WMETR_EnvTmp: float
+    WMETR_AirDen: float
+    WMETR_EnvPres: float
+  units:
+    time: datetim64[ns]
+    WMETR_HorWdSpd: m/s
+    WMETR_HorWdSpdU: m/s
+    WMETR_HorWdSpdV: m/s
+    WMETR_HorWdDir: deg
+    WMETR_EnvTmp: K
+    WMETR_AirDen: kg/m^3
+    WMETR_EnvPres: Pa
