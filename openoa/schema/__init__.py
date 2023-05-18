@@ -1,5 +1,5 @@
-from schema import create_schema, create_analysis_schema
-from metadata import (
+from openoa.schema.schema import create_schema, create_analysis_schema
+from openoa.schema.metadata import (
     ANALYSIS_REQUIREMENTS,
     AssetMetaData,
     FromDictMixin,
@@ -7,6 +7,7 @@ from metadata import (
     PlantMetaData,
     SCADAMetaData,
     TowerMetaData,
+    StatusMetaData,
     CurtailMetaData,
     ReanalysisMetaData,
 )

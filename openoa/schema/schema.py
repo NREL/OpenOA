@@ -1,5 +1,7 @@
 """Methods to generate YAML and JSON schema files"""
 
+from __future__ import annotations
+
 import json
 from typing import Any
 from pathlib import Path
@@ -7,7 +9,7 @@ from pathlib import Path
 import yaml
 from attrs import Attribute, asdict
 
-from openoa.plant import (
+from openoa.schema.metadata import (
     AssetMetaData,
     MeterMetaData,
     SCADAMetaData,

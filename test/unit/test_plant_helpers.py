@@ -9,8 +9,17 @@ import pytest
 from attrs import field, define
 
 from openoa.plant import (  # , compose_error_message
-    ANALYSIS_REQUIREMENTS,
     PlantData,
+    load_to_pandas,
+    rename_columns,
+    convert_to_list,
+    dtype_converter,
+    column_validator,
+    frequency_validator,
+    load_to_pandas_dict,
+)
+from openoa.schema import (  # , compose_error_message
+    ANALYSIS_REQUIREMENTS,
     AssetMetaData,
     FromDictMixin,
     MeterMetaData,
@@ -20,16 +29,8 @@ from openoa.plant import (  # , compose_error_message
     StatusMetaData,
     CurtailMetaData,
     ReanalysisMetaData,
-    load_to_pandas,
-    rename_columns,
-    convert_to_list,
-    dtype_converter,
-    _at_least_hourly,
-    column_validator,
-    convert_reanalysis,
-    frequency_validator,
-    load_to_pandas_dict,
 )
+from openoa.schema.metadata import _at_least_hourly, convert_reanalysis
 
 
 # Test the FromDictMixin mixin class and class-dependent methods

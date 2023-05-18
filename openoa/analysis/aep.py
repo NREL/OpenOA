@@ -22,11 +22,12 @@ from matplotlib.markers import MarkerStyle
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import KFold
 
-from openoa.plant import PlantData, FromDictMixin
+from openoa.plant import PlantData
 from openoa.utils import plot, filters
 from openoa.utils import timeseries as tm
 from openoa.utils import unit_conversion as un
 from openoa.utils import met_data_processing as mt
+from openoa.schema import FromDictMixin
 from openoa.logging import logging, logged_method_call
 from openoa.utils.machine_learning_setup import MachineLearningSetup
 
@@ -929,7 +930,6 @@ class MonteCarloAEP(FromDictMixin):
 
         # Loop through number of simulations, run regression each time, store AEP results
         for n in tqdm(np.arange(num_sim)):
-
             self._run = self.mc_inputs.loc[n]
 
             # Run regression

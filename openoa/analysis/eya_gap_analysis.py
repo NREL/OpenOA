@@ -13,8 +13,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from attrs import field, define
 
-from openoa.plant import PlantData, FromDictMixin
+from openoa.plant import PlantData
 from openoa.utils import plot
+from openoa.schema import FromDictMixin
 from openoa.logging import logging, logged_method_call
 
 

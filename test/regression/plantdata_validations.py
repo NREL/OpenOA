@@ -9,7 +9,7 @@ from numpy.testing import assert_array_equal
 from pandas.testing import assert_frame_equal
 
 from openoa import PlantData
-from openoa.plant import ANALYSIS_REQUIREMENTS, ReanalysisMetaData
+from openoa.schema import ANALYSIS_REQUIREMENTS, ReanalysisMetaData
 
 
 example_data_path = Path(__file__).parents[2].resolve() / "examples" / "data" / "la_haute_borne"

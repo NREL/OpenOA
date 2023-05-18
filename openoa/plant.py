@@ -15,7 +15,7 @@ from shapely.geometry import Point
 
 import openoa.utils.timeseries as ts
 import openoa.utils.met_data_processing as met
-from openoa.schema import ANALYSIS_REQUIREMENTS, PlantMetaData
+from openoa.schema.metadata import ANALYSIS_REQUIREMENTS, PlantMetaData
 from openoa.utils.metadata_fetch import attach_eia_data
 from openoa.utils.unit_conversion import convert_power_to_energy
 

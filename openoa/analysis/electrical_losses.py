@@ -16,7 +16,8 @@ from tqdm import tqdm
 from attrs import field, define
 
 import openoa.utils.timeseries as ts
-from openoa.plant import PlantData, FromDictMixin
+from openoa.plant import PlantData
+from openoa.schema import FromDictMixin
 from openoa.logging import logging, logged_method_call
 from openoa.utils.plot import set_styling
 from openoa.analysis._analysis_validators import validate_UQ_input, validate_open_range_0_1
@@ -241,7 +242,6 @@ class ElectricalLosses(FromDictMixin):
 
             # If monthly meter data, sum the corrected daily turbine energy to monthly and merge
             if self.monthly_meter:
-
                 scada_monthly = self.scada_daily.resample("MS")["corrected_energy"].sum().to_frame()
                 scada_monthly.columns = ["WTUR_SupWh"]
 

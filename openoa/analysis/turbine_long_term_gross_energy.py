@@ -19,10 +19,11 @@ from tqdm import tqdm
 from attrs import field, define
 from matplotlib.ticker import StrMethodFormatter
 
-from openoa.plant import PlantData, FromDictMixin
+from openoa.plant import PlantData
 from openoa.utils import plot, filters, imputing
 from openoa.utils import timeseries as ts
 from openoa.utils import met_data_processing as met
+from openoa.schema import FromDictMixin
 from openoa.logging import logging, logged_method_call
 from openoa.utils.power_curve import functions
 from openoa.analysis._analysis_validators import validate_UQ_input, validate_open_range_0_1
@@ -176,7 +177,6 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
 
         # Loop through number of simulations, store TIE results
         for i in tqdm(np.arange(self.num_sim)):
-
             self._run = self._inputs.loc[i]
 
             self.filter_turbine_data()  # Filter turbine data
