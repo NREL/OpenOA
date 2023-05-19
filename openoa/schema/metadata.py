@@ -42,7 +42,7 @@ ANALYSIS_REQUIREMENTS = {
     },
     "TurbineLongTermGrossEnergy": {
         "scada": {
-            "columns": ["WTUR_TurNam", "WMET_HorWdSpd", "WTUR_W"],
+            "columns": ["asset_id", "WMET_HorWdSpd", "WTUR_W"],
             "freq": _at_least_daily,
         },
         "reanalysis": {
@@ -52,7 +52,7 @@ ANALYSIS_REQUIREMENTS = {
     },
     "ElectricalLosses": {
         "scada": {
-            "columns": ["WTUR_TurNam", "WMET_HorWdSpd", "WTUR_W"],
+            "columns": ["asset_id", "WMET_HorWdSpd", "WTUR_W"],
             "freq": _at_least_daily,
         },
         "meter": {
@@ -62,7 +62,7 @@ ANALYSIS_REQUIREMENTS = {
     },
     "WakeLosses": {
         "scada": {
-            "columns": ["WTUR_TurNam", "WMET_HorWdSpd", "WTUR_W"],
+            "columns": ["asset_id", "WMET_HorWdSpd", "WTUR_W"],
             "freq": _at_least_hourly,
         },
         "reanalysis": {
@@ -187,7 +187,7 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
         time (str): The datetime stamp for the SCADA data, by default "time". This data should be of
             type: `np.datetime64[ns]`, or able to be converted to a pandas DatetimeIndex. Additional
             columns describing the datetime stamps are: `frequency`
-        WTUR_TurNam (str): The turbine identifier column in the SCADA data, by default "id". This data should be of
+        asset_id (str): The turbine identifier column in the SCADA data, by default "asset_id". This data should be of
             type: `str`.
         WTUR_W (str): The power produced, in kW, column in the SCADA data, by default "WTUR_W".
             This data should be of type: `float`.
@@ -212,7 +212,7 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
 
     # DataFrame columns
     time: str = field(default="time")
-    WTUR_TurNam: str = field(default="WTUR_TurNam")
+    asset_id: str = field(default="asset_id")
     WTUR_W: str = field(default="WTUR_W")
     WMET_HorWdSpd: str = field(default="WMET_HorWdSpd")
     WMET_HorWdDir: str = field(default="WMET_HorWdDir")
@@ -232,7 +232,7 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
     dtypes: dict = field(
         default=dict(
             time=np.datetime64,
-            WTUR_TurNam=str,
+            asset_id=str,
             WTUR_W=float,
             WMET_HorWdSpd=float,
             WMET_HorWdDir=float,
@@ -246,7 +246,7 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
     units: dict = field(
         default=dict(
             time="datetim64[ns]",
-            WTUR_TurNam=None,
+            asset_id=None,
             WTUR_W="kW",
             WMET_HorWdSpd="m/s",
             WMET_HorWdDir="deg",
@@ -261,7 +261,7 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
     def __attrs_post_init__(self) -> None:
         self.col_map = dict(
             time=self.time,
-            WTUR_TurNam=self.WTUR_TurNam,
+            asset_id=self.asset_id,
             WTUR_W=self.WTUR_W,
             WMET_HorWdSpd=self.WMET_HorWdSpd,
             WMET_HorWdDir=self.WMET_HorWdDir,
@@ -337,7 +337,7 @@ class TowerMetaData(FromDictMixin):  # noqa: F821
         time (str): The datetime stamp for the met tower data, by default "time". This data should
             be of type: `np.datetime64[ns]`, or able to be converted to a pandas DatetimeIndex.
             Additional columns describing the datetime stamps are: `frequency`
-        id (str): The met tower identifier column in the met tower data, by default "id". This data
+        asset_id (str): The met tower identifier column in the met tower data, by default "asset_id". This data
             should be of type: `str`.
         frequency (str): The frequency of `time` in the met tower data, by default "10T". The input
             should align with the `Pandas frequency offset aliases`_.
@@ -349,7 +349,7 @@ class TowerMetaData(FromDictMixin):  # noqa: F821
 
     # DataFrame columns
     time: str = field(default="time")
-    id: str = field(default="id")
+    asset_id: str = field(default="asset_id")
 
     # Data about the columns
     frequency: str = field(default="10T")
@@ -361,14 +361,14 @@ class TowerMetaData(FromDictMixin):  # noqa: F821
     dtypes: dict = field(
         default=dict(
             time=np.datetime64,
-            id=str,
+            asset_id=str,
         ),
         init=False,  # don't allow for user input
     )
     units: dict = field(
         default=dict(
             time="datetim64[ns]",
-            id=None,
+            asset_id=None,
         ),
         init=False,  # don't allow for user input
     )
@@ -376,7 +376,7 @@ class TowerMetaData(FromDictMixin):  # noqa: F821
     def __attrs_post_init__(self) -> None:
         self.col_map = dict(
             time=self.time,
-            id=self.id,
+            asset_id=self.asset_id,
         )
 
 
@@ -390,13 +390,13 @@ class StatusMetaData(FromDictMixin):  # noqa: F821
         time (str): The datetime stamp for the status data, by default "time". This data should
             be of type: `np.datetime64[ns]`, or able to be converted to a pandas DatetimeIndex.
             Additional columns describing the datetime stamps are: `frequency`
-        id (str): The turbine identifier column in the status data, by default "id". This data
+        asset_id (str): The turbine identifier column in the status data, by default "asset_id". This data
             should be of type: `str`.
-        status_id (str): The status code identifier column in the status data, by default "id". This data
+        status_id (str): The status code identifier column in the status data, by default "asset_id". This data
             should be of type: `str`.
-        status_code (str): The status code column in the status data, by default "id". This data
+        status_code (str): The status code column in the status data, by default "asset_id". This data
             should be of type: `str`.
-        status_text (str): The status text description column in the status data, by default "id".
+        status_text (str): The status text description column in the status data, by default "asset_id".
             This data should be of type: `str`.
         frequency (str): The frequency of `time` in the met tower data, by default "10T". The input
             should align with the `Pandas frequency offset aliases`_.
@@ -408,7 +408,7 @@ class StatusMetaData(FromDictMixin):  # noqa: F821
 
     # DataFrame columns
     time: str = field(default="time")
-    id: str = field(default="id")
+    asset_id: str = field(default="asset_id")
     status_id: str = field(default="status_id")
     status_code: str = field(default="status_code")
     status_text: str = field(default="status_text")
@@ -423,7 +423,7 @@ class StatusMetaData(FromDictMixin):  # noqa: F821
     dtypes: dict = field(
         default=dict(
             time=np.datetime64,
-            id=str,
+            asset_id=str,
             status_id=np.int64,
             status_code=np.int64,
             status_text=str,
@@ -433,7 +433,7 @@ class StatusMetaData(FromDictMixin):  # noqa: F821
     units: dict = field(
         default=dict(
             time="datetim64[ns]",
-            id=None,
+            asset_id=None,
             status_id=None,
             status_code=None,
             status_text=None,
@@ -444,7 +444,7 @@ class StatusMetaData(FromDictMixin):  # noqa: F821
     def __attrs_post_init__(self) -> None:
         self.col_map = dict(
             time=self.time,
-            id=self.id,
+            asset_id=self.asset_id,
             status_id=self.status_id,
             status_code=self.status_code,
             status_text=self.status_text,
@@ -517,8 +517,8 @@ class AssetMetaData(FromDictMixin):  # noqa: F821
     larger plant metadata schema/routine.
 
     Args:
-        id (str): The asset identifier column in the asset metadata, by default "id". This data
-            should be of type: `str`.
+        asset_id (str): The asset identifier column in the asset metadata, by default "asset_id"
+            This data should be of type: `str`.
         latitude (str): The asset's latitudinal position, in WGS84, column in the asset metadata, by
             default "latitude". This data should be of type: `float`.
         longitude (str): The asset's longitudinal position, in WGS84, column in the asset metadata,
@@ -534,7 +534,7 @@ class AssetMetaData(FromDictMixin):  # noqa: F821
     """
 
     # DataFrame columns
-    id: str = field(default="id")
+    asset_id: str = field(default="asset_id")
     latitude: str = field(default="latitude")
     longitude: str = field(default="longitude")
     rated_power: str = field(default="rated_power")
@@ -549,7 +549,7 @@ class AssetMetaData(FromDictMixin):  # noqa: F821
     col_map: dict = field(init=False)
     dtypes: dict = field(
         default=dict(
-            id=str,
+            asset_id=str,
             latitude=float,
             longitude=float,
             rated_power=float,
@@ -562,7 +562,7 @@ class AssetMetaData(FromDictMixin):  # noqa: F821
     )
     units: dict = field(
         default=dict(
-            id=None,
+            asset_id=None,
             latitude="WGS84",
             longitude="WGS84",
             rated_power="kW",
@@ -576,7 +576,7 @@ class AssetMetaData(FromDictMixin):  # noqa: F821
 
     def __attrs_post_init__(self) -> None:
         self.col_map = dict(
-            id=self.id,
+            asset_id=self.asset_id,
             latitude=self.latitude,
             longitude=self.longitude,
             rated_power=self.rated_power,

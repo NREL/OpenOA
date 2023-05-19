@@ -242,7 +242,7 @@ def test_rename_columns():
 def test_SCADAMetaData():
     # Tests the SCADAMetaData for defaults and user-provided values
 
-    # Leaving id and power as the default values
+    # Leaving asset_id and power as the default values
     meta_dict = dict(
         time="datetime",
         WMET_HorWdSpd="ws_100",
@@ -253,7 +253,7 @@ def test_SCADAMetaData():
         frequency="H",
     )
     valid_map = deepcopy(meta_dict)
-    valid_map.update(dict(WTUR_TurNam="WTUR_TurNam", WTUR_W="WTUR_W"))
+    valid_map.update(dict(asset_id="asset_id", WTUR_W="WTUR_W"))
     valid_map.pop("frequency")
 
     meta = SCADAMetaData.from_dict(meta_dict)
@@ -306,7 +306,7 @@ def test_TowerMetaData():
 
     # Leaving time as the default value
     meta_dict = dict(
-        id="the_IDs",
+        asset_id="the_IDs",
         frequency="D",
     )
     valid_map = deepcopy(meta_dict)
@@ -334,7 +334,7 @@ def test_StatusMetaData():
 
     # Leaving time and status_text as the default values
     meta_dict = dict(
-        id="the_IDs",
+        asset_id="the_IDs",
         status_id="status_ids",
         status_code="code",
         frequency="H",
@@ -393,7 +393,7 @@ def test_AssetMetaData():
 
     # Leaving elevation and type as the default values
     meta_dict = dict(
-        id="asset_name",
+        asset_id="asset_name",
         latitude="lat",
         longitude="lon",
         rated_power="P",

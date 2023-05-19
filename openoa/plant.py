@@ -534,10 +534,10 @@ class PlantData:
         """Sets the index value for each of the `PlantData` objects that are not `None`."""
         if self.scada is not None:
             time_col = self.metadata.scada.col_map["time"]
-            id_col = self.metadata.scada.col_map["WTUR_TurNam"]
+            id_col = self.metadata.scada.col_map["asset_id"]
             self.scada[time_col] = pd.DatetimeIndex(self.scada[time_col])
             self.scada = self.scada.set_index([time_col, id_col])
-            self.scada.index.names = ["time", "WTUR_TurNam"]
+            self.scada.index.names = ["time", "asset_id"]
 
         if self.meter is not None:
             time_col = self.metadata.meter.col_map["time"]
@@ -547,17 +547,17 @@ class PlantData:
 
         if self.status is not None:
             time_col = self.metadata.status.col_map["time"]
-            id_col = self.metadata.status.col_map["id"]
+            id_col = self.metadata.status.col_map["asset_id"]
             self.status[time_col] = pd.DatetimeIndex(self.status[time_col])
             self.status = self.status.set_index([time_col, id_col])
-            self.status.index.names = ["time", "id"]
+            self.status.index.names = ["time", "asset_id"]
 
         if self.tower is not None:
             time_col = self.metadata.tower.col_map["time"]
-            id_col = self.metadata.tower.col_map["id"]
+            id_col = self.metadata.tower.col_map["asset_id"]
             self.tower[time_col] = pd.DatetimeIndex(self.tower[time_col])
             self.tower = self.tower.set_index([time_col, id_col])
-            self.tower.index.names = ["time", "id"]
+            self.tower.index.names = ["time", "asset_id"]
 
         if self.curtail is not None:
             time_col = self.metadata.curtail.col_map["time"]
@@ -566,9 +566,9 @@ class PlantData:
             self.curtail.index.name = "time"
 
         if self.asset is not None:
-            id_col = self.metadata.asset.col_map["id"]
+            id_col = self.metadata.asset.col_map["asset_id"]
             self.asset = self.asset.set_index([id_col])
-            self.asset.index.name = "id"
+            self.asset.index.name = "asset_id"
 
         if self.reanalysis is not None:
             for name in self.reanalysis:
@@ -998,7 +998,7 @@ class PlantData:
         SCADA data, if `asset` is undefined.
         """
         if self.asset is None:
-            return self.scada.index.get_level_values("id").unique()
+            return self.scada.index.get_level_values("asset_id").unique()
         return self.asset.loc[self.asset["type"] == "turbine"].index.values
 
     @property
@@ -1010,7 +1010,7 @@ class PlantData:
         """Filters `scada` on a single `turbine_id` and returns the filtered data frame.
 
         Args:
-            turbine_id (str): The ID of the turbine to retrieve its data.
+            turbine_id (str): The asset_id of the turbine to retrieve its data.
 
         Returns:
             pd.DataFrame: The turbine-specific SCADA data frame.
@@ -1025,7 +1025,7 @@ class PlantData:
         tower data, if `asset` is undefined.
         """
         if self.asset is None:
-            return self.tower.index.get_level_values("id").unique()
+            return self.tower.index.get_level_values("asset_id").unique()
         return self.asset.loc[self.asset["type"] == "tower"].index.values
 
     @property
@@ -1310,31 +1310,31 @@ class PlantData:
         self.asset.loc[ix, "nearest_turbine_id"] = nearest_turbine.values
         self.asset.loc[ix, "nearest_tower_id"] = nearest_tower.values
 
-    def nearest_turbine(self, id: str) -> str:
-        """Finds the nearest turbine to the provided `id`.
+    def nearest_turbine(self, asset_id: str) -> str:
+        """Finds the nearest turbine to the provided `asset_id`.
 
         Args:
-            id (str): A valid `asset` `id`.
+            asset_id (str): A valid `asset` `asset_id`.
 
         Returns:
-            str: The turbine `id` closest to the provided `id`.
+            str: The turbine `asset_id` closest to the provided `asset_id`.
         """
         if "nearest_turbine_id" not in self.asset.columns:
             self.calculate_nearest_neighbor()
-        return self.asset.loc[id, "nearest_turbine_id"].values[0]
+        return self.asset.loc[asset_id, "nearest_turbine_id"].values[0]
 
-    def nearest_tower(self, id: str) -> str:
-        """Finds the nearest tower to the provided `id`.
+    def nearest_tower(self, asset_id: str) -> str:
+        """Finds the nearest tower to the provided `asset_id`.
 
         Args:
-            id (str): A valid `asset` `id`.
+            asset_id (str): A valid `asset` `asset_id`.
 
         Returns:
-            str: The tower `id` closest to the provided `id`.
+            str: The tower `asset_id` closest to the provided `asset_id`.
         """
         if "nearest_tower_id" not in self.asset.columns:
             self.calculate_nearest_neighbor()
-        return self.asset.loc[id, "nearest_tower_id"].values[0]
+        return self.asset.loc[asset_id, "nearest_tower_id"].values[0]
 
 
 # **********************************************************

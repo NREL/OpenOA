@@ -807,7 +807,7 @@ class WakeLosses(FromDictMixin):
         """
 
         # keep relevant SCADA columns, create a unique time index and two-level turbine variable columns
-        # (variable name and turbine ID)
+        # (variable name and turbine asset_id)
 
         # include scada wind direction column only if using scada to determine mean wind direction for wind plant
         scada_cols = ["WMET_HorWdSpd", "WTUR_W"]
@@ -1163,7 +1163,7 @@ class WakeLosses(FromDictMixin):
             plot_norm_energy (bool, optional): If True, include a plot of normalized wind plant energy
                 production as a function of wind direction in addition to the wind farm efficiency plot.
                 Defaults to True.
-            turbine_id (str, optional): Turbine ID to plot wake losses for. If None, wake losses for the
+            turbine_id (str, optional): Turbine asset_id to plot wake losses for. If None, wake losses for the
                 entire wind plant will be plotted. Defaults to None.
             xlim (:obj:`tuple[float, float]`, optional): A tuple of floats representing the x-axis
                 wind direction plotting display limits (degrees). Defaults to (None, None).
@@ -1255,7 +1255,7 @@ class WakeLosses(FromDictMixin):
             plot_norm_energy (bool, optional): If True, include a plot of normalized wind plant energy
                 production as a function of wind speed in addition to the wind farm efficiency plot. Defaults to
                 True.
-            turbine_id (str, optional): Turbine ID to plot wake losses for. If None, wake losses for the
+            turbine_id (str, optional): Turbine asset_id to plot wake losses for. If None, wake losses for the
                 entire wind plant will be plotted. Defaults to None.
             xlim (:obj:`tuple[float, float]`, optional): A tuple of floats representing the x-axis
                 wind speed plotting display limits (degrees). Defaults to (None, None).

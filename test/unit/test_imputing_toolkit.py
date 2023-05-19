@@ -15,10 +15,10 @@ class SimpleFilters(unittest.TestCase):
             data={
                 "time": ["01", "02", "03", "04", "05", "01", "02", "03", "04", "05"],
                 "data": [0, np.nan, 4, 5, 8, 13, 18, 20, 20, 30],
-                "WTUR_TurNam": ["a", "a", "a", "a", "a", "b", "b", "b", "b", "b"],
+                "asset_id": ["a", "a", "a", "a", "a", "b", "b", "b", "b", "b"],
             },
             index=np.arange(10),
-        ).set_index(["time", "WTUR_TurNam"])
+        ).set_index(["time", "asset_id"])
 
         # Test dataframe #2: two assets, first asset as 2 NaN entries, 2nd asset as one NaN entry overlapping with
         # first asset
@@ -26,7 +26,7 @@ class SimpleFilters(unittest.TestCase):
             data={
                 "time": ["01", "02", "03", "04", "05", "01", "02", "03", "04", "05"],
                 "data": [0, np.nan, np.nan, 5, 8, 13, np.nan, 20, 20, 30],
-                "WTUR_TurNam": ["a", "a", "a", "a", "a", "b", "b", "b", "b", "b"],
+                "asset_id": ["a", "a", "a", "a", "a", "b", "b", "b", "b", "b"],
             },
             index=["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"],
         )
@@ -68,10 +68,10 @@ class SimpleFilters(unittest.TestCase):
             data={
                 "time": ["01", "02", "03", "04", "05", "01", "02", "03", "04", "05"],
                 "data": [0, np.nan, np.nan, 5, 8, np.nan, 20, 20, np.nan, np.nan],
-                "WTUR_TurNam": ["a", "a", "a", "a", "a", "b", "b", "b", "b", "b"],
+                "asset_id": ["a", "a", "a", "a", "a", "b", "b", "b", "b", "b"],
             },
             index=["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"],
-        ).set_index(["time", "WTUR_TurNam"])
+        ).set_index(["time", "asset_id"])
 
         # Data frame of 3 assets with overlapping NaN occurrences and highly correlated data
         # Asset 'b' in particular shouldn't be able to get imputed
@@ -111,7 +111,7 @@ class SimpleFilters(unittest.TestCase):
                     85,
                     np.nan,
                 ],
-                "WTUR_TurNam": [
+                "asset_id": [
                     "a",
                     "a",
                     "a",
@@ -130,7 +130,7 @@ class SimpleFilters(unittest.TestCase):
                 ],
             },
             index=np.arange(15),
-        ).set_index(["time", "WTUR_TurNam"])
+        ).set_index(["time", "asset_id"])
 
         # Data farme of 3 assets with overlapping NaN occurrences and highly correlated data
         # All data should be imputed
@@ -182,7 +182,7 @@ class SimpleFilters(unittest.TestCase):
                     120,
                     145,
                 ],
-                "WTUR_TurNam": [
+                "asset_id": [
                     "a",
                     "a",
                     "a",
@@ -206,7 +206,7 @@ class SimpleFilters(unittest.TestCase):
                     "c",
                 ],
             },
-        ).set_index(["time", "WTUR_TurNam"])
+        ).set_index(["time", "asset_id"])
 
         # Data frame of two assets that are poorly correlated
         # No data should be imputed
@@ -229,7 +229,7 @@ class SimpleFilters(unittest.TestCase):
                     "07",
                 ],
                 "data": [0, np.nan, np.nan, 5, 8, 11, 14, 40, 40, np.nan, 20, np.nan, 80, 10],
-                "WTUR_TurNam": [
+                "asset_id": [
                     "a",
                     "a",
                     "a",
@@ -247,7 +247,7 @@ class SimpleFilters(unittest.TestCase):
                 ],
             },
             index=np.arange(14),
-        ).set_index(["time", "WTUR_TurNam"])
+        ).set_index(["time", "asset_id"])
 
     def test_asset_correlation_matrix(self):
         # Test 1, make sure a simple correlation of two assets works
@@ -284,8 +284,8 @@ class SimpleFilters(unittest.TestCase):
         y_test = imputing.impute_data(
             "data",
             "data",
-            self.test2_df.loc[self.test2_df.WTUR_TurNam == "a"],
-            self.test2_df.loc[self.test2_df.WTUR_TurNam == "b"],
+            self.test2_df.loc[self.test2_df.asset_id == "a"],
+            self.test2_df.loc[self.test2_df.asset_id == "b"],
             "time",
         )
         nptest.assert_almost_equal(np.float64(y_test.loc["c"]), np.float64(3.874429), decimal=4)

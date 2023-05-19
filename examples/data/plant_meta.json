@@ -1,8 +1,8 @@
 {
   "asset": {
+    "asset_id": "asset_id",
     "elevation": "elevation_m",
     "hub_height": "Hub_height_m",
-    "id": "id",
     "latitude": "Latitude",
     "longitude": "Longitude",
     "rated_power": "Rated_power",
@@ -45,8 +45,8 @@
     "WMET_HorWdDir": "Wa_avg",
     "WMET_HorWdSpd": "Ws_avg",
     "WROT_BlPthAngVal": "Ba_avg",
-    "WTUR_TurNam": "Wind_turbine_name",
     "WTUR_W": "P_avg",
+    "asset_id": "Wind_turbine_name",
     "frequency": "10T",
     "time": "Date_time"
   }
