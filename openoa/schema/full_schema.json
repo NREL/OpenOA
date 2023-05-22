@@ -1,5 +1,10 @@
 {
   "asset": {
+    "asset_id": {
+      "dtype": "str",
+      "name": "asset_id",
+      "units": null
+    },
     "elevation": {
       "dtype": "float",
       "name": "elevation",
@@ -9,11 +14,6 @@
       "dtype": "float",
       "name": "hub_height",
       "units": "m"
-    },
-    "id": {
-      "dtype": "str",
-      "name": "id",
-      "units": null
     },
     "latitude": {
       "dtype": "float",
@@ -141,11 +141,6 @@
       "name": "WTUR_SupWh",
       "units": "kWh"
     },
-    "WTUR_TurNam": {
-      "dtype": "str",
-      "name": "WTUR_TurNam",
-      "units": null
-    },
     "WTUR_TurSt": {
       "dtype": "str",
       "name": "WTUR_TurSt",
@@ -156,6 +151,11 @@
       "name": "WTUR_W",
       "units": "kW"
     },
+    "asset_id": {
+      "dtype": "str",
+      "name": "asset_id",
+      "units": null
+    },
     "frequency": "10T",
     "time": {
       "dtype": "numpy.datetime64",
@@ -164,12 +164,12 @@
     }
   },
   "status": {
-    "frequency": "10T",
-    "id": {
+    "asset_id": {
       "dtype": "str",
-      "name": "id",
+      "name": "asset_id",
       "units": null
     },
+    "frequency": "10T",
     "status_code": {
       "dtype": "numpy.int64",
       "name": "status_code",
@@ -192,12 +192,12 @@
     }
   },
   "tower": {
-    "frequency": "10T",
-    "id": {
+    "asset_id": {
       "dtype": "str",
-      "name": "id",
+      "name": "asset_id",
       "units": null
     },
+    "frequency": "10T",
     "time": {
       "dtype": "numpy.datetime64",
       "name": "time",

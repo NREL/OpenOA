@@ -1,6 +1,6 @@
 scada:
-  WTUR_TurNam:
-    name: WTUR_TurNam
+  asset_id:
+    name: asset_id
     dtype: str
     units: null
   WTUR_W:
@@ -12,15 +12,15 @@ scada:
     dtype: float
     units: m/s
   frequency:
-  - L
-  - S
+  - U
   - ms
   - T
-  - min
-  - N
-  - us
-  - U
   - H
+  - us
+  - N
+  - L
+  - min
+  - S
 reanalysis:
   WMETR_HorWdSpd:
     name: WMETR_HorWdSpd
@@ -31,12 +31,12 @@ reanalysis:
     dtype: float
     units: deg
   frequency:
-  - L
-  - S
+  - U
   - ms
   - T
-  - min
-  - N
-  - us
-  - U
   - H
+  - us
+  - N
+  - L
+  - min
+  - S

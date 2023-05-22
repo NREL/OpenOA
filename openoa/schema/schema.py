@@ -120,10 +120,6 @@ def create_analysis_schema(analysis_types: str | list[str]) -> dict:
     return schema
 
 
-# TODO: bring metadata components of plant.py into schema/
-# TODO: replace ID naming to asset_id
-
-
 if __name__ == "__main__":
     # Get the schemas
     full_schema = create_schema()
@@ -138,9 +134,9 @@ if __name__ == "__main__":
     with open(HERE / "full_schema.json", "w") as f:
         json.dump(full_schema, f, sort_keys=False, indent=2)
 
-    with open(HERE / "base_monthe_carlo_aep_schema.yml", "w") as f:
+    with open(HERE / "base_monte_carlo_aep_schema.yml", "w") as f:
         yaml.dump(base_mc_aep_schema, f, default_flow_style=False, sort_keys=False)
-    with open(HERE / "base_monthe_carlo_aep_schema.json", "w") as f:
+    with open(HERE / "base_monte_carlo_aep_schema.json", "w") as f:
         json.dump(base_mc_aep_schema, f, sort_keys=False, indent=2)
 
     with open(HERE / "base_wake_losses_schema.yml", "w") as f:

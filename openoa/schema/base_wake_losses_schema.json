@@ -11,15 +11,15 @@
       "units": "m/s"
     },
     "frequency": [
-      "L",
-      "S",
+      "U",
       "ms",
       "T",
-      "min",
-      "N",
+      "H",
       "us",
-      "U",
-      "H"
+      "N",
+      "L",
+      "min",
+      "S"
     ]
   },
   "scada": {
@@ -28,26 +28,26 @@
       "name": "WMET_HorWdSpd",
       "units": "m/s"
     },
-    "WTUR_TurNam": {
-      "dtype": "str",
-      "name": "WTUR_TurNam",
-      "units": null
-    },
     "WTUR_W": {
       "dtype": "float",
       "name": "WTUR_W",
       "units": "kW"
     },
+    "asset_id": {
+      "dtype": "str",
+      "name": "asset_id",
+      "units": null
+    },
     "frequency": [
-      "L",
-      "S",
+      "U",
       "ms",
       "T",
-      "min",
-      "N",
+      "H",
       "us",
-      "U",
-      "H"
+      "N",
+      "L",
+      "min",
+      "S"
     ]
   }
 }

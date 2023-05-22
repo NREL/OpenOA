@@ -1,6 +1,6 @@
 scada:
-  WTUR_TurNam:
-    name: WTUR_TurNam
+  asset_id:
+    name: asset_id
     dtype: str
     units: null
   WTUR_W:
@@ -12,32 +12,32 @@ scada:
     dtype: float
     units: m/s
   frequency:
-  - S
-  - L
-  - D
+  - U
   - ms
   - T
-  - min
-  - N
-  - us
-  - U
   - H
+  - us
+  - N
+  - L
+  - min
+  - D
+  - S
 meter:
   MMTR_SupWh:
     name: MMTR_SupWh
     dtype: float
     units: kWh
   frequency:
-  - S
-  - L
-  - D
-  - M
-  - MS
-  - ms
-  - W
-  - T
-  - min
-  - N
-  - us
   - U
+  - ms
+  - M
+  - min
   - H
+  - MS
+  - us
+  - N
+  - W
+  - L
+  - T
+  - D
+  - S

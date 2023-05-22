@@ -4,19 +4,19 @@ meter:
     dtype: float
     units: kWh
   frequency:
-  - S
-  - L
-  - D
-  - M
-  - MS
-  - ms
-  - W
-  - T
-  - min
-  - N
-  - us
   - U
+  - ms
+  - M
+  - min
   - H
+  - MS
+  - us
+  - N
+  - W
+  - L
+  - T
+  - D
+  - S
 curtail:
   IAVL_ExtPwrDnWh:
     name: IAVL_ExtPwrDnWh
@@ -27,19 +27,19 @@ curtail:
     dtype: float
     units: kWh
   frequency:
-  - S
-  - L
-  - D
-  - M
-  - MS
-  - ms
-  - W
-  - T
-  - min
-  - N
-  - us
   - U
+  - ms
+  - M
+  - min
   - H
+  - MS
+  - us
+  - N
+  - W
+  - L
+  - T
+  - D
+  - S
 reanalysis:
   WMETR_HorWdSpd:
     name: WMETR_HorWdSpd
@@ -50,16 +50,16 @@ reanalysis:
     dtype: float
     units: kg/m^3
   frequency:
-  - S
-  - L
-  - D
-  - M
-  - MS
-  - ms
-  - W
-  - T
-  - min
-  - N
-  - us
   - U
+  - ms
+  - M
+  - min
   - H
+  - MS
+  - us
+  - N
+  - W
+  - L
+  - T
+  - D
+  - S

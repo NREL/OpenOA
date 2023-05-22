@@ -3,8 +3,8 @@ scada:
     name: time
     dtype: numpy.datetime64
     units: datetim64[ns]
-  WTUR_TurNam:
-    name: WTUR_TurNam
+  asset_id:
+    name: asset_id
     dtype: str
     units: null
   WTUR_W:
@@ -51,8 +51,8 @@ tower:
     name: time
     dtype: numpy.datetime64
     units: datetim64[ns]
-  id:
-    name: id
+  asset_id:
+    name: asset_id
     dtype: str
     units: null
   frequency: 10T
@@ -61,8 +61,8 @@ status:
     name: time
     dtype: numpy.datetime64
     units: datetim64[ns]
-  id:
-    name: id
+  asset_id:
+    name: asset_id
     dtype: str
     units: null
   status_id:
@@ -93,8 +93,8 @@ curtail:
     units: kWh
   frequency: 10T
 asset:
-  id:
-    name: id
+  asset_id:
+    name: asset_id
     dtype: str
     units: null
   latitude:

@@ -93,7 +93,7 @@ data type or can be converted to that type.
  Field Name          Descriptive Name   Data Type (SCADAMetaData.dtypes)   Units (SCADAMetaData.units)
 ==================== ================= ================================== =============================
  time                 time stamp        datetime64[ns]                     datetime64[ns]
- WTUR_TurNam          id                string                             None
+ asset_id             id                string                             None
  WTUR_W               power             float                              kW
  WMET_HorWdSpd        windspeed         float                              m/s
  WMET_HorWdDir        winddirection     float                              degrees
@@ -143,7 +143,7 @@ data type or can be converted to that type.
  Field Name           Descriptive Name   Data Type (TowerMetaData.dtypes)   Units (TowerMetaData.units)
 ==================== ================== ================================== =============================
  time                 time               datetime64[ns]                     datetime64[ns]
- id                   id                 string                             None
+ asset_id             id                 string                             None
 ==================== ================== ================================== =============================
 
 Curtail
@@ -186,7 +186,7 @@ listed data type or can be converted to that type.
  Field Name           Descriptive Name   Data Type (StatusMetaData.dtypes)   Units (StatusMetaData.units)
 ==================== ================== =================================== ==============================
  time                 time stamp         datetime64[ns]                      datetime64[ns]
- id                   id                 string                              None
+ asset_id             id                 string                              None
  status_id            status id          int                                 None
  status_code          status code        int                                 None
  status_text          status text        string                              None
@@ -204,7 +204,7 @@ type or can be converted to that type.
 ==================== ================== ================================== =============================
  Field Name           Descriptive Name   Data Type (AssetMetaData.dtypes)   Units (AssetMetaData.units)
 ==================== ================== ================================== =============================
- id                   id                 string                             None
+ asset_id             id                 string                             None
  latitude             latitude           float                              WGS-84
  longitude            longitude          float                              WGS-84
  rated_power          rated power        float                              kW
