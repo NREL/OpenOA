@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from pathlib import Path
 
 import attr
 import numpy as np
@@ -31,6 +32,9 @@ from openoa.schema import (  # , compose_error_message
     ReanalysisMetaData,
 )
 from openoa.schema.metadata import _at_least_hourly, convert_reanalysis
+
+
+EXAMPLE_DATA_PATH = Path(__file__).resolve().parents[2] / "examples/data"
 
 
 # Test the FromDictMixin mixin class and class-dependent methods
@@ -529,30 +533,110 @@ def test_PlantMetaData_defaults():
     assert vals["reanalysis"]["era5"] == ReanalysisMetaData().col_map
 
 
-# def test_PlantMetaData_from_yaml():
-#     # Test the PlantMetaData object using the from_yaml classmethod
+def test_PlantMetaData_from_file():
+    # Test the PlantMetaData object using the from_yaml classmethod
 
-#     # Test the default values only for meta data because all the subcomponents have been checked
-#     meta = PlantMetaData.from_yaml(need to create the test data)
-#     assert meta.latitude == 0.0
-#     assert meta.longitude == 0.0
-#     assert meta.scada == SCADAMetaData()
-#     assert meta.meter == MeterMetaData()
-#     assert meta.tower == TowerMetaData()
-#     assert meta.status == StatusMetaData()
-#     assert meta.curtail == CurtailMetaData()
-#     assert meta.asset == AssetMetaData()
-#     assert meta.reanalysis == {}
+    latitude = 48.4497
+    longitude = 5.5896
+    capacity = 8.2
+    scada = SCADAMetaData(
+        frequency="10T",
+        asset_id="Wind_turbine_name",
+        WROT_BlPthAngVal="Ba_avg",
+        WTUR_W="P_avg",
+        WMET_EnvTmp="Ot_avg",
+        time="Date_time",
+        WMET_HorWdDir="Wa_avg",
+        WMET_HorWdSpd="Ws_avg",
+    )
+    meter = MeterMetaData(
+        MMTR_SupWh="net_energy_kwh",
+        time="time",
+    )
+    curtail = CurtailMetaData(
+        IAVL_DnWh="availability_kwh",
+        IAVL_ExtPwrDnWh="curtailment_kwh",
+        frequency="10T",
+        time="time",
+    )
+    asset = AssetMetaData(
+        elevation="elevation_m",
+        hub_height="Hub_height_m",
+        asset_id="Wind_turbine_name",
+        latitude="Latitude",
+        longitude="Longitude",
+        rated_power="Rated_power",
+        rotor_diameter="Rotor_diameter_m",
+    )
+    reanalysis = {
+        "era5": ReanalysisMetaData(
+            frequency="H",
+            WMETR_EnvPres="surf_pres",
+            WMETR_EnvTmp="t_2m",
+            time="datetime",
+            WMETR_HorWdSpdU="u_100",
+            WMETR_HorWdSpdV="v_100",
+            WMETR_HorWdDir="winddirection_deg",
+        ),
+        "merra2": ReanalysisMetaData(
+            frequency="H",
+            WMETR_EnvPres="surface_pressure",
+            WMETR_EnvTmp="temp_2m",
+            time="datetime",
+            WMETR_HorWdSpdU="u_50",
+            WMETR_HorWdSpdV="v_50",
+            WMETR_HorWdDir="winddirection_deg",
+        ),
+    }
 
-#     # Test the coordinates property
-#     assert meta.coordinates == (0.0, 0.0)
+    # Test the default values only for meta data because all the subcomponents have been checked
+    meta = PlantMetaData.from_yaml(EXAMPLE_DATA_PATH / "plant_meta.yml")
+    assert meta.capacity == capacity
+    assert meta.latitude == latitude
+    assert meta.longitude == longitude
+    assert meta.scada == scada
+    assert meta.meter == meter
+    assert meta.tower == TowerMetaData()
+    assert meta.status == StatusMetaData()
+    assert meta.curtail == curtail
+    assert meta.asset == asset
+    assert meta.reanalysis == reanalysis
 
-#     # Test the column_map property
-#     vals = meta.column_map
-#     assert vals["scada"] == SCADAMetaData().col_map
-#     assert vals["meter"] == MeterMetaData().col_map
-#     assert vals["tower"] == TowerMetaData().col_map
-#     assert vals["status"] == StatusMetaData().col_map
-#     assert vals["curtail"] == CurtailMetaData().col_map
-#     assert vals["asset"] == AssetMetaData().col_map
-#     assert vals["reanalysis"] == {}
+    # Test the coordinates property
+    assert meta.coordinates == (latitude, longitude)
+
+    # Test the column_map property
+    vals = meta.column_map
+    assert vals["scada"] == scada.col_map
+    assert vals["meter"] == meter.col_map
+    assert vals["tower"] == TowerMetaData().col_map
+    assert vals["status"] == StatusMetaData().col_map
+    assert vals["curtail"] == curtail.col_map
+    assert vals["asset"] == asset.col_map
+    assert vals["reanalysis"] == {name: val.col_map for name, val in reanalysis.items()}
+
+    # Test the default values only for meta data because all the subcomponents have been checked
+    meta = PlantMetaData.from_json(EXAMPLE_DATA_PATH / "plant_meta.json")
+    assert meta.capacity == capacity
+    assert meta.latitude == latitude
+    assert meta.longitude == longitude
+    assert meta.scada == scada
+    assert meta.meter == meter
+    assert meta.tower == TowerMetaData()
+    assert meta.status == StatusMetaData()
+    assert meta.curtail == curtail
+    assert meta.asset == asset
+    assert meta.reanalysis == reanalysis
+
+    # Test the coordinates property
+    assert meta.coordinates == (latitude, longitude)
+
+    # Test the column_map property
+    vals = meta.column_map
+    assert vals["scada"] == scada.col_map
+    assert vals["meter"] == meter.col_map
+    assert vals["tower"] == TowerMetaData().col_map
+    assert vals["status"] == StatusMetaData().col_map
+    assert vals["curtail"] == curtail.col_map
+    assert vals["asset"] == asset.col_map
+    assert vals["reanalysis"] == {name: val.col_map for name, val in reanalysis.items()}

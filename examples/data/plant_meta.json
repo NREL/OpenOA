@@ -1,6 +1,6 @@
 {
   "asset": {
-    "asset_id": "asset_id",
+    "asset_id": "Wind_turbine_name",
     "elevation": "elevation_m",
     "hub_height": "Hub_height_m",
     "latitude": "Latitude",
@@ -8,6 +8,7 @@
     "rated_power": "Rated_power",
     "rotor_diameter": "Rotor_diameter_m"
   },
+  "capacity": 8.2,
   "curtail": {
     "IAVL_DnWh": "availability_kwh",
     "IAVL_ExtPwrDnWh": "curtailment_kwh",

@@ -74,6 +74,9 @@ class TestPlantData(unittest.TestCase):
         self.plant.analysis_type = "MonteCarloAEP"
         self.plant.validate()
 
+        # Ensure that after validating a non-None analysis type, that the None is removed
+        assert None not in self.plant.analysis_type
+
     def test_doesNotValidateForAll(self):
         """
         The example plant should not validate for MonteCarloAEP analysis type
@@ -111,7 +114,6 @@ class TestPlantData(unittest.TestCase):
             )
             assert len(re_original.intersection(self.plant.reanalysis[name].columns)) == 0
 
-    @pytest.mark.skip
     def test_toCSV(self):
         """
         Save this plant to a temporary directory, load it in, and make sure the data matches.
