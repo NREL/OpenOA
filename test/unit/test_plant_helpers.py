@@ -640,3 +640,23 @@ def test_PlantMetaData_from_file():
     assert vals["curtail"] == curtail.col_map
     assert vals["asset"] == asset.col_map
     assert vals["reanalysis"] == {name: val.col_map for name, val in reanalysis.items()}
+
+    # Test the load classmethod
+    meta_v2 = PlantMetaData.load(EXAMPLE_DATA_PATH / "plant_meta.json")
+    assert meta == meta_v2
+
+    meta_v3 = PlantMetaData.load(EXAMPLE_DATA_PATH / "plant_meta.yml")
+    assert meta == meta_v3
+
+    # Test for non existent files
+    with pytest.raises(FileExistsError):
+        PlantMetaData.from_yaml(EXAMPLE_DATA_PATH / "plant_meta_data.yml")
+
+    with pytest.raises(FileExistsError):
+        PlantMetaData.from_json(EXAMPLE_DATA_PATH / "plant_meta_data.json")
+
+    with pytest.raises(ValueError):
+        PlantMetaData.load(EXAMPLE_DATA_PATH / "plant_meta_data.jsn")
+
+    with pytest.raises(ValueError):
+        PlantMetaData.load([])
