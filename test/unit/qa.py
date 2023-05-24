@@ -1,4 +1,3 @@
-from openoa.utils import qa
 import unittest
 
-
+from openoa.utils import qa

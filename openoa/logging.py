@@ -3,6 +3,7 @@ import json
 import logging
 import logging.config
 
+
 def setup_logging(default_path="logging.json", default_level=logging.INFO, env_key="LOG_CFG"):
     """Setup logging configuration"""
     path = default_path
@@ -39,5 +40,3 @@ def logged_function_call(the_function, msg="call"):
         return the_function(*args, **kwargs)
 
     return _wrapper
-
-

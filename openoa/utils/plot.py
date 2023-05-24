@@ -736,7 +736,6 @@ def turbine_polar_contour(
 
 
 def luminance(rgb):
-
     """Calculates the brightness of an rgb 255 color. See https://en.wikipedia.org/wiki/Relative_luminance
 
     Args:
@@ -764,7 +763,6 @@ def luminance(rgb):
 
 
 def color_to_rgb(color):
-
     """Converts named colors, hex and normalised RGB to 255 RGB values
 
     Args:
@@ -807,7 +805,6 @@ def plot_windfarm(
     kwargs_for_figure={},
     kwargs_for_marker={},
 ):
-
     """Plot the windfarm spatially on a map using the Bokeh plotting libaray.
 
     Args:
@@ -1287,6 +1284,7 @@ def plot_distributions(
     figure_kwargs: dict = {},
     plot_kwargs: dict = {},
     annotate_kwargs: dict = {},
+    title: str | None = None,
 ) -> None | tuple[plt.Figure, plt.Axes]:
     """
     Plot a distribution of AEP values from the Monte-Carlo OA method
@@ -1308,6 +1306,7 @@ def plot_distributions(
             `ax.hist()`. Defaults to {}.
         annotate_kwargs (:obj:`dict`, optional): Additional annotation keyword arguments that are
             passed to `ax.annotate()`. Defaults to {}.
+        title (:str:, optional): Title to place over all subplots.
 
     Returns:
         None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes]: If `return_fig` is True, then
@@ -1340,7 +1339,7 @@ def plot_distributions(
             **annotate_kwargs,
         )
         ax.annotate(
-            f"Uncentainty = {vals.std() / vals.mean():.1f}",
+            f"Uncentainty = {(vals.std() / vals.mean())*100:.1f}%",
             (0.05, 0.85),
             xycoords="axes fraction",
             **annotate_kwargs,
@@ -1348,6 +1347,9 @@ def plot_distributions(
         ax.set_xlabel(label)
         ax.set_xlim(_xlim)
         ax.set_ylim(_ylim)
+
+    if title:
+        plt.suptitle(title)
 
     # Delete the extra axes
     if (n_delete := len(axes.flatten()) - len(which)) > 0:
@@ -1787,7 +1789,7 @@ def plot_wake_losses(
                     "The inputs `energy_data_por` and `energy_data_lt` must both have the same dimensions"
                     "as `efficiency_data_por` and `efficiency_data_lt`."
                 )
-        )
+            )
     elif (energy_data_por is None) & (energy_data_lt is None):
         plot_norm_energy = False
     else:

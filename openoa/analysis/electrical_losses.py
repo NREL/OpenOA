@@ -241,7 +241,6 @@ class ElectricalLosses(FromDictMixin):
 
             # If monthly meter data, sum the corrected daily turbine energy to monthly and merge
             if self.monthly_meter:
-
                 scada_monthly = self.scada_daily.resample("MS")["corrected_energy"].sum().to_frame()
                 scada_monthly.columns = ["WTUR_SupWh"]
 
