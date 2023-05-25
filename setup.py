@@ -89,7 +89,7 @@ setup(
     author="NREL PRUF OA Team",
     author_email="openoa@nrel.gov",
     url="https://github.com/NREL/OpenOA",
-    packages=find_packages(exclude=["test"]),
+    packages=find_packages(exclude=["test", "examples"]),
     include_package_data=True,
     install_requires=REQUIRED,
     extras_require=EXTRAS,
