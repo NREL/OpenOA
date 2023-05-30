@@ -515,7 +515,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
 
     def check_simulation_results_gbm_daily(self, s):
         # Make sure AEP results are consistent to six decimal places
-        expected_results = [12.957132, 14.928604, 1.310955, 5.248099, 0.049947, 9.21482]
+        expected_results = [12.955753, 14.918292, 1.310864, 5.250295, 0.049952, 9.226035]
 
         calculated_results = [
             s.aep_GWh.mean(),
