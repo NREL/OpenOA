@@ -42,7 +42,6 @@ class EYAGAPAnalysis(unittest.TestCase):
         self.analysis.run()
 
     def test_eya_gap_analysis_results(self):
-
         # Check that the compiled gap analysis results match as expected
         expected_compiled_data = [467.0, -41.441648, 6.59437, 6.230899, 9.61638]
         actual_compiled_data = self.analysis.compiled_data

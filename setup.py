@@ -25,7 +25,7 @@ REQUIRED = [
     "bokeh>=2.4",
     "attrs>=22",
     "pytz",
-    "pyspark",  # TODO: confirm if options required [sql] or [pandas_on_spark]
+    "pyspark",
     "pyyaml",
     "h5pyd",
 ]
@@ -44,7 +44,6 @@ EXTRAS = {
         "sphinxcontrib-bibtex",
         "myst-parser",
     ],
-    "entr": ["pyhive"],
     "develop": [
         "pre-commit",
         "black",
