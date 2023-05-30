@@ -160,11 +160,21 @@ html_theme_options = {
     "navigation_depth": 2,
     "collapse_navigation": True,
     "navbar_align": "left",
+    "logo": {
+        "image_light": str(
+            Path(__file__).resolve().parents[1]
+            / "Open OA Final Logos/Color/Open OA Color Transparent Background.png"
+        ),
+        "image_dark": str(
+            Path(__file__).resolve().parents[1]
+            / "Open OA Final Logos/Color/Open OA Color Transparent Background.png"
+        ),
+    },
 }
-html_sidebars = {"**": []}  # ["search-field.html", "sidebar-nav-bs", "sidebar-ethical-ads"]
-html_logo = str(
-    Path("../Open OA Final Logos").resolve() / "Color" / "Open OA Color Transparent Background.png"
-)
+
+html_context = {
+    "default_mode": "light",
+}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,

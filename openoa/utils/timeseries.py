@@ -14,12 +14,13 @@ from dateutil.parser import parse
 from openoa.utils._converters import series_method
 
 
-def offset_to_seconds(offset: str | np.datetime64) -> int | float:
+def offset_to_seconds(offset: int | float | str | np.datetime64) -> int | float:
     """Converts pandas datetime offset alias to its corresponding number of seconds.
 
     Args:
-        offset(:obj:`str` | `numpy.datetime64`): The pandas offset alias or numpy timestamp to be
-            converted to seconds.
+        offset(:obj:`int` | `float` | `str` | `numpy.datetime64`): The pandas offset
+            alias or numpy timestamp to be converted to seconds. If a number (int or
+            float) is passed, then it must be in nanoseconds, the Pandas default.
 
     Returns:
         :obj:`int` | `float`: The number of seconds corresponding to :py:attr:`offset`.
@@ -209,7 +210,7 @@ def gap_fill_data_frame(data: pd.DataFrame, dt_col: str, freq: str) -> pd.DataFr
     gap_df = pd.DataFrame(columns=data.columns)
     gap_df[dt_col] = find_time_gaps(data[dt_col], freq)
 
-    return data.append(gap_df).sort_values(dt_col)
+    return pd.concat([data, gap_df], axis=0).sort_values(dt_col)
 
 
 @series_method(data_cols=["col"])
