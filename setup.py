@@ -44,7 +44,6 @@ EXTRAS = {
         "sphinxcontrib-bibtex",
         "myst-parser",
     ],
-    "entr": ["pyhive"],
     "develop": [
         "pre-commit",
         "black",

@@ -929,7 +929,6 @@ class MonteCarloAEP(FromDictMixin):
 
         # Loop through number of simulations, run regression each time, store AEP results
         for n in tqdm(np.arange(num_sim)):
-
             self._run = self.mc_inputs.loc[n]
 
             # Run regression
