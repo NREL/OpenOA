@@ -13,11 +13,11 @@ REQUIRED = [
     "scikit-learn>=1.0",
     "requests>=2.21.0",
     "eia-python>=1.22",
-    "pyproj>=3.3,<3.4",  # 3.4 has incorrect use of importlib.metadata
-    "shapely>=1.7.1",
-    "numpy>=1.15.4",
-    "pandas>=0.23.4,<1.3",
-    "pygam>=0.8.0",
+    "pyproj>=3.5",
+    "shapely>=1.8",
+    "numpy>=1.24",
+    "pandas>=2.0",
+    "pygam>=0.9.0",
     "scipy>=1.7",
     "statsmodels>=0.11",
     "tqdm>=4.28.1",
@@ -25,22 +25,22 @@ REQUIRED = [
     "bokeh>=2.4",
     "attrs>=22",
     "pytz",
-    "pyspark",
     "pyyaml",
     "h5pyd",
+    "pyspark",
 ]
 
 TESTS = ["pytest>=5.4.2", "pytest-cov>=2.8.1"]
 
 EXTRAS = {
     "docs": [
-        "ipython==8.5.*",
+        "ipython==8.5",
         "m2r2>=0.3",
         "Sphinx>=5.0",
-        "pydata-sphinx-theme==0.10.*",
+        "pydata-sphinx-theme",
         "nbmerge==0.0.4",
-        "nbsphinx==0.8.*",
-        "sphinx_design==0.3.*",
+        "nbsphinx>=0.8,<=0.9",
+        "sphinx_design>=0.3,<=0.4",
         "sphinxcontrib-bibtex",
         "myst-parser",
     ],

@@ -10,7 +10,6 @@ import yaml
 import attrs
 import numpy as np
 import pandas as pd
-import pyspark as spark
 from attrs import field, define
 from pyproj import Transformer
 from shapely.geometry import Point
@@ -27,7 +26,7 @@ from openoa.utils.unit_conversion import convert_power_to_energy
 
 
 # Datetime frequency checks
-_at_least_monthly = ("M", "MS", "W", "D", "H", "T", "min", "S", "L", "ms", "U", "us", "N")
+_at_least_monthly = ("MS", "W", "D", "H", "T", "min", "S", "L", "ms", "U", "us", "N")
 _at_least_daily = ("D", "H", "T", "min", "S", "L", "ms", "U", "us", "N")
 _at_least_hourly = ("H", "T", "min", "S", "L", "ms", "U", "us", "N")
 
@@ -363,11 +362,11 @@ def dtype_converter(df: pd.DataFrame, column_types={}) -> list[str]:
     return errors
 
 
-def load_to_pandas(data: str | Path | pd.DataFrame | spark.sql.DataFrame) -> pd.DataFrame | None:
+def load_to_pandas(data: str | Path | pd.DataFrame) -> pd.DataFrame | None:
     """Loads the input data or filepath to apandas DataFrame.
 
     Args:
-        data (str | Path | pd.DataFrame | spark.DataFrame): The input data.
+        data (str | Path | pd.DataFrame): The input data.
 
     Raises:
         ValueError: Raised if an invalid data type was passed.
@@ -381,20 +380,18 @@ def load_to_pandas(data: str | Path | pd.DataFrame | spark.sql.DataFrame) -> pd.
         return pd.read_csv(data)
     elif isinstance(data, pd.DataFrame):
         return data
-    elif isinstance(data, spark.sql.DataFrame):
-        return data.toPandas()
     else:
         raise ValueError("Input data could not be converted to pandas")
 
 
 def load_to_pandas_dict(
-    data: dict[str | Path | pd.DataFrame | spark.sql.DataFrame],
+    data: dict[str | Path | pd.DataFrame],
 ) -> dict[str, pd.DataFrame] | None:
     """Converts a dictionary of data or data locations to a dictionary of `pd.DataFrame`s
     by iterating over the dictionary and passing each value to `load_to_pandas`.
 
     Args:
-        data (dict[str  |  Path  |  pd.DataFrame  |  spark.sql.DataFrame]): The input data.
+        data (dict[str  |  Path  |  pd.DataFrame]): The input data.
 
     Returns:
         dict[str, pd.DataFrame] | None: The passed `None` or the converted `pd.DataFrame`

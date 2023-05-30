@@ -441,7 +441,7 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
             temp_df["day"] = temp_df.index
 
             # Append turbine data into single data frame for imputing
-            self.scada_valid = self.scada_valid.append(temp_df)
+            self.scada_valid = pd.concat([self.scada_valid, temp_df], axis=0)
 
         # Reset index after all turbines has been combined
         self.scada_valid = self.scada_valid.set_index("WTUR_TurNam", append=True)
