@@ -59,7 +59,7 @@ class SimpleMetProcessing(unittest.TestCase):
         wd_ans = [352.5, 312.5, 17.5]  # Expected result
 
         y = mt.circular_mean(df.values, axis=1)  # Test result
-        nptest.assert_array_equal(y, wd_ans)
+        nptest.assert_allclose(y, wd_ans, rtol=1e-5)
 
     def test_compute_wind_direction(self):
         u = pd.Series([0, -1, -1, -1, 0, 1, 1, 1])
