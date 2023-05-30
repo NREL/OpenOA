@@ -10,7 +10,6 @@ import yaml
 import attrs
 import numpy as np
 import pandas as pd
-import pyspark as spark
 from attrs import field, define
 from pyproj import Transformer
 from shapely.geometry import Point
@@ -27,7 +26,7 @@ from openoa.utils.unit_conversion import convert_power_to_energy
 
 
 # Datetime frequency checks
-_at_least_monthly = ("M", "MS", "W", "D", "H", "T", "min", "S", "L", "ms", "U", "us", "N")
+_at_least_monthly = ("MS", "W", "D", "H", "T", "min", "S", "L", "ms", "U", "us", "N")
 _at_least_daily = ("D", "H", "T", "min", "S", "L", "ms", "U", "us", "N")
 _at_least_hourly = ("H", "T", "min", "S", "L", "ms", "U", "us", "N")
 
@@ -363,11 +362,11 @@ def dtype_converter(df: pd.DataFrame, column_types={}) -> list[str]:
     return errors
 
 
-def load_to_pandas(data: str | Path | pd.DataFrame | spark.sql.DataFrame) -> pd.DataFrame | None:
+def load_to_pandas(data: str | Path | pd.DataFrame) -> pd.DataFrame | None:
     """Loads the input data or filepath to apandas DataFrame.
 
     Args:
-        data (str | Path | pd.DataFrame | spark.DataFrame): The input data.
+        data (str | Path | pd.DataFrame): The input data.
 
     Raises:
         ValueError: Raised if an invalid data type was passed.
@@ -381,20 +380,18 @@ def load_to_pandas(data: str | Path | pd.DataFrame | spark.sql.DataFrame) -> pd.
         return pd.read_csv(data)
     elif isinstance(data, pd.DataFrame):
         return data
-    elif isinstance(data, spark.sql.DataFrame):
-        return data.toPandas()
     else:
         raise ValueError("Input data could not be converted to pandas")
 
 
 def load_to_pandas_dict(
-    data: dict[str | Path | pd.DataFrame | spark.sql.DataFrame],
+    data: dict[str | Path | pd.DataFrame],
 ) -> dict[str, pd.DataFrame] | None:
     """Converts a dictionary of data or data locations to a dictionary of `pd.DataFrame`s
     by iterating over the dictionary and passing each value to `load_to_pandas`.
 
     Args:
-        data (dict[str  |  Path  |  pd.DataFrame  |  spark.sql.DataFrame]): The input data.
+        data (dict[str  |  Path  |  pd.DataFrame]): The input data.
 
     Returns:
         dict[str, pd.DataFrame] | None: The passed `None` or the converted `pd.DataFrame`
@@ -1522,7 +1519,6 @@ class PlantData:
             if category != "all" and category != name:
                 # Skip any irrelevant columns if not processing all data types
                 continue
-
             if name == "reanalysis":
                 # If no reanalysis data, get the default key from ReanalysisMetaData
                 if df is None:
@@ -1667,7 +1663,6 @@ class PlantData:
             self.metadata = metadata
 
         # Reset the index columns to be part of the columns space so the validations still work
-
         self._errors = {
             "missing": self._validate_column_names(),
             "dtype": self._validate_dtypes(),
@@ -1803,7 +1798,7 @@ class PlantData:
         SCADA data, if `asset` is undefined.
         """
         if self.asset is None:
-            return self.scada.index.get_level_values("id").unique()
+            return self.scada.index.get_level_values("WTUR_TurNam").unique()
         return self.asset.loc[self.asset["type"] == "turbine"].index.values
 
     @property
@@ -2141,61 +2136,21 @@ class PlantData:
             self.calculate_nearest_neighbor()
         return self.asset.loc[id, "nearest_tower_id"].values[0]
 
+    @classmethod
+    def from_entr(cls, *args, **kwargs):
+        try:
+            from entr.plantdata import from_entr
+        except ModuleNotFoundError:
+            raise NotImplementedError(
+                "The entr python package was not found. Please install py-entr by visiting https://github.com/entralliance/py-entr and following the instructions."
+            )
+
+        return from_entr(*args, **kwargs)
+
 
 # **********************************************************
 # Define additional class methods for custom loading methods
 # **********************************************************
 
-
-def from_entr(
-    thrift_server_host: str = "localhost",
-    thrift_server_port: int = 10000,
-    database: str = "entr_warehouse",
-    wind_plant: str = "",
-    aggregation: str = "",
-    date_range: list = None,
-):
-    """
-    from_entr
-
-    Load a PlantData object from data in an entr_warehouse.
-
-    Args:
-        thrift_server_url(str): URL of the Apache Thrift server
-        database(str): Name of the Hive database
-        wind_plant(str): Name of the wind plant you'd like to load
-        aggregation: Not yet implemented
-        date_range: Not yet implemented
-
-    Returns:
-        plant(PlantData): An OpenOA PlantData object.
-    """
-    from pyhive import hive
-
-    conn = hive.Connection(host=thrift_server_host, port=thrift_server_port)
-
-    scada_query = """SELECT Wind_turbine_name as Wind_turbine_name,
-            Date_time as Date_time,
-            cast(P_avg as float) as P_avg,
-            cast(Power_W as float) as Power_W,
-            cast(Ws_avg as float) as Ws_avg,
-            Wa_avg as Wa_avg,
-            Va_avg as Va_avg,
-            Ya_avg as Ya_avg,
-            Ot_avg as Ot_avg,
-            Ba_avg as Ba_avg
-
-    FROM entr_warehouse.la_haute_borne_scada_for_openoa
-    """
-
-    plant = PlantData()
-
-    plant.scada.df = pd.read_sql(scada_query, conn)
-
-    conn.close()
-
-    return plant
-
-
-setattr(PlantData, "from_entr", classmethod(from_entr))
+# TODO: Document this
 setattr(PlantData, "attach_eia_data", attach_eia_data)
