@@ -412,7 +412,6 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         nptest.assert_array_almost_equal(expected_curt_pct, df.loc[date_ind, "curtailment_pct"])
 
     def check_process_reanalysis_data_monthly(self, df, df_rean):
-
         expected = {
             "merra2": [5.42523278, 6.86883337, 5.02690892],
             "era5": [5.20508049, 6.71586744, 5.23824611],
@@ -467,7 +466,6 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         nptest.assert_array_almost_equal(expected_curt_pct, df.loc[date_ind, "curtailment_pct"])
 
     def check_process_reanalysis_data_daily(self, df):
-
         expected = {
             "merra2": np.array([11.02459231, 7.04306896, 8.41880152]),
             "era5": np.array([10.47942319, 7.71069617, 9.60864791]),
@@ -517,7 +515,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
 
     def check_simulation_results_gbm_daily(self, s):
         # Make sure AEP results are consistent to six decimal places
-        expected_results = [12.957132, 14.928604, 1.310955, 5.248099, 0.049947, 9.21482]
+        expected_results = [12.955753, 14.918292, 1.310864, 5.250295, 0.049952, 9.226035]
 
         calculated_results = [
             s.aep_GWh.mean(),

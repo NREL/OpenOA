@@ -259,7 +259,7 @@ def bin_filter(
             deviation = y_bin.std() * threshold
         elif threshold_type == "scalar":
             deviation = threshold
-        else: # median absolute deviation (mad)
+        else:  # median absolute deviation (mad)
             deviation = (y_bin - center).abs().median() * threshold
 
         # Perform flagging depending on specfied direction

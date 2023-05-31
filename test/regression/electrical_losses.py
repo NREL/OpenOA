@@ -25,7 +25,6 @@ class TestElectricalLosses(unittest.TestCase):
         self.analysis.run()
 
     def testelectrical_losses_results(self):
-
         # Check that the computed electrical loss means and their std are as expected
         expected_losses = 0.02
         expected_losses_std = 0
@@ -55,7 +54,6 @@ class TestElectricalLossesUQ(unittest.TestCase):
         self.analysis_uq.run()
 
     def testelectrical_losses_results(self):
-
         # Check that the computed electrical loss means and their std are as expected
         expected_losses_uq = 0.02
         expected_losses_uq_std = 0.0069
