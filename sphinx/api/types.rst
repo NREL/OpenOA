@@ -49,9 +49,9 @@ of the other metadata types.
 
 .. literalinclude:: ../../examples/data/plant_meta.yml
     :language: yaml
-    :lines: 34-42
+    :lines: 37-45
     :linenos:
-    :lineno-start: 34
+    :lineno-start: 37
 
 
 
@@ -74,16 +74,16 @@ specific analysis type, or types, then only the data specified in
 :py:const:`openoa.plant.ANALYSIS_REQUIREMENTS` (shown below) will be checked, and in the case of
 :py:attr:`analysis_type` = None, then no errors will be raised during validation.
 
-.. literalinclude:: ../../openoa/plant.py
+.. literalinclude:: ../../openoa/schema/metadata.py
     :language: python
-    :lines: 33-72
+    :lines: 24-73
     :linenos:
-    :lineno-start: 33
+    :lineno-start: 24
 
 SCADA
 =====
 
-:py:attr:`PlantData.scada` is configured by the :py:class:`openoa.plant.SCADAMetaData` class, which is set in the configuration
+:py:attr:`PlantData.scada` is configured by the :py:class:`openoa.schema.SCADAMetaData` class, which is set in the configuration
 data with the "scada" key. Users can set each of the following "Field Name" keys with their own
 data's column names in their SCADA data, plus the "freq" field. Users just have to ensure that the
 columns are already using the specified units, and that each column is already using the listed
@@ -104,14 +104,14 @@ data type or can be converted to that type.
 
 .. literalinclude:: ../../examples/data/plant_meta.yml
     :language: yaml
-    :lines: 35-43
+    :lines: 37-45
     :linenos:
-    :lineno-start: 35
+    :lineno-start: 37
 
 Meter
 =====
 
-:py:attr:`PlantData.meter` is configured by the :py:class:`openoa.plant.MeterMetaData` class, which is set in the configuration
+:py:attr:`PlantData.meter` is configured by the :py:class:`openoa.schema.MeterMetaData` class, which is set in the configuration
 data with the "meter" key. Users can set each of the following "Field Name" keys with their own
 data's column names in their SCADA data, plus the "freq" field. Users just have to ensure that the
 columns are already using the specified units, and that each column is already using the listed
@@ -133,7 +133,7 @@ data type or can be converted to that type.
 Tower
 =====
 
-:py:attr:`PlantData.tower` is configured by the :py:class:`openoa.plant.TowerMetaData` class, which is set in the configuration
+:py:attr:`PlantData.tower` is configured by the :py:class:`openoa.schema.TowerMetaData` class, which is set in the configuration
 data with the "tower" key. Users can set each of the following "Field Name" keys with their own
 data's column names in their met tower data, plus the "freq" field. Users just have to ensure that
 the columns are already using the specified units, and that each column is already using the listed
@@ -149,7 +149,7 @@ data type or can be converted to that type.
 Curtail
 =======
 
-:py:attr:`PlantData.curtail` is configured by the :py:class:`openoa.plant.CurtailMetaData` class, which is set in the configuration
+:py:attr:`PlantData.curtail` is configured by the :py:class:`openoa.schema.CurtailMetaData` class, which is set in the configuration
 data with the "curtail" key. Users can set each of the following "Field Name" keys with their own
 data's column names in their curtailment data, plus the "freq" field. Users just have to ensure that
 the columns are already using the specified units, and that each column is already using the listed
@@ -172,7 +172,7 @@ data type or can be converted to that type.
 Status
 ======
 
-:py:attr:`PlantData.status` is configured by the :py:class:`openoa.plant.StatusMetaData` class, which is set in the configuration
+:py:attr:`PlantData.status` is configured by the :py:class:`openoa.schema.StatusMetaData` class, which is set in the configuration
 data with the "status" key. Users can set each of the following "Field Name" keys with their own
 data's column names in their turbine status data, plus the "freq" field. Users just have to ensure
 that the columns are already using the specified units, and that each column is already using the
@@ -195,7 +195,7 @@ listed data type or can be converted to that type.
 Asset
 =====
 
-:py:attr:`PlantData.asset` is configured by the :py:class:`openoa.plant.AssetMetaData` class, which is set in the configuration
+:py:attr:`PlantData.asset` is configured by the :py:class:`openoa.schema.AssetMetaData` class, which is set in the configuration
 data with the "asset" key. Users can set each of the following "Field Name" keys with their own
 data's column names in their turbine and met tower asset data. Users just have to ensure that the
 columns are already using the specified units, and that each column is already using the listed data
@@ -224,7 +224,7 @@ type or can be converted to that type.
 Reanalysis
 ==========
 
-:py:attr:`PlantData.reanalysis` is configured by the :py:class:`openoa.plant.ReanlysisMetaData` class, which is set in the configuration
+:py:attr:`PlantData.reanalysis` is configured by the :py:class:`openoa.schema.ReanlysisMetaData` class, which is set in the configuration
 data with the "reanalysis" key, but it should be noted that reanalysis data should be a dictionary
 of settintgs for each of the reanalysis products provided. For instance, if MERRA2 and ERA5 data are
 both provided, then each data set's configurations should be provided under reanalysis as dictionary
@@ -301,42 +301,42 @@ PlantData API
 PlantMetaData API
 *****************
 
-.. autoclass:: openoa.plant.PlantMetaData
+.. autoclass:: openoa.schema.PlantMetaData
     :members:
     :no-undoc-members:
     :show-inheritance:
 
-.. autoclass:: openoa.plant.SCADAMetaData
+.. autoclass:: openoa.schema.SCADAMetaData
     :members:
     :no-undoc-members:
     :show-inheritance:
 
-.. autoclass:: openoa.plant.MeterMetaData
+.. autoclass:: openoa.schema.MeterMetaData
     :members:
     :no-undoc-members:
     :show-inheritance:
 
-.. autoclass:: openoa.plant.TowerMetaData
+.. autoclass:: openoa.schema.TowerMetaData
     :members:
     :no-undoc-members:
     :show-inheritance:
 
-.. autoclass:: openoa.plant.CurtailMetaData
+.. autoclass:: openoa.schema.CurtailMetaData
     :members:
     :no-undoc-members:
     :show-inheritance:
 
-.. autoclass:: openoa.plant.StatusMetaData
+.. autoclass:: openoa.schema.StatusMetaData
     :members:
     :no-undoc-members:
     :show-inheritance:
 
-.. autoclass:: openoa.plant.AssetMetaData
+.. autoclass:: openoa.schema.AssetMetaData
     :members:
     :no-undoc-members:
     :show-inheritance:
 
-.. autoclass:: openoa.plant.ReanalysisMetaData
+.. autoclass:: openoa.schema.ReanalysisMetaData
     :members:
     :no-undoc-members:
     :show-inheritance:
