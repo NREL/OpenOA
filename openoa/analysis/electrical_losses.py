@@ -111,6 +111,9 @@ class ElectricalLosses(FromDictMixin):
                 "The input to 'plant' must be validated for at least the 'ElectricalLosses'"
             )
 
+        # Ensure the data are up to spec before continuing with initialization
+        self.plant.validate()
+
         logger.info("Initializing Electrical Losses Object")
 
         # Check that selected UQ is allowed and reset num_sim if no UQ

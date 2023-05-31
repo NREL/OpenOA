@@ -231,6 +231,9 @@ class MonteCarloAEP(FromDictMixin):
                 "The input to 'plant' must be validated for at least the 'MonteCarloAEP'"
             )
 
+        # Ensure the data are up to spec before continuing with initialization
+        self.plant.validate()
+
         logger.info("Initializing MonteCarloAEP Analysis Object")
 
         self.resample_freq = {"M": "MS", "D": "D", "H": "H"}[self.time_resolution]

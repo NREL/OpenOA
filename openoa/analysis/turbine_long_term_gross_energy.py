@@ -140,6 +140,9 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
                 "The input to 'plant' must be validated for at least the 'TurbineLongTermGrossEnergy'"
             )
 
+        # Ensure the data are up to spec before continuing with initialization
+        self.plant.validate()
+
         logger.info("Initializing TurbineLongTermGrossEnergy Object")
 
         # Check that selected UQ is allowed

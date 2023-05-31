@@ -191,6 +191,9 @@ class WakeLosses(FromDictMixin):
         if set(("WakeLosses", "all")).intersection(self.plant.analysis_type) == set():
             raise TypeError("The input to 'plant' must be validated for at least 'WakeLosses'")
 
+        # Ensure the data are up to spec before continuing with initialization
+        self.plant.validate()
+
         # Check that selected UQ is allowed and reset num_sim if no UQ
         if self.UQ:
             logger.info("Note: uncertainty quantification will be performed in the calculation")
