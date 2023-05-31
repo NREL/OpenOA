@@ -30,7 +30,7 @@ schema is on the way for the variations on the base analysis.
 The minimum data specification for the base turbine ideal energy analysis. More robust
 schema is on the way for the variations on the base analysis.
 
-## Base Monte Carlo AEP
+## Base Wake Losses
 
 [JSON](base_wake_losses_schema.json) [YAML](base_wake_losses_schema.yml)
 
