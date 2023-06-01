@@ -151,5 +151,5 @@ if __name__ == "__main__":
 
     with open(HERE / "base_electrical_losses_schema.yml", "w") as f:
         yaml.dump(base_electric_schema, f, default_flow_style=False, sort_keys=False)
-    with open(HERE / "base_electric_losses_schema.json", "w") as f:
+    with open(HERE / "base_electrical_losses_schema.json", "w") as f:
         json.dump(base_electric_schema, f, sort_keys=False, indent=2)
