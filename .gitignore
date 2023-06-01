@@ -29,6 +29,9 @@ examples/operational_AEP_analysis/data/*.csv
 examples/turbine_analysis/data/*.csv
 examples/cleansed
 
+examples/data/kelmarsh/
+examples/data/penmanshiel/
+
 sphinx/examplesout.ipynb
 
 .devcontainer
@@ -37,3 +40,4 @@ sphinx/examplesout.ipynb
 .local
 
 .ipython
+*.nc

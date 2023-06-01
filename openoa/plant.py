@@ -420,8 +420,6 @@ class PlantData:
     asset_distance_matrix: pd.DataFrame = field(init=False)
     asset_direction_matrix: pd.DataFrame = field(init=False)
 
-    # Stubs for attaching analysis classes later
-
     def __attrs_post_init__(self):
         self._calculate_reanalysis_columns()
         self._set_index_columns()
