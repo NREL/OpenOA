@@ -227,9 +227,7 @@ class MonteCarloAEP(FromDictMixin):
             )
 
         if set(("MonteCarloAEP", "all")).intersection(self.plant.analysis_type) == set():
-            raise TypeError(
-                "The input to 'plant' must be validated for at least the 'MonteCarloAEP'"
-            )
+            self.plant.analysis_type.append("MonteCarloAEP")
 
         # Ensure the data are up to spec before continuing with initialization
         self.plant.validate()

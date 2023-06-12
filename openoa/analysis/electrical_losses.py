@@ -107,9 +107,7 @@ class ElectricalLosses(FromDictMixin):
             )
 
         if set(("ElectricalLosses", "all")).intersection(self.plant.analysis_type) == set():
-            raise TypeError(
-                "The input to 'plant' must be validated for at least the 'ElectricalLosses'"
-            )
+            self.plant.analysis_type.append("ElectricalLosses")
 
         # Ensure the data are up to spec before continuing with initialization
         self.plant.validate()

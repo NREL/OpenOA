@@ -136,9 +136,7 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
             set(("TurbineLongTermGrossEnergy", "all")).intersection(self.plant.analysis_type)
             == set()
         ):
-            raise TypeError(
-                "The input to 'plant' must be validated for at least the 'TurbineLongTermGrossEnergy'"
-            )
+            self.plant.analysis_type.append("TurbineLongTermGrossEnergy")
 
         # Ensure the data are up to spec before continuing with initialization
         self.plant.validate()
