@@ -296,6 +296,7 @@ class TestSchema(unittest.TestCase):
                 "asset_id": {"name": "asset_id", "dtype": "str", "units": None},
                 "WTUR_W": {"name": "WTUR_W", "dtype": "float", "units": "kW"},
                 "WMET_HorWdSpd": {"name": "WMET_HorWdSpd", "dtype": "float", "units": "m/s"},
+                "WMET_HorWdDir": {"name": "WMET_HorWdDir", "dtype": "float", "units": "deg"},
                 "frequency": [
                     "H",
                     "S",
