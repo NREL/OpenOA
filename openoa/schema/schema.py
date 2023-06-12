@@ -104,7 +104,7 @@ def create_analysis_schema(analysis_types: str | list[str]) -> dict:
     """
     schema = create_schema()
     schema_copy = deepcopy(schema)
-    column_requirements, frequnency_requirements = determine_analysis_requirements(
+    column_requirements, frequency_requirements = determine_analysis_requirements(
         which="both", analysis_type=analysis_types
     )
     for name, meta in schema_copy.items():
@@ -113,7 +113,7 @@ def create_analysis_schema(analysis_types: str | list[str]) -> dict:
             continue
         for col in meta:
             if col == "frequency":
-                schema[name][col] = list(frequnency_requirements[name])
+                schema[name][col] = list(frequency_requirements[name])
                 continue
             if col not in column_requirements[name]:
                 schema[name].pop(col)
