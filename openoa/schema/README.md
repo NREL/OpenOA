@@ -9,7 +9,7 @@ Each of the keys (e.g., scada) represents a field for `PlantData` with each nest
 representing the following:
 
 - name: the default column name
-- dtype: the data type `PlantData will convert that column to, if it's not already of that type
+- dtype: the data type `PlantData` will convert that column to, if it's not already of that type
 - units: the expected units of the input data (there are no checks for this)
 
 As an example for the first column entry and its associated frequency in the full schema,
