@@ -7,37 +7,33 @@ scada:
     name: WTUR_W
     dtype: float
     units: kW
-  WMET_HorWdSpd:
-    name: WMET_HorWdSpd
-    dtype: float
-    units: m/s
   frequency:
-  - min
-  - us
-  - L
   - T
   - S
-  - U
-  - ms
-  - N
-  - H
   - D
+  - ms
+  - U
+  - us
+  - N
+  - min
+  - H
+  - L
 meter:
   MMTR_SupWh:
     name: MMTR_SupWh
     dtype: float
     units: kWh
   frequency:
+  - H
   - min
-  - us
-  - MS
-  - L
-  - M
   - T
   - S
-  - U
-  - ms
-  - N
-  - H
-  - W
   - D
+  - ms
+  - U
+  - M
+  - us
+  - N
+  - MS
+  - W
+  - L

@@ -6,27 +6,22 @@
       "units": "kWh"
     },
     "frequency": [
+      "H",
       "min",
-      "us",
-      "MS",
-      "L",
-      "M",
       "T",
       "S",
-      "U",
+      "D",
       "ms",
+      "U",
+      "M",
+      "us",
       "N",
-      "H",
+      "MS",
       "W",
-      "D"
+      "L"
     ]
   },
   "scada": {
-    "WMET_HorWdSpd": {
-      "dtype": "float",
-      "name": "WMET_HorWdSpd",
-      "units": "m/s"
-    },
     "WTUR_W": {
       "dtype": "float",
       "name": "WTUR_W",
@@ -38,16 +33,16 @@
       "units": null
     },
     "frequency": [
-      "min",
-      "us",
-      "L",
       "T",
       "S",
-      "U",
+      "D",
       "ms",
+      "U",
+      "us",
       "N",
+      "min",
       "H",
-      "D"
+      "L"
     ]
   }
 }

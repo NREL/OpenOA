@@ -52,7 +52,7 @@ ANALYSIS_REQUIREMENTS = {
     },
     "ElectricalLosses": {
         "scada": {
-            "columns": ["asset_id", "WMET_HorWdSpd", "WTUR_W"],
+            "columns": ["asset_id", "WTUR_W"],
             "freq": _at_least_daily,
         },
         "meter": {

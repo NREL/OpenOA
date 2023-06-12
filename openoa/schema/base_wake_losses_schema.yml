@@ -16,15 +16,15 @@ scada:
     dtype: float
     units: deg
   frequency:
-  - min
-  - us
-  - L
   - T
   - S
-  - U
   - ms
+  - U
+  - us
   - N
+  - min
   - H
+  - L
 reanalysis:
   WMETR_HorWdSpd:
     name: WMETR_HorWdSpd
@@ -35,12 +35,12 @@ reanalysis:
     dtype: float
     units: deg
   frequency:
-  - min
-  - us
-  - L
   - T
   - S
-  - U
   - ms
+  - U
+  - us
   - N
+  - min
   - H
+  - L
