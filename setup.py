@@ -94,5 +94,5 @@ setup(
     install_requires=REQUIRED,
     extras_require=EXTRAS,
     tests_require=TESTS,
-    python_requires=">=3.8, <=3.10",
+    python_requires=">=3.8, <3.11",
 )
