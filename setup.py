@@ -40,7 +40,7 @@ EXTRAS = {
         "pydata-sphinx-theme",
         "nbmerge==0.0.4",
         "nbsphinx>=0.8,<0.10",
-        "sphinx_design>=0.3,<0.5",
+        "sphinx_design>=0.3",
         "sphinxcontrib-bibtex",
         "myst-parser",
     ],
