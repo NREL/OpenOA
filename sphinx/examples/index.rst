@@ -81,7 +81,14 @@ Table of Contents
 .. toctree::
     :maxdepth: 3
 
-    examplesout
+    00_intro_to_plant_data
+    01_utils_examples
+    02_plant_aep_analysis
+    02b_augmented_plant_aep_analysis
+    03_turbine_ideal_energy
+    04_electrical_losses
+    05_eya_gap_analysis
+    06_wake_loss_analysis
 
 
 .. _Binder: https://mybinder.org/v2/gh/NREL/OpenOA/develop_v3?filepath=examples
