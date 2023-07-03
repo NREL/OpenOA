@@ -16,7 +16,8 @@ from tqdm import tqdm
 from attrs import field, define
 
 import openoa.utils.timeseries as ts
-from openoa.plant import PlantData, FromDictMixin
+from openoa.plant import PlantData
+from openoa.schema import FromDictMixin
 from openoa.logging import logging, logged_method_call
 from openoa.utils.plot import set_styling
 from openoa.analysis._analysis_validators import validate_UQ_input, validate_open_range_0_1
@@ -106,9 +107,10 @@ class ElectricalLosses(FromDictMixin):
             )
 
         if set(("ElectricalLosses", "all")).intersection(self.plant.analysis_type) == set():
-            raise TypeError(
-                "The input to 'plant' must be validated for at least the 'ElectricalLosses'"
-            )
+            self.plant.analysis_type.append("ElectricalLosses")
+
+        # Ensure the data are up to spec before continuing with initialization
+        self.plant.validate()
 
         logger.info("Initializing Electrical Losses Object")
 

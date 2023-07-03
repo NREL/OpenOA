@@ -12,11 +12,11 @@ from numpy.polynomial import Polynomial
 
 def asset_correlation_matrix(data: pd.DataFrame, value_col: str) -> pd.DataFrame:
     """Create a correlation matrix on a MultiIndex `DataFrame` with time (or a different
-    alignment value) and ID values as its indices, respectively.
+    alignment value) and asset_id values as its indices, respectively.
 
     Args:
         data(:obj:`pandas.DataFrame`): input data frame such as `Plant.scada` that uses a
-            MultiIndex with a timestamp and ID column for indices, in that order.
+            MultiIndex with a timestamp and asset_id column for indices, in that order.
         value_col(:obj:`str`): the column containing the data values to be used when
             assessing correlation
 
@@ -56,7 +56,7 @@ def impute_data(
         reference_col(:obj:`str`): the name of the column in either `data` or `reference_data` to be
             used for imputation
         data(:obj:`pandas.DataFrame`): input data frame such as `Plant.scada` that uses a
-            MultiIndex with a timestamp and ID column for indices, in that order, by default None.
+            MultiIndex with a timestamp and asset_id column for indices, in that order, by default None.
         target_data(:obj:`pandas.DataFrame`): the `DataFrame` with  NaN data to be imputed
         reference_data(:obj:`pandas.DataFrame`): the `SeDataFrameries` to be used in imputation
         align_col(:obj:`str`): the name of the column that to join `target_data` and `reference_data`.
@@ -134,7 +134,7 @@ def impute_all_assets_by_correlation(
     data: pd.DataFrame,
     impute_col: str,
     reference_col: str,
-    asset_id_col: str = "WTUR_TurNam",
+    asset_id_col: str = "asset_id",
     r2_threshold: float = 0.7,
     method: str = "linear",
     degree: int = 1,
@@ -155,11 +155,11 @@ def impute_all_assets_by_correlation(
 
     Args:
         data(:obj:`pandas.DataFrame`): input data frame such as `Plant.scada` that uses a
-            MultiIndex with a timestamp and ID column for indices, in that order.
+            MultiIndex with a timestamp and asset_id column for indices, in that order.
         impute_col(:obj:`str`): the name of the column in `data` to be imputed.
         reference_col(:obj:`str`): the name of the column in `data` to be used in imputation.
-        asset_id_col(:obj:`str): The name of the ID column, should be one of the turinbe or tower
-            index column names. Defaults to the turbine column name "WTUR_TurNam".
+        asset_id_col(:obj:`str): The name of the asset_id column, should be one of the turinbe or tower
+            index column names. Defaults to the turbine column name "asset_id".
         r2_threshold(:obj:`float`): the correlation threshold for a neighboring assets to be considered valid
             for use in imputation, by default 0.7.
         method(:obj:`str`): The imputation method, should be one of "linear" or "polynomial", by default "linear".

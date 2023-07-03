@@ -18,9 +18,10 @@ from tqdm import tqdm
 from attrs import field, define
 from sklearn.linear_model import LinearRegression
 
-from openoa.plant import PlantData, FromDictMixin
+from openoa.plant import PlantData
 from openoa.utils import plot, filters
 from openoa.utils import met_data_processing as met
+from openoa.schema import FromDictMixin
 from openoa.logging import logging, logged_method_call
 
 
@@ -188,7 +189,10 @@ class WakeLosses(FromDictMixin):
         logger.info("Initializing WakeLosses analysis object")
 
         if set(("WakeLosses", "all")).intersection(self.plant.analysis_type) == set():
-            raise TypeError("The input to 'plant' must be validated for at least 'WakeLosses'")
+            self.plant.analysis_type.append("WakeLosses")
+
+        # Ensure the data are up to spec before continuing with initialization
+        self.plant.validate()
 
         # Check that selected UQ is allowed and reset num_sim if no UQ
         if self.UQ:
@@ -806,7 +810,7 @@ class WakeLosses(FromDictMixin):
         """
 
         # keep relevant SCADA columns, create a unique time index and two-level turbine variable columns
-        # (variable name and turbine ID)
+        # (variable name and turbine asset_id)
 
         # include scada wind direction column only if using scada to determine mean wind direction for wind plant
         scada_cols = ["WMET_HorWdSpd", "WTUR_W"]
@@ -1162,7 +1166,7 @@ class WakeLosses(FromDictMixin):
             plot_norm_energy (bool, optional): If True, include a plot of normalized wind plant energy
                 production as a function of wind direction in addition to the wind farm efficiency plot.
                 Defaults to True.
-            turbine_id (str, optional): Turbine ID to plot wake losses for. If None, wake losses for the
+            turbine_id (str, optional): Turbine asset_id to plot wake losses for. If None, wake losses for the
                 entire wind plant will be plotted. Defaults to None.
             xlim (:obj:`tuple[float, float]`, optional): A tuple of floats representing the x-axis
                 wind direction plotting display limits (degrees). Defaults to (None, None).
@@ -1254,7 +1258,7 @@ class WakeLosses(FromDictMixin):
             plot_norm_energy (bool, optional): If True, include a plot of normalized wind plant energy
                 production as a function of wind speed in addition to the wind farm efficiency plot. Defaults to
                 True.
-            turbine_id (str, optional): Turbine ID to plot wake losses for. If None, wake losses for the
+            turbine_id (str, optional): Turbine asset_id to plot wake losses for. If None, wake losses for the
                 entire wind plant will be plotted. Defaults to None.
             xlim (:obj:`tuple[float, float]`, optional): A tuple of floats representing the x-axis
                 wind speed plotting display limits (degrees). Defaults to (None, None).

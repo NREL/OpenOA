@@ -1,0 +1,161 @@
+scada:
+  time:
+    name: time
+    dtype: numpy.datetime64
+    units: datetim64[ns]
+  asset_id:
+    name: asset_id
+    dtype: str
+    units: null
+  WTUR_W:
+    name: WTUR_W
+    dtype: float
+    units: kW
+  WMET_HorWdSpd:
+    name: WMET_HorWdSpd
+    dtype: float
+    units: m/s
+  WMET_HorWdDir:
+    name: WMET_HorWdDir
+    dtype: float
+    units: deg
+  WTUR_TurSt:
+    name: WTUR_TurSt
+    dtype: str
+    units: null
+  WROT_BlPthAngVal:
+    name: WROT_BlPthAngVal
+    dtype: float
+    units: deg
+  WMET_EnvTmp:
+    name: WMET_EnvTmp
+    dtype: float
+    units: C
+  frequency: 10T
+  WTUR_SupWh:
+    name: WTUR_SupWh
+    dtype: float
+    units: kWh
+meter:
+  time:
+    name: time
+    dtype: numpy.datetime64
+    units: datetim64[ns]
+  MMTR_SupWh:
+    name: MMTR_SupWh
+    dtype: float
+    units: kWh
+  frequency: 10T
+tower:
+  time:
+    name: time
+    dtype: numpy.datetime64
+    units: datetim64[ns]
+  asset_id:
+    name: asset_id
+    dtype: str
+    units: null
+  frequency: 10T
+status:
+  time:
+    name: time
+    dtype: numpy.datetime64
+    units: datetim64[ns]
+  asset_id:
+    name: asset_id
+    dtype: str
+    units: null
+  status_id:
+    name: status_id
+    dtype: numpy.int64
+    units: null
+  status_code:
+    name: status_code
+    dtype: numpy.int64
+    units: null
+  status_text:
+    name: status_text
+    dtype: str
+    units: null
+  frequency: 10T
+curtail:
+  time:
+    name: time
+    dtype: numpy.datetime64
+    units: datetim64[ns]
+  IAVL_ExtPwrDnWh:
+    name: IAVL_ExtPwrDnWh
+    dtype: float
+    units: kWh
+  IAVL_DnWh:
+    name: IAVL_DnWh
+    dtype: float
+    units: kWh
+  frequency: 10T
+asset:
+  asset_id:
+    name: asset_id
+    dtype: str
+    units: null
+  latitude:
+    name: latitude
+    dtype: float
+    units: WGS84
+  longitude:
+    name: longitude
+    dtype: float
+    units: WGS84
+  rated_power:
+    name: rated_power
+    dtype: float
+    units: kW
+  hub_height:
+    name: hub_height
+    dtype: float
+    units: m
+  rotor_diameter:
+    name: rotor_diameter
+    dtype: float
+    units: m
+  elevation:
+    name: elevation
+    dtype: float
+    units: m
+  type:
+    name: type
+    dtype: str
+    units: null
+reanalysis:
+  time:
+    name: time
+    dtype: numpy.datetime64
+    units: datetim64[ns]
+  WMETR_HorWdSpd:
+    name: WMETR_HorWdSpd
+    dtype: float
+    units: m/s
+  WMETR_HorWdSpdU:
+    name: WMETR_HorWdSpdU
+    dtype: float
+    units: m/s
+  WMETR_HorWdSpdV:
+    name: WMETR_HorWdSpdV
+    dtype: float
+    units: m/s
+  WMETR_HorWdDir:
+    name: WMETR_HorWdDir
+    dtype: float
+    units: deg
+  WMETR_EnvTmp:
+    name: WMETR_EnvTmp
+    dtype: float
+    units: K
+  WMETR_AirDen:
+    name: WMETR_AirDen
+    dtype: float
+    units: kg/m^3
+  WMETR_EnvPres:
+    name: surface_pressure
+    dtype: float
+    units: Pa
+  frequency: 10T

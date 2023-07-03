@@ -22,11 +22,12 @@ from matplotlib.markers import MarkerStyle
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import KFold
 
-from openoa.plant import PlantData, FromDictMixin
+from openoa.plant import PlantData
 from openoa.utils import plot, filters
 from openoa.utils import timeseries as tm
 from openoa.utils import unit_conversion as un
 from openoa.utils import met_data_processing as mt
+from openoa.schema import FromDictMixin
 from openoa.logging import logging, logged_method_call
 from openoa.utils.machine_learning_setup import MachineLearningSetup
 
@@ -226,9 +227,10 @@ class MonteCarloAEP(FromDictMixin):
             )
 
         if set(("MonteCarloAEP", "all")).intersection(self.plant.analysis_type) == set():
-            raise TypeError(
-                "The input to 'plant' must be validated for at least the 'MonteCarloAEP'"
-            )
+            self.plant.analysis_type.append("MonteCarloAEP")
+
+        # Ensure the data are up to spec before continuing with initialization
+        self.plant.validate()
 
         logger.info("Initializing MonteCarloAEP Analysis Object")
 

@@ -186,7 +186,7 @@ def duplicate_time_identification(
         df (:obj: `pd.DataFrame`): The resulting SCADA dataframe from `convert_datetime_column()`, otherwise
             the UTC and localized column checks will return `None`.
         time_col (:obj: `str`): The string name of the timestamp column.
-        id_col (:obj: `str`): The string name of the turbine ID column, to ensure that duplicates
+        id_col (:obj: `str`): The string name of the turbine asset_id column, to ensure that duplicates
             aren't based off multiple turbine's data.
 
     Returns:
@@ -281,7 +281,7 @@ def daylight_savings_plot(
         local_tz(:obj: 'String'): The `pytz`-compatible timezone for the input `time_field`, by
             default UTC. This should be in the format of "Country/City" or "Region/City" such as
             "America/Denver" or "Europe/Paris".
-        id_col (:obj: `str`): The string name of the turbine ID column in `df`, to ensure that
+        id_col (:obj: `str`): The string name of the turbine asset_id column in `df`, to ensure that
             duplicates aren't based off multiple turbine's data.
         time_col (:obj: `str`): The string name of the timestamp column in `df`.
         power_col(:obj: 'str'): String name of the power column in `df`.

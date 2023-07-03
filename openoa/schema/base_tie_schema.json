@@ -1,0 +1,60 @@
+{
+  "reanalysis": {
+    "WMETR_AirDen": {
+      "dtype": "float",
+      "name": "WMETR_AirDen",
+      "units": "kg/m^3"
+    },
+    "WMETR_HorWdDir": {
+      "dtype": "float",
+      "name": "WMETR_HorWdDir",
+      "units": "deg"
+    },
+    "WMETR_HorWdSpd": {
+      "dtype": "float",
+      "name": "WMETR_HorWdSpd",
+      "units": "m/s"
+    },
+    "frequency": [
+      "T",
+      "S",
+      "D",
+      "ms",
+      "U",
+      "us",
+      "N",
+      "min",
+      "H",
+      "L"
+    ]
+  },
+  "scada": {
+    "WMET_HorWdSpd": {
+      "dtype": "float",
+      "name": "WMET_HorWdSpd",
+      "units": "m/s"
+    },
+    "WTUR_W": {
+      "dtype": "float",
+      "name": "WTUR_W",
+      "units": "kW"
+    },
+    "asset_id": {
+      "dtype": "str",
+      "name": "asset_id",
+      "units": null
+    },
+    "frequency": [
+      "T",
+      "S",
+      "D",
+      "ms",
+      "U",
+      "us",
+      "N",
+      "min",
+      "H",
+      "L"
+    ]
+  }
+}
