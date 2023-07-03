@@ -39,8 +39,8 @@ EXTRAS = {
         "Sphinx>=5.0",
         "pydata-sphinx-theme",
         "nbmerge==0.0.4",
-        "nbsphinx>=0.8,<=0.9",
-        "sphinx_design>=0.3,<=0.4",
+        "nbsphinx>=0.8",
+        "sphinx_design>=0.3",
         "sphinxcontrib-bibtex",
         "myst-parser",
     ],
@@ -94,5 +94,5 @@ setup(
     install_requires=REQUIRED,
     extras_require=EXTRAS,
     tests_require=TESTS,
-    python_requires=">=3.8, <=3.10",
+    python_requires=">=3.8, <3.11",
 )
