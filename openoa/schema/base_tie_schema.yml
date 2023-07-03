@@ -1,0 +1,48 @@
+scada:
+  asset_id:
+    name: asset_id
+    dtype: str
+    units: null
+  WTUR_W:
+    name: WTUR_W
+    dtype: float
+    units: kW
+  WMET_HorWdSpd:
+    name: WMET_HorWdSpd
+    dtype: float
+    units: m/s
+  frequency:
+  - T
+  - S
+  - D
+  - ms
+  - U
+  - us
+  - N
+  - min
+  - H
+  - L
+reanalysis:
+  WMETR_HorWdSpd:
+    name: WMETR_HorWdSpd
+    dtype: float
+    units: m/s
+  WMETR_HorWdDir:
+    name: WMETR_HorWdDir
+    dtype: float
+    units: deg
+  WMETR_AirDen:
+    name: WMETR_AirDen
+    dtype: float
+    units: kg/m^3
+  frequency:
+  - T
+  - S
+  - D
+  - ms
+  - U
+  - us
+  - N
+  - min
+  - H
+  - L

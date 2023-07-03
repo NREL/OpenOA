@@ -19,10 +19,11 @@ from tqdm import tqdm
 from attrs import field, define
 from matplotlib.ticker import StrMethodFormatter
 
-from openoa.plant import PlantData, FromDictMixin
+from openoa.plant import PlantData
 from openoa.utils import plot, filters, imputing
 from openoa.utils import timeseries as ts
 from openoa.utils import met_data_processing as met
+from openoa.schema import FromDictMixin
 from openoa.logging import logging, logged_method_call
 from openoa.utils.power_curve import functions
 from openoa.analysis._analysis_validators import validate_UQ_input, validate_open_range_0_1
@@ -64,7 +65,7 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
 
         - _scada_freq
         - reanalysis products with columns ['time', 'WMETR_HorWdSpdU', 'WMETR_HorWdSpdV', 'WMETR_HorWdSpd', 'WMETR_AirDen']
-        - scada with columns: ['time', 'WTUR_TurNam', 'WMET_HorWdSpd', 'WTUR_W', 'WTUR_SupWh']
+        - scada with columns: ['time', 'asset_id', 'WMET_HorWdSpd', 'WTUR_W', 'WTUR_SupWh']
 
     Args:
         UQ(:obj:`bool`): Indicator to perform (True) or not (False) uncertainty quantification.
@@ -135,9 +136,10 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
             set(("TurbineLongTermGrossEnergy", "all")).intersection(self.plant.analysis_type)
             == set()
         ):
-            raise TypeError(
-                "The input to 'plant' must be validated for at least the 'TurbineLongTermGrossEnergy'"
-            )
+            self.plant.analysis_type.append("TurbineLongTermGrossEnergy")
+
+        # Ensure the data are up to spec before continuing with initialization
+        self.plant.validate()
 
         logger.info("Initializing TurbineLongTermGrossEnergy Object")
 
@@ -238,7 +240,7 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
         """
         Performs the following manipulations:
          1. Creates a copy of the SCADA data
-         2. Sorts it by turbine ID, then timestamp (the two index columns)
+         2. Sorts it by turbine asset_id, then timestamp (the two index columns)
          3. Drops any rows that don't have any windspeed or energy data
          4. Flags windspeed values outside the range [0, 40]
          5. Flags windspeed values that have stayed the same for at least 3 straight readings
@@ -249,13 +251,13 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
         self.scada = (
             self.plant.scada.swaplevel().sort_index().dropna(subset=["WMET_HorWdSpd", "WTUR_SupWh"])
         )
-        turbine_capacity = self.scada.groupby(level="WTUR_TurNam").max()["WTUR_W"]
+        turbine_capacity = self.scada.groupby(level="asset_id").max()["WTUR_W"]
         flag_range = filters.range_flag(self.scada.loc[:, "WMET_HorWdSpd"], below=0, above=40)
         flag_frozen = filters.unresponsive_flag(self.scada.loc[:, "WMET_HorWdSpd"], threshold=3)
         flag_neg = pd.Series(index=self.scada.index, dtype=bool)
         flag_window = pd.Series(index=self.scada.index, dtype=bool)
         for t in self.turbine_ids:
-            ix_turb = self.scada.index.get_level_values("WTUR_TurNam") == t
+            ix_turb = self.scada.index.get_level_values("asset_id") == t
             flag_neg.loc[ix_turb] = filters.range_flag(
                 self.scada.loc[ix_turb, "power"], below=0, above=turbine_capacity.loc[t]
             )
@@ -274,7 +276,7 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
 
     def sort_scada_by_turbine(self) -> None:
         """
-        Sorts the SCADA DataFrame by the ID and timestamp index columns, respectively.
+        Sorts the SCADA DataFrame by the asset_id and timestamp index columns, respectively.
         """
 
         df = self.plant.scada.copy()
@@ -283,7 +285,7 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
         # Loop through turbine IDs
         for t in self.turbine_ids:
             # Store relevant variables in dictionary
-            dic[t] = df.loc[df.index.get_level_values("WTUR_TurNam") == t].reindex(
+            dic[t] = df.loc[df.index.get_level_values("asset_id") == t].reindex(
                 columns=["WMET_HorWdSpd", "WTUR_W", "WTUR_SupWh"]
             )
             dic[t].sort_index(inplace=True)
@@ -437,14 +439,14 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
             )
             temp_df["energy_corrected"] = scada_daily["energy_corrected"]
             temp_df["percent_nan"] = scada_daily["percent_nan"]
-            temp_df["WTUR_TurNam"] = np.repeat(t, temp_df.shape[0])
+            temp_df["asset_id"] = np.repeat(t, temp_df.shape[0])
             temp_df["day"] = temp_df.index
 
             # Append turbine data into single data frame for imputing
             self.scada_valid = pd.concat([self.scada_valid, temp_df], axis=0)
 
         # Reset index after all turbines has been combined
-        self.scada_valid = self.scada_valid.set_index("WTUR_TurNam", append=True)
+        self.scada_valid = self.scada_valid.set_index("asset_id", append=True)
 
         # Impute missing days for each turbine - provides progress bar
         self.scada_valid["energy_imputed"] = imputing.impute_all_assets_by_correlation(
@@ -461,7 +463,7 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
         reanalysis = self.daily_reanalysis
         for t in self.turbine_ids:
             self.turbine_model_dict[t] = (
-                self.scada_valid.loc[self.scada_valid.index.get_level_values("WTUR_TurNam") == t]
+                self.scada_valid.loc[self.scada_valid.index.get_level_values("asset_id") == t]
                 .set_index("day")
                 .join(reanalysis)
                 .dropna(subset=["energy_imputed", "WMETR_HorWdSpd"])

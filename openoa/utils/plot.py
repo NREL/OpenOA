@@ -98,7 +98,7 @@ def plot_array(project):
     turbines = asset_groups.get_group("turbine")
     X = turbines["longitude"]
     Y = turbines["latitude"]
-    labels = turbines["id"].tolist()
+    labels = turbines["asset_id"].tolist()
 
     ax.scatter(X, Y, marker="o", color="k")
     for label, x, y in zip(labels, X, Y):
@@ -107,7 +107,7 @@ def plot_array(project):
     towers = asset_groups.get_group("tower")
     X = towers["longitude"]
     Y = towers["latitude"]
-    labels = towers["id"].tolist()
+    labels = towers["asset_id"].tolist()
 
     ax.scatter(X, Y, marker="s", color="r")
     for label, x, y in zip(labels, X, Y):
@@ -187,7 +187,7 @@ def powerRose_array(project, fig, rect, tid, model_eval, shift=[0], direction=1)
         fig(:obj:`figure handle`): figure handle
         rect(:obj:`list of four scalars`): [left offset, bottom offset, width, height] as fractions of figure
         width/height
-        tid(:obj:`string`): id of turbine to be plotted
+        tid(:obj:`string`): asset_id of turbine to be plotted
         model_eval(:obj:`dict`): JORDAN, WHAT IS THIS SUPPOSED TO BE??
         shift(:obj:`list of scalars`): number of degrees to rotate wind direction data, each plotted as new line
         direction(:obj:`-1, 1`): wind direction data measured clockwise (1) or counterclockwise (-1)
@@ -198,8 +198,8 @@ def powerRose_array(project, fig, rect, tid, model_eval, shift=[0], direction=1)
     ax_carthesian = fig.add_axes(rect, frameon=True)
 
     # plotting the line on the carthesian axis
-    X0 = project.asset.df.loc[project.asset.df.id == tid, "longitude"]
-    Y0 = project.asset.df.loc[project.asset.df.id == tid, "latitude"]
+    X0 = project.asset.df.loc[project.asset.df.asset_id == tid, "longitude"]
+    Y0 = project.asset.df.loc[project.asset.df.asset_id == tid, "latitude"]
     XY = project.asset.df.apply(
         lambda r: coordinateMapping(X0, Y0, r["longitude"], r["latitude"]), axis=1
     )
@@ -864,7 +864,7 @@ def plot_windfarm(
         "x_axis_label": "Longitude",
         "y_axis_label": "Latitude",
         "match_aspect": True,
-        "tooltips": [("id", "@id"), ("type", "@type"), ("(Lat,Lon)", "@coordinates")],
+        "tooltips": [("asset_id", "@asset_id"), ("type", "@type"), ("(Lat,Lon)", "@coordinates")],
     }
     figure_options.update(kwargs_for_figure)
 
@@ -933,11 +933,11 @@ def plot_by_id(
     df: pd.DataFrame, id_col: str, x_axis: str, y_axis: str, return_fig: bool = False
 ) -> None:
     """Function to plot any two fields against each other in a dataframe with unique plots for each
-    ID.
+    asset_id.
 
     Args:
         df(:obj:`pd.DataFrame`): The dataframe for comparing values.
-        id_col(:obj:`str`): The id column (or index column) in `df`.
+        id_col(:obj:`str`): The asset_id column (or index column) in `df`.
         x_axis(:obj:`str`): Independent variable to plot, should align with a column in `df`.
         y_axis(:obj:`str`): Dependent variable to plot, should align with a column in `df`.
         return_fig(:obj:`bool`): Indicator for if the figure and axes objects should be returned,
