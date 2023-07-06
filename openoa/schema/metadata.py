@@ -70,6 +70,18 @@ ANALYSIS_REQUIREMENTS = {
             "freq": _at_least_hourly,
         },
     },
+    "StaticYawMisalignment": {
+        "scada": {
+            "columns": [
+                "asset_id",
+                "WMET_HorWdSpd",
+                "WTUR_W",
+                "WMET_HorWdDirRel",
+                "WROT_BlPthAngVal",
+            ],
+            "freq": _at_least_hourly,
+        },
+    },
 }
 
 
@@ -195,6 +207,9 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
             This data should be of type: `float`.
         WMET_HorWdDir (str): The measured wind direction, in degrees, column in the SCADA data, by default
             "WMET_HorWdDir". This data should be of type: `float`.
+        WMET_HorWdDirRel (str): The measured wind direction relative to the nacelle orientation
+            (i.e., the wind vane measurement), in degrees, column in the SCADA data, by default
+            "WMET_HorWdDirRel". This data should be of type: `float`.
         WTUR_TurSt (str): The status code column in the SCADA data, by default "WTUR_TurSt". This data
             should be of type: `str`.
         WROT_BlPthAngVal (str): The pitch, in degrees, column in the SCADA data, by default "WROT_BlPthAngVal". This data
@@ -216,6 +231,7 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
     WTUR_W: str = field(default="WTUR_W")
     WMET_HorWdSpd: str = field(default="WMET_HorWdSpd")
     WMET_HorWdDir: str = field(default="WMET_HorWdDir")
+    WMET_HorWdDirRel: str = field(default="WMET_HorWdDirRel")
     WTUR_TurSt: str = field(default="WTUR_TurSt")
     WROT_BlPthAngVal: str = field(default="WROT_BlPthAngVal")
     WMET_EnvTmp: str = field(default="WMET_EnvTmp")
@@ -236,6 +252,7 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
             WTUR_W=float,
             WMET_HorWdSpd=float,
             WMET_HorWdDir=float,
+            WMET_HorWdDirRel=float,
             WTUR_TurSt=str,
             WROT_BlPthAngVal=float,
             WMET_EnvTmp=float,
@@ -250,6 +267,7 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
             WTUR_W="kW",
             WMET_HorWdSpd="m/s",
             WMET_HorWdDir="deg",
+            WMET_HorWdDirRel="deg",
             WTUR_TurSt=None,
             WROT_BlPthAngVal="deg",
             WMET_EnvTmp="C",
@@ -265,6 +283,7 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
             WTUR_W=self.WTUR_W,
             WMET_HorWdSpd=self.WMET_HorWdSpd,
             WMET_HorWdDir=self.WMET_HorWdDir,
+            WMET_HorWdDirRel=self.WMET_HorWdDirRel,
             WTUR_TurSt=self.WTUR_TurSt,
             WROT_BlPthAngVal=self.WROT_BlPthAngVal,
             WMET_EnvTmp=self.WMET_EnvTmp,

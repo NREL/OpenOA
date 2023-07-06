@@ -42,4 +42,5 @@ scada:
   WMET_EnvTmp: Ot_avg  # temperature, C
   time: Date_time  # timestamps
   WMET_HorWdDir: Wa_avg  # wind direction, degrees
+  WMET_HorWdDirRel: Va_avg  # wind direction relative to nacelle orientation, degrees
   WMET_HorWdSpd: Ws_avg  # non-directional windspeed, m/s
