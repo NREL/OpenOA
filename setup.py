@@ -53,6 +53,7 @@ EXTRAS = {
         "pytest",
         "pytest-cov",
     ],
+    "examples": ["jupyterlab"],
 }
 
 
