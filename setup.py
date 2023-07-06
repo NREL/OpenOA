@@ -53,7 +53,13 @@ EXTRAS = {
         "pytest",
         "pytest-cov",
     ],
-    "examples": ["jupyterlab"],
+    "examples": [
+        "jupyterlab",
+        "xarray",
+        "dask",
+        "netcdf4",
+        "cdsapi",
+    ],
 }
 
 
