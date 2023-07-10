@@ -1088,7 +1088,7 @@ def plot_power_curve(
     fig = plt.figure(**figure_kwargs)
     ax = fig.add_subplot(111)
 
-    if ~np.all(flag):
+    if ~np.any(flag):
         pc_label = "Power Curve" if flag_labels is None else flag_labels[1]
         ax.scatter(wind_speed, power, label=pc_label, **scatter_kwargs)
     else:
