@@ -33,6 +33,7 @@ at the same time with the following.
 
 
 Now you can verify the version that was installed
+
 .. code-block:: python
 
     import openoa
