@@ -8,6 +8,7 @@ from setuptools import setup, find_packages
 
 # Configs ##########
 
+# Core dependencies
 REQUIRED = [
     "statsmodels",
     "scikit-learn>=1.0",
@@ -30,8 +31,10 @@ REQUIRED = [
     "pyspark",
 ]
 
+# Testing-only dependencies
 TESTS = ["pytest>=5.4.2", "pytest-cov>=2.8.1"]
 
+# All extra dependencies (see keys for breakdown by purpose)
 EXTRAS = {
     "docs": [
         "ipython",
@@ -50,8 +53,6 @@ EXTRAS = {
         "isort",
         "flake8",
         "flake8-docstrings",
-        "pytest",
-        "pytest-cov",
     ],
     "examples": [
         "jupyterlab",
@@ -61,6 +62,7 @@ EXTRAS = {
         "cdsapi",
     ],
 }
+EXTRAS["develop"] += TESTS
 
 
 # Read the version from the __init__.py file without importing it
