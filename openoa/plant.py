@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 from attrs import field, define
 from pyproj import Transformer
+from tabulate import tabulate
 from shapely.geometry import Point
 
 import openoa.utils.timeseries as ts
@@ -389,7 +390,10 @@ class PlantData:
     """
 
     metadata: PlantMetaData = field(
-        default={}, converter=PlantMetaData.load, on_setattr=[attrs.converters, attrs.validators]
+        default={},
+        converter=PlantMetaData.load,
+        on_setattr=[attrs.converters, attrs.validators],
+        repr=False,
     )
     analysis_type: list[str] | None = field(
         default=None,
@@ -524,6 +528,47 @@ class PlantData:
         else:
             self._errors["missing"].update(self._validate_column_names(category=name))
             self._errors["dtype"].update(self._validate_dtypes(category=name))
+
+    def __repr__(self):
+        repr = ["---------", "PlantData", "---------\n"]
+        for attribute in self.__attrs_attrs__:
+            if not attribute.repr:
+                continue
+
+            name = attribute.name
+            value = self.__getattribute__(name)
+            if name == "analysis_type":
+                repr.append(f"{name}: {value}")
+            elif name in ("scada", "meter", "tower", "status", "curtail"):
+                repr.append(f"{name}")
+                repr.append("-" * len(name))
+                if value is None:
+                    repr.append("None")
+                else:
+                    _repr = value.describe().T
+                    repr.append(tabulate(_repr, headers=_repr.columns, floatfmt=",.3f"))
+            elif name == "reanalysis":
+                repr.append(f"{name}")
+                repr.append("-" * len(name))
+                if "product" in value:
+                    repr.append("None")
+                else:
+                    for product, df in value.items():
+                        repr.append(f"\n{product}")
+
+                        _repr = df.describe().T
+                        repr.append(tabulate(_repr, headers=_repr.columns, floatfmt=",.3f"))
+            elif name == "asset":
+                repr.append(f"{name}")
+                repr.append("-" * len(name))
+                if value is None:
+                    repr.append("None")
+                else:
+                    repr.append(tabulate(value, headers=value.columns, floatfmt=",.3f"))
+
+            repr.append("\n")
+
+        return "\n".join(repr)
 
     def _set_index_columns(self) -> None:
         """Sets the index value for each of the `PlantData` objects that are not `None`."""

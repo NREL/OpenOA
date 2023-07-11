@@ -9,7 +9,6 @@ from setuptools import setup, find_packages
 # Configs ##########
 
 REQUIRED = [
-    "statsmodels",
     "scikit-learn>=1.0",
     "requests>=2.21.0",
     "eia-python>=1.22",
@@ -25,9 +24,11 @@ REQUIRED = [
     "bokeh>=2.4",
     "attrs>=22",
     "pytz",
-    "pyyaml",
     "h5pyd",
+    "pyyaml",
     "pyspark",
+    "tabulate",
+    "statsmodels",
 ]
 
 TESTS = ["pytest>=5.4.2", "pytest-cov>=2.8.1"]
