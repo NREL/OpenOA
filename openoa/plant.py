@@ -546,7 +546,9 @@ class PlantData:
                     repr.append("None")
                 else:
                     _repr = value.describe().T
-                    repr.append(tabulate(_repr, headers=_repr.columns, floatfmt=",.3f"))
+                    repr.append(
+                        tabulate(_repr, headers=_repr.columns, floatfmt=",.3f", tablefmt="grid")
+                    )
             elif name == "reanalysis":
                 repr.append(f"{name}")
                 repr.append("-" * len(name))
@@ -557,17 +559,19 @@ class PlantData:
                         repr.append(f"\n{product}")
 
                         _repr = df.describe().T
-                        repr.append(tabulate(_repr, headers=_repr.columns, floatfmt=",.3f"))
+                        repr.append(
+                            tabulate(_repr, headers=_repr.columns, floatfmt=",.3f", tablefmt="grid")
+                        )
             elif name == "asset":
                 repr.append(f"{name}")
                 repr.append("-" * len(name))
                 if value is None:
                     repr.append("None")
                 else:
-                    repr.append(tabulate(value, headers=value.columns, floatfmt=",.3f"))
-
+                    repr.append(
+                        tabulate(value, headers=value.columns, floatfmt=",.3f", tablefmt="grid")
+                    )
             repr.append("\n")
-
         return "\n".join(repr)
 
     def _set_index_columns(self) -> None:
