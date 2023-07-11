@@ -8,7 +8,9 @@ from pathlib import Path
 import yaml
 import attrs
 import numpy as np
+import pandas as pd
 from attrs import field, define
+from tabulate import tabulate
 
 
 # *************************************************************************
@@ -271,6 +273,31 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
             WTUR_SupWh=self.WTUR_SupWh,
         )
         self.col_map_reversed = {v: k for k, v in self.col_map.items()}
+
+    def __repr__(self):
+        summary = pd.concat(
+            [
+                pd.DataFrame.from_dict(self.col_map, orient="index", columns=["Column Name"]),
+                pd.DataFrame.from_dict(
+                    {
+                        k: str(v).replace("<class '", "").replace("'>", "")
+                        for k, v in self.dtypes.items()
+                    },
+                    orient="index",
+                    columns=["Expected Type"],
+                ),
+                pd.DataFrame.from_dict(self.units, orient="index", columns=["Expected Units"]),
+            ],
+            axis=1,
+        )
+
+        repr = ["-------------", "SCADAMetaData", "-------------\n"]
+
+        repr.append("frequency\n--------")
+        repr.append(self.frequency)
+        repr.append("\nMetadata Summary\n----------------")
+        repr.append(tabulate(summary, headers=summary.columns, tablefmt="grid"))
+        return "\n".join(repr)
 
 
 @define(auto_attribs=True)
