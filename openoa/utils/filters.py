@@ -242,37 +242,37 @@ def bin_filter(
     # Ensure the last bin edge value is bin_max
     bin_edges = np.unique(np.clip(np.append(bin_edges, bin_max), bin_min, bin_max))
 
-    # Define empty flag of 'False' values with indices matching value_col
-    flag = pd.Series(index=value_col.index, data=False)
+    # Bin the data and recreate the comparison data as a multi-column data frame
+    which_bin_col = np.digitize(bin_col, bin_edges, right=True)
 
-    # Loop through bins and applying flagging
-    nbins = len(bin_edges)
-    for i in range(nbins - 1):
-        # Get data that fall wihtin bin
-        y_bin = value_col.loc[(bin_col <= bin_edges[i + 1]) & (bin_col > bin_edges[i])]
-        flag_bin = np.zeros_like(y_bin, dtype=bool)
+    # Define empty flag of 'False' values with indices and columns matching value_col
+    flag_vals = (
+        value_col.to_frame().set_index(pd.Series(which_bin_col, name="bin"), append=True).unstack()
+    )
+    flag_vals.columns = flag_vals.columns.droplevel(0).rename(None)
+    flag = pd.DataFrame(np.zeros_like(flag_vals, dtype=bool), index=flag_vals.index)
 
-        # Get center of binned data
-        center = y_bin.mean() if center_type == "mean" else y_bin.median()
+    # Get center of binned data
+    center = flag_vals.median() if center_type == "median" else flag_vals.mean()
+    center = pd.DataFrame(
+        np.full(flag_vals.shape, center), index=flag_vals.index, columns=flag_vals.columns
+    )
 
-        # Define threshold of data flag
-        if threshold_type == "std":
-            deviation = y_bin.std() * threshold
-        elif threshold_type == "scalar":
-            deviation = threshold
-        else:  # median absolute deviation (mad)
-            deviation = (y_bin - center).abs().median() * threshold
+    # Define threshold of data flag
+    if threshold_type == "std":
+        deviation = flag_vals.std() * threshold
+    elif threshold_type == "scalar":
+        deviation = threshold
+    else:  # median absolute deviation (mad)
+        deviation = (flag_vals - center).abs().median() * threshold
 
-        # Perform flagging depending on specfied direction
-        if direction in ("above", "all"):
-            flag_bin |= y_bin > (center + deviation)
-        if direction in ("below", "all"):
-            flag_bin |= y_bin < (center - deviation)
+    # Perform flagging depending on specfied direction
+    if direction in ("above", "all"):
+        flag |= flag_vals > center + deviation
+    if direction in ("below", "all"):
+        flag |= flag_vals < center - deviation
 
-        # Record flags in final flag column
-        flag.loc[flag_bin.index] = flag_bin
-
-    return flag
+    return flag.max(axis=1)
 
 
 @dataframe_method(data_cols=["data_col1", "data_col2"])
