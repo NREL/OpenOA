@@ -249,7 +249,8 @@ def bin_filter(
     flag_vals = (
         value_col.to_frame().set_index(pd.Series(which_bin_col, name="bin"), append=True).unstack()
     )
-    flag_vals.columns = flag_vals.columns.droplevel(0).rename(None)
+    drop = [i for i, el in enumerate(flag_vals.columns.names) if el != "bin"]
+    flag_vals.columns = flag_vals.columns.droplevel(drop).rename(None)
     flag = pd.DataFrame(np.zeros_like(flag_vals, dtype=bool), index=flag_vals.index)
 
     # Get center of binned data
