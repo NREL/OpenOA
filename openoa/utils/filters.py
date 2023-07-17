@@ -245,12 +245,15 @@ def bin_filter(
     # Bin the data and recreate the comparison data as a multi-column data frame
     which_bin_col = np.digitize(bin_col, bin_edges, right=True)
 
-    # Define empty flag of 'False' values with indices and columns matching value_col
+    # Create the flag values as a matrix with each column being the timestamp's binned value,
+    # e.g., all columns values are NaN if the data point is not in that bin
     flag_vals = (
         value_col.to_frame().set_index(pd.Series(which_bin_col, name="bin"), append=True).unstack()
     )
     drop = [i for i, el in enumerate(flag_vals.columns.names) if el != "bin"]
     flag_vals.columns = flag_vals.columns.droplevel(drop).rename(None)
+
+    # Create a False array as default, so flags are set to True
     flag = pd.DataFrame(np.zeros_like(flag_vals, dtype=bool), index=flag_vals.index)
 
     # Get center of binned data
@@ -273,7 +276,10 @@ def bin_filter(
     if direction in ("below", "all"):
         flag |= flag_vals < center - deviation
 
-    return flag.max(axis=1)
+    # Get all instances where the value is True, and reset any values outside the bin limits
+    flag = flag.max(axis=1)
+    flag.loc[(bin_col <= bin_min) | (bin_col > bin_max)] = False
+    return flag
 
 
 @dataframe_method(data_cols=["data_col1", "data_col2"])
