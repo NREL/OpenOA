@@ -250,6 +250,7 @@ def bin_filter(
     for i in range(nbins - 1):
         # Get data that fall wihtin bin
         y_bin = value_col.loc[(bin_col <= bin_edges[i + 1]) & (bin_col > bin_edges[i])]
+        flag_bin = np.zeros_like(y_bin, dtype=bool)
 
         # Get center of binned data
         center = y_bin.mean() if center_type == "mean" else y_bin.median()
@@ -263,12 +264,10 @@ def bin_filter(
             deviation = (y_bin - center).abs().median() * threshold
 
         # Perform flagging depending on specfied direction
-        if direction == "above":
-            flag_bin = y_bin > (center + deviation)
-        elif direction == "below":
-            flag_bin = y_bin < (center - deviation)
-        else:
-            flag_bin = (y_bin > (center + deviation)) | (y_bin < (center - deviation))
+        if direction in ("above", "all"):
+            flag_bin |= y_bin > (center + deviation)
+        if direction in ("below", "all"):
+            flag_bin |= y_bin < (center - deviation)
 
         # Record flags in final flag column
         flag.loc[flag_bin.index] = flag_bin
