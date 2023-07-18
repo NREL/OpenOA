@@ -254,7 +254,7 @@ def bin_filter(
     flag_vals.columns = flag_vals.columns.droplevel(drop).rename(None)
 
     # Create a False array as default, so flags are set to True
-    flag = pd.DataFrame(np.zeros_like(flag_vals, dtype=bool), index=flag_vals.index)
+    flag_df = pd.DataFrame(np.zeros_like(flag_vals, dtype=bool), index=flag_vals.index)
 
     # Get center of binned data
     if center_type == "median":
@@ -277,12 +277,12 @@ def bin_filter(
 
     # Perform flagging depending on specfied direction
     if direction in ("above", "all"):
-        flag |= flag_vals > center + deviation
+        flag_df |= flag_vals > center + deviation
     if direction in ("below", "all"):
-        flag |= flag_vals < center - deviation
+        flag_df |= flag_vals < center - deviation
 
     # Get all instances where the value is True, and reset any values outside the bin limits
-    flag = flag.max(axis=1)
+    flag = pd.Series(np.nanmax(flag_df, axis=1), index=flag_df.index)
     flag.loc[(bin_col <= bin_min) | (bin_col > bin_max)] = False
     return flag
 
