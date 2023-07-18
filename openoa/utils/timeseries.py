@@ -227,7 +227,7 @@ def percent_nan(col: pd.Series | str, data: pd.DataFrame = None):
     Returns:
         :obj:`float`: Percentage of NaN data in the data series
     """
-    return 1 if (denominator := float(col.size)) == 0 else col.isna().sum() / denominator
+    return 1 if (denominator := float(col.size)) == 0 else np.isnan(col.values).sum() / denominator
 
 
 @series_method(data_cols=["dt_col"])
