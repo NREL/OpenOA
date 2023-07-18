@@ -273,7 +273,7 @@ def bin_filter(
     elif threshold_type == "scalar":
         deviation = threshold
     else:  # median absolute deviation (mad)
-        deviation = np.nanmedian((flag_vals.values - center.values).abs(), axis=0) * threshold
+        deviation = np.nanmedian(np.abs(flag_vals.values - center.values), axis=0) * threshold
 
     # Perform flagging depending on specfied direction
     if direction in ("above", "all"):
