@@ -147,8 +147,8 @@ def std_range_flag(
         raise ValueError("The inputs to `col` and `threshold` must be the same length.")
 
     subset = data.loc[:, col].copy()
-    data_mean = subset.mean(axis=0)
-    data_std = subset.std(axis=0) * np.array(threshold)
+    data_mean = np.nanmean(subset.values, axis=0)
+    data_std = np.nanstd(subset.values, ddof=1, axis=0) * np.array(threshold)
     flag = subset.le(data_mean - data_std) | subset.ge(data_mean + data_std)
 
     # Return back a pd.Series if one was provided, else a pd.DataFrame
