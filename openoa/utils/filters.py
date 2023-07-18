@@ -269,7 +269,7 @@ def bin_filter(
 
     # Define threshold of data flag
     if threshold_type == "std":
-        deviation = np.nanstd(flag_vals.values, axis=0) * threshold
+        deviation = np.nanstd(flag_vals.values, ddof=1, axis=0) * threshold
     elif threshold_type == "scalar":
         deviation = threshold
     else:  # median absolute deviation (mad)
