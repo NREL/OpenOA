@@ -232,9 +232,9 @@ def bin_filter(
 
     # Set bin min and max values if not passed to function
     if bin_min is None:
-        bin_min = bin_col.min()
+        bin_min = np.min(bin_col.values)
     if bin_max is None:
-        bin_max = bin_col.max()
+        bin_max = np.max(bin_col.values)
 
     # Define bin edges
     bin_edges = np.arange(bin_min, bin_max, bin_width)
@@ -257,18 +257,23 @@ def bin_filter(
     flag = pd.DataFrame(np.zeros_like(flag_vals, dtype=bool), index=flag_vals.index)
 
     # Get center of binned data
-    center = flag_vals.median() if center_type == "median" else flag_vals.mean()
+    if center_type == "median":
+        center = np.nanmedian(flag_vals.values, axis=0)
+    else:
+        center = np.nanmean(flag_vals.values, axis=0)
     center = pd.DataFrame(
-        np.full(flag_vals.shape, center), index=flag_vals.index, columns=flag_vals.columns
+        np.full(flag_vals.shape, center),
+        index=flag_vals.index,
+        columns=flag_vals.columns,
     )
 
     # Define threshold of data flag
     if threshold_type == "std":
-        deviation = flag_vals.std() * threshold
+        deviation = np.nanstd(flag_vals.values, axis=0) * threshold
     elif threshold_type == "scalar":
         deviation = threshold
     else:  # median absolute deviation (mad)
-        deviation = (flag_vals - center).abs().median() * threshold
+        deviation = np.nanmedian((flag_vals.values - center.values).abs(), axis=0) * threshold
 
     # Perform flagging depending on specfied direction
     if direction in ("above", "all"):
