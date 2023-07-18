@@ -300,62 +300,48 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
 
         # Loop through turbines
         for t in self.turbine_ids:
-            turb_capac = dic[t]["WTUR_W"].max()
+            scada_df = self.scada_dict[t]
+            turbine_capacity_real = scada_df.WTUR_W.max()
 
             max_bin = (
-                self._run.max_power_filter * turb_capac
+                self._run.max_power_filter * turbine_capacity_real
             )  # Set maximum range for using bin-filter
 
-            dic[t].dropna(
+            scada_df.dropna(
                 subset=["WMET_HorWdSpd", "WTUR_SupWh"], inplace=True
             )  # Drop any data where scada wind speed or energy is NaN
 
-            # Flag turbine energy data less than zero
-            dic[t].loc[:, "flag_neg"] = filters.range_flag(
-                dic[t].loc[:, "WTUR_W"], lower=0, upper=turb_capac
+            scada_df = scada_df.assign(
+                flag_neg=filters.range_flag(scada_df.WTUR_W, lower=0, upper=turbine_capacity_real),
+                flag_range=filters.range_flag(scada_df.WMET_HorWdSpd, lower=0, upper=40),
+                flag_frozen=filters.unresponsive_flag(scada_df.WMET_HorWdSpd, threshold=3),
+                flag_window=filters.window_range_flag(
+                    window_col=dic[t].loc[:, "WMET_HorWdSpd"],
+                    window_start=5.0,
+                    window_end=40,
+                    value_col=dic[t].loc[:, "WTUR_W"],
+                    value_min=0.02 * turbine_capacity_real,
+                    value_max=1.2 * turbine_capacity_real,
+                ),
+                flag_bin=filters.bin_filter(
+                    bin_col=dic[t].loc[:, "WTUR_W"],
+                    value_col=dic[t].loc[:, "WMET_HorWdSpd"],
+                    bin_width=0.06 * turbine_capacity_real,
+                    threshold=self._run.wind_bin_thresh,
+                    center_type="median",
+                    bin_min=np.round(0.01 * turbine_capacity_real),
+                    bin_max=np.round(max_bin),
+                    threshold_type="std",
+                    direction="all",
+                ),
             )
-            # Apply range filter
-            dic[t].loc[:, "flag_range"] = filters.range_flag(
-                dic[t].loc[:, "WMET_HorWdSpd"], lower=0, upper=40
-            )
-            # Apply frozen/unresponsive sensor filter
-            dic[t].loc[:, "flag_frozen"] = filters.unresponsive_flag(
-                dic[t].loc[:, "WMET_HorWdSpd"], threshold=3
-            )
-            # Apply window range filter
-            dic[t].loc[:, "flag_window"] = filters.window_range_flag(
-                window_col=dic[t].loc[:, "WMET_HorWdSpd"],
-                window_start=5.0,
-                window_end=40,
-                value_col=dic[t].loc[:, "WTUR_W"],
-                value_min=0.02 * turb_capac,
-                value_max=1.2 * turb_capac,
-            )
-
-            threshold_wind_bin = self._run.wind_bin_thresh
-            # Apply bin-based filter
-            dic[t].loc[:, "flag_bin"] = filters.bin_filter(
-                bin_col=dic[t].loc[:, "WTUR_W"],
-                value_col=dic[t].loc[:, "WMET_HorWdSpd"],
-                bin_width=0.06 * turb_capac,
-                threshold=threshold_wind_bin,  # wind bin thresh
-                center_type="median",
-                bin_min=np.round(0.01 * turb_capac),
-                bin_max=np.round(max_bin),
-                threshold_type="std",
-                direction="all",
-            )
-
             # Create a 'final' flag which is true if any of the previous flags are true
-            dic[t].loc[:, "flag_final"] = (
-                (dic[t].loc[:, "flag_range"])
-                | (dic[t].loc[:, "flag_window"])
-                | (dic[t].loc[:, "flag_bin"])
-                | (dic[t].loc[:, "flag_frozen"])
+            self.scada_dict[t].loc[:, "flag_final"] = (
+                scada_df.flag_range
+                | scada_df.flag_window
+                | scada_df.flag_bin
+                | scada_df.flag_frozen
             )
-
-            # Set negative turbine data to zero
-            dic[t].loc[dic[t]["flag_neg"], "WTUR_W"] = 0
 
     def setup_daily_reanalysis_data(self) -> None:
         """
