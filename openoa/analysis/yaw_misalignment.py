@@ -569,3 +569,18 @@ class StaticYawMisalignment(FromDictMixin):
 
         if return_fig:
             return axes_dict
+
+
+__defaults_UQ = StaticYawMisalignment.__attrs_attrs__.UQ.default
+__defaults_turbine_ids = StaticYawMisalignment.__attrs_attrs__.turbine_ids.default
+
+
+def create_StaticYawMisalignment(
+    project: PlantData,
+    turbine_ids: list[str] = __defaults_turbine_ids,
+    UQ: bool = __defaults_UQ,
+) -> StaticYawMisalignment:
+    return StaticYawMisalignment(project, turbine_ids, UQ)
+
+
+create_StaticYawMisalignment.__doc__ = StaticYawMisalignment.__doc__
