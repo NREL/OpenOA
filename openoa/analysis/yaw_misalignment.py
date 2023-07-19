@@ -437,9 +437,11 @@ class StaticYawMisalignment(FromDictMixin):
         else:
             self._df_turb_ws["pow_ref"] = 1.0
 
-        self._df_turb_ws["pow_ratio"] = self._df_turb_ws["WTUR_W"] / self._df_turb_ws["pow_ref"]
+        self._df_turb_ws["pow_ratio"] = (
+            self._df_turb_ws["WTUR_W"].values / self._df_turb_ws["pow_ref"].values
+        )
 
-        mean_vane_angle = self._df_turb_ws["WMET_HorWdDirRel"].mean()
+        mean_vane_angle = self._df_turb_ws["WMET_HorWdDirRel"].values.mean()
 
         # Bin power performance by wind vane
         df_bin = self._df_turb_ws.groupby("vane_bin").mean()
