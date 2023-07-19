@@ -426,14 +426,13 @@ class StaticYawMisalignment(FromDictMixin):
             by wind vane angle.
         """
 
-        self._df_turb_ws["vane_bin"] = (
-            self._vane_bin_width
-            * (self._df_turb_ws["WMET_HorWdDirRel"] / self._vane_bin_width).round()
+        self._df_turb_ws["vane_bin"] = self._vane_bin_width * np.round(
+            self._df_turb_ws["WMET_HorWdDirRel"].values / self._vane_bin_width
         )
 
         # Normalize by wind speed cubed if using power coefficient to determine power performance
         if self._use_power_coeff:
-            self._df_turb_ws["pow_ref"] = self._df_turb_ws["WMET_HorWdSpd"] ** 3
+            self._df_turb_ws["pow_ref"] = self._df_turb_ws["WMET_HorWdSpd"].values ** 3
         else:
             self._df_turb_ws["pow_ref"] = 1.0
 
