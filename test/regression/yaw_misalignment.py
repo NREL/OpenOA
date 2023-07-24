@@ -5,9 +5,11 @@ import numpy as np
 import pandas as pd
 import pytest
 from numpy import testing as nptest
-from examples import project_ENGIE, example_data_path_str
 
 from openoa.analysis import yaw_misalignment
+
+
+from test.conftest import project_ENGIE, example_data_path_str  # isort: skip
 
 
 def reset_prng():

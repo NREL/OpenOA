@@ -5,7 +5,6 @@ from pathlib import Path
 
 import yaml
 import pytest
-from examples import project_ENGIE
 from numpy.testing import assert_array_equal
 from pandas.testing import assert_frame_equal
 
@@ -14,8 +13,7 @@ from openoa.schema import ANALYSIS_REQUIREMENTS, ReanalysisMetaData
 from openoa.schema.schema import create_schema, create_analysis_schema
 
 
-example_data_path = Path(__file__).parents[2].resolve() / "examples" / "data" / "la_haute_borne"
-example_data_path_str = str(example_data_path)
+from test.conftest import project_ENGIE, example_data_path_str  # isort: skip
 
 
 class TestPlantData(unittest.TestCase):

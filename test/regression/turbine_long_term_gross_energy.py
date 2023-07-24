@@ -3,9 +3,11 @@ import unittest
 
 import numpy as np
 import numpy.testing as npt
-from examples import project_ENGIE, example_data_path_str
 
 from openoa.analysis import TurbineLongTermGrossEnergy
+
+
+from test.conftest import project_ENGIE, example_data_path_str  # isort: skip
 
 
 def reset_prng():
