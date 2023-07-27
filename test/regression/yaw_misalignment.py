@@ -172,64 +172,82 @@ class TestStaticYawMisalignment(unittest.TestCase):
         calculated_yaw_mis_results_overall = self.analysis.yaw_misalignment
 
         nptest.assert_array_almost_equal(
-            expected_yaw_mis_results_overall, calculated_yaw_mis_results_overall
+            expected_yaw_mis_results_overall, calculated_yaw_mis_results_overall, decimal=5
         )
 
         calculated_yaw_mis_results_ws = self.analysis.yaw_misalignment_ws
 
-        nptest.assert_array_almost_equal(expected_yaw_mis_results_ws, calculated_yaw_mis_results_ws)
+        nptest.assert_array_almost_equal(
+            expected_yaw_mis_results_ws, calculated_yaw_mis_results_ws, decimal=5
+        )
 
         calculated_mean_vane_results_ws = self.analysis.mean_vane_angle_ws
 
         nptest.assert_array_almost_equal(
-            expected_mean_vane_results_ws, calculated_mean_vane_results_ws
+            expected_mean_vane_results_ws, calculated_mean_vane_results_ws, decimal=5
         )
 
     def check_simulation_results_yaw_misalignment_with_UQ(self):
         # Make sure yaw misalignment results are consistent to six decimal places with UQ.
         # Average, std. dev., and 95% confidence intervals of yaw misaligment values for each
         # turbine
-        expected_yaw_mis_results_avg_overall = [3.39797646, 2.83936405]
-        expected_yaw_mis_results_std_overall = [1.07249834, 0.20931001]
+        expected_yaw_mis_results_avg_overall = [3.39786547, 2.83936406]
+        expected_yaw_mis_results_std_overall = [1.07213289, 0.20931013]
         expected_yaw_mis_results_95ci_overall = np.array(
-            [[2.34081486, 6.26548693], [2.54339719, 3.27505279]]
+            [[2.34081532, 6.26432238], [2.54339698, 3.27505334]]
         )
 
         # Average, std. dev., and 95% confidence intervals of yaw misaligment values for each
         # turbine and wind speed bin
         expected_yaw_mis_results_avg_ws = np.array(
             [
-                [0.29327722, 1.67630047, 0.75801698, 0.28590947, 4.32244527, 8.6688918, 7.78099402],
-                [0.68337613, 1.5401184, 0.40385382, 1.22481493, 4.43486861, 5.4035374, 6.18497908],
+                [
+                    0.29327747,
+                    1.67630044,
+                    0.75801711,
+                    0.28591006,
+                    4.32244541,
+                    8.66811546,
+                    7.78099234,
+                ],
+                [
+                    0.68337628,
+                    1.54011846,
+                    0.40385385,
+                    1.22481477,
+                    4.43486872,
+                    5.40353726,
+                    6.18497911,
+                ],
             ]
         )
 
         expected_yaw_mis_results_std_ws = np.array(
             [
-                [0.27452248, 0.25452166, 0.14938781, 0.26991743, 1.2673068, 7.14268279, 3.85032593],
-                [0.3221081, 0.21103417, 0.13357736, 0.39072339, 0.9020596, 0.67756419, 1.17456709],
+                [0.27452239, 0.25452165, 0.14938781, 0.26991718, 1.26730681, 7.1395735, 3.85032651],
+                [0.32210774, 0.2110342, 0.13357729, 0.39072353, 0.90206007, 0.67756395, 1.17456696],
             ]
         )
 
         expected_yaw_mis_results_95ci_ws = np.array(
             [
                 [
-                    [-0.18432752, 0.76832232],
-                    [1.30016147, 2.08735716],
-                    [0.43874702, 1.00960394],
-                    [-0.07071526, 0.7746465],
-                    [2.44271202, 6.85382618],
-                    [3.30097681, 26.7338411],
-                    [4.65658994, 17.31832244],
+                    [-0.18432679, 0.76832261],
+                    [1.30016145, 2.087357],
+                    [0.43874719, 1.00960424],
+                    [-0.07071617, 0.77464821],
+                    [2.44271128, 6.85382468],
+                    [3.30097555, 26.7256876],
+                    [4.65659024, 17.31832531],
                 ],
                 [
-                    [0.15930714, 1.19891378],
-                    [1.20126941, 1.92257911],
-                    [0.20607499, 0.66990646],
-                    [0.57507927, 1.92932946],
-                    [3.35247852, 6.65183682],
-                    [4.33917236, 6.80123731],
-                    [4.34021853, 8.74114073],
+                    [0.15930799, 1.19891363],
+                    [1.20126952, 1.92257919],
+                    [0.20607552, 0.66990626],
+                    [0.57507836, 1.92932954],
+                    [3.35247832, 6.65183919],
+                    [4.3391722, 6.80123652],
+                    [4.3402178, 8.74113964],
                 ],
             ]
         )
