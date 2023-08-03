@@ -133,6 +133,8 @@ class MonteCarloAEP(FromDictMixin):
     """
 
     plant: PlantData
+    reg_temperature: bool = field(default=False, converter=bool)
+    reg_wind_direction: bool = field(default=False, converter=bool)
     reanalysis_products: list[str] = field(
         default=["merra2", "ncep2", "era5"],
         validator=attrs.validators.deep_iterable(
@@ -174,8 +176,6 @@ class MonteCarloAEP(FromDictMixin):
         default="lin", converter=str, validator=attrs.validators.in_(("lin", "gbm", "etr", "gam"))
     )
     ml_setup_kwargs: dict = field(default={}, converter=dict)
-    reg_temperature: bool = field(default=False, converter=bool)
-    reg_wind_direction: bool = field(default=False, converter=bool)
 
     # Internally created attributes need to be given a type before usage
     resample_freq: str = field(init=False)
@@ -226,7 +226,16 @@ class MonteCarloAEP(FromDictMixin):
                 f"The passed `plant` object must be of type `PlantData`, not: {type(self.plant)}"
             )
 
-        if set(("MonteCarloAEP", "all")).intersection(self.plant.analysis_type) == set():
+        if self.reg_temperature and self.reg_wind_direction:
+            analysis_type = "MonteCarloAEP-temp-wd"
+        elif self.reg_temperature:
+            analysis_type = "MonteCarloAEP-temp"
+        elif self.reg_wind_direction:
+            analysis_type = "MonteCarloAEP-wd"
+        else:
+            analysis_type = "MonteCarloAEP"
+
+        if set((analysis_type, "all")).intersection(self.plant.analysis_type) == set():
             self.plant.analysis_type.append("MonteCarloAEP")
 
         # Ensure the data are up to spec before continuing with initialization
@@ -267,7 +276,22 @@ class MonteCarloAEP(FromDictMixin):
         ]
 
     @logged_method_call
-    def run(self, num_sim: int, reanalysis_subset: list[str] = None):
+    def run(
+        self,
+        num_sim: int,
+        reg_model: str = "lin",
+        reanalysis_subset: list[str] = None,
+        uncertainty_meter: float = 0.005,
+        uncertainty_losses: float = 0.05,
+        uncertainty_windiness: float | tuple[float, float] = (10.0, 20.0),
+        uncertainty_loss_max: float | tuple[float, float] = (10.0, 20.0),
+        outlier_detection: bool = False,
+        uncertainty_outlier: float | tuple[float, float] = (1.0, 3.0),
+        uncertainty_nan_energy: float = 0.01,
+        time_resolution: str = "M",
+        end_date_lt: str | pd.Timestamp | None = None,
+        ml_setup_kwargs: dict = {},
+    ) -> None:
         """
         Perform pre-processing of data into an internal representation for which the analysis can run more quickly.
 
@@ -280,9 +304,18 @@ class MonteCarloAEP(FromDictMixin):
             None
         """
         self.num_sim = num_sim
-        self.reanalysis_subset = (
-            self.reanalysis_products if reanalysis_subset is None else reanalysis_subset
-        )
+        self.reanalysis_subset = reanalysis_subset
+        self.reg_model = reg_model
+        self.uncertainty_meter = uncertainty_meter
+        self.uncertainty_losses = uncertainty_losses
+        self.uncertainty_windiness = uncertainty_windiness
+        self.uncertainty_loss_max = uncertainty_loss_max
+        self.outlier_detection = outlier_detection
+        self.uncertainty_outlier = uncertainty_outlier
+        self.uncertainty_nan_energy = uncertainty_nan_energy
+        self.time_resolution = time_resolution
+        self.end_date_lt = end_date_lt
+        self.ml_setup_kwargs = ml_setup_kwargs
 
         # Write parameters of run to the log file
         logged_params = dict(
