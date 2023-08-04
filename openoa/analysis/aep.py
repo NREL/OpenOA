@@ -22,7 +22,7 @@ from matplotlib.markers import MarkerStyle
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import KFold
 
-from openoa.plant import PlantData
+from openoa.plant import PlantData, convert_to_list
 from openoa.utils import plot, filters
 from openoa.utils import timeseries as tm
 from openoa.utils import unit_conversion as un
@@ -136,10 +136,11 @@ class MonteCarloAEP(FromDictMixin):
     reg_temperature: bool = field(default=False, converter=bool)
     reg_wind_direction: bool = field(default=False, converter=bool)
     reanalysis_products: list[str] = field(
-        default=["merra2", "ncep2", "era5"],
+        default=None,
+        converter=convert_to_list,
         validator=attrs.validators.deep_iterable(
             iterable_validator=attrs.validators.instance_of(list),
-            member_validator=attrs.validators.instance_of(str),
+            member_validator=attrs.validators.instance_of((str, type(None))),
         ),
     )
     uncertainty_meter: float = field(default=0.005, converter=float)
@@ -209,6 +210,8 @@ class MonteCarloAEP(FromDictMixin):
     @reanalysis_products.validator
     def check_reanalysis_products(self, attribute: attrs.Attribute, value: list[str]) -> None:
         """Checks that the provided reanalysis products actually exist in the reanalysis data."""
+        if value == [None]:
+            return
         valid = [*self.plant.reanalysis]
         invalid = list(set(value).difference(valid))
         if invalid:
@@ -243,6 +246,8 @@ class MonteCarloAEP(FromDictMixin):
 
         logger.info("Initializing MonteCarloAEP Analysis Object")
 
+        self.finalize_reanalysis_products()
+
         self.resample_freq = {"M": "MS", "D": "D", "H": "H"}[self.time_resolution]
         self.resample_hours = {"M": 30 * 24, "D": 1 * 24, "H": 1}[self.time_resolution]
         self.calendar_samples = {"M": 12, "D": 365, "H": 365 * 24}[self.time_resolution]
@@ -275,6 +280,22 @@ class MonteCarloAEP(FromDictMixin):
             (self.aggregate.index >= self.start_por) & (self.aggregate.index <= self.end_por)
         ]
 
+    def finalize_reanalysis_products(self):
+        """Checks for the default None value, and if exists, reassigns ``reanalysis_products`` to
+        be all of the reanalysis keys from ``plant.`` If the "product", the default shell value
+        for ``plant.reanalysis`` and ``plant.metadata.reanalysis``, then an error is raised.
+
+        Raises:
+            ValueError: Raised if "product" is in ``reanalysis_products``.
+        """
+        if None in self.reanalysis_products:
+            self.reanalysis_products = [*self.plant.reanalysis]
+        if "product" in self.reanalysis_products:
+            raise ValueError(
+                "Neither `plant.reanalysis` nor `reanalysis_products` can have 'product',"
+                " as an input. 'product' is the empty default value and is reserved."
+            )
+
     @logged_method_call
     def run(
         self,
@@ -304,7 +325,9 @@ class MonteCarloAEP(FromDictMixin):
             None
         """
         self.num_sim = num_sim
-        self.reanalysis_subset = reanalysis_subset
+        self.reanalysis_subset = (
+            [*self.plant.reanalysis] if reanalysis_subset is None else reanalysis_subset
+        )
         self.reg_model = reg_model
         self.uncertainty_meter = uncertainty_meter
         self.uncertainty_losses = uncertainty_losses
@@ -1036,7 +1059,9 @@ class MonteCarloAEP(FromDictMixin):
             iav[n] = gross_lt_annual.std() / gross_lt_annual.mean()
             avail_pct[n] = avail_lt_losses
             curt_pct[n] = curt_lt_losses
-            lt_por_ratio[n] = (gross_lt.sum() / self._run.num_years_windiness) / gross_por.sum()
+            lt_por_ratio[n] = (
+                gross_lt.sum() / self._run.num_years_windiness
+            ) / gross_por.values.sum()
 
         # Calculate mean IAV for gross energy
         iav_avg = iav.mean()
@@ -1521,21 +1546,21 @@ def create_MonteCarloAEP(
     reg_wind_direction: bool = __defaults_reg_wind_direction,
 ) -> MonteCarloAEP:
     return MonteCarloAEP(
-        project,
-        reanalysis_products,
-        uncertainty_meter,
-        uncertainty_losses,
-        uncertainty_windiness,
-        uncertainty_loss_max,
-        outlier_detection,
-        uncertainty_outlier,
-        uncertainty_nan_energy,
-        time_resolution,
-        end_date_lt,
-        reg_model,
-        ml_setup_kwargs,
-        reg_temperature,
-        reg_wind_direction,
+        plant=project,
+        reanalysis_products=reanalysis_products,
+        uncertainty_meter=uncertainty_meter,
+        uncertainty_losses=uncertainty_losses,
+        uncertainty_windiness=uncertainty_windiness,
+        uncertainty_loss_max=uncertainty_loss_max,
+        outlier_detection=outlier_detection,
+        uncertainty_outlier=uncertainty_outlier,
+        uncertainty_nan_energy=uncertainty_nan_energy,
+        time_resolution=time_resolution,
+        end_date_lt=end_date_lt,
+        reg_model=reg_model,
+        ml_setup_kwargs=ml_setup_kwargs,
+        reg_temperature=reg_temperature,
+        reg_wind_direction=reg_wind_direction,
     )
 
 
