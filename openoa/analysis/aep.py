@@ -97,8 +97,13 @@ class MonteCarloAEP(FromDictMixin):
 
     Args:
         plant(:obj:`PlantData`): PlantData object from which PlantAnalysis should draw data.
+        reg_temperature(:obj:`bool`): Indicator to include temperature (True) or not (False) as a
+            regression input. Defaults to False.
+        reg_wind_direction(:obj:`bool`): Indicator to include wind direction (True) or not (False) as
+            a regression input. Defaults to False.
         reanal_products(obj:`list[str]`) : List of reanalysis products to use for Monte Carlo
-            sampling. Defaults to ["merra2", "ncep2", "era5"].
+            sampling. Defaults to None, which pulls all the products contained in
+            :py:attr:`plant.reanalysis`.
         uncertainty_meter(:obj:`float`): Uncertainty on revenue meter data. Defaults to 0.005.
         uncertainty_losses(:obj:`float`): Uncertainty on long-term losses. Defaults to 0.05.
         uncertainty_windiness(:obj:`tuple[int, int]`): number of years to use for the windiness
@@ -126,10 +131,6 @@ class MonteCarloAEP(FromDictMixin):
             points. Defaults to "lin".
         ml_setup_kwargs(:obj:`kwargs`): Keyword arguments to
             :py:class:`openoa.utils.machine_learning_setup.MachineLearningSetup` class. Defaults to {}.
-        reg_temperature(:obj:`bool`): Indicator to include temperature (True) or not (False) as a
-            regression input. Defaults to False.
-        reg_wind_direction(:obj:`bool`): Indicator to include wind direction (True) or not (False) as
-            a regression input. Defaults to False.
     """
 
     plant: PlantData
@@ -314,12 +315,41 @@ class MonteCarloAEP(FromDictMixin):
         ml_setup_kwargs: dict = {},
     ) -> None:
         """
-        Perform pre-processing of data into an internal representation for which the analysis can run more quickly.
+        Perform pre-processing of data into an internal representation for which the analysis can
+        run more quickly.
 
         Args:
             num_sim(:obj:`int`): number of simulations to perform
-            reanalysis_subset(:obj:`list[str]`): list of reanalysis abbreviations indicating which
-                reanalysis products to use for operational analysis.
+            reanal_products(obj:`list[str]`) : List of reanalysis products to use for Monte Carlo
+                sampling. Defaults to None, which pulls all the products contained in
+                :py:attr:`plant.reanalysis`.
+            uncertainty_meter(:obj:`float`): Uncertainty on revenue meter data. Defaults to 0.005.
+            uncertainty_losses(:obj:`float`): Uncertainty on long-term losses. Defaults to 0.05.
+            uncertainty_windiness(:obj:`tuple[int, int]`): number of years to use for the windiness
+                correction. Defaults to (10, 20).
+            uncertainty_loss_max(:obj:`tuple[int, int]`): Threshold for the combined availabilty and
+                curtailment monthly loss threshold. Defaults to (10, 20).
+            outlier_detection(:obj:`bool`): whether to perform (True) or not (False - default) outlier
+                detection filtering. Defaults to False.
+            uncertainty_outlier(:obj:`tuple[float, float]`): Min and max thresholds (Monte-Carlo
+                sampled) for the outlier detection filter. At monthly resolution, this is the tuning
+                constant for Huber's t function for a robust linear regression. At daily/hourly
+                resolution, this is the number of stdev of wind speed used as threshold for the bin
+                filter. Defaults to (1, 3).
+            uncertainty_nan_energy(:obj:`float`): Threshold to flag days/months based on NaNs. Defaults
+                to 0.01.
+            time_resolution(:obj:`string`): whether to perform the AEP calculation at monthly ("M"),
+                daily ("D") or hourly ("H") time resolution. Defaults to "M".
+            end_date_lt(:obj:`string` or :obj:`pandas.Timestamp`): The last date to use for the
+                long-term correction. Note that only the component of the date corresponding to the
+                time_resolution argument is considered. If None, the end of the last complete month of
+                reanalysis data will be used. Defaults to None.
+            reg_model(:obj:`string`): Which model to use for the regression ("lin" for linear, "gam" for,
+                general additive, "gbm" for gradient boosting, or "etr" for extra treees). At monthly
+                time resolution only linear regression is allowed because of the reduced number of data
+                points. Defaults to "lin".
+            ml_setup_kwargs(:obj:`kwargs`): Keyword arguments to
+                :py:class:`openoa.utils.machine_learning_setup.MachineLearningSetup` class. Defaults to {}.
 
         Returns:
             None
