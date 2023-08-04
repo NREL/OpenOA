@@ -25,6 +25,7 @@ All notable changes to this project will be documented in this file. If you make
 - Analysis class API redesign
   - Creating a class will take all of the same parameters, moving all data validation parameters to the front of the arguments for each class, so check your class initializations when changing versions.
   - `AnalysisClass.run()` now takes all of the same arguments as the class initialization, except for those that modify what data will be validated. For example, `MonteCarloAEP` has arguments `reg_temperature` and `reg_wind_direction`, which flag if additional columns should be present in the reanalysis data, therefore modifying the data validation requirements. As such, they will not be able to updated in `run()`, and a new analysis class instance will need to be created.
+  - `reanalysis_subset` is being replaced with `reanalysis_products` in all cases to use a consistent naming convention across classes.
 
 ## 3.0rc2
 - Everything from release candidate 1
