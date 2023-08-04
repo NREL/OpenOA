@@ -143,9 +143,11 @@ class SimpleTimeseriesTests(unittest.TestCase):
 
     def test_percent_nan(self):
         test_dict = {}
-        test_dict["a"] = pd.Series(["", 1, 2, 1e5, np.Inf])
-        test_dict["b"] = pd.Series(["", np.nan, 2, 1e5, np.Inf])
-        test_dict["c"] = pd.Series([np.nan, 1, 2, 1e5, np.nan])
+
+        # All should be float Series given PlantData requirements
+        test_dict["a"] = pd.Series([True, 1, 2, 1e5, np.Inf]).astype(float)
+        test_dict["b"] = pd.Series([False, np.nan, 2, 1e5, np.Inf]).astype(float)
+        test_dict["c"] = pd.Series([np.nan, 1, 2, 1e5, np.nan]).astype(float)
 
         nan_values = {"a": 0.0, "b": 0.2, "c": 0.4}
 
