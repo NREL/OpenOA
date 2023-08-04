@@ -22,6 +22,9 @@ All notable changes to this project will be documented in this file. If you make
 - Modern dependency stacks now supported!
   - Upgrading past major versions of Scikit-Learn (1.0) and Pandas (2.0), in conjunction with their own dependencies, caused small divergences in the MonteCarloAEP analysis method with Daily GBM, and the Wake Losses analysis method with UQ. The magnitude of the differences are small compared with the magnitude of the output.
   - In general, OpenOA is now moving away from pinning the maximum dependency version, and will stick to defining minimum dependencies to ensure modern API usage is supported across the software.
+- Analysis class API redesign
+  - Creating a class will take all of the same parameters, moving all data validation parameters to the front of the arguments for each class, so check your class initializations when changing versions.
+  - `AnalysisClass.run()` now takes all of the same arguments as the class initialization, except for those that modify what data will be validated. For example, `MonteCarloAEP` has arguments `reg_temperature` and `reg_wind_direction`, which flag if additional columns should be present in the reanalysis data, therefore modifying the data validation requirements. As such, they will not be able to updated in `run()`, and a new analysis class instance will need to be created.
 
 ## 3.0rc2
 - Everything from release candidate 1
