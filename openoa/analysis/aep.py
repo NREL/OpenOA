@@ -197,7 +197,6 @@ class MonteCarloAEP(FromDictMixin):
     )
     _reanalysis_aggregate: pd.DataFrame = field(init=False)
     num_sim: int = field(init=False)
-    reanalysis_subset: list[str] = field(init=False)
     long_term_losses: tuple[pd.Series, pd.Series] = field(init=False)
     mc_inputs: pd.DataFrame = field(init=False)
     _mc_num_points: NDArrayFloat = field(init=False)
@@ -243,7 +242,7 @@ class MonteCarloAEP(FromDictMixin):
             analysis_type = "MonteCarloAEP"
 
         if set((analysis_type, "all")).intersection(self.plant.analysis_type) == set():
-            self.plant.analysis_type.append("MonteCarloAEP")
+            self.plant.analysis_type.append(analysis_type)
 
         # Ensure the data are up to spec before continuing with initialization
         self.plant.validate()
@@ -297,22 +296,26 @@ class MonteCarloAEP(FromDictMixin):
     def run(
         self,
         num_sim: int,
-        reg_model: str = "lin",
-        reanalysis_subset: list[str] = None,
-        uncertainty_meter: float = 0.005,
-        uncertainty_losses: float = 0.05,
-        uncertainty_windiness: float | tuple[float, float] = (10.0, 20.0),
-        uncertainty_loss_max: float | tuple[float, float] = (10.0, 20.0),
-        outlier_detection: bool = False,
-        uncertainty_outlier: float | tuple[float, float] = (1.0, 3.0),
-        uncertainty_nan_energy: float = 0.01,
-        time_resolution: str = "M",
+        reg_model: str = None,
+        reanalysis_products: list[str] = None,
+        uncertainty_meter: float = None,
+        uncertainty_losses: float = None,
+        uncertainty_windiness: float | tuple[float, float] = None,
+        uncertainty_loss_max: float | tuple[float, float] = None,
+        outlier_detection: bool = None,
+        uncertainty_outlier: float | tuple[float, float] = None,
+        uncertainty_nan_energy: float = None,
+        time_resolution: str = None,
         end_date_lt: str | pd.Timestamp | None = None,
-        ml_setup_kwargs: dict = {},
+        ml_setup_kwargs: dict = None,
     ) -> None:
         """
         Perform pre-processing of data into an internal representation for which the analysis can
         run more quickly.
+
+        .. note:: If None is provided to any of the inputs, then the last used input value will be
+            used for the analysis, and if no prior values were set, then the model defaults, or the
+            provided defaults will be used.
 
         Args:
             num_sim(:obj:`int`): number of simulations to perform
@@ -351,20 +354,31 @@ class MonteCarloAEP(FromDictMixin):
             None
         """
         self.num_sim = num_sim
-        self.reanalysis_subset = (
-            [*self.plant.reanalysis] if reanalysis_subset is None else reanalysis_subset
-        )
-        self.reg_model = reg_model
-        self.uncertainty_meter = uncertainty_meter
-        self.uncertainty_losses = uncertainty_losses
-        self.uncertainty_windiness = uncertainty_windiness
-        self.uncertainty_loss_max = uncertainty_loss_max
-        self.outlier_detection = outlier_detection
-        self.uncertainty_outlier = uncertainty_outlier
-        self.uncertainty_nan_energy = uncertainty_nan_energy
-        self.time_resolution = time_resolution
-        self.end_date_lt = end_date_lt
-        self.ml_setup_kwargs = ml_setup_kwargs
+        if reanalysis_products is not None:
+            self.reanalysis_products = reanalysis_products
+            self.finalize_reanalysis_products()
+        if reg_model is not None:
+            self.reg_model = reg_model
+        if uncertainty_meter is not None:
+            self.uncertainty_meter = uncertainty_meter
+        if uncertainty_losses is not None:
+            self.uncertainty_losses = uncertainty_losses
+        if uncertainty_windiness is not None:
+            self.uncertainty_windiness = uncertainty_windiness
+        if uncertainty_loss_max is not None:
+            self.uncertainty_loss_max = uncertainty_loss_max
+        if outlier_detection is not None:
+            self.outlier_detection = outlier_detection
+        if uncertainty_outlier is not None:
+            self.uncertainty_outlier = uncertainty_outlier
+        if uncertainty_nan_energy is not None:
+            self.uncertainty_nan_energy = uncertainty_nan_energy
+        if time_resolution is not None:
+            self.time_resolution = time_resolution
+        if end_date_lt is not None:
+            self.end_date_lt = end_date_lt
+        if ml_setup_kwargs is not None:
+            self.ml_setup_kwargs = ml_setup_kwargs
 
         # Write parameters of run to the log file
         logged_params = dict(
@@ -374,7 +388,7 @@ class MonteCarloAEP(FromDictMixin):
             uncertainty_windiness=self.uncertainty_windiness,
             uncertainty_nan_energy=self.uncertainty_nan_energy,
             num_sim=self.num_sim,
-            reanalysis_subset=self.reanalysis_subset,
+            reanalysis_products=self.reanalysis_products,
         )
         logger.info("Running with parameters: {}".format(logged_params))
 
@@ -692,6 +706,9 @@ class MonteCarloAEP(FromDictMixin):
 
         # Ensure there are 12 or 365 data points in long-term average. If not, throw an exception:
         if avail_long_term.shape[0] < self.calendar_samples:
+            print(avail_long_term)
+            print()
+            print(self.calendar_samples)
             raise Exception(
                 "Not all calendar days/months represented in long-term availability calculation"
             )
@@ -715,7 +732,7 @@ class MonteCarloAEP(FromDictMixin):
         """
 
         # Create extra long list of renanalysis product names to sample from
-        reanal_list = list(np.repeat(self.reanalysis_subset, self.num_sim))
+        reanal_list = list(np.repeat(self.reanalysis_products, self.num_sim))
 
         inputs = {
             "reanalysis_product": np.asarray(random.sample(reanal_list, self.num_sim)),
@@ -1085,9 +1102,10 @@ class MonteCarloAEP(FromDictMixin):
             iav[n] = gross_lt_annual.std() / gross_lt_annual.mean()
             avail_pct[n] = avail_lt_losses
             curt_pct[n] = curt_lt_losses
-            lt_por_ratio[n] = (
-                gross_lt.sum() / self._run.num_years_windiness
-            ) / gross_por.values.sum()
+            gross_por_sum = gross_por.sum()
+            if isinstance(gross_por_sum, pd.Series):
+                gross_por_sum = gross_por_sum.iloc[0]
+            lt_por_ratio[n] = (gross_lt.sum() / self._run.num_years_windiness) / gross_por_sum
 
         # Calculate mean IAV for gross energy
         iav_avg = iav.mean()
