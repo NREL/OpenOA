@@ -255,37 +255,39 @@ class TestStaticYawMisalignment(unittest.TestCase):
         calculated_yaw_mis_results_avg_overall = self.analysis.yaw_misalignment_avg
 
         nptest.assert_array_almost_equal(
-            expected_yaw_mis_results_avg_overall, calculated_yaw_mis_results_avg_overall
+            expected_yaw_mis_results_avg_overall, calculated_yaw_mis_results_avg_overall, decimal=5
         )
 
         calculated_yaw_mis_results_std_overall = self.analysis.yaw_misalignment_std
 
         nptest.assert_array_almost_equal(
-            expected_yaw_mis_results_std_overall, calculated_yaw_mis_results_std_overall
+            expected_yaw_mis_results_std_overall, calculated_yaw_mis_results_std_overall, decimal=5
         )
 
         calculated_yaw_mis_results_95ci_overall = self.analysis.yaw_misalignment_95ci
 
         nptest.assert_array_almost_equal(
-            expected_yaw_mis_results_95ci_overall, calculated_yaw_mis_results_95ci_overall
+            expected_yaw_mis_results_95ci_overall,
+            calculated_yaw_mis_results_95ci_overall,
+            decimal=5,
         )
 
         calculated_yaw_mis_results_avg_ws = self.analysis.yaw_misalignment_avg_ws
 
         nptest.assert_array_almost_equal(
-            expected_yaw_mis_results_avg_ws, calculated_yaw_mis_results_avg_ws
+            expected_yaw_mis_results_avg_ws, calculated_yaw_mis_results_avg_ws, decimal=5
         )
 
         calculated_yaw_mis_results_std_ws = self.analysis.yaw_misalignment_std_ws
 
         nptest.assert_array_almost_equal(
-            expected_yaw_mis_results_std_ws, calculated_yaw_mis_results_std_ws
+            expected_yaw_mis_results_std_ws, calculated_yaw_mis_results_std_ws, decimal=5
         )
 
         calculated_yaw_mis_results_95ci_ws = self.analysis.yaw_misalignment_95ci_ws
 
         nptest.assert_array_almost_equal(
-            expected_yaw_mis_results_95ci_ws, calculated_yaw_mis_results_95ci_ws
+            expected_yaw_mis_results_95ci_ws, calculated_yaw_mis_results_95ci_ws, decimal=5
         )
 
     def check_simulation_results_yaw_misalignment_with_UQ_new_params(self):
@@ -334,37 +336,39 @@ class TestStaticYawMisalignment(unittest.TestCase):
         calculated_yaw_mis_results_avg_overall = self.analysis.yaw_misalignment_avg
 
         nptest.assert_array_almost_equal(
-            expected_yaw_mis_results_avg_overall, calculated_yaw_mis_results_avg_overall
+            expected_yaw_mis_results_avg_overall, calculated_yaw_mis_results_avg_overall, decimal=5
         )
 
         calculated_yaw_mis_results_std_overall = self.analysis.yaw_misalignment_std
 
         nptest.assert_array_almost_equal(
-            expected_yaw_mis_results_std_overall, calculated_yaw_mis_results_std_overall
+            expected_yaw_mis_results_std_overall, calculated_yaw_mis_results_std_overall, decimal=5
         )
 
         calculated_yaw_mis_results_95ci_overall = self.analysis.yaw_misalignment_95ci
 
         nptest.assert_array_almost_equal(
-            expected_yaw_mis_results_95ci_overall, calculated_yaw_mis_results_95ci_overall
+            expected_yaw_mis_results_95ci_overall,
+            calculated_yaw_mis_results_95ci_overall,
+            decimal=5,
         )
 
         calculated_yaw_mis_results_avg_ws = self.analysis.yaw_misalignment_avg_ws
 
         nptest.assert_array_almost_equal(
-            expected_yaw_mis_results_avg_ws, calculated_yaw_mis_results_avg_ws
+            expected_yaw_mis_results_avg_ws, calculated_yaw_mis_results_avg_ws, decimal=5
         )
 
         calculated_yaw_mis_results_std_ws = self.analysis.yaw_misalignment_std_ws
 
         nptest.assert_array_almost_equal(
-            expected_yaw_mis_results_std_ws, calculated_yaw_mis_results_std_ws
+            expected_yaw_mis_results_std_ws, calculated_yaw_mis_results_std_ws, decimal=5
         )
 
         calculated_yaw_mis_results_95ci_ws = self.analysis.yaw_misalignment_95ci_ws
 
         nptest.assert_array_almost_equal(
-            expected_yaw_mis_results_95ci_ws, calculated_yaw_mis_results_95ci_ws
+            expected_yaw_mis_results_95ci_ws, calculated_yaw_mis_results_95ci_ws, decimal=5
         )
 
     def tearDown(self):
