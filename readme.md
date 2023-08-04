@@ -175,24 +175,13 @@ make html
 ```
 
 ### Contributors
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
 
-Alphabetically:
-Nathan Agarwal,
-Nicola Bodini,
-Anna Craig,
-Jason Fields,
-Rob Hammond,
-Zachary Heitkamp,
-Travis Kemper,
-Joseph Lee,
-Monte Lunacek,
-John Meissner,
-Mike Optis,
-Jordan Perr-Sauer,
-Sebastian Pfaffel,
-Caleb Phillips,
-Charlie Plumley,
-Eliot Quon,
-Sheungwen Sheng,
-Eric Simley, and
-Lindy Williams.
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+
+<!-- ALL-CONTRIBUTORS-LIST:END -->
+
+[![All Contributors](https://img.shields.io/github/all-contributors/NREL/OpenOA?color=ee8449&style=flat-square)](#contributors)

@@ -147,8 +147,8 @@ def std_range_flag(
         raise ValueError("The inputs to `col` and `threshold` must be the same length.")
 
     subset = data.loc[:, col].copy()
-    data_mean = subset.mean(axis=0)
-    data_std = subset.std(axis=0) * np.array(threshold)
+    data_mean = np.nanmean(subset.values, axis=0)
+    data_std = np.nanstd(subset.values, ddof=1, axis=0) * np.array(threshold)
     flag = subset.le(data_mean - data_std) | subset.ge(data_mean + data_std)
 
     # Return back a pd.Series if one was provided, else a pd.DataFrame
@@ -232,9 +232,9 @@ def bin_filter(
 
     # Set bin min and max values if not passed to function
     if bin_min is None:
-        bin_min = bin_col.min()
+        bin_min = np.min(bin_col.values)
     if bin_max is None:
-        bin_max = bin_col.max()
+        bin_max = np.max(bin_col.values)
 
     # Define bin edges
     bin_edges = np.arange(bin_min, bin_max, bin_width)
@@ -242,37 +242,48 @@ def bin_filter(
     # Ensure the last bin edge value is bin_max
     bin_edges = np.unique(np.clip(np.append(bin_edges, bin_max), bin_min, bin_max))
 
-    # Define empty flag of 'False' values with indices matching value_col
-    flag = pd.Series(index=value_col.index, data=False)
+    # Bin the data and recreate the comparison data as a multi-column data frame
+    which_bin_col = np.digitize(bin_col, bin_edges, right=True)
 
-    # Loop through bins and applying flagging
-    nbins = len(bin_edges)
-    for i in range(nbins - 1):
-        # Get data that fall wihtin bin
-        y_bin = value_col.loc[(bin_col <= bin_edges[i + 1]) & (bin_col > bin_edges[i])]
+    # Create the flag values as a matrix with each column being the timestamp's binned value,
+    # e.g., all columns values are NaN if the data point is not in that bin
+    flag_vals = (
+        value_col.to_frame().set_index(pd.Series(which_bin_col, name="bin"), append=True).unstack()
+    )
+    drop = [i for i, el in enumerate(flag_vals.columns.names) if el != "bin"]
+    flag_vals.columns = flag_vals.columns.droplevel(drop).rename(None)
 
-        # Get center of binned data
-        center = y_bin.mean() if center_type == "mean" else y_bin.median()
+    # Create a False array as default, so flags are set to True
+    flag_df = pd.DataFrame(np.zeros_like(flag_vals, dtype=bool), index=flag_vals.index)
 
-        # Define threshold of data flag
-        if threshold_type == "std":
-            deviation = y_bin.std() * threshold
-        elif threshold_type == "scalar":
-            deviation = threshold
-        else:  # median absolute deviation (mad)
-            deviation = (y_bin - center).abs().median() * threshold
+    # Get center of binned data
+    if center_type == "median":
+        center = np.nanmedian(flag_vals.values, axis=0)
+    else:
+        center = np.nanmean(flag_vals.values, axis=0)
+    center = pd.DataFrame(
+        np.full(flag_vals.shape, center),
+        index=flag_vals.index,
+        columns=flag_vals.columns,
+    )
 
-        # Perform flagging depending on specfied direction
-        if direction == "above":
-            flag_bin = y_bin > (center + deviation)
-        elif direction == "below":
-            flag_bin = y_bin < (center - deviation)
-        else:
-            flag_bin = (y_bin > (center + deviation)) | (y_bin < (center - deviation))
+    # Define threshold of data flag
+    if threshold_type == "std":
+        deviation = np.nanstd(flag_vals.values, ddof=1, axis=0) * threshold
+    elif threshold_type == "scalar":
+        deviation = threshold
+    else:  # median absolute deviation (mad)
+        deviation = np.nanmedian(np.abs(flag_vals.values - center.values), axis=0) * threshold
 
-        # Record flags in final flag column
-        flag.loc[flag_bin.index] = flag_bin
+    # Perform flagging depending on specfied direction
+    if direction in ("above", "all"):
+        flag_df |= flag_vals > center + deviation
+    if direction in ("below", "all"):
+        flag_df |= flag_vals < center - deviation
 
+    # Get all instances where the value is True, and reset any values outside the bin limits
+    flag = pd.Series(np.nanmax(flag_df, axis=1), index=flag_df.index)
+    flag.loc[(bin_col <= bin_min) | (bin_col > bin_max)] = False
     return flag
 
 
