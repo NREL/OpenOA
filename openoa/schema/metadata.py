@@ -33,10 +33,6 @@ ANALYSIS_REQUIREMENTS = {
         },
         "reanalysis": {
             "columns": ["WMETR_HorWdSpd", "WMETR_AirDen"],
-            "conditional_columns": {
-                "reg_temperature": ["WMETR_EnvTmp"],
-                "reg_wind_direction": ["WMETR_HorWdSpdU", "WMETR_HorWdSpdV"],
-            },
             "freq": _at_least_monthly,
         },
     },
@@ -71,6 +67,19 @@ ANALYSIS_REQUIREMENTS = {
         },
     },
 }
+
+# Add the analysis variations
+ANALYSIS_REQUIREMENTS["MonteCarloAEP-temp"] = deepcopy(ANALYSIS_REQUIREMENTS["MonteCarloAEP"])
+ANALYSIS_REQUIREMENTS["MonteCarloAEP-wd"] = deepcopy(ANALYSIS_REQUIREMENTS["MonteCarloAEP"])
+ANALYSIS_REQUIREMENTS["MonteCarloAEP-temp-wd"] = deepcopy(ANALYSIS_REQUIREMENTS["MonteCarloAEP"])
+
+ANALYSIS_REQUIREMENTS["MonteCarloAEP-temp"]["reanalysis"]["columns"].extend(["WMETR_EnvTmp"])
+ANALYSIS_REQUIREMENTS["MonteCarloAEP-temp"]["reanalysis"]["columns"].extend(
+    ["WMETR_HorWdSpdU", "WMETR_HorWdSpdV"]
+)
+ANALYSIS_REQUIREMENTS["MonteCarloAEP-temp"]["reanalysis"]["columns"].extend(
+    ["WMETR_EnvTmp", "WMETR_HorWdSpdU", "WMETR_HorWdSpdV"]
+)
 
 
 def determine_analysis_requirements(

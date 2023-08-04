@@ -232,10 +232,13 @@ class MonteCarloAEP(FromDictMixin):
 
         if self.reg_temperature and self.reg_wind_direction:
             analysis_type = "MonteCarloAEP-temp-wd"
+            self.reanalysis_vars.extend(["WMETR_EnvTmp", "WMETR_HorWdSpdU", "WMETR_HorWdSpdV"])
         elif self.reg_temperature:
             analysis_type = "MonteCarloAEP-temp"
+            self.reanalysis_vars.append("WMETR_EnvTmp")
         elif self.reg_wind_direction:
             analysis_type = "MonteCarloAEP-wd"
+            self.reanalysis_vars.extend(["WMETR_HorWdSpdU", "WMETR_HorWdSpdV"])
         else:
             analysis_type = "MonteCarloAEP"
 
@@ -256,13 +259,6 @@ class MonteCarloAEP(FromDictMixin):
         if self.end_date_lt is not None:
             # Set to the bottom of the bottom of the hour
             self.end_date_lt = pd.to_datetime(self.end_date_lt).replace(minute=0)
-
-        # Build list of regression variables
-        # self.reanalysis_vars = []  # Recreate because of data persistency bug
-        if self.reg_temperature:
-            self.reanalysis_vars.append("WMETR_EnvTmp")
-        if self.reg_wind_direction:
-            self.reanalysis_vars.extend(["WMETR_HorWdSpdU", "WMETR_HorWdSpdV"])
 
         # Monthly data can only use robust linear regression because of limited number of data
         if (self.time_resolution == "M") & (self.reg_model != "lin"):
