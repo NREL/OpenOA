@@ -314,8 +314,7 @@ class MonteCarloAEP(FromDictMixin):
         run more quickly.
 
         .. note:: If None is provided to any of the inputs, then the last used input value will be
-            used for the analysis, and if no prior values were set, then the model defaults, or the
-            provided defaults will be used.
+            used for the analysis, and if no prior values were set, then this is the model's defaults.
 
         Args:
             num_sim(:obj:`int`): number of simulations to perform
