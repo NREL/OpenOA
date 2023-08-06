@@ -30,6 +30,13 @@ def validate_UQ_input(cls, attribute: attrs.Attribute, value: float | tuple) -> 
         if not all(isinstance(x, (float, int)) for x in value):
             raise ValueError(f"All values of {attribute.name} must be of type 'float'.")
     else:
+        # For some defaults values of analysis classes, a tuple is provided, so ensure that those
+        # are correctly converted to mean value with a 2-decimal precision as is intended through
+        # the original API, otherwise raise an error that a float should be provided.
+        if isinstance(value, tuple):
+            if len(value) == 2:
+                object.__setattr__(cls, attribute.name, round(np.mean(value), 2))
+                return
         if not isinstance(value, float):
             raise ValueError(
                 f"When UQ is False, the value provided to {attribute.name} ({value}), must be a float"

@@ -72,16 +72,16 @@ class ElectricalLosses(FromDictMixin):
     """
 
     plant: PlantData
-    UQ: bool = field(default=False, converter=bool)
+    UQ: bool = field(default=False, validator=attrs.validators.instance_of(bool))
     num_sim: int = field(default=20000, converter=int)
+    uncertainty_meter: NDArrayFloat | float = field(
+        default=0.005, validator=validate_open_range_0_1
+    )
+    uncertainty_scada: NDArrayFloat | float = field(
+        default=0.005, validator=validate_open_range_0_1
+    )
     uncertainty_correction_threshold: NDArrayFloat | tuple[float, float] | float = field(
-        default=0.95, validator=(validate_UQ_input, validate_open_range_0_1)
-    )
-    uncertainty_meter: NDArrayFloat | tuple[float, float] | float = field(
-        default=0.005, validator=validate_open_range_0_1
-    )
-    uncertainty_scada: NDArrayFloat | tuple[float, float] | float = field(
-        default=0.005, validator=validate_open_range_0_1
+        default=(0.9, 0.995), validator=(validate_UQ_input, validate_open_range_0_1)
     )
 
     # Internally created attributes need to be given a type before usage
@@ -128,10 +128,42 @@ class ElectricalLosses(FromDictMixin):
             self.monthly_meter = False
 
     @logged_method_call
-    def run(self):
+    def run(
+        self,
+        num_sim: int | None = None,
+        uncertainty_meter: NDArrayFloat | float = None,
+        uncertainty_scada: NDArrayFloat | float = None,
+        uncertainty_correction_threshold: NDArrayFloat | tuple[float, float] | float = None,
+    ):
         """
         Run the electrical losses calculation.
+
+        .. note:: If None is provided to any of the inputs, then the last used input value will be
+            used for the analysis, and if no prior values were set, then this is the model's defaults.
+
+        Args:
+            num_sim(:obj:`int`): Number of Monte Carlo simulations to perform.
+            uncertainty_meter(:obj:`float`): Uncertainty imposed on the revenue meter data (for
+                :py:attr:`UQ` = True case).
+            uncertainty_scada(:obj:`float`): Uncertainty imposed on the scada data (for :py:attr:`UQ` =
+                True case).
+            uncertainty_correction_threshold(:obj:`tuple` | `float`): Data availability thresholds, in
+                the range of (0, 1), under which months should be eliminated. If :py:attr:`UQ` = True,
+                then a 2-element tuple containing an upper and lower bound for a randomly selected value
+                should be given, otherwise, a scalar value should be provided.
         """
+        if num_sim is not None and self.UQ:
+            self.num_sim = num_sim
+        elif num_sim > 1 and not self.UQ:
+            logger.info(
+                "`num_sim` can NOT be greater than 1 when `UQ=False`, value has not been set."
+            )
+        if uncertainty_meter is not None:
+            self.uncertainty_meter = uncertainty_meter
+        if uncertainty_scada is not None:
+            self.uncertainty_scada = uncertainty_scada
+        if uncertainty_correction_threshold is not None:
+            self.uncertainty_correction_threshold = uncertainty_correction_threshold
         # Setup Monte Carlo approach, and calculate the electrical losses
         self.setup_inputs()
         self.calculate_electrical_losses()
@@ -363,12 +395,12 @@ def create_ElectricalLosses(
     uncertainty_scada: NDArrayFloat | tuple[float, float] | float = __defaults_uncertainty_scada,
 ) -> ElectricalLosses:
     return ElectricalLosses(
-        project,
-        UQ,
-        num_sim,
-        uncertainty_correction_threshold,
-        uncertainty_meter,
-        uncertainty_scada,
+        plant=project,
+        UQ=UQ,
+        num_sim=num_sim,
+        uncertainty_meter=uncertainty_meter,
+        uncertainty_scada=uncertainty_scada,
+        uncertainty_correction_threshold=uncertainty_correction_threshold,
     )
 
 
