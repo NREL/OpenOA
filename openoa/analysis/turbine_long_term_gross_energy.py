@@ -19,7 +19,7 @@ from tqdm import tqdm
 from attrs import field, define
 from matplotlib.ticker import StrMethodFormatter
 
-from openoa.plant import PlantData
+from openoa.plant import PlantData, convert_to_list
 from openoa.utils import plot, filters, imputing
 from openoa.utils import timeseries as ts
 from openoa.utils import met_data_processing as met
@@ -69,38 +69,46 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
 
     Args:
         UQ(:obj:`bool`): Indicator to perform (True) or not (False) uncertainty quantification.
+        num_sim(:obj:`int`): Number of simulations to run when `UQ` is True, otherwise set to 1.
+            Defaults to 20000.
+        uncertainty_scada(:obj:`float`): Uuncertainty imposed to the SCADA data when :py:attr:`UQ`
+            is True only Defaults to 0.005.
+        reanalysis_products(obj:`list[str]`) : List of reanalysis products to use for Monte Carlo
+            sampling. Defaults to None, which pulls all the products contained in
+            :py:attr:`plant.reanalysis`.
         wind_bin_threshold(:obj:`tuple`): The filter threshold for each vertical bin, expressed as
-            number of standard deviations from the median in each bin. When :py:attr:`UQ` is True, then this should be a
-            tuple of the lower and upper limits of this threshold, otherwise a single value should be used. Defaults to
-            (1.0, 3.0)
-        max_power_filter(:obj:`tuple`): Maximum power threshold, in the range (0, 1], to which the bin
-            filter should be applied. When :py:attr:`UQ` is True, then this should be a tuple of the lower and upper
-            limits of this filter, otherwise a single value should be used. Defaults to (0.8, 0.9).
-        correction_threshold(:obj:`tuple`): The threshold, in the range of (0, 1], above which daily scada
-            energy data should be corrected. When :py:attr:`UQ` is True, then this should be a tuple of the lower and
-            upper limits of this threshold, otherwise a single value should be used. Defaults to (0.85, 0.95)
-        uncertainty_scada(:obj:`float`): Uuncertainty imposed to the SCADA data when :py:attr:`UQ` is True only Defaults
-            to 0.005.
-        num_sim(:obj:`int`): Number of simulations to run when `UQ` is True, otherwise set to 1. Defaults to 20000.
+            number of standard deviations from the median in each bin. When :py:attr:`UQ` is True,
+            then this should be a tuple of the lower and upper limits of this threshold, otherwise a
+            single value should be used. Defaults to (1.0, 3.0)
+        max_power_filter(:obj:`tuple`): Maximum power threshold, in the range (0, 1], to which the
+            binfilter should be applied. When :py:attr:`UQ` is True, then this should be a tuple of
+            the lower and upper limits of this filter, otherwise a single value should be used.
+            Defaults to (0.8, 0.9).
+        correction_threshold(:obj:`tuple`): The threshold, in the range of (0, 1], above which daily
+            scadaenergy data should be corrected. When :py:attr:`UQ` is True, then this should be a
+            tuple of the lower and upper limits of this threshold, otherwise a single value should
+            be used. Defaults to (0.85, 0.95)
     """
 
     plant: PlantData
     UQ: bool = field(default=True, converter=bool)
-    wind_bin_threshold: NDArrayFloat = field(
-        default=(1.0, 3.0), validator=validate_UQ_input, on_setattr=None
-    )
-    max_power_filter: NDArrayFloat = field(
-        default=(0.8, 0.9),
-        validator=(validate_UQ_input, validate_half_closed_0_1_right),
-        on_setattr=None,
-    )
-    correction_threshold: NDArrayFloat = field(
-        default=(0.85, 0.95),
-        validator=(validate_UQ_input, validate_half_closed_0_1_right),
-        on_setattr=None,
+    num_sim: int = field(default=20000, converter=int)
+    reanalysis_products: list[str] = field(
+        default=None,
+        converter=convert_to_list,
+        validator=attrs.validators.deep_iterable(
+            iterable_validator=attrs.validators.instance_of(list),
+            member_validator=attrs.validators.instance_of((str, type(None))),
+        ),
     )
     uncertainty_scada: float = field(default=0.005, converter=float)
-    num_sim: int = field(default=20000, converter=int)
+    wind_bin_threshold: NDArrayFloat = field(default=(1.0, 3.0), validator=validate_UQ_input)
+    max_power_filter: NDArrayFloat = field(
+        default=(0.8, 0.9), validator=(validate_UQ_input, validate_half_closed_0_1_right)
+    )
+    correction_threshold: NDArrayFloat = field(
+        default=(0.85, 0.95), validator=(validate_UQ_input, validate_half_closed_0_1_right)
+    )
 
     # Internally created attributes need to be given a type before usage
     por_start: pd.Timestamp = field(init=False)
@@ -112,7 +120,6 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
     model_dict: dict = field(factory=dict, init=False)
     model_results: dict = field(factory=dict, init=False)
     scada_daily_valid: pd.DataFrame = field(default=pd.DataFrame(), init=False)
-    reanalysis_subset: list[str] = field(init=False)
     reanalysis_memo: dict[str, pd.DataFrame] = field(factory=dict, init=False)
     daily_reanalysis: dict[str, pd.DataFrame] = field(factory=dict, init=False)
     _run: pd.DataFrame = field(init=False)
@@ -145,6 +152,8 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
 
         logger.info("Initializing TurbineLongTermGrossEnergy Object")
 
+        self.finalize_reanalysis_products()
+
         # Check that selected UQ is allowed
         if self.UQ:
             logger.info("Note: uncertainty quantification will be performed in the calculation")
@@ -161,19 +170,78 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
         logger.info("Processing SCADA data into dictionaries by turbine (this can take a while)")
         self.sort_scada_by_turbine()
 
+    def finalize_reanalysis_products(self):
+        """Checks for the default None value, and if exists, reassigns ``reanalysis_products`` to
+        be all of the reanalysis keys from ``plant.`` If the "product", the default shell value
+        for ``plant.reanalysis`` and ``plant.metadata.reanalysis``, then an error is raised.
+
+        Raises:
+            ValueError: Raised if "product" is in ``reanalysis_products``.
+        """
+        if None in self.reanalysis_products:
+            self.reanalysis_products = [*self.plant.reanalysis]
+        if "product" in self.reanalysis_products:
+            raise ValueError(
+                "Neither `plant.reanalysis` nor `reanalysis_products` can have 'product',"
+                " as an input. 'product' is the empty default value and is reserved."
+            )
+
     @logged_method_call
     def run(
         self,
-        reanalysis_subset=["erai", "ncep2", "merra2"],
+        num_sim: int | None = None,
+        reanalysis_products: list[str] | None = None,
+        uncertainty_scada: float | None = None,
+        wind_bin_threshold: float | tuple[float, float] | None = None,
+        max_power_filter: float | tuple[float, float] | None = None,
+        correction_threshold: float | tuple[float, float] | None = None,
     ) -> None:
         """
         Pre-process the run-specific data settings for each simulation, then fit and apply the
         model for each simualtion.
 
+        .. note:: If None is provided to any of the inputs, then the last used input value will be
+            used for the analysis, and if no prior values were set, then this is the model's defaults.
+
         Args:
-            reanalysis_subset(:obj:`list`): The reanalysis products to use for long-term correction.
+            num_sim(:obj:`int`): Number of simulations to run when `UQ` is True, otherwise set to 1.
+                Defaults to 20000.
+            uncertainty_scada(:obj:`float`): Uuncertainty imposed to the SCADA data when :py:attr:`UQ`
+                is True only Defaults to 0.005.
+            reanalysis_products(obj:`list[str]`) : List of reanalysis products to use for Monte Carlo
+                sampling. Defaults to None, which pulls all the products contained in
+                :py:attr:`plant.reanalysis`.
+            wind_bin_threshold(:obj:`tuple`): The filter threshold for each vertical bin, expressed as
+                number of standard deviations from the median in each bin. When :py:attr:`UQ` is True,
+                then this should be a tuple of the lower and upper limits of this threshold, otherwise a
+                single value should be used. Defaults to (1.0, 3.0)
+            max_power_filter(:obj:`tuple`): Maximum power threshold, in the range (0, 1], to which the
+                binfilter should be applied. When :py:attr:`UQ` is True, then this should be a tuple of
+                the lower and upper limits of this filter, otherwise a single value should be used.
+                Defaults to (0.8, 0.9).
+            correction_threshold(:obj:`tuple`): The threshold, in the range of (0, 1], above which daily
+                scadaenergy data should be corrected. When :py:attr:`UQ` is True, then this should be a
+                tuple of the lower and upper limits of this threshold, otherwise a single value should
+                be used. Defaults to (0.85, 0.95)
         """
-        self.reanalysis_subset = reanalysis_subset  # Reanalysis data to consider in fitting
+        if num_sim is not None:
+            if self.UQ:
+                self.num_sim = num_sim
+            elif num_sim > 1:
+                logger.info(
+                    "`num_sim` can NOT be greater than 1 when `UQ=False`, value has not been set."
+                )
+        if reanalysis_products is not None:
+            self.reanalysis_products = reanalysis_products
+            self.finalize_reanalysis_products()
+        if uncertainty_scada is not None:
+            self.uncertainty_scada = uncertainty_scada
+        if wind_bin_threshold is not None:
+            self.wind_bin_threshold = wind_bin_threshold
+        if max_power_filter is not None:
+            self.max_power_filter = max_power_filter
+        if correction_threshold is not None:
+            self.correction_threshold = correction_threshold
 
         self.setup_inputs()
         logger.info("Running the long term gross energy analysis")
@@ -199,7 +267,7 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
         """
         if self.UQ:
             reanal_list = list(
-                np.repeat(self.reanalysis_subset, self.num_sim)
+                np.repeat(self.reanalysis_products, self.num_sim)
             )  # Create extra long list of renanalysis product names to sample from
             inputs = {
                 "reanalysis_product": np.asarray(random.sample(reanal_list, self.num_sim)),
@@ -227,14 +295,14 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
 
         if not self.UQ:
             inputs = {
-                "reanalysis_product": self.reanalysis_subset,
+                "reanalysis_product": self.reanalysis_products,
                 "scada_data_fraction": 1,
                 "wind_bin_thresh": self.wind_bin_threshold,
                 "max_power_filter": self.max_power_filter,
                 "correction_threshold": self.correction_threshold,
             }
-            self.plant_gross = np.empty([len(self.reanalysis_subset), 1])
-            self.num_sim = len(self.reanalysis_subset)
+            self.plant_gross = np.empty([len(self.reanalysis_products), 1])
+            self.num_sim = len(self.reanalysis_products)
 
         self._inputs = pd.DataFrame(inputs)
 
@@ -506,7 +574,9 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
         mod_results = self._model_results
 
         # Create a data frame to store final results
-        self.summary_results = pd.DataFrame(index=self.reanalysis_subset, columns=self.turbine_ids)
+        self.summary_results = pd.DataFrame(
+            index=self.reanalysis_products, columns=self.turbine_ids
+        )
 
         daily_reanalysis = self.daily_reanalysis
         turb_gross = pd.DataFrame(index=daily_reanalysis.index)
@@ -698,6 +768,11 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
 
 
 __defaults_UQ = TurbineLongTermGrossEnergy.__attrs_attrs__.UQ.default
+__defaults_num_sim = TurbineLongTermGrossEnergy.__attrs_attrs__.num_sim.default
+__defaults_reanalysis_products = (
+    TurbineLongTermGrossEnergy.__attrs_attrs__.reanalysis_products.default
+)
+__defaults_uncertainty_scada = TurbineLongTermGrossEnergy.__attrs_attrs__.uncertainty_scada.default
 __defaults_wind_bin_threshold = (
     TurbineLongTermGrossEnergy.__attrs_attrs__.wind_bin_threshold.default
 )
@@ -705,27 +780,27 @@ __defaults_max_power_filter = TurbineLongTermGrossEnergy.__attrs_attrs__.max_pow
 __defaults_correction_threshold = (
     TurbineLongTermGrossEnergy.__attrs_attrs__.correction_threshold.default
 )
-__defaults_uncertainty_scada = TurbineLongTermGrossEnergy.__attrs_attrs__.uncertainty_scada.default
-__defaults_num_sim = TurbineLongTermGrossEnergy.__attrs_attrs__.num_sim.default
 
 
 def create_TurbineLongTermGrossEnergy(
     project: PlantData,
     UQ: bool = __defaults_UQ,
+    num_sim: int = __defaults_num_sim,
+    reanalysis_products=__defaults_reanalysis_products,
+    uncertainty_scada: float = __defaults_uncertainty_scada,
     wind_bin_threshold: NDArrayFloat = __defaults_wind_bin_threshold,
     max_power_filter: NDArrayFloat = __defaults_max_power_filter,
     correction_threshold: NDArrayFloat = __defaults_correction_threshold,
-    uncertainty_scada: float = __defaults_uncertainty_scada,
-    num_sim: int = __defaults_num_sim,
 ) -> TurbineLongTermGrossEnergy:
     return TurbineLongTermGrossEnergy(
-        project,
-        UQ,
-        wind_bin_threshold,
-        max_power_filter,
-        correction_threshold,
-        uncertainty_scada,
-        num_sim,
+        plant=project,
+        UQ=UQ,
+        num_sim=num_sim,
+        reanalysis_products=reanalysis_products,
+        wind_bin_threshold=wind_bin_threshold,
+        max_power_filter=max_power_filter,
+        correction_threshold=correction_threshold,
+        uncertainty_scada=uncertainty_scada,
     )
 
 

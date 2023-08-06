@@ -30,7 +30,7 @@ class TestLongTermGrossEnergy(unittest.TestCase):
             correction_threshold=0.9,
         )
 
-        self.analysis.run(reanalysis_subset=["era5", "merra2"])
+        self.analysis.run(reanalysis_products=["era5", "merra2"])
 
     def test_longterm_gross_energy_results(self):
         reset_prng()
@@ -53,7 +53,7 @@ class TestLongTermGrossEnergyUQ(unittest.TestCase):
         self.project.validate()
 
         self.analysis_uq = TurbineLongTermGrossEnergy(self.project, UQ=True, num_sim=10)
-        self.analysis_uq.run(reanalysis_subset=["era5", "merra2"])
+        self.analysis_uq.run(reanalysis_products=["era5", "merra2"])
 
     def test_longterm_gross_energy_results(self):
         reset_prng()
