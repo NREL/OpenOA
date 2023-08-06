@@ -101,7 +101,7 @@ class MonteCarloAEP(FromDictMixin):
             regression input. Defaults to False.
         reg_wind_direction(:obj:`bool`): Indicator to include wind direction (True) or not (False) as
             a regression input. Defaults to False.
-        reanal_products(obj:`list[str]`) : List of reanalysis products to use for Monte Carlo
+        reanalysis_products(obj:`list[str]`) : List of reanalysis products to use for Monte Carlo
             sampling. Defaults to None, which pulls all the products contained in
             :py:attr:`plant.reanalysis`.
         uncertainty_meter(:obj:`float`): Uncertainty on revenue meter data. Defaults to 0.005.

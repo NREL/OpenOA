@@ -165,6 +165,7 @@ class ElectricalLosses(FromDictMixin):
             self.uncertainty_scada = uncertainty_scada
         if uncertainty_correction_threshold is not None:
             self.uncertainty_correction_threshold = uncertainty_correction_threshold
+
         # Setup Monte Carlo approach, and calculate the electrical losses
         self.setup_inputs()
         self.calculate_electrical_losses()
