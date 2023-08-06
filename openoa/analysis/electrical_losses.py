@@ -152,12 +152,13 @@ class ElectricalLosses(FromDictMixin):
                 then a 2-element tuple containing an upper and lower bound for a randomly selected value
                 should be given, otherwise, a scalar value should be provided.
         """
-        if num_sim is not None and self.UQ:
-            self.num_sim = num_sim
-        elif num_sim > 1 and not self.UQ:
-            logger.info(
-                "`num_sim` can NOT be greater than 1 when `UQ=False`, value has not been set."
-            )
+        if num_sim is not None:
+            if self.UQ:
+                self.num_sim = num_sim
+            elif num_sim > 1:
+                logger.info(
+                    "`num_sim` can NOT be greater than 1 when `UQ=False`, value has not been set."
+                )
         if uncertainty_meter is not None:
             self.uncertainty_meter = uncertainty_meter
         if uncertainty_scada is not None:
