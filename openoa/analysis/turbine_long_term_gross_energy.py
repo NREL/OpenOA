@@ -26,7 +26,7 @@ from openoa.utils import met_data_processing as met
 from openoa.schema import FromDictMixin
 from openoa.logging import logging, logged_method_call
 from openoa.utils.power_curve import functions
-from openoa.analysis._analysis_validators import validate_UQ_input, validate_open_range_0_1
+from openoa.analysis._analysis_validators import validate_UQ_input, validate_half_closed_0_1_right
 
 
 logger = logging.getLogger(__name__)
@@ -90,11 +90,13 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
         default=(1.0, 3.0), validator=validate_UQ_input, on_setattr=None
     )
     max_power_filter: NDArrayFloat = field(
-        default=(0.8, 0.9), validator=(validate_UQ_input, validate_open_range_0_1), on_setattr=None
+        default=(0.8, 0.9),
+        validator=(validate_UQ_input, validate_half_closed_0_1_right),
+        on_setattr=None,
     )
     correction_threshold: NDArrayFloat = field(
         default=(0.85, 0.95),
-        validator=(validate_UQ_input, validate_open_range_0_1),
+        validator=(validate_UQ_input, validate_half_closed_0_1_right),
         on_setattr=None,
     )
     uncertainty_scada: float = field(default=0.005, converter=float)

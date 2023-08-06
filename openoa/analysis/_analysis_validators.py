@@ -43,7 +43,7 @@ def validate_UQ_input(cls, attribute: attrs.Attribute, value: float | tuple) -> 
             )
 
 
-def validate_open_range_0_1(cls, attribute: attrs.Attribute, value: float | tuple) -> None:
+def validate_half_closed_0_1_right(cls, attribute: attrs.Attribute, value: float | tuple) -> None:
     """Validates that the value, or tuple of values is in the half-closed range of (0, 1].
 
     Args:
@@ -54,6 +54,30 @@ def validate_open_range_0_1(cls, attribute: attrs.Attribute, value: float | tupl
     Raises:
         ValueError: Raised if a single input is passed and outside the range of (0, 1].
         ValueError: Raised if any of the inputs in the input tuple are outside the range of (0, 1].
+    """
+    if isinstance(value, float):
+        if not 0.0 < value <= 1.0:
+            raise ValueError(
+                f"The value provided to '{attribute.name}' ({value}) must be in the range (0, 1]."
+            )
+    else:
+        if not all(0.0 < x <= 1.0 for x in value):
+            raise ValueError(
+                f"The values provided to '{attribute.name}' ({value}) must be in the range (0, 1]."
+            )
+
+
+def validate_half_closed_0_1_left(cls, attribute: attrs.Attribute, value: float | tuple) -> None:
+    """Validates that the value, or tuple of values is in the half-closed range of [0, 1).
+
+    Args:
+        attribute (attrs.Attribute): The attrs Attribute information for the class attribute being
+            validated.
+        value (float | tuple): The user input to the class attribute.
+
+    Raises:
+        ValueError: Raised if a single input is passed and outside the range of [0, 1).
+        ValueError: Raised if any of the inputs in the input tuple are outside the range of [0, 1).
     """
     if isinstance(value, float):
         if not 0.0 < value <= 1.0:

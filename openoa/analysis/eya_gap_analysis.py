@@ -17,16 +17,11 @@ from openoa.plant import PlantData
 from openoa.utils import plot
 from openoa.schema import FromDictMixin
 from openoa.logging import logging, logged_method_call
+from openoa.analysis._analysis_validators import validate_half_closed_0_1_left
 
 
 logger = logging.getLogger(__name__)
 plot.set_styling()
-
-
-def validate_range_0_1(instance, attribute: attrs.Attribute, value: float):
-    """Validates that the provided value is in the range of [0, 1)."""
-    if not 0.0 <= value < 1.0:
-        raise ValueError(f"The input to '{attribute.name}' must be in the range (0, 1).")
 
 
 @define(auto_attribs=True)
@@ -49,11 +44,13 @@ class EYAEstimate(FromDictMixin):
 
     aep: float = field(converter=float)
     gross_energy: float = field(converter=float)
-    availability_losses: float = field(converter=float, validator=validate_range_0_1)
-    electrical_losses: float = field(converter=float, validator=validate_range_0_1)
-    turbine_losses: float = field(converter=float, validator=validate_range_0_1)
-    blade_degradation_losses: float = field(converter=float, validator=validate_range_0_1)
-    wake_losses: float = field(converter=float, validator=validate_range_0_1)
+    availability_losses: float = field(converter=float, validator=validate_half_closed_0_1_left)
+    electrical_losses: float = field(converter=float, validator=validate_half_closed_0_1_left)
+    turbine_losses: float = field(converter=float, validator=validate_half_closed_0_1_left)
+    blade_degradation_losses: float = field(
+        converter=float, validator=validate_half_closed_0_1_left
+    )
+    wake_losses: float = field(converter=float, validator=validate_half_closed_0_1_left)
 
 
 @define(auto_attribs=True)
@@ -71,8 +68,8 @@ class OAResults(FromDictMixin):
     """
 
     aep: float = field(converter=float)
-    availability_losses: float = field(converter=float, validator=validate_range_0_1)
-    electrical_losses: float = field(converter=float, validator=validate_range_0_1)
+    availability_losses: float = field(converter=float, validator=validate_half_closed_0_1_left)
+    electrical_losses: float = field(converter=float, validator=validate_half_closed_0_1_left)
     turbine_ideal_energy: float = field(converter=float)
 
     @availability_losses.validator
