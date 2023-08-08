@@ -705,9 +705,6 @@ class MonteCarloAEP(FromDictMixin):
 
         # Ensure there are 12 or 365 data points in long-term average. If not, throw an exception:
         if avail_long_term.shape[0] < self.calendar_samples:
-            print(avail_long_term)
-            print()
-            print(self.calendar_samples)
             raise Exception(
                 "Not all calendar days/months represented in long-term availability calculation"
             )
