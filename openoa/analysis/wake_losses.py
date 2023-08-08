@@ -430,6 +430,8 @@ class WakeLosses(FromDictMixin):
                 f"`reanalysis_products` has been changed, be sure the `end_date_lt`"
                 f"({self.end_date_lt}) is contained in the updated reanalyis products subset."
             )
+        if wd_bin_width is not None:
+            self.wd_bin_width = wd_bin_width
         if freestream_sector_width is not None:
             self.freestream_sector_width = freestream_sector_width
         if freestream_power_method is not None:
@@ -465,7 +467,7 @@ class WakeLosses(FromDictMixin):
             for t in self.turbine_ids:
                 self.aggregate_df[("derate_flag", t)] = False
 
-            if correct_for_derating:
+            if self.correct_for_derating:
                 self._identify_derating()
 
             # Randomly resample 10-minute periods for bootstrapping
@@ -479,7 +481,7 @@ class WakeLosses(FromDictMixin):
             self.aggregate_df_sample["power_mean_freestream"] = np.nan
             self.aggregate_df_sample["windspeed_mean_freestream"] = np.nan
 
-            wd_bins = np.arange(0.0, 360.0, wd_bin_width)
+            wd_bins = np.arange(0.0, 360.0, self.wd_bin_width)
 
             # Create columns for turbine power and wind speed during normal operation (NaN otherwise)
             for t in self.turbine_ids:
@@ -528,34 +530,38 @@ class WakeLosses(FromDictMixin):
                 # between 0 and 360 degrees
                 _agg_wd = self.aggregate_df_sample["wind_direction_ref"]
                 if wd == 0.0:
-                    wd_bin_flag = _agg_wd >= 360.0 - 0.5 * wd_bin_width
-                    wd_bin_flag |= _agg_wd < (freestream_sector_wds[i_wd + 1] - 0.5 * wd_bin_width)
+                    wd_bin_flag = _agg_wd >= 360.0 - 0.5 * self.wd_bin_width
+                    wd_bin_flag |= _agg_wd < (
+                        freestream_sector_wds[i_wd + 1] - 0.5 * self.wd_bin_width
+                    )
                 elif i_wd < len(freestream_sector_wds) - 1:
-                    wd_bin_flag = _agg_wd >= (wd - 0.5 * wd_bin_width)
-                    wd_bin_flag &= _agg_wd < (freestream_sector_wds[i_wd + 1] - 0.5 * wd_bin_width)
+                    wd_bin_flag = _agg_wd >= (wd - 0.5 * self.wd_bin_width)
+                    wd_bin_flag &= _agg_wd < (
+                        freestream_sector_wds[i_wd + 1] - 0.5 * self.wd_bin_width
+                    )
                 elif (i_wd == len(freestream_sector_wds) - 1) & (freestream_sector_wds[0] == 0.0):
-                    wd_bin_flag = _agg_wd >= (wd - 0.5 * wd_bin_width)
-                    wd_bin_flag &= _agg_wd < (360.0 - 0.5 * wd_bin_width)
+                    wd_bin_flag = _agg_wd >= (wd - 0.5 * self.wd_bin_width)
+                    wd_bin_flag &= _agg_wd < (360.0 - 0.5 * self.wd_bin_width)
                 else:  # last wind direction in dictionary and first wind direction is not zero:
-                    wd_bin_flag = _agg_wd >= (wd - 0.5 * wd_bin_width)
-                    wd_bin_flag |= _agg_wd < (freestream_sector_wds[0] - 0.5 * wd_bin_width)
+                    wd_bin_flag = _agg_wd >= (wd - 0.5 * self.wd_bin_width)
+                    wd_bin_flag |= _agg_wd < (freestream_sector_wds[0] - 0.5 * self.wd_bin_width)
 
                 # Assign representative energy and wind speed of freestream turbines. If correct_for_derating
                 # is True, only freestream turbines operating normally will be considered.
 
                 _power = self.aggregate_df_sample.loc[wd_bin_flag, "power_normal"]
-                if freestream_power_method == "mean":
+                if self.freestream_power_method == "mean":
                     _power = _power[freestream_turbine_ids].mean(axis=1)
-                elif freestream_power_method == "median":
+                elif self.freestream_power_method == "median":
                     _power = _power[freestream_turbine_ids].median(axis=1)
-                elif freestream_power_method == "max":
+                elif self.freestream_power_method == "max":
                     _power = _power[freestream_turbine_ids].max(axis=1)
                 self.aggregate_df_sample.loc[wd_bin_flag, "power_mean_freestream"] = _power
 
                 _ws = self.aggregate_df_sample.loc[wd_bin_flag, "windspeed_normal"]
-                if freestream_wind_speed_method == "mean":
+                if self.freestream_wind_speed_method == "mean":
                     _ws = _ws[freestream_turbine_ids].mean(axis=1)
-                elif freestream_wind_speed_method == "median":
+                elif self.freestream_wind_speed_method == "median":
                     _ws = _ws[freestream_turbine_ids].median(axis=1)
                 self.aggregate_df_sample.loc[wd_bin_flag, "windspeed_mean_freestream"] = _ws
 
@@ -623,7 +629,6 @@ class WakeLosses(FromDictMixin):
                 ] = self.aggregate_df_sample.loc[
                     self.aggregate_df_sample[("derate_flag", t)], ("WTUR_W", t)
                 ]
-
                 turbine_wake_losses_por[i] = (
                     1
                     - self.aggregate_df_sample[("WTUR_W", t)].sum()
