@@ -45,14 +45,26 @@ plot.set_styling()
 
 
 def cos_curve(x, A, Offset, cos_exp):
-    # Cosine exponent curve as a function of yaw misalignment for curve fitting
+    """Computes a cosine exponent curve as a function of yaw misalignment for curve fitting.
+
+    Args:
+        x (:obj:`float`): The yaw misalignment input in degrees.
+        A (:obj:`float`): The amplitude of the cosine exponent curve.
+        Offset (:obj:`float`): The yaw misaligment offset at which the cosine exponent curve is
+            maximized in degrees.
+        cos_exp (:obj:`float`): The exponent to which the cosine curve is raised.
+    Returns:
+        :obj:`float`: The value of the cosine exponent curve for the provided yaw misalignment.
+    """
     return A * np.cos((np.pi / 180) * (x - Offset)) ** cos_exp
 
 
 @define(auto_attribs=True)
 class StaticYawMisalignment(FromDictMixin):
     """
-    A method for estimating static yaw misalignment for different wind speed bins for each specified wind turbine as well as the average static yaw msialignment over all wind speed bins using turbine-level SCADA data.
+    A method for estimating static yaw misalignment for different wind speed bins for each specified
+    wind turbine as well as the average static yaw misalignment over all wind speed bins using
+    turbine-level SCADA data.
 
     The method is comprised of the following core steps, which are performed for each specified
     wind turbine. If :py:attr:`UQ` is selected, the following steps are performed multiple times
@@ -63,8 +75,8 @@ class StaticYawMisalignment(FromDictMixin):
          near above-rated conditions where yaw misalignment has little impact on power performance.
          Next to increase the likelihood that power performance deviations are caused by yaw
          misalignment, a power curve outlier detection filter is used to remove timestamps when the
-         turbine is oeprating abnormally. If :py:attr:`UQ` is selected, power curve outlier
-         detection parameters will be chosen randomly each Monte Carlo iteration.
+         turbine is operating abnormally. If :py:attr:`UQ` is selected, power curve outlier
+         detection parameters will be chosen randomly for each Monte Carlo iteration.
       2. The filtered SCADA data are divided into the specified wind speed bins based on wind speed
          measured by the nacelle anemometer. If :py:attr:`UQ` is selected, the data corresponding
          to each wind speed bin are randomly resampled with replacement each Monte Carlo iteration
@@ -523,7 +535,7 @@ class StaticYawMisalignment(FromDictMixin):
         if turbine_ids is None:
             turbine_ids = self.turbine_ids
         else:
-            if (set(turbine_ids) - set(self.turbine_ids)) != set():
+            if set(turbine_ids).difference(self.turbine_ids):
                 raise ValueError(
                     "All turbine names in the argument `turbine_ids` must be present in the list of"
                     "turbines for which yaw misalginment detection was performed."
