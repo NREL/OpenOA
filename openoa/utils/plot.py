@@ -2198,8 +2198,20 @@ def plot_yaw_misalignment(
                 )
             )
 
-    for i in range(N_col):
-        axs[int(np.floor((len(ws_bins) - 1) / N_col))][i].set_xlabel("Wind Vane Angle ($^\circ$)")
+    # remove unused subplots and add x axis labels
+    last_row = int(np.floor((len(ws_bins) - 1) / N_col))
+
+    if (len(ws_bins) >= 5) & (len(ws_bins) % 3 > 0):
+        for i in range(len(ws_bins) % 3, 3):
+            axs[last_row][i].remove()
+            axs[last_row - 1][i].tick_params(labelbottom=True)
+            axs[last_row - 1][i].set_xlabel("Wind Vane Angle ($^\circ$)")
+
+        for i in range(len(ws_bins) % 3):
+            axs[last_row][i].set_xlabel("Wind Vane Angle ($^\circ$)")
+    else:
+        for i in range(N_col):
+            axs[last_row][i].set_xlabel("Wind Vane Angle ($^\circ$)")
 
     mean_yaw_mis = np.round(np.mean(yaw_misalignment_ws), 1)
     if UQ:
