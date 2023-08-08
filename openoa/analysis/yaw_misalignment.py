@@ -127,6 +127,8 @@ class StaticYawMisalignment(FromDictMixin):
     _min_vane_bin_count: int = field(init=False)
     _max_abs_vane_angle: float = field(init=False)
     _pitch_thresh: float = field(init=False)
+    _num_power_bins: int = field(init=False)
+    _min_power_filter: float = field(init=False)
     _max_power_filter: float | tuple[float, float] = field(init=False)
     _power_bin_mad_thresh: float | tuple[float, float] = field(init=False)
     _use_power_coeff: bool = field(init=False)
@@ -136,21 +138,22 @@ class StaticYawMisalignment(FromDictMixin):
     _df_turb_ws: pd.DataFrame = field(init=False)
     _curve_fit_params_ws: NDArrayFloat = field(init=False)
 
-    @plant.validator
-    def validate_plant_ready_for_anylsis(
-        self, attribute: attrs.Attribute, value: PlantData
-    ) -> None:
-        """Validates that the value has been validated for a static yaw misalignment analysis."""
-        if set(("StaticYawMisalignment", "all")).intersection(value.analysis_type) == set():
-            raise TypeError(
-                "The input to 'plant' must be validated for at least 'StaticYawMisalignment'"
-            )
-
     @logged_method_call
     def __attrs_post_init__(self):
         """
         Initialize logging and post-initialization setup steps.
         """
+        if not isinstance(self.plant, PlantData):
+            raise TypeError(
+                f"The passed `plant` object must be of type `PlantData`, not: {type(self.plant)}"
+            )
+
+        if set(("StaticYawMisalignment", "all")).intersection(self.plant.analysis_type) == set():
+            self.plant.analysis_type.append("StaticYawMisalignment")
+
+        # Ensure the data are up to spec before continuing with initialization
+        self.plant.validate()
+
         logger.info("Initializing StaticYawMisalignment analysis object")
 
         # Check that selected UQ is allowed and reset num_sim if no UQ
@@ -172,6 +175,8 @@ class StaticYawMisalignment(FromDictMixin):
         min_vane_bin_count: int = 100,
         max_abs_vane_angle=25.0,
         pitch_thresh: float = 0.5,
+        num_power_bins: int = 25,
+        min_power_filter: float = 0.01,
         max_power_filter: float = None,
         power_bin_mad_thresh: float = None,
         use_power_coeff: bool = False,
@@ -201,6 +206,11 @@ class StaticYawMisalignment(FromDictMixin):
                 detecting yaw misalignment. Defaults to 25 degrees.
             pitch_thresh (float, optional): Maximum blade pitch angle considered when detecting yaw
                 misalignment. Defaults to 0.5 degrees.
+            num_power_bins (int, optional): Number of power bins to use for power curve bin
+                filtering to remove outlier data points. Defaults to 25.
+            min_power_filter (float, optional): Minimum power threshold, defined as a fraction
+                of rated power, to which the power curve bin filter should be applied. Defaults to
+                0.01.
             max_power_filter (tuple | float, optional): Maximum power threshold, defined as a fraction
                 of rated power, to which the power curve bin filter should be applied. This should be
                 a tuple when :py:attr:`UQ` = True (values are Monte-Carlo sampled within the specified
@@ -226,6 +236,8 @@ class StaticYawMisalignment(FromDictMixin):
         self._min_vane_bin_count = min_vane_bin_count
         self._max_abs_vane_angle = max_abs_vane_angle
         self._pitch_thresh = pitch_thresh
+        self._num_power_bins = num_power_bins
+        self._min_power_filter = min_power_filter
         self._use_power_coeff = use_power_coeff
 
         # Assign default parameter values depending on whether UQ is performed
@@ -409,14 +421,16 @@ class StaticYawMisalignment(FromDictMixin):
         # Apply bin-based filter to flag samples for which wind speed is greater than a threshold from the median
         # wind speed in each power bin
         turb_capac = self.plant.asset.loc[turbine_id, "rated_power"]
-        bin_width_frac = 0.04 * (self._run.max_power_filter - 0.01)
+        bin_width_frac = (
+            self._run.max_power_filter - self._min_power_filter
+        ) / self._num_power_bins
         flag_bin = filters.bin_filter(
             bin_col=self._df_turb["WTUR_W"],
             value_col=self._df_turb["WMET_HorWdSpd"],
             bin_width=bin_width_frac * turb_capac,
             threshold=self._run.power_bin_mad_thresh,
             center_type="median",
-            bin_min=0.01 * turb_capac,
+            bin_min=self._min_power_filter * turb_capac,
             bin_max=self._run.max_power_filter * turb_capac,
             threshold_type="mad",
             direction="all",
