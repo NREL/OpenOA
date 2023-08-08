@@ -37,7 +37,7 @@ def validate_UQ_input(cls, attribute: attrs.Attribute, value: float | tuple) -> 
             if len(value) == 2:
                 object.__setattr__(cls, attribute.name, round(np.mean(value), 2))
                 return
-        if not isinstance(value, float):
+        if not isinstance(value, (int, float)):
             raise ValueError(
                 f"When UQ is False, the value provided to {attribute.name} ({value}), must be a float"
             )

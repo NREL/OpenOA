@@ -18,7 +18,7 @@ from tqdm import tqdm
 from attrs import field, define
 from sklearn.linear_model import LinearRegression
 
-from openoa.plant import PlantData
+from openoa.plant import PlantData, convert_to_list
 from openoa.utils import plot, filters
 from openoa.utils import met_data_processing as met
 from openoa.schema import FromDictMixin
@@ -195,7 +195,14 @@ class WakeLosses(FromDictMixin):
     num_sim: int = field(default=100, converter=int)
     start_date: str | pd.Timestamp = field(default=None)
     end_date: str | pd.Timestamp = field(default=None)
-    reanalysis_products: list[str] = field(default=["merra2", "era5"])
+    reanalysis_products: list[str] = field(
+        default=None,
+        converter=convert_to_list,
+        validator=attrs.validators.deep_iterable(
+            iterable_validator=attrs.validators.instance_of(list),
+            member_validator=attrs.validators.instance_of((str, type(None))),
+        ),
+    )
     end_date_lt: str | pd.Timestamp = field(default=None)
     wd_bin_width: float = field(default=5.0)
     freestream_sector_width: float | tuple[float, float] = field(
@@ -215,7 +222,7 @@ class WakeLosses(FromDictMixin):
     )
     wd_bin_width_LT_corr: float = field(default=5.0)
     ws_bin_width_LT_corr: float = field(default=1.0)
-    num_years_LT: int | tuple[float, float] = field(default=(10, 20), validator=validate_UQ_input)
+    num_years_LT: int | tuple[int, int] = field(default=(10, 20), validator=validate_UQ_input)
     assume_no_wakes_high_ws_LT_corr: bool = field(default=True)
     no_wakes_ws_thresh_LT_corr: float = field(default=13.0)
 
@@ -253,6 +260,8 @@ class WakeLosses(FromDictMixin):
     @reanalysis_products.validator
     def check_reanalysis_products(self, attribute: attrs.Attribute, value: list[str]) -> None:
         """Checks that the provided reanalysis products actually exist in the reanalysis data."""
+        if value == [None]:
+            return
         valid = [*self.plant.reanalysis]
         invalid = list(set(value).difference(valid))
         if invalid:

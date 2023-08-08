@@ -46,7 +46,12 @@ class TestWakeLosses(unittest.TestCase):
 
         # Run Wake Loss analysis, using default parameters. Aside from no_wakes_ws_thresh_LT_corr,
         # use default parameters. Confirm the results are consistent.
-        self.analysis.run(no_wakes_ws_thresh_LT_corr=15.0)
+        self.analysis.run(
+            no_wakes_ws_thresh_LT_corr=15.0,
+            num_years_LT=20,
+            freestream_sector_width=90.0,
+            wind_bin_mad_thresh=7.0,
+        )
         self.check_simulation_results_wake_losses_without_UQ()
 
     def test_wake_losses_with_UQ(self):
@@ -65,7 +70,9 @@ class TestWakeLosses(unittest.TestCase):
         # Run Wake Loss analysis with 50 Monte Carlo iterations.
         # Aside from no_wakes_ws_thresh_LT_corr and num_sim, use default parameters.
         # Confirm the results are consistent.
-        self.analysis.run(num_sim=50, no_wakes_ws_thresh_LT_corr=15.0)
+        self.analysis.run(
+            num_sim=50, no_wakes_ws_thresh_LT_corr=15.0, reanalysis_products=["merra2", "era5"]
+        )
         self.check_simulation_results_wake_losses_with_UQ()
 
     def test_wake_losses_with_UQ_new_parameters(self):
@@ -98,6 +105,7 @@ class TestWakeLosses(unittest.TestCase):
             correct_for_derating=False,
             num_years_LT=(5, 15),
             assume_no_wakes_high_ws_LT_corr=False,
+            reanalysis_products=["merra2", "era5"],
         )
         self.check_simulation_results_wake_losses_with_UQ_new_params()
 
