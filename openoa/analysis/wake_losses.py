@@ -1454,24 +1454,26 @@ __defaults_end_date = WakeLosses.__attrs_attrs__.end_date.default
 __defaults_reanalysis_products = WakeLosses.__attrs_attrs__.reanalysis_products.default
 __defaults_end_date_lt = WakeLosses.__attrs_attrs__.end_date_lt.default
 __defaults_wd_bin_width = WakeLosses.__attrs_attrs__.wd_bin_width.default
-__defaultsfreestream_sector_width = WakeLosses.__attrs_attrs__.freestream_sector_width.default
+__defaults_freestream_sector_width = WakeLosses.__attrs_attrs__.freestream_sector_width.default
 __defaults_freestream_power_method = WakeLosses.__attrs_attrs__.freestream_power_method.default
 __defaults_freestream_wind_speed_method = (
     WakeLosses.__attrs_attrs__.freestream_wind_speed_method.default
 )
 __defaults_correct_for_derating = WakeLosses.__attrs_attrs__.correct_for_derating.default
-__defaultsderating_filter_wind_speed_start = (
+__defaults_derating_filter_wind_speed_start = (
     WakeLosses.__attrs_attrs__.derating_filter_wind_speed_start.default
 )
-__defaultsmax_power_filter = WakeLosses.__attrs_attrs__.max_power_filter.default
-__defaultswind_bin_mad_thresh = WakeLosses.__attrs_attrs__.wind_bin_mad_thresh.default
-__defaultswd_bin_width_LT_corr = WakeLosses.__attrs_attrs__.wd_bin_width_LT_corr.default
-__defaultsws_bin_width_LT_corr = WakeLosses.__attrs_attrs__.ws_bin_width_LT_corr.default
-__defaultsnum_years_LT = WakeLosses.__attrs_attrs__.num_years_LT.default
-__defaultsassume_no_wakes_high_ws_LT_corr = (
+__defaults_max_power_filter = WakeLosses.__attrs_attrs__.max_power_filter.default
+__defaults_wind_bin_mad_thresh = WakeLosses.__attrs_attrs__.wind_bin_mad_thresh.default
+__defaults_wd_bin_width_LT_corr = WakeLosses.__attrs_attrs__.wd_bin_width_LT_corr.default
+__defaults_ws_bin_width_LT_corr = WakeLosses.__attrs_attrs__.ws_bin_width_LT_corr.default
+__defaults_num_years_LT = WakeLosses.__attrs_attrs__.num_years_LT.default
+__defaults_assume_no_wakes_high_ws_LT_corr = (
     WakeLosses.__attrs_attrs__.assume_no_wakes_high_ws_LT_corr.default
 )
-__defaultsno_wakes_ws_thresh_LT_corr = WakeLosses.__attrs_attrs__.no_wakes_ws_thresh_LT_corr.default
+__defaults_no_wakes_ws_thresh_LT_corr = (
+    WakeLosses.__attrs_attrs__.no_wakes_ws_thresh_LT_corr.default
+)
 
 
 def create_WakeLosses(
@@ -1486,18 +1488,18 @@ def create_WakeLosses(
     reanalysis_products: list[str] = __defaults_reanalysis_products,
     end_date_lt: str | pd.Timestamp = __defaults_end_date_lt,
     wd_bin_width: float = __defaults_wd_bin_width,
-    freestream_sector_width: float = __defaultsfreestream_sector_width,
+    freestream_sector_width: float = __defaults_freestream_sector_width,
     freestream_power_method: str = __defaults_freestream_power_method,
     freestream_wind_speed_method: str = __defaults_freestream_wind_speed_method,
     correct_for_derating: bool = __defaults_correct_for_derating,
-    derating_filter_wind_speed_start: float = __defaultsderating_filter_wind_speed_start,
-    max_power_filter: float = __defaultsmax_power_filter,
-    wind_bin_mad_thresh: float = __defaultswind_bin_mad_thresh,
-    wd_bin_width_LT_corr: float = __defaultswd_bin_width_LT_corr,
-    ws_bin_width_LT_corr: float = __defaultsws_bin_width_LT_corr,
-    num_years_LT: int = __defaultsnum_years_LT,
-    assume_no_wakes_high_ws_LT_corr: bool = __defaultsassume_no_wakes_high_ws_LT_corr,
-    no_wakes_ws_thresh_LT_corr: float = __defaultsno_wakes_ws_thresh_LT_corr,
+    derating_filter_wind_speed_start: float = __defaults_derating_filter_wind_speed_start,
+    max_power_filter: float = __defaults_max_power_filter,
+    wind_bin_mad_thresh: float = __defaults_wind_bin_mad_thresh,
+    wd_bin_width_LT_corr: float = __defaults_wd_bin_width_LT_corr,
+    ws_bin_width_LT_corr: float = __defaults_ws_bin_width_LT_corr,
+    num_years_LT: int = __defaults_num_years_LT,
+    assume_no_wakes_high_ws_LT_corr: bool = __defaults_assume_no_wakes_high_ws_LT_corr,
+    no_wakes_ws_thresh_LT_corr: float = __defaults_no_wakes_ws_thresh_LT_corr,
 ) -> WakeLosses:
     return WakeLosses(
         plant=project,
