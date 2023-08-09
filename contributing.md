@@ -4,8 +4,8 @@
 
 ## Getting Started
 
-All users wishing to contribute to OpenOA, or modify the code in any way, even for personal use,
-should follow much of the below guides.
+These contributing guidelines should be read by software developers wishing to contribute code or
+documentation changes into OpenOA, or to push changes upstream to the main NREL/OpenOA repository.
 
 1. Create a fork of OpenOA on GitHub
 2. Clone your fork of the repository
@@ -42,7 +42,7 @@ should follow much of the below guides.
 ## Keeping your fork in sync with NREL/OpenOA
 
 The "main" OpenOA repository is regularly updated with ongoing research at NREL and beyond. After
-creating and clonging your fork from the previous section, you might be wondering how to keep it
+creating and cloning your fork from the previous section, you might be wondering how to keep it
 up to date with the latest improvements.
 
 Please note that the below process may introduce merge conflicts with your work, and this does not
@@ -176,7 +176,7 @@ pip install -e ".[docs]"
 
 To build the documentation locally, first ensure that
 [Pandoc is installed](https://pandoc.org/installing.html) on your computer. Once confirmed, you
-need to navigate to the `shpinx/` folder, and then run the build command as follows.
+need to navigate to the `sphinx/` folder, and then run the build command as follows.
 
 ```bash
 # Assuming you're already in OpenOA/
@@ -254,6 +254,9 @@ in `OpenOA/sphinx/`. Pull requests will not be accepted until these changes are 
 All changes must be documented appropriately in CHANGELOG.md in the [Unreleased] section.
 
 ## Release Process
+
+This section is a reference for OpenOA's maintainers to keep processes largely consistent
+over time, regardless of who the core developers are.
 
 1. Bump version number and metadata in `openoa/__init__.py`
 2. Bump version numbers of any dependencies in `setup.py`. Be sure to separate to keep dependencies
