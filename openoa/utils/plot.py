@@ -1339,7 +1339,7 @@ def plot_distributions(
             **annotate_kwargs,
         )
         ax.annotate(
-            f"Uncentainty = {(vals.std() / vals.mean())*100:.1f}%",
+            f"Uncertainty = {(vals.std() / vals.mean())*100:.1f}%",
             (0.05, 0.85),
             xycoords="axes fraction",
             **annotate_kwargs,
