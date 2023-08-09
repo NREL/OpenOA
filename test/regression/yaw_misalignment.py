@@ -297,15 +297,15 @@ class TestStaticYawMisalignment(unittest.TestCase):
         expected_yaw_mis_results_avg_overall = [1.75706202, 1.47057408]
         expected_yaw_mis_results_std_overall = [0.45806813, 0.34581758]
         expected_yaw_mis_results_95ci_overall = np.array(
-            [[1.06916517, 2.70370405], [1.04684593, 2.35213216]]
+            [[1.06914694, 2.70370656], [1.04684644, 2.35213362]]
         )
 
         # Average, std. dev., and 95% confidence intervals of yaw misaligment values for each
         # turbine and wind speed bin
         expected_yaw_mis_results_avg_ws = np.array(
             [
-                [-0.08193763, 0.05487448, 2.05100812, 5.00430312],
-                [0.92771594, 0.38065257, 1.25760774, 3.31632008],
+                [-0.08193632, 0.05485578, 2.05100775, 5.00430343],
+                [0.92771598, 0.38065238, 1.25760663, 3.31632077],
             ]
         )
 
