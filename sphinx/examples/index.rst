@@ -100,9 +100,9 @@ Table of Contents
 
     00_intro_to_plant_data
     01_utils_examples
-    02_plant_aep_analysis
-    02b_augmented_plant_aep_analysis
-    02c_plant_aep_analysis_cubico
+    02a_plant_aep_analysis
+    02b_plant_aep_analysis_cubico
+    02c_augmented_plant_aep_analysis
     03_turbine_ideal_energy
     04_electrical_losses
     05_eya_gap_analysis
