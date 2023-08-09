@@ -190,7 +190,7 @@ class MachineLearningSetup:
             param_distributions=self.hyper_range,
             n_iter=n_iter_search,
             scoring=self.my_scorer,
-            verbose=1,
+            verbose=0,
             return_train_score=True,
         )
         # Fit the model to each combination of hyperparmeters
