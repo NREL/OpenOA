@@ -29,6 +29,7 @@ REQUIRED = [
     "pyspark",
     "tabulate",
     "statsmodels",
+    "ipython",
 ]
 
 TESTS = ["pytest>=5.4.2", "pytest-cov>=2.8.1"]
