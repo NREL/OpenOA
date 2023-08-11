@@ -532,6 +532,7 @@ class PlantData:
             self._errors["dtype"].update(self._validate_dtypes(category=name))
 
     def __generate_text_repr(self):
+        """Generates a text summary of the core internal data."""
         repr = ["---------", "PlantData", "---------\n"]
         for attribute in self.__attrs_attrs__:
             if not attribute.repr:
@@ -542,20 +543,20 @@ class PlantData:
             if name == "analysis_type":
                 repr.append(f"{name}: {value}")
             elif name in ("scada", "meter", "tower", "status", "curtail"):
-                repr.append(f"{name}")
+                repr.append(f"\n{name}")
                 repr.append("-" * len(name))
                 if value is None:
-                    repr.append("None")
+                    repr.append("no data")
                 else:
                     _repr = value.describe().T
                     repr.append(
                         tabulate(_repr, headers=_repr.columns, floatfmt=",.3f", tablefmt="grid")
                     )
             elif name == "reanalysis":
-                repr.append(f"{name}")
+                repr.append(f"\n{name}")
                 repr.append("-" * len(name))
                 if "product" in value:
-                    repr.append("None")
+                    repr.append("no data")
                 else:
                     for product, df in value.items():
                         repr.append(f"\n{product}")
@@ -565,10 +566,10 @@ class PlantData:
                             tabulate(_repr, headers=_repr.columns, floatfmt=",.3f", tablefmt="grid")
                         )
             elif name == "asset":
-                repr.append(f"{name}")
+                repr.append(f"\n{name}")
                 repr.append("-" * len(name))
                 if value is None:
-                    repr.append("None")
+                    repr.append("no data")
                 else:
                     value = value.drop(columns=["geometry"])
                     repr.append(
@@ -577,6 +578,7 @@ class PlantData:
         return "\n".join(repr)
 
     def __generate_markdown_repr(self):
+        """Generates a markdown-friendly summary of the core internal data."""
         new_line = "\n"
 
         repr = [
@@ -618,12 +620,15 @@ class PlantData:
         return (new_line).join(repr)
 
     def __str__(self):
+        """The string summary."""
         return self.__generate_text_repr()
 
     def markdown(self):
+        """A markdown-formatted version of the ``__str__``."""
         display(Markdown(self.__generate_markdown_repr()))
 
     def __repr__(self):
+        """A context-aware summary generator for printing out the objects."""
         is_terminal = sys.stderr.isatty()
         if is_terminal:
             return self.__generate_text_repr()
