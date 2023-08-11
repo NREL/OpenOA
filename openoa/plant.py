@@ -533,7 +533,7 @@ class PlantData:
 
     def __generate_text_repr(self):
         """Generates a text summary of the core internal data."""
-        repr = ["---------", "PlantData", "---------\n"]
+        repr = []
         for attribute in self.__attrs_attrs__:
             if not attribute.repr:
                 continue
