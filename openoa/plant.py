@@ -609,13 +609,13 @@ class PlantData:
         data = "no data" if self.curtail is None else self.curtail.describe().T.to_markdown()
         repr.extend(["**curtail**", new_line, data, new_line])
 
-        repr.append("**reanalysis**")
+        repr.extend(["**reanalysis**", new_line])
 
         if "product" in self.reanalysis:
             repr.append("no data")
         for name, df in self.reanalysis.items():
             data = df.describe().T.to_markdown()
-            repr.extend([f"**{name}**", data, new_line])
+            repr.extend([f"**{name}**", new_line, data, new_line])
 
         return (new_line).join(repr)
 
