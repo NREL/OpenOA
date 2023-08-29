@@ -41,10 +41,9 @@ EXTRAS = {
         "m2r2>=0.3",
         "Sphinx>=5.0,!=7.2.0",
         "pydata-sphinx-theme",
-        "nbsphinx>=0.8",
-        "nbsphinx_link",
         "sphinx_design>=0.3",
         "sphinxcontrib-bibtex",
+        "myst-nb",
         "myst-parser",
     ],
     "develop": [

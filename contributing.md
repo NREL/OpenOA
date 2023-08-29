@@ -182,6 +182,9 @@ need to navigate to the `sphinx/` folder, and then run the build command as foll
 # Assuming you're already in OpenOA/
 cd sphinx/
 
+# Copy any updated examples to the sphinx examples directory
+cp ../examples/<new-or-updated-example>.ipynb examples/
+
 # Build the docs
 make html
 ```

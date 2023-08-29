@@ -44,10 +44,8 @@ extensions = [
     "sphinx.ext.todo",
     "sphinx_design",
     "sphinxcontrib.bibtex",
-    "nbsphinx",
-    "nbsphinx_link",
     "bokeh.sphinxext.bokeh_plot",
-    "myst_parser",
+    "myst_nb",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -62,7 +60,12 @@ source_suffix = {
     ".rst": "restructuredtext",
     ".txt": "markdown",
     ".md": "markdown",
+    ".ipynb": "myst-nb",
+    ".myst": "myst-nb",
 }
+
+# toggle this between auto/off to rerun full documentation build
+nb_execution_mode = "off"  # Should be coming from the examples folder
 
 # The master toctree document.
 master_doc = "index"
