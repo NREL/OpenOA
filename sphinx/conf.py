@@ -64,9 +64,6 @@ source_suffix = {
     ".myst": "myst-nb",
 }
 
-# toggle this between auto/off to rerun full documentation build
-nb_execution_mode = "off"  # Should be coming from the examples folder
-
 # The master toctree document.
 master_doc = "index"
 
@@ -214,11 +211,12 @@ latex_documents = [
 
 # -- Options for Myst -----------------------------------------------------
 
+# Syntax descriptions and examples: https://myst-parser.readthedocs.io/en/latest/syntax/optional.html#syntax-extensions
 myst_enable_extensions = [
     "amsmath",
     # "attrs_inline",
     "colon_fence",
-    # "deflist",
+    "deflist",
     "dollarmath",
     "fieldlist",
     # "html_admonition",
@@ -228,8 +226,11 @@ myst_enable_extensions = [
     # "smartquotes",
     # "strikethrough",
     # "substitution",
-    # "tasklist",
+    "tasklist",
 ]
+
+# toggle this between auto/off to rerun full documentation build
+nb_execution_mode = "off"  # Should be coming from the examples folder
 
 myst_heading_anchors = 3
 
