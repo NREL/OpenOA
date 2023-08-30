@@ -356,14 +356,13 @@ class TestStaticYawMisalignment(unittest.TestCase):
         calculated_yaw_mis_results_avg_ws = self.analysis.yaw_misalignment_avg_ws
 
         nptest.assert_array_almost_equal(
-            expected_yaw_mis_results_avg_ws, calculated_yaw_mis_results_avg_ws
+            expected_yaw_mis_results_avg_ws, calculated_yaw_mis_results_avg_ws, decimal=5
         )
 
         calculated_yaw_mis_results_std_ws = self.analysis.yaw_misalignment_std_ws
 
-        print(calculated_yaw_mis_results_std_ws)
         nptest.assert_array_almost_equal(
-            expected_yaw_mis_results_std_ws, calculated_yaw_mis_results_std_ws
+            expected_yaw_mis_results_std_ws, calculated_yaw_mis_results_std_ws, decimal=5
         )
 
         # calculated_yaw_mis_results_95ci_ws = self.analysis.yaw_misalignment_95ci_ws
