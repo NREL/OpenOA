@@ -287,7 +287,10 @@ class TestStaticYawMisalignment(unittest.TestCase):
         calculated_yaw_mis_results_95ci_ws = self.analysis.yaw_misalignment_95ci_ws
 
         nptest.assert_array_almost_equal(
-            expected_yaw_mis_results_95ci_ws, calculated_yaw_mis_results_95ci_ws, decimal=5
+            expected_yaw_mis_results_95ci_ws,
+            calculated_yaw_mis_results_95ci_ws,
+            decimal=5,
+            verbose=True,
         )
 
     def check_simulation_results_yaw_misalignment_with_UQ_new_params(self):
