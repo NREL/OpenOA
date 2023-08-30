@@ -38,7 +38,6 @@ TESTS = ["pytest>=5.4.2", "pytest-cov>=2.8.1"]
 EXTRAS = {
     "docs": [
         "ipython",
-        "m2r2>=0.3",
         "Sphinx>=5.0,!=7.2.0",
         "pydata-sphinx-theme",
         "sphinx_design>=0.3",
