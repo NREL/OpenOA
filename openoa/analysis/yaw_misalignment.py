@@ -70,28 +70,29 @@ class StaticYawMisalignment(FromDictMixin):
     wind turbine. If :py:attr:`UQ` is selected, the following steps are performed multiple times
     using Monte Carlo simulation to produce a distribution of static yaw misalignment estimates
     from which 95% confidence intervals can be derived:
-      1. Timestamps containing power curve outliers are removed. Specifically, pitch angles are
-         limited to a specified threshold to remove timestamps when turbines are operating in or
-         near above-rated conditions where yaw misalignment has little impact on power performance.
-         Next to increase the likelihood that power performance deviations are caused by yaw
-         misalignment, a power curve outlier detection filter is used to remove timestamps when the
-         turbine is operating abnormally. If :py:attr:`UQ` is selected, power curve outlier
-         detection parameters will be chosen randomly for each Monte Carlo iteration.
-      2. The filtered SCADA data are divided into the specified wind speed bins based on wind speed
-         measured by the nacelle anemometer. If :py:attr:`UQ` is selected, the data corresponding
-         to each wind speed bin are randomly resampled with replacement each Monte Carlo iteration
-         (i.e., bootstrapping).
-      3. For each wind speed bin, the power performance is binned by wind vane angle, where power
-         performance can be defined as the raw power or a normalized coefficient power formed by
-         dividing the raw power by the wind speed cubed.
-      4. A cosine exponent curve as a function of wind vane angle is fit to the binned power
-         performance values, where the free parameters are the amplitude, the exponent applied to
-         the cosine, and the wind vane angle offset where the peak of the cosine curve is located.
-      5. For each wind speed bin, the static yaw misalignment is estimated as the difference
-         between the wind vane angle where power performance is maximized, based on the wind vane
-         angle offset for the best-fit cosine curve, and the mean wind vane angle.
-      6. The overall yaw misalignment is estimated as the average yaw misalignment over all wind
-         speed bins.
+
+    1. Timestamps containing power curve outliers are removed. Specifically, pitch angles are
+       limited to a specified threshold to remove timestamps when turbines are operating in or
+       near above-rated conditions where yaw misalignment has little impact on power performance.
+       Next to increase the likelihood that power performance deviations are caused by yaw
+       misalignment, a power curve outlier detection filter is used to remove timestamps when the
+       turbine is operating abnormally. If :py:attr:`UQ` is selected, power curve outlier
+       detection parameters will be chosen randomly for each Monte Carlo iteration.
+    2. The filtered SCADA data are divided into the specified wind speed bins based on wind speed
+       measured by the nacelle anemometer. If :py:attr:`UQ` is selected, the data corresponding
+       to each wind speed bin are randomly resampled with replacement each Monte Carlo iteration
+       (i.e., bootstrapping).
+    3. For each wind speed bin, the power performance is binned by wind vane angle, where power
+       performance can be defined as the raw power or a normalized coefficient power formed by
+       dividing the raw power by the wind speed cubed.
+    4. A cosine exponent curve as a function of wind vane angle is fit to the binned power
+       performance values, where the free parameters are the amplitude, the exponent applied to
+       the cosine, and the wind vane angle offset where the peak of the cosine curve is located.
+    5. For each wind speed bin, the static yaw misalignment is estimated as the difference
+       between the wind vane angle where power performance is maximized, based on the wind vane
+       angle offset for the best-fit cosine curve, and the mean wind vane angle.
+    6. The overall yaw misalignment is estimated as the average yaw misalignment over all wind
+       speed bins.
 
     Args:
         plant (:obj:`PlantData`): A :py:attr:`openoa.plant.PlantData` object that has been validated
