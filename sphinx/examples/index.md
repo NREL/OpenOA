@@ -76,6 +76,14 @@ of OpenOA. In each notebook, OpenOA is demonstrated using two years of operation
   turbine with and without uncertainty quantification
 * Demonstrates methods for plotting wake losses as a function of wind direction and wind speed
 
+## Estimate Yaw Misalignment [[link]](07_static_yaw_misalignment.ipynb)
+
+* Introduces the static yaw misalignment estimation class and workflow
+* Demonstrates the estimation of yaw misalignment based on turbine-level SCADA data during
+  the period of record
+* Illustrates the estimation of wake losses  for each wind turbine with and without uncertainty quantification
+* Demonstrates methods for plotting yaw misalignment as a function of wind vane angle and normalized power
+
 ## Table of Contents
 
 ```{toctree}
@@ -88,4 +96,5 @@ of OpenOA. In each notebook, OpenOA is demonstrated using two years of operation
 04_electrical_losses
 05_eya_gap_analysis
 06_wake_loss_analysis
+07_static_yaw_misalignment
 ```
