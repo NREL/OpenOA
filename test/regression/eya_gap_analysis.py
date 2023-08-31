@@ -2,9 +2,11 @@ import unittest
 
 import numpy as np
 import numpy.testing as npt
-from examples import project_ENGIE, example_data_path_str
 
 from openoa.analysis.eya_gap_analysis import EYAGapAnalysis
+
+
+from test.conftest import project_ENGIE, example_data_path_str  # isort: skip
 
 
 class EYAGAPAnalysis(unittest.TestCase):

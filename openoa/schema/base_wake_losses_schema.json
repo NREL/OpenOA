@@ -1,4 +1,21 @@
 {
+  "asset": {
+    "latitude": {
+      "dtype": "float",
+      "name": "latitude",
+      "units": "WGS84"
+    },
+    "longitude": {
+      "dtype": "float",
+      "name": "longitude",
+      "units": "WGS84"
+    },
+    "rated_power": {
+      "dtype": "float",
+      "name": "rated_power",
+      "units": "kW"
+    }
+  },
   "reanalysis": {
     "WMETR_HorWdDir": {
       "dtype": "float",
@@ -12,14 +29,14 @@
     },
     "frequency": [
       "T",
-      "S",
-      "ms",
-      "U",
-      "us",
-      "N",
       "min",
+      "ms",
       "H",
-      "L"
+      "N",
+      "us",
+      "L",
+      "U",
+      "S"
     ]
   },
   "scada": {
@@ -45,14 +62,14 @@
     },
     "frequency": [
       "T",
-      "S",
-      "ms",
-      "U",
-      "us",
-      "N",
       "min",
+      "ms",
       "H",
-      "L"
+      "N",
+      "us",
+      "L",
+      "U",
+      "S"
     ]
   }
 }

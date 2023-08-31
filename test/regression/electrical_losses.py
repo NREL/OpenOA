@@ -6,7 +6,7 @@ import numpy.testing as npt
 from openoa.analysis.electrical_losses import ElectricalLosses
 
 
-from examples import project_ENGIE, example_data_path_str  # isort:skip
+from test.conftest import project_ENGIE, example_data_path_str  # isort: skip
 
 
 class TestElectricalLosses(unittest.TestCase):
