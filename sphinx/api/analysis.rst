@@ -21,3 +21,6 @@ together to create reproducible analysis workflows.
 
 .. autoclass:: openoa.analysis.wake_losses.WakeLosses
     :members:
+
+.. autoclass:: openoa.analysis.yaw_misalignment.StaticYawMisalignment
+    :members:

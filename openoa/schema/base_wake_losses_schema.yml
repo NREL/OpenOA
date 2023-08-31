@@ -17,14 +17,27 @@ scada:
     units: deg
   frequency:
   - T
-  - S
-  - ms
-  - U
-  - us
-  - N
   - min
+  - ms
   - H
+  - N
+  - us
   - L
+  - U
+  - S
+asset:
+  latitude:
+    name: latitude
+    dtype: float
+    units: WGS84
+  longitude:
+    name: longitude
+    dtype: float
+    units: WGS84
+  rated_power:
+    name: rated_power
+    dtype: float
+    units: kW
 reanalysis:
   WMETR_HorWdSpd:
     name: WMETR_HorWdSpd
@@ -36,11 +49,11 @@ reanalysis:
     units: deg
   frequency:
   - T
-  - S
-  - ms
-  - U
-  - us
-  - N
   - min
+  - ms
   - H
+  - N
+  - us
   - L
+  - U
+  - S

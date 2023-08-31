@@ -44,6 +44,7 @@
   "scada": {
     "WMET_EnvTmp": "Ot_avg",
     "WMET_HorWdDir": "Wa_avg",
+    "WMET_HorWdDirRel": "Va_avg",
     "WMET_HorWdSpd": "Ws_avg",
     "WROT_BlPthAngVal": "Ba_avg",
     "WTUR_W": "P_avg",
