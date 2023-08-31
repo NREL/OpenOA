@@ -39,6 +39,7 @@ new_nb = nbmerge.merge_notebooks(
         "../examples/04_electrical_losses.ipynb",
         "../examples/05_eya_gap_analysis.ipynb",
         "../examples/06_wake_loss_analysis.ipynb",
+        "../examples/07_static_yaw_misalignment.ipynb",
     ),
 )
 nbmerge.write_notebook(new_nb, "./examples/examplesout.ipynb")

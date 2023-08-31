@@ -251,6 +251,7 @@ def test_SCADAMetaData():
         time="datetime",
         WMET_HorWdSpd="ws_100",
         WMET_HorWdDir="wd_100",
+        WMET_HorWdDirRel="wd_rel_100",
         WTUR_TurSt="turb_stat",
         WROT_BlPthAngVal="rotor_angle",
         WMET_EnvTmp="temp",
@@ -547,6 +548,7 @@ def test_PlantMetaData_from_file():
         WMET_EnvTmp="Ot_avg",
         time="Date_time",
         WMET_HorWdDir="Wa_avg",
+        WMET_HorWdDirRel="Va_avg",
         WMET_HorWdSpd="Ws_avg",
     )
     meter = MeterMetaData(

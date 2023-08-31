@@ -19,6 +19,10 @@ scada:
     name: WMET_HorWdDir
     dtype: float
     units: deg
+  WMET_HorWdDirRel:
+    name: WMET_HorWdDirRel
+    dtype: float
+    units: deg
   WTUR_TurSt:
     name: WTUR_TurSt
     dtype: str

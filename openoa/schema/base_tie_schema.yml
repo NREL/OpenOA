@@ -12,16 +12,16 @@ scada:
     dtype: float
     units: m/s
   frequency:
-  - T
-  - S
   - D
-  - ms
-  - U
-  - us
-  - N
-  - min
-  - H
   - L
+  - min
+  - ms
+  - H
+  - N
+  - us
+  - T
+  - U
+  - S
 reanalysis:
   WMETR_HorWdSpd:
     name: WMETR_HorWdSpd
@@ -36,13 +36,13 @@ reanalysis:
     dtype: float
     units: kg/m^3
   frequency:
-  - T
-  - S
   - D
-  - ms
-  - U
-  - us
-  - N
-  - min
-  - H
   - L
+  - min
+  - ms
+  - H
+  - N
+  - us
+  - T
+  - U
+  - S

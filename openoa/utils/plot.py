@@ -1088,7 +1088,7 @@ def plot_power_curve(
     fig = plt.figure(**figure_kwargs)
     ax = fig.add_subplot(111)
 
-    if ~np.all(flag):
+    if ~np.any(flag):
         pc_label = "Power Curve" if flag_labels is None else flag_labels[1]
         ax.scatter(wind_speed, power, label=pc_label, **scatter_kwargs)
     else:
@@ -1751,6 +1751,7 @@ def plot_wake_losses(
         legend_kwargs (:obj:`dict`, optional): Additional legend keyword arguments that are passed to
             `ax.legend()` for the wind farm efficiency and, if `energy_data_por` and `energy_data_lt`
             arguments are provided, energy distributions subplots. Defaults to {}.
+
     Returns:
         None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes] | tuple[matplotlib.pyplot.Figure, tuple [matplotlib.pyplot.Axes, matplotlib.pyplot.Axes]]:
             If `return_fig` is True, then the figure and axes object(s), corresponding to the wake
@@ -1932,3 +1933,307 @@ def plot_wake_losses(
         plt.tight_layout()
         if return_fig:
             return fig, ax1
+
+
+def plot_yaw_misalignment(
+    ws_bins: list[float],
+    vane_bins: list[float],
+    power_values_vane_ws: NDArrayFloat,
+    curve_fit_params_ws: NDArrayFloat,
+    mean_vane_angle_ws: NDArrayFloat,
+    yaw_misalignment_ws: NDArrayFloat,
+    turbine_id: str,
+    power_performance_label: str = "Normalized Cp (-)",
+    xlim: tuple[float, float] = (None, None),
+    ylim: tuple[float, float] = (None, None),
+    return_fig: bool = False,
+    figure_kwargs: dict = None,
+    plot_kwargs_curve: dict = {},
+    plot_kwargs_line: dict = {},
+    plot_kwargs_fill: dict = {},
+    legend_kwargs: dict = {},
+):
+    """Plots power performance vs. wind vane angle along with the best-fit cosine curve for each
+    wind speed bin for a single turbine. The mean wind vane angle and the wind vane angle where
+    power performance is maximized are shown for each wind speed bin. Additionally, the yaw
+    misalignments for each wind speed bin as well as the mean yaw misalignment avergaged over all
+    wind speed bins are listed. If UQ is used, 95% confidence intervals will be plotted for the
+    binned power performance values and listed for the yaw misalignment estiamtes.
+
+    Args:
+        ws_bins (list[float]): Wind speed bin values for which yaw misalignment plots are
+            produced (m/s).
+        vane_bins (list[float]): Wind vane angle bin values for which power performance values are
+            plotted (degrees).
+        power_values_vane_ws (:obj:`np.ndarray`): 2D or 3D array containing power performance data
+            for each wind speed bin in the `ws_bins` argument (first dimension if a 2D array) and
+            each wind vane bin in the `vane_bins` argument (second dimension if a 2D array). If a
+            3D array is provided, the first dimension should contain results from different Monte
+            Carlo iterations and 95% confidence intervals will be plotted.
+        curve_fit_params_ws (:obj:`np.ndarray`): 2D or 3D array containing optimal cosine curve fit
+            parameters (magnitude, offset (degrees), and cosine exponent) for each wind speed bin in
+            the `ws_bins` argument (first dimension if a 2D array). If a 3D array is provided, the
+            first dimension should contain results from different Monte Carlo iterations and 95%
+            confidence intervals will be plotted. The last dimension contains the optimal curve
+            fit parameters.
+        mean_vane_angle_ws (:obj:`np.ndarray`): Array containing mean wind vane angles for each
+            wind speed bin in the `ws_bins` argument (degrees).
+        yaw_misalignment_ws (:obj:`np.ndarray`): 1D or 2D array containing yaw misalignment values
+            for each wind speed bin in the `ws_bins` argument (degrees). If a 2D array is provided,
+            the first dimension should contain results from different Monte Carlo iterations and
+            95% confidence intervals will be plotted.
+        turbine_id (str, optional): Name of turbine for which yaw misalignment data are
+            provided. Used to determine title and plot axis labels. Defaults to None.
+        power_performance_label (str, optional): The label to use for the power performance (y) axis.
+            Defaults to "Normalized Cp (-)".
+        xlim (:obj:`tuple[float, float]`, optional): A tuple of floats representing the x-axis
+            wind vane angle plotting display limits (degrees). Defaults to (None, None).
+        ylim (:obj:`tuple[float, float]`, optional): A tuple of the y-axis plotting display limits
+            for the power performance vs. wind vane plots. Defaults to (None, None).
+        return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
+        figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
+            that are passed to `plt.figure()`. Defaults to None.
+        plot_kwargs_curve (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
+            `ax.plot()` for plotting lines for the power performance vs. wind vane plots. Defaults to {}.
+        plot_kwargs_line (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
+            `ax.plot()` for plotting vertical lines indicating mean vane angle and vane angle where
+            power is maximized. Defaults to {}.
+        plot_kwargs_fill (:obj:`dict`, optional): If `UQ` is True, additional plotting keyword arguments
+            that are passed to `ax.fill_between()` for plotting shading regions for 95% confidence
+            intervals for power performance vs. wind vane. Defaults to {}.
+        legend_kwargs (:obj:`dict`, optional): Additional legend keyword arguments that are passed to
+            `ax.legend()` for the power performance vs. wind vane plots. Defaults to {}.
+
+    Returns:
+        None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes]:
+            If `return_fig` is True, then the figure and axes object(s) corresponding to the yaw
+            misalignment plots are returned for further tinkering/saving.
+    """
+
+    from openoa.analysis.yaw_misalignment import cos_curve
+
+    power_color_code = "#4477AA"
+    mean_vane_color_code = "#000000"
+    curve_fit_color_code = "#EE6677"
+
+    plot_kwargs_fill.setdefault("alpha", 0.2)
+
+    if figure_kwargs is None:
+        figure_kwargs = {}
+
+    # determine if confidence intervals should be plotted (i.e., UQ) based on dimension of data
+    if (
+        (power_values_vane_ws.ndim == 2)
+        & (curve_fit_params_ws.ndim == 2)
+        & (yaw_misalignment_ws.ndim == 1)
+    ):
+        UQ = False
+    elif (
+        (power_values_vane_ws.ndim == 3)
+        & (curve_fit_params_ws.ndim == 3)
+        & (yaw_misalignment_ws.ndim == 2)
+    ):
+        UQ = True
+    else:
+        raise ValueError(
+            "The inputs `power_values_vane_ws`, `curve_fit_params_ws`, and `yaw_misalignment_ws` "
+            "must have either 2, 2, and 1 dimensions or 3, 3, and 2 dimensions, respectively."
+        )
+
+    # Select figure size based on number of subplots
+    if len(ws_bins) == 1:
+        figure_kwargs.setdefault("figsize", (6, 5))
+        fig, axs = plt.subplots(1, 1, **figure_kwargs)
+        axs = [[axs]]
+        N_col = 1
+    elif len(ws_bins) == 2:
+        figure_kwargs.setdefault("figsize", (11, 5))
+        fig, axs = plt.subplots(1, 2, sharex=True, **figure_kwargs)
+        N_col = 2
+    elif len(ws_bins) == 3:
+        figure_kwargs.setdefault("figsize", (16, 5))
+        fig, axs = plt.subplots(1, 3, sharex=True, **figure_kwargs)
+        N_col = 3
+    elif len(ws_bins) == 4:
+        figure_kwargs.setdefault("figsize", (11, 10))
+        fig, axs = plt.subplots(2, 2, sharex=True, **figure_kwargs)
+        N_col = 2
+    elif len(ws_bins) >= 13:
+        figure_kwargs.setdefault("figsize", (16, 17))
+        fig, axs = plt.subplots(
+            int(np.floor((len(ws_bins) - 1) / 3) + 1), 3, sharex=True, **figure_kwargs
+        )
+        N_col = 3
+    elif len(ws_bins) >= 10:
+        figure_kwargs.setdefault("figsize", (16, 14))
+        fig, axs = plt.subplots(4, 3, sharex=True, **figure_kwargs)
+        N_col = 3
+    elif len(ws_bins) >= 7:
+        figure_kwargs.setdefault("figsize", (16, 11))
+        fig, axs = plt.subplots(3, 3, sharex=True, **figure_kwargs)
+        N_col = 3
+    elif len(ws_bins) >= 5:
+        figure_kwargs.setdefault("figsize", (16, 7.5))
+        fig, axs = plt.subplots(2, 3, sharex=True, **figure_kwargs)
+        N_col = 3
+
+    for i, ws in enumerate(ws_bins):
+        ax = axs[int(np.floor(i / N_col))][i % N_col]
+
+        if UQ:
+            norm_factor = curve_fit_params_ws[:, i, 0].mean()
+
+            y_min = np.nanmin(np.nanpercentile(power_values_vane_ws[:, i, :], 2.5, 0))
+            y_max = np.nanmax(np.nanpercentile(power_values_vane_ws[:, i, :], 97.5, 0))
+
+            ax.fill_between(
+                vane_bins,
+                np.percentile(power_values_vane_ws[:, i, :], 2.5, 0) / norm_factor,
+                np.percentile(power_values_vane_ws[:, i, :], 97.5, 0) / norm_factor,
+                color=power_color_code,
+                label="_nolegend_",
+                **plot_kwargs_fill,
+            )
+            ax.scatter(
+                vane_bins,
+                np.mean(power_values_vane_ws[:, i, :], 0) / norm_factor,
+                color=power_color_code,
+            )
+            ax.plot(
+                vane_bins,
+                cos_curve(
+                    vane_bins,
+                    curve_fit_params_ws[:, i, 0].mean() / norm_factor,
+                    curve_fit_params_ws[:, i, 1].mean(),
+                    curve_fit_params_ws[:, i, 2].mean(),
+                ),
+                color=curve_fit_color_code,
+                label="_nolabel_",
+            )
+            ax.plot(
+                2 * [curve_fit_params_ws[:, i, 1].mean()],
+                [
+                    0.01 * np.floor(y_min / norm_factor / 0.01),
+                    0.01 * np.ceil(y_max / norm_factor / 0.01),
+                ],
+                color=curve_fit_color_code,
+                linestyle="--",
+                label=f"Max. Power Vane Angle = {round(curve_fit_params_ws[:,i,1].mean(),1)}$^\circ$",
+            )
+
+            yaw_mis_mean = np.round(np.mean(yaw_misalignment_ws[:, i]), 1)
+            yaw_mis_lb = np.round(np.percentile(yaw_misalignment_ws[:, i], 2.5), 1)
+            yaw_mis_ub = np.round(np.percentile(yaw_misalignment_ws[:, i], 97.5), 1)
+
+            ax.set_title(
+                (
+                    f"{ws} m/s\nYaw Misalignment = "
+                    f"{yaw_mis_mean}$^\circ$ [{yaw_mis_lb}$^\circ$, {yaw_mis_ub}$^\circ$]"
+                )
+            )
+        else:
+            norm_factor = curve_fit_params_ws[i, 0]
+
+            y_min = np.nanmin(power_values_vane_ws[i, :])
+            y_max = np.nanmax(power_values_vane_ws[i, :])
+
+            if xlim == (None, None):
+                valid_vane_indices = np.where(~np.isnan(np.nanmean(power_values_vane_ws, 0)))[0]
+                xlim = (
+                    vane_bins[valid_vane_indices[0]] - 1.0,
+                    vane_bins[valid_vane_indices[-1]] + 1.0,
+                )
+
+            ax.scatter(vane_bins, power_values_vane_ws[i, :] / norm_factor, color=power_color_code)
+            ax.plot(
+                vane_bins,
+                cos_curve(
+                    vane_bins,
+                    curve_fit_params_ws[i, 0] / norm_factor,
+                    curve_fit_params_ws[i, 1],
+                    curve_fit_params_ws[i, 2],
+                ),
+                color=curve_fit_color_code,
+                label="_nolabel_",
+            )
+            ax.plot(
+                2 * [curve_fit_params_ws[i, 1]],
+                [
+                    0.01 * np.floor(y_min / norm_factor / 0.01),
+                    0.01 * np.ceil(y_max / norm_factor / 0.01),
+                ],
+                color=curve_fit_color_code,
+                linestyle="--",
+                label=f"Max. Power Vane Angle = {round(curve_fit_params_ws[i,1],1)}$^\circ$",
+            )
+
+            ax.set_title(
+                f"{ws} m/s\nYaw Misalignment = {np.round(yaw_misalignment_ws[i],1)}$^\circ$"
+            )
+
+        ax.plot(
+            2 * [mean_vane_angle_ws[i]],
+            [
+                0.01 * np.floor(y_min / norm_factor / 0.01),
+                0.01 * np.ceil(y_max / norm_factor / 0.01),
+            ],
+            color=mean_vane_color_code,
+            linestyle="--",
+            label=f"Mean Vane Angle = {round(mean_vane_angle_ws[i],1)}$^\circ$",
+        )
+
+        ax.grid("on")
+
+        ax.legend(**legend_kwargs)
+
+        ax.set_ylabel(power_performance_label)
+
+        if ylim != (None, None):
+            ax.set_ylim(ylim)
+        else:
+            ax.set_ylim(
+                (
+                    0.1 * np.floor(y_min / norm_factor / 0.1),
+                    0.1 * np.ceil(y_max / norm_factor / 0.1),
+                )
+            )
+
+    # remove unused subplots and add x axis labels
+    last_row = int(np.floor((len(ws_bins) - 1) / N_col))
+
+    if (len(ws_bins) >= 5) & (len(ws_bins) % 3 > 0):
+        for i in range(len(ws_bins) % 3, 3):
+            axs[last_row][i].remove()
+            axs[last_row - 1][i].tick_params(labelbottom=True)
+            axs[last_row - 1][i].set_xlabel("Wind Vane Angle ($^\circ$)")
+
+        for i in range(len(ws_bins) % 3):
+            axs[last_row][i].set_xlabel("Wind Vane Angle ($^\circ$)")
+    else:
+        for i in range(N_col):
+            axs[last_row][i].set_xlabel("Wind Vane Angle ($^\circ$)")
+
+    mean_yaw_mis = np.round(np.mean(yaw_misalignment_ws), 1)
+    if UQ:
+        yaw_misalignment_95CI = np.round(
+            np.percentile(np.mean(yaw_misalignment_ws, 1), [2.5, 97.5]), 1
+        )
+        fig.suptitle(
+            (
+                f"Turbine {turbine_id}, Yaw Misalignment = {mean_yaw_mis}$^\circ$ "
+                f"[{yaw_misalignment_95CI[0]}$^\circ$, {yaw_misalignment_95CI[1]}$^\circ$]"
+            )
+        )
+    else:
+        fig.suptitle(f"Turbine {turbine_id}, Mean Yaw Misalignment = {str(mean_yaw_mis)}$^\circ$")
+
+    plt.tight_layout()
+
+    if xlim == (None, None):
+        valid_vane_indices = np.where(~np.isnan(np.nanmean(power_values_vane_ws, (0, 1))))[0]
+        xlim = (vane_bins[valid_vane_indices[0]] - 1.0, vane_bins[valid_vane_indices[-1]] + 1.0)
+
+    axs[0][0].set_xlim(xlim)
+
+    if return_fig:
+        return fig, axs
