@@ -144,7 +144,7 @@ class ElectricalLosses(FromDictMixin):
             uncertainty_scada(:obj:`float`): Uncertainty imposed on the scada data (for :py:attr:`UQ` =
                 True case).
             uncertainty_correction_threshold(:obj:`tuple` | `float`): Data availability thresholds, in
-                the range of (0, 1), under which months should be eliminated. If :py:attr:`UQ` = True,
+                the range of (0, 1], under which months should be eliminated. If :py:attr:`UQ` = True,
                 then a 2-element tuple containing an upper and lower bound for a randomly selected value
                 should be given, otherwise, a scalar value should be provided.
         """
