@@ -42,7 +42,7 @@ Analysis routines are provided in analysis classes, which each use the PlantData
   losses, 2) electrical losses, and 3) TIE.
 * ``WakeLosses``: This routine estimates long-term internal wake losses experienced by a wind plant and for each individual
   turbine, along with the uncertainty.
-* StaticYawMisalignment: The StaticYawMisalignment routine estimates the static yaw misalignment
+* ``StaticYawMisalignment``: The StaticYawMisalignment routine estimates the static yaw misalignment
   for individual wind turbines as a function of wind speed by comparing the estimated wind vane
   angle at which power is maximized to the mean wind vane angle at which the turbines operate.
   The routine includes uncertainty quantification.
