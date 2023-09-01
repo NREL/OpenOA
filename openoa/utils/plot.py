@@ -1339,7 +1339,7 @@ def plot_distributions(
             **annotate_kwargs,
         )
         ax.annotate(
-            f"Uncentainty = {(vals.std() / vals.mean())*100:.1f}%",
+            f"Uncertainty = {(vals.std() / vals.mean())*100:.1f}%",
             (0.05, 0.85),
             xycoords="axes fraction",
             **annotate_kwargs,
@@ -2118,7 +2118,7 @@ def plot_yaw_misalignment(
                 ],
                 color=curve_fit_color_code,
                 linestyle="--",
-                label=f"Max. Power Vane Angle = {round(curve_fit_params_ws[:,i,1].mean(),1)}$^\circ$",
+                label=f"Max. Power Vane Angle = {round(curve_fit_params_ws[:,i,1].mean(),1)}$^\circ$",  # noqa: W605
             )
 
             yaw_mis_mean = np.round(np.mean(yaw_misalignment_ws[:, i]), 1)
@@ -2128,7 +2128,7 @@ def plot_yaw_misalignment(
             ax.set_title(
                 (
                     f"{ws} m/s\nYaw Misalignment = "
-                    f"{yaw_mis_mean}$^\circ$ [{yaw_mis_lb}$^\circ$, {yaw_mis_ub}$^\circ$]"
+                    f"{yaw_mis_mean}$^\circ$ [{yaw_mis_lb}$^\circ$, {yaw_mis_ub}$^\circ$]"  # noqa: W605
                 )
             )
         else:
@@ -2164,11 +2164,11 @@ def plot_yaw_misalignment(
                 ],
                 color=curve_fit_color_code,
                 linestyle="--",
-                label=f"Max. Power Vane Angle = {round(curve_fit_params_ws[i,1],1)}$^\circ$",
+                label=f"Max. Power Vane Angle = {round(curve_fit_params_ws[i,1],1)}$^\circ$",  # noqa: W605
             )
 
             ax.set_title(
-                f"{ws} m/s\nYaw Misalignment = {np.round(yaw_misalignment_ws[i],1)}$^\circ$"
+                f"{ws} m/s\nYaw Misalignment = {np.round(yaw_misalignment_ws[i],1)}$^\circ$"  # noqa: W605
             )
 
         ax.plot(
@@ -2179,7 +2179,7 @@ def plot_yaw_misalignment(
             ],
             color=mean_vane_color_code,
             linestyle="--",
-            label=f"Mean Vane Angle = {round(mean_vane_angle_ws[i],1)}$^\circ$",
+            label=f"Mean Vane Angle = {round(mean_vane_angle_ws[i],1)}$^\circ$",  # noqa: W605
         )
 
         ax.grid("on")
@@ -2205,13 +2205,13 @@ def plot_yaw_misalignment(
         for i in range(len(ws_bins) % 3, 3):
             axs[last_row][i].remove()
             axs[last_row - 1][i].tick_params(labelbottom=True)
-            axs[last_row - 1][i].set_xlabel("Wind Vane Angle ($^\circ$)")
+            axs[last_row - 1][i].set_xlabel("Wind Vane Angle ($^\circ$)")  # noqa: W605
 
         for i in range(len(ws_bins) % 3):
-            axs[last_row][i].set_xlabel("Wind Vane Angle ($^\circ$)")
+            axs[last_row][i].set_xlabel("Wind Vane Angle ($^\circ$)")  # noqa: W605
     else:
         for i in range(N_col):
-            axs[last_row][i].set_xlabel("Wind Vane Angle ($^\circ$)")
+            axs[last_row][i].set_xlabel("Wind Vane Angle ($^\circ$)")  # noqa: W605
 
     mean_yaw_mis = np.round(np.mean(yaw_misalignment_ws), 1)
     if UQ:
@@ -2220,12 +2220,14 @@ def plot_yaw_misalignment(
         )
         fig.suptitle(
             (
-                f"Turbine {turbine_id}, Yaw Misalignment = {mean_yaw_mis}$^\circ$ "
-                f"[{yaw_misalignment_95CI[0]}$^\circ$, {yaw_misalignment_95CI[1]}$^\circ$]"
+                f"Turbine {turbine_id}, Yaw Misalignment = {mean_yaw_mis}$^\circ$ "  # noqa: W605
+                f"[{yaw_misalignment_95CI[0]}$^\circ$, {yaw_misalignment_95CI[1]}$^\circ$]"  # noqa: W605
             )
         )
     else:
-        fig.suptitle(f"Turbine {turbine_id}, Mean Yaw Misalignment = {str(mean_yaw_mis)}$^\circ$")
+        fig.suptitle(
+            f"Turbine {turbine_id}, Mean Yaw Misalignment = {str(mean_yaw_mis)}$^\circ$"  # noqa: W605
+        )
 
     plt.tight_layout()
 

@@ -8,6 +8,7 @@ from setuptools import setup, find_packages
 
 # Configs ##########
 
+# Core dependencies
 REQUIRED = [
     "statsmodels",
     "scikit-learn>=1.0",
@@ -28,20 +29,25 @@ REQUIRED = [
     "pyyaml",
     "h5pyd",
     "pyspark",
+    "jupyterlab",
+    "xarray",
+    "dask",
+    "netcdf4",
+    "cdsapi",
 ]
 
+# Testing-only dependencies
 TESTS = ["pytest>=5.4.2", "pytest-cov>=2.8.1"]
 
+# All extra dependencies (see keys for breakdown by purpose)
 EXTRAS = {
     "docs": [
-        "ipython==8.5",
-        "m2r2>=0.3",
-        "Sphinx>=5.0",
+        "ipython",
+        "Sphinx>=5.0,!=7.2.0",
         "pydata-sphinx-theme",
-        "nbmerge==0.0.4",
-        "nbsphinx>=0.8",
         "sphinx_design>=0.3",
         "sphinxcontrib-bibtex",
+        "myst-nb",
         "myst-parser",
     ],
     "develop": [
@@ -50,10 +56,9 @@ EXTRAS = {
         "isort",
         "flake8",
         "flake8-docstrings",
-        "pytest",
-        "pytest-cov",
     ],
 }
+EXTRAS["develop"] += TESTS
 
 
 # Read the version from the __init__.py file without importing it

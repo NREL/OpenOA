@@ -151,7 +151,7 @@ def impute_all_assets_by_correlation(
     5. Continue until either:
         a. There are no NaN data remaining in asset data
         b. There are no more neighbors to consider
-        c. The neighboring asset does not meet the specified correlation threshold, <r2_threshold>
+        c. The neighboring asset does not meet the specified correlation threshold, :py:attr:`r2_threshold`
 
     Args:
         data(:obj:`pandas.DataFrame`): input data frame such as `Plant.scada` that uses a
