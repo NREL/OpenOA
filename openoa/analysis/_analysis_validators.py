@@ -79,12 +79,12 @@ def validate_half_closed_0_1_left(cls, attribute: attrs.Attribute, value: float 
         ValueError: Raised if any of the inputs in the input tuple are outside the range of [0, 1).
     """
     if isinstance(value, float):
-        if not 0.0 < value <= 1.0:
+        if not 0.0 <= value < 1.0:
             raise ValueError(
                 f"The value provided to '{attribute.name}' ({value}) must be in the range (0, 1]."
             )
     else:
-        if not all(0.0 < x <= 1.0 for x in value):
+        if not all(0.0 <= x < 1.0 for x in value):
             raise ValueError(
                 f"The values provided to '{attribute.name}' ({value}) must be in the range (0, 1]."
             )
