@@ -83,7 +83,7 @@ inevitably arise in development work.
    git checkout main
    git pull upstream main
 
-   # Most common branch to brought up to speed
+   # Most common branch to bring up to speed
    git checkout develop
    git pull upstream develop
    ```
@@ -281,10 +281,10 @@ over time, regardless of who the core developers are.
 - Tag the new release version:
 
   ```bash
-   git tag -a v1.2.3 -m "Tag messgae for v1.2.3"
+   git tag -a v1.2.3 -m "Tag message for v1.2.3"
    git push origin v1.2.3
    ```
 
 - Deploying a Package to PyPi
-  - The repository is equipped with a github action to build and publish new versions to PyPI. A maintainer can invoke this workflow by pushing a tag to the NREL/OpenOA reposiory with prefix "v", such as "v1.2.3".
+  - The repository is equipped with a github action to build and publish new versions to PyPI. A maintainer can invoke this workflow by pushing a tag to the NREL/OpenOA repository with prefix "v", such as "v1.2.3".
   - The action is defined in `.github/workflows/tags-to-pypi.yml`.
