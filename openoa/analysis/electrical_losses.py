@@ -74,12 +74,8 @@ class ElectricalLosses(FromDictMixin):
     plant: PlantData
     UQ: bool = field(default=False, validator=attrs.validators.instance_of(bool))
     num_sim: int = field(default=20000, converter=int)
-    uncertainty_meter: NDArrayFloat | float = field(
-        default=0.005, validator=validate_half_closed_0_1_right
-    )
-    uncertainty_scada: NDArrayFloat | float = field(
-        default=0.005, validator=validate_half_closed_0_1_right
-    )
+    uncertainty_meter: float = field(default=0.005, validator=validate_half_closed_0_1_right)
+    uncertainty_scada: float = field(default=0.005, validator=validate_half_closed_0_1_right)
     uncertainty_correction_threshold: NDArrayFloat | tuple[float, float] | float = field(
         default=(0.9, 0.995), validator=(validate_UQ_input, validate_half_closed_0_1_right)
     )
