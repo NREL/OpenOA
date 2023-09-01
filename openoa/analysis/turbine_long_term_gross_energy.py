@@ -85,7 +85,7 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
             the lower and upper limits of this filter, otherwise a single value should be used.
             Defaults to (0.8, 0.9).
         correction_threshold(:obj:`tuple`): The threshold, in the range of (0, 1], above which daily
-            scadaenergy data should be corrected. When :py:attr:`UQ` is True, then this should be a
+            scada energy data should be corrected. When :py:attr:`UQ` is True, then this should be a
             tuple of the lower and upper limits of this threshold, otherwise a single value should
             be used. Defaults to (0.85, 0.95)
     """
@@ -216,11 +216,11 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
                 then this should be a tuple of the lower and upper limits of this threshold, otherwise a
                 single value should be used. Defaults to (1.0, 3.0)
             max_power_filter(:obj:`tuple`): Maximum power threshold, in the range (0, 1], to which the
-                binfilter should be applied. When :py:attr:`UQ` is True, then this should be a tuple of
+                bin filter should be applied. When :py:attr:`UQ` is True, then this should be a tuple of
                 the lower and upper limits of this filter, otherwise a single value should be used.
                 Defaults to (0.8, 0.9).
             correction_threshold(:obj:`tuple`): The threshold, in the range of (0, 1], above which daily
-                scadaenergy data should be corrected. When :py:attr:`UQ` is True, then this should be a
+                scada energy data should be corrected. When :py:attr:`UQ` is True, then this should be a
                 tuple of the lower and upper limits of this threshold, otherwise a single value should
                 be used. Defaults to (0.85, 0.95)
         """
