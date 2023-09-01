@@ -6,7 +6,7 @@ All notebooks are located at /examples in the OpenOA repository, and can be modi
 ## Overview
 
 In each of the following examples we'll be providing more insight into the different functionalities
-of OpenOA. In each notebook, OpenOA is demonstrated using two years of operational data for the La Haute Borne wind power plant from the ENGIE open data set (https://opendata-renewables.engie.com). The examples start by introducing the {py:attr}`openoa.plant.PlantData` class and quality assurance methods in the {py:mod}`openoa.utils.qa` utils module, illustrating how a PlantData object is created for the La Haute Borne data set (the rest of the examples use this PlantData object to demonstrate OpenOA analysis and utils methods). Next, several utils module use cases are demonstrated, such as power curve fitting and plotting. Three analysis methods are then demonstrated: MonteCarloAEP (long-term AEP analysis), TurbineLongTermGrossEnergy (turbine ideal energy), and ElectricalLosses. Next, the EYAGapAnalysis class is used to perform a gap analysis using the estimated operational long-term AEP, turbine ideal energy, electrical losses, and availability losses together with corresponding example pre-construction estimates. Finally, the WakeLosses method for estimating operational wind plant and wind turbine-level wake losses is demonstrated.
+of OpenOA. In each notebook, OpenOA is demonstrated using two years of operational data for the La Haute Borne wind power plant from the ENGIE open data set (https://opendata-renewables.engie.com). The examples start by introducing the {py:attr}`openoa.plant.PlantData` class and quality assurance methods in the {py:mod}`openoa.utils.qa` utils module, illustrating how a PlantData object is created for the La Haute Borne data set (the rest of the examples use this PlantData object to demonstrate OpenOA analysis and utils methods). Next, several utils module use cases are demonstrated, such as power curve fitting and plotting. Three analysis methods are then demonstrated: MonteCarloAEP (long-term AEP analysis), TurbineLongTermGrossEnergy (turbine ideal energy), and ElectricalLosses. Next, the EYAGapAnalysis class is used to perform a gap analysis using the estimated operational long-term AEP, turbine ideal energy, electrical losses, and availability losses together with corresponding example pre-construction estimates. Two additional analysis methods are then demonstrated: the WakeLosses method for estimating operational wind plant and wind turbine-level wake losses, and the StaticYawMisalignment method for estimating static yaw misalignment for individual wind turbines as a function of wind speed.
 
 ## Intro to OpenOA `PlantData` and the QA Methods [[link]](00_intro_to_plant_data.ipynb)
 
@@ -81,7 +81,7 @@ of OpenOA. In each notebook, OpenOA is demonstrated using two years of operation
 * Introduces the static yaw misalignment estimation class and workflow
 * Demonstrates the estimation of yaw misalignment based on turbine-level SCADA data during
   the period of record
-* Illustrates the estimation of wake losses  for each wind turbine with and without uncertainty quantification
+* Illustrates the estimation of wake losses for each wind turbine with and without uncertainty quantification
 * Demonstrates methods for plotting yaw misalignment as a function of wind vane angle and normalized power
 
 ## Table of Contents
