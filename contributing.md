@@ -25,11 +25,9 @@ documentation changes into OpenOA, or to push changes upstream to the main NREL/
    - ``".[develop]"`` is for the linting, autoformatting, and code checking tools
    - ``".[docs]"`` is for the documentation building tools. Ideally, developers should also be
      contributing to the documentation, and therefore checking that the documentation builds locally.
-   - ``".[examples]"`` is for jupyter lab. Ideally, developers should be running impacted examples
-     to ensure they still run correctly.
 
     ```bash
-    pip install -e ".[develop,docs,examples]"
+    pip install -e ".[develop,docs]"
     ```
 
 5. Turn on the automated linting and code checking tools. Pre-commit runs at the commit level, and

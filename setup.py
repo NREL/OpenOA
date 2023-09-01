@@ -29,6 +29,11 @@ REQUIRED = [
     "pyyaml",
     "h5pyd",
     "pyspark",
+    "jupyterlab",
+    "xarray",
+    "dask",
+    "netcdf4",
+    "cdsapi",
 ]
 
 # Testing-only dependencies
@@ -51,13 +56,6 @@ EXTRAS = {
         "isort",
         "flake8",
         "flake8-docstrings",
-    ],
-    "examples": [
-        "jupyterlab",
-        "xarray",
-        "dask",
-        "netcdf4",
-        "cdsapi",
     ],
 }
 EXTRAS["develop"] += TESTS

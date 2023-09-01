@@ -64,13 +64,6 @@ cd OpenOA
 pip install .
 ```
 
-If you wish to work with the examples, be sure to install the extra dependencies associated with
-them.
-
-```bash
-pip install ".[examples]"
-```
-
 You should now be able to import openoa from the Python interpreter:
 
 ```bash
@@ -93,9 +86,23 @@ conda install Shapely
 pip install --upgrade pywin32==255
 ```
 
+#### Example Notebooks and Data
+
+The example data will be automaticaly extracted as needed by the tests. To manually extract the example data for use with the example notebooks, use the following command:
+
+```bash
+unzip examples/data/la_haute_borne.zip -d examples/data/la_haute_borne/
+```
+
+The example notebooks are located in the `examples` directory. We suggest installing the Jupyter notebook server to run the notebooks interactively. The notebooks can also be viewed statically on [Read The Docs](http://openoa.readthedocs.io/en/latest/examples).
+
+```bash
+jupyter lab  # "jupyter notebook" is also ok if that's your preference
+```
+
 ### Development
 
-Please see the developer section of the contributing guide [here](contributing.md), or on the [documentation site](https://openoa.readthedocs.io/en/latest/getting_started/contributing.html) for more details.
+Please see the developer section of the contributing guide [here](contributing.md), or on the [documentation site](https://openoa.readthedocs.io/en/latest/getting_started/contributing.html) for complete details.
 
 Development dependencies are provided through the develop extra flag in setup.py. Here, we install
 OpenOA, with development dependencies, in editable mode, and activate the pre-commit workflow (note:
@@ -112,27 +119,6 @@ Occasionally, you will need to update the dependencies in the pre-commit workflo
 ```bash
 pre-commit autoupdate
 git add .pre-commit-config.yaml
-```
-
-#### Example Notebooks and Data
-
-The example data will be automaticaly extracted as needed by the tests. To manually extract the example data for use with the example notebooks, use the following command:
-
-```bash
-unzip examples/data/la_haute_borne.zip -d examples/data/la_haute_borne/
-```
-
-In addition, you will need to install the packages required for running the examples with the following command:
-
-```bash
-cd OpenOA
-pip install ".[examples]"
-```
-
-The example notebooks are located in the `examples` directory. We suggest installing the Jupyter notebook server to run the notebooks interactively. The notebooks can also be viewed statically on [Read The Docs](http://openoa.readthedocs.io/en/latest/examples).
-
-```bash
-jupyter lab
 ```
 
 #### Testing
