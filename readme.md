@@ -43,14 +43,14 @@ If you use this software in your work, please cite our JOSS article with the fol
 
 ### Requirements
 
-  * Python 3.6+ with pip.
+- Python 3.8, 3.9, or 3.10 with pip.
 
 We strongly recommend using the Anaconda Python distribution and creating a new conda environment for OpenOA. You can download Anaconda through [their website.](https://www.anaconda.com/products/individual)
 
 After installing Anaconda, create and activate a new conda environment with the name "openoa-env":
 
-```
-conda create --name openoa-env python=3.8
+```bash
+conda create --name openoa-env python=3.10
 conda activate openoa-env
 ```
 
@@ -58,98 +58,109 @@ conda activate openoa-env
 
 Clone the repository and install the library and its dependencies using pip:
 
-```
+```bash
 git clone https://github.com/NREL/OpenOA.git
-pip install ./OpenOA
+cd OpenOA
+pip install .
 ```
 
 You should now be able to import openoa from the Python interpreter:
 
-```
+```bash
 python
 >>> import openoa
+>>> openoa.__version__
 ```
 
-#### Common Installation Issues:
+#### Common Installation Issues
 
 - In Windows you may get an error regarding geos_c.dll. To fix this install Shapely using:
 
-```
+```bash
 conda install Shapely
 ```
 
 - In Windows, an ImportError regarding win32api can also occur. This can be resolved by fixing the version of pywin32 as follows:
 
-```
+```bash
 pip install --upgrade pywin32==255
-```
-
-### Development
-
-Development dependencies are provided through the develop extra flag in setup.py. Here, we install OpenOA, with development dependencies, in editable mode, and activate the pre-commit workflow (note: this second step must be done before committing any
-changes):
-
-```
-pip install -e "./OpenOA[develop]"
-pre-commit install
-```
-
-Occasionally, you will need to update the dependencies in the pre-commit workflow, which will provide an error when this needs to happen. When it does, this can normally be resolved with the below code, after which you can continue with your normal git workflow:
-```
-pre-commit autoupdate
-git add .pre-commit-config.yaml
 ```
 
 #### Example Notebooks and Data
 
 The example data will be automaticaly extracted as needed by the tests. To manually extract the example data for use with the example notebooks, use the following command:
 
-```
+```bash
 unzip examples/data/la_haute_borne.zip -d examples/data/la_haute_borne/
 ```
 
-In addition, you will need to install the packages required for running the examples with the following command:
+The example notebooks are located in the `examples` directory. We suggest installing the Jupyter notebook server to run the notebooks interactively. The notebooks can also be viewed statically on [Read The Docs](http://openoa.readthedocs.io/en/latest/examples).
 
-```
-pip install -r ./OpenOA/examples/requirements.txt
+```bash
+jupyter lab  # "jupyter notebook" is also ok if that's your preference
 ```
 
-The example notebooks are located in the `examples` directory. We suggest installing the Jupyter notebook server to run the notebooks interactively. The notebooks can also be viewed statically on [Read The Docs](http://openoa.readthedocs.io/).
+### Development
 
+Please see the developer section of the contributing guide [here](contributing.md), or on the [documentation site](https://openoa.readthedocs.io/en/latest/getting_started/contributing.html) for complete details.
+
+Development dependencies are provided through the develop extra flag in setup.py. Here, we install
+OpenOA, with development dependencies, in editable mode, and activate the pre-commit workflow (note:
+this second step must be done before committing any changes):
+
+```bash
+cd OpenOA
+pip install -e ".[develop, docs]"
+pre-commit install
 ```
-jupyter notebook
+
+Occasionally, you will need to update the dependencies in the pre-commit workflow, which will provide an error when this needs to happen. When it does, this can normally be resolved with the below code, after which you can continue with your normal git workflow:
+
+```bash
+pre-commit autoupdate
+git add .pre-commit-config.yaml
 ```
 
 #### Testing
-Tests are written in the Python unittest framework and are runnable using pytest. There are two types of tests, unit tests (located in `test/unit`) run quickly and are automatically for every pull request to the OpenOA repository. Regression tests (located at `test/regression`) provide a comprehensive suite of scientific tests that may take a long time to run (up to 20 minutes on our machines). These tests should be run locally before submitting a pull request, and are run weekly on the develop and main branches.
+Tests are written in the Python unittest or pytest framework and are runnable using pytest. There
+are two types of tests, unit tests (located in `test/unit`) run quickly and are automatically for
+every pull request to the OpenOA repository. Regression tests (located at `test/regression`) provide
+a comprehensive suite of scientific tests that may take a long time to run (up to 20 minutes on our
+machines). These tests should be run locally before submitting a pull request, and are run weekly on
+the develop and main branches.
 
 To run all unit and regresison tests:
-```
+
+```bash
 pytest
 ```
 
 To run unit tests only:
-```
+
+```bash
 pytest test/unit
 ```
 
 To run all tests and generate a code coverage report
-```
+
+```bash
 pytest --cov=openoa
 ```
 
 #### Documentation
 
-Documentation is automatically built by, and visible through, [Read The Docs](http://openoa.readthedocs.io/).
+Documentation is automatically built by, and visible through
+[Read The Docs](http://openoa.readthedocs.io/).
 
-You can build the documentation with [sphinx](http://www.sphinx-doc.org/en/stable/), but will need to ensure [Pandoc is installed](https://pandoc.org/installing.html) on your computer first:
+You can build the documentation with [sphinx](http://www.sphinx-doc.org/en/stable/), but will need
+to ensure [Pandoc is installed](https://pandoc.org/installing.html) on your computer first.
 
-```
+```bash
+cd OpenOA
 pip install -e ".[docs]"
 cd sphinx
 make html
 ```
-
 
 ### Contributors
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->

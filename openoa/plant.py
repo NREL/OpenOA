@@ -633,7 +633,7 @@ class PlantData:
         if is_terminal:
             return self.__generate_text_repr()
         else:
-            return self.__generate_markdown_repr()
+            return repr(display(Markdown(self.__generate_markdown_repr())))
 
     def _set_index_columns(self) -> None:
         """Sets the index value for each of the `PlantData` objects that are not `None`."""
