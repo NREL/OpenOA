@@ -95,6 +95,8 @@ pip install --upgrade pywin32==255
 
 ### Development
 
+Please see the developer section of the contributing guide [here](contributing.md), or on the [documentation site](https://openoa.readthedocs.io/en/latest/getting_started/contributing.html) for more details.
+
 Development dependencies are provided through the develop extra flag in setup.py. Here, we install
 OpenOA, with development dependencies, in editable mode, and activate the pre-commit workflow (note:
 this second step must be done before committing any changes):
