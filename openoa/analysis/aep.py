@@ -310,8 +310,7 @@ class MonteCarloAEP(FromDictMixin):
         ml_setup_kwargs: dict = None,
     ) -> None:
         """
-        Perform pre-processing of data into an internal representation for which the analysis can
-        run more quickly.
+        Process all appropriate data and run the MonteCarlo AEP analysis.
 
         .. note:: If None is provided to any of the inputs, then the last used input value will be
             used for the analysis, and if no prior values were set, then this is the model's defaults.
