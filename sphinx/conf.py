@@ -22,26 +22,6 @@ import re
 import sys
 from pathlib import Path
 
-import nbmerge
-
-
-# Merge example Notebooks into one notebook to keep the required structure
-new_nb = nbmerge.merge_notebooks(
-    "./",
-    (
-        "./examples/examples.ipynb",
-        "../examples/00_intro_to_plant_data.ipynb",
-        # TODO: uncomment when the examples are updated and reincorporated
-        "../examples/01_utils_examples.ipynb",
-        "../examples/02_plant_aep_analysis.ipynb",
-        # "../examples/02b_augmented_plant_aep_analysis.ipynb",
-        "../examples/03_turbine_ideal_energy.ipynb",
-        "../examples/04_electrical_losses.ipynb",
-        "../examples/05_eya_gap_analysis.ipynb",
-        "../examples/06_wake_loss_analysis.ipynb",
-    ),
-)
-nbmerge.write_notebook(new_nb, "./examples/examplesout.ipynb")
 
 sys.path.insert(0, os.path.abspath(".."))
 
@@ -64,24 +44,20 @@ extensions = [
     "sphinx.ext.todo",
     "sphinx_design",
     "sphinxcontrib.bibtex",
-    # "m2r2",
-    "nbsphinx",
     "bokeh.sphinxext.bokeh_plot",
-    "myst_parser",
+    "myst_nb",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
 
 # The suffix(es) of source filenames.
-# You can specify multiple suffix as a list of string:
-#
-# source_suffix = '.rst'
-# source_suffix = [".rst", ".md"]
 source_suffix = {
     ".rst": "restructuredtext",
     ".txt": "markdown",
-    ".md": "markdown",
+    ".md": "myst-nb",
+    ".ipynb": "myst-nb",
+    ".myst": "myst-nb",
 }
 
 # The master toctree document.
@@ -89,7 +65,7 @@ master_doc = "index"
 
 # General information about the project.
 project = "OpenOA"
-copyright = "2022, NREL"
+copyright = "2023, NREL"
 author = "NREL PRUF OA Team"
 
 
@@ -229,6 +205,30 @@ latex_documents = [
     ),
 ]
 
+# -- Options for Myst -----------------------------------------------------
+
+# Syntax descriptions and examples: https://myst-parser.readthedocs.io/en/latest/syntax/optional.html#syntax-extensions
+myst_enable_extensions = [
+    "amsmath",
+    # "attrs_inline",
+    "colon_fence",
+    "deflist",
+    "dollarmath",
+    "fieldlist",
+    # "html_admonition",
+    # "html_image",
+    # "linkify",
+    # "replacements",
+    # "smartquotes",
+    # "strikethrough",
+    # "substitution",
+    "tasklist",
+]
+
+# toggle this between auto/off to rerun full documentation build
+nb_execution_mode = "off"  # Should be coming from the examples folder
+
+myst_heading_anchors = 3
 
 # -- Options for manual page output ---------------------------------------
 
@@ -264,21 +264,23 @@ autoclass_content = "both"
 # TODO: MAKE SURE THIS STAYS IN LINE WITH setup.py
 
 autodoc_mock_imports = [
-    "scikit_learn>=0.20.1,<1.0",
+    "statsmodels",
+    "scikit-learn>=1.0",
     "requests>=2.21.0",
     "eia-python>=1.22",
-    "pyproj>=3.3",
-    "shapely>=1.7.1",
-    "numpy>=1.15.4",
-    "pandas>=0.23.4,<1.3",
-    "pygam>=0.8.0",
-    "scipy>=1.1.0",
+    "pyproj>=3.5",
+    "shapely>=1.8",
+    "numpy>=1.24",
+    "pandas>=2.0",
+    "pygam>=0.9.0",
+    "scipy>=1.7",
     "statsmodels>=0.11",
     "tqdm>=4.28.1",
-    "matplotlib>=3.6.*",
-    "bokeh>=2.3.*",
+    "matplotlib>=3.6",
+    "bokeh>=2.4",
     "attrs>=22",
     "pytz",
-    "pyspark",  # TODO: confirm if options required [sql] or [pandas_on_spark]
     "pyyaml",
+    "h5pyd",
+    "pyspark",
 ]

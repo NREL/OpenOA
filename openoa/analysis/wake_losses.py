@@ -6,6 +6,13 @@
 # steps to estimate wake losses during the period of record. Methods for calclating the
 # long-term wake losses using reanalaysis data and quantifying uncertainty are provided as well.
 
+# The general approach for estimating wake losses and quantifying uncertainty using bootstrapping
+# is based in part on the following publications:
+# 1. N. G. Nygaard, "Systematic quantification of wake model uncertainty,"" Proc. EWEA Offshore,
+#    Copenhagen, Denmark, 2015.
+# 2. J. Xue and L. Wang, “Online data-driven approach of yaw error estimation and correction of
+#    horizontal axis wind turbine,” IET J. Eng., 2019(18), 4937–4940, 2019.
+
 from __future__ import annotations
 
 import random

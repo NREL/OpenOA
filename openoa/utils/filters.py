@@ -282,7 +282,7 @@ def bin_filter(
         flag_df |= flag_vals < center - deviation
 
     # Get all instances where the value is True, and reset any values outside the bin limits
-    flag = pd.Series(np.nanmax(flag_df, axis=1), index=flag_df.index)
+    flag = pd.Series(np.nanmax(flag_df, axis=1), index=flag_df.index, dtype="bool")
     flag.loc[(bin_col <= bin_min) | (bin_col > bin_max)] = False
     return flag
 

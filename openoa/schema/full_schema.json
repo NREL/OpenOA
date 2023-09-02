@@ -126,6 +126,11 @@
       "name": "WMET_HorWdDir",
       "units": "deg"
     },
+    "WMET_HorWdDirRel": {
+      "dtype": "float",
+      "name": "WMET_HorWdDirRel",
+      "units": "deg"
+    },
     "WMET_HorWdSpd": {
       "dtype": "float",
       "name": "WMET_HorWdSpd",

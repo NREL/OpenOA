@@ -2,6 +2,8 @@
 All notable changes to this project will be documented in this file. If you make a notable change to the project, please add a line describing the change to the "unreleased" section. The maintainers will make an effort to keep the [Github Releases](https://github.com/NREL/OpenOA/releases) page up to date with this changelog. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
+- A static yaw misalignment analysis class `StaticYawMisalignment` has been added to estimate static yaw misalignment as a function of wind speed for individual wind turbines using turbine-level SCADA data
+  - The new `07_static_yaw_misalignment` example notebook demonstrates the application of the yaw misalignment method using the example La Haute Borne data
 - Added downloader utils module containing functions for downloading generic files from the web, downloading files from Zenodo, and downloading monthly-resolution ERA5 and MERRA2 data
 - Added example notebook "02c_plant_aep_analysis_cubico.ipynb" that demonstrates creating a `PlantData` object and running AEP analysis for two Cubico wind plants (Kelmarsh and Penmanshiel) using open data downloaded from Zenodo
 - Hard-coded reanalyis product abbreviation requirements in the analysis classes have been moved to check that the provided abbreviations match the reanalysis abbreviations used for the `PlantData.reanalysis` dictionary keys.
@@ -22,13 +24,20 @@ All notable changes to this project will be documented in this file. If you make
 - Modern dependency stacks now supported!
   - Upgrading past major versions of Scikit-Learn (1.0) and Pandas (2.0), in conjunction with their own dependencies, caused small divergences in the MonteCarloAEP analysis method with Daily GBM, and the Wake Losses analysis method with UQ. The magnitude of the differences are small compared with the magnitude of the output.
   - In general, OpenOA is now moving away from pinning the maximum dependency version, and will stick to defining minimum dependencies to ensure modern API usage is supported across the software.
+- Updated documentation for users and contributors in the Getting Started section.
 - `utils.filters.bin_filter` was converted from a for loop to a vectorized method
 - `utils.filters.bin_filter` and `utils.timeseries.percent_nan` were converted to be nearly pure NumPy methods operating on NumPy arrays for significant speedups of the TIE analysis method.
 - `analysis.TurbineLongTermGrossEnergy.filter_turbine_data` was cleaned up for a minor gain in efficiency and readability.
 - Analysis class API redesign
+- Better `__repr__` methods for `PlantData` and `PlantMetaData`.
+  - Printing a `PlantData` object now provides a high level statistical summary of each of the
+    datasets in `PlantData`, alongside other key variables.
+  - Printing a `PlantMetaData` object now shows the default or provided column mapping with the
+    associated expected dtypes and units, alongside other key variables.
   - Creating a class will take all of the same parameters, moving all data validation parameters to the front of the arguments for each class, so check your class initializations when changing versions.
   - `AnalysisClass.run()` now takes all of the same arguments as the class initialization, except for those that modify what data will be validated. For example, `MonteCarloAEP` has arguments `reg_temperature` and `reg_wind_direction`, which flag if additional columns should be present in the reanalysis data, therefore modifying the data validation requirements. As such, they will not be able to updated in `run()`, and a new analysis class instance will need to be created.
   - `reanalysis_subset` is being replaced with `reanalysis_products` in all cases to use a consistent naming convention across classes.
+
 
 ## 3.0rc2
 - Everything from release candidate 1

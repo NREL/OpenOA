@@ -1097,10 +1097,12 @@ class MonteCarloAEP(FromDictMixin):
             iav[n] = gross_lt_annual.std() / gross_lt_annual.mean()
             avail_pct[n] = avail_lt_losses
             curt_pct[n] = curt_lt_losses
-            gross_por_sum = gross_por.sum()
-            if isinstance(gross_por_sum, pd.Series):
-                gross_por_sum = gross_por_sum.iloc[0]
-            lt_por_ratio[n] = (gross_lt.sum() / self._run.num_years_windiness) / gross_por_sum
+            gps = (
+                gross_por.sum()
+                if not isinstance(gross_por, (pd.Series, pd.DataFrame))
+                else gross_por.values.sum()
+            )
+            lt_por_ratio[n] = (gross_lt.sum() / self._run.num_years_windiness) / gps
 
         # Calculate mean IAV for gross energy
         iav_avg = iav.mean()

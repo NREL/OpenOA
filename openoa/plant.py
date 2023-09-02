@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 import itertools
 from typing import Callable, Optional, Sequence
 from pathlib import Path
@@ -10,6 +11,8 @@ import numpy as np
 import pandas as pd
 from attrs import field, define
 from pyproj import Transformer
+from tabulate import tabulate
+from IPython.display import Markdown, display
 from shapely.geometry import Point
 
 import openoa.utils.timeseries as ts
@@ -389,7 +392,10 @@ class PlantData:
     """
 
     metadata: PlantMetaData = field(
-        default={}, converter=PlantMetaData.load, on_setattr=[attrs.converters, attrs.validators]
+        default={},
+        converter=PlantMetaData.load,
+        on_setattr=[attrs.converters, attrs.validators],
+        repr=False,
     )
     analysis_type: list[str] | None = field(
         default=None,
@@ -524,6 +530,110 @@ class PlantData:
         else:
             self._errors["missing"].update(self._validate_column_names(category=name))
             self._errors["dtype"].update(self._validate_dtypes(category=name))
+
+    def __generate_text_repr(self):
+        """Generates a text summary of the core internal data."""
+        repr = []
+        for attribute in self.__attrs_attrs__:
+            if not attribute.repr:
+                continue
+
+            name = attribute.name
+            value = self.__getattribute__(name)
+            if name == "analysis_type":
+                repr.append(f"{name}: {value}")
+            elif name in ("scada", "meter", "tower", "status", "curtail"):
+                repr.append(f"\n{name}")
+                repr.append("-" * len(name))
+                if value is None:
+                    repr.append("no data")
+                else:
+                    _repr = value.describe().T
+                    repr.append(
+                        tabulate(_repr, headers=_repr.columns, floatfmt=",.3f", tablefmt="grid")
+                    )
+            elif name == "reanalysis":
+                repr.append(f"\n{name}")
+                repr.append("-" * len(name))
+                if "product" in value:
+                    repr.append("no data")
+                else:
+                    for product, df in value.items():
+                        repr.append(f"\n{product}")
+
+                        _repr = df.describe().T
+                        repr.append(
+                            tabulate(_repr, headers=_repr.columns, floatfmt=",.3f", tablefmt="grid")
+                        )
+            elif name == "asset":
+                repr.append(f"\n{name}")
+                repr.append("-" * len(name))
+                if value is None:
+                    repr.append("no data")
+                else:
+                    value = value.drop(columns=["geometry"])
+                    repr.append(
+                        tabulate(value, headers=value.columns, floatfmt=",.3f", tablefmt="grid")
+                    )
+        return "\n".join(repr)
+
+    def __generate_markdown_repr(self):
+        """Generates a markdown-friendly summary of the core internal data."""
+        new_line = "\n"
+
+        repr = [
+            "PlantData",
+            new_line,
+            "**analysis_type**",
+            *[f"- {el}" for el in self.analysis_type],
+            new_line,
+        ]
+
+        data = (
+            "no data" if self.asset is None else self.asset.drop(columns=["geometry"]).to_markdown()
+        )
+        repr.extend(["**asset**", new_line, data, new_line])
+
+        data = "no data" if self.scada is None else self.scada.describe().T.to_markdown()
+        repr.extend(["**scada**", new_line, data, new_line])
+
+        data = "no data" if self.meter is None else self.meter.describe().T.to_markdown()
+        repr.extend(["**meter**", new_line, data, new_line])
+
+        data = "no data" if self.tower is None else self.tower.describe().T.to_markdown()
+        repr.extend(["**tower**", new_line, data, new_line])
+
+        data = "no data" if self.status is None else self.status.describe().T.to_markdown()
+        repr.extend(["**status**", new_line, data, new_line])
+
+        data = "no data" if self.curtail is None else self.curtail.describe().T.to_markdown()
+        repr.extend(["**curtail**", new_line, data, new_line])
+
+        repr.extend(["**reanalysis**", new_line])
+
+        if "product" in self.reanalysis:
+            repr.append("no data")
+        for name, df in self.reanalysis.items():
+            data = df.describe().T.to_markdown()
+            repr.extend([f"**{name}**", new_line, data, new_line])
+
+        return (new_line).join(repr)
+
+    def __str__(self):
+        """The string summary."""
+        return self.__generate_text_repr()
+
+    def markdown(self):
+        """A markdown-formatted version of the ``__str__``."""
+        display(Markdown(self.__generate_markdown_repr()))
+
+    def __repr__(self):
+        """A context-aware summary generator for printing out the objects."""
+        is_terminal = sys.stderr.isatty()
+        if is_terminal:
+            return self.__generate_text_repr()
+        else:
+            return repr(display(Markdown(self.__generate_markdown_repr())))
 
     def _set_index_columns(self) -> None:
         """Sets the index value for each of the `PlantData` objects that are not `None`."""

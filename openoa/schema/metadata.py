@@ -3,12 +3,15 @@ from __future__ import annotations
 import json
 import itertools
 from copy import deepcopy
+from typing import Any
 from pathlib import Path
 
 import yaml
 import attrs
 import numpy as np
+import pandas as pd
 from attrs import field, define
+from tabulate import tabulate
 
 
 # *************************************************************************
@@ -64,6 +67,26 @@ ANALYSIS_REQUIREMENTS = {
         "reanalysis": {
             "columns": ["WMETR_HorWdSpd", "WMETR_HorWdDir"],
             "freq": _at_least_hourly,
+        },
+        "asset": {
+            "columns": ["latitude", "longitude", "rated_power"],
+            "freq": (),
+        },
+    },
+    "StaticYawMisalignment": {
+        "scada": {
+            "columns": [
+                "asset_id",
+                "WMET_HorWdSpd",
+                "WTUR_W",
+                "WMET_HorWdDirRel",
+                "WROT_BlPthAngVal",
+            ],
+            "freq": _at_least_hourly,
+        },
+        "asset": {
+            "columns": ["rated_power"],
+            "freq": (),
         },
     },
 }
@@ -181,6 +204,60 @@ class FromDictMixin:
         return cls(**kwargs)  # type: ignore
 
 
+def _make_single_repr(name: str, meta_class) -> str:
+    summary = pd.concat(
+        [
+            pd.DataFrame.from_dict(meta_class.col_map, orient="index", columns=["Column Name"]),
+            pd.DataFrame.from_dict(
+                {
+                    k: str(v).replace("<class '", "").replace("'>", "")
+                    for k, v in meta_class.dtypes.items()
+                },
+                orient="index",
+                columns=["Expected Type"],
+            ),
+            pd.DataFrame.from_dict(meta_class.units, orient="index", columns=["Expected Units"]),
+        ],
+        axis=1,
+    )
+
+    if name == "ReanalysisMetaData":
+        repr = []
+    else:
+        repr = ["-" * len(name), name, "-" * len(name) + "\n"]
+
+    if name != "AssetMetaData":
+        repr.append("frequency\n--------")
+        repr.append(meta_class.frequency)
+
+    repr.append("\nMetadata Summary\n----------------")
+    repr.append(tabulate(summary, headers=summary.columns, tablefmt="grid"))
+    return "\n".join(repr)
+
+
+def _make_combined_repr(cls: PlantMetaData) -> str:
+    reanalysis_name = "ReanalysisMetaData"
+    reanalysis_repr = [
+        "-" * len(reanalysis_name),
+        reanalysis_name,
+        "-" * len(reanalysis_name) + "\n",
+    ]
+    for name, meta in cls.reanalysis.items():
+        reanalysis_repr.append(f"\n{name}:\n")
+        reanalysis_repr.append(f"{meta}")
+
+    repr = [
+        cls.scada,
+        cls.meter,
+        cls.tower,
+        cls.status,
+        cls.curtail,
+        cls.asset,
+        "\n".join(reanalysis_repr),
+    ]
+    return "\n\n".join([f"{el}" for el in repr]).replace("\n\n\n", "\n\n")
+
+
 # ***************************************
 # Define the meta data validation classes
 # ***************************************
@@ -204,6 +281,9 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
             This data should be of type: `float`.
         WMET_HorWdDir (str): The measured wind direction, in degrees, column in the SCADA data, by default
             "WMET_HorWdDir". This data should be of type: `float`.
+        WMET_HorWdDirRel (str): The measured wind direction relative to the nacelle orientation
+            (i.e., the wind vane measurement), in degrees, column in the SCADA data, by default
+            "WMET_HorWdDirRel". This data should be of type: `float`.
         WTUR_TurSt (str): The status code column in the SCADA data, by default "WTUR_TurSt". This data
             should be of type: `str`.
         WROT_BlPthAngVal (str): The pitch, in degrees, column in the SCADA data, by default "WROT_BlPthAngVal". This data
@@ -225,6 +305,7 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
     WTUR_W: str = field(default="WTUR_W")
     WMET_HorWdSpd: str = field(default="WMET_HorWdSpd")
     WMET_HorWdDir: str = field(default="WMET_HorWdDir")
+    WMET_HorWdDirRel: str = field(default="WMET_HorWdDirRel")
     WTUR_TurSt: str = field(default="WTUR_TurSt")
     WROT_BlPthAngVal: str = field(default="WROT_BlPthAngVal")
     WMET_EnvTmp: str = field(default="WMET_EnvTmp")
@@ -245,6 +326,7 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
             WTUR_W=float,
             WMET_HorWdSpd=float,
             WMET_HorWdDir=float,
+            WMET_HorWdDirRel=float,
             WTUR_TurSt=str,
             WROT_BlPthAngVal=float,
             WMET_EnvTmp=float,
@@ -259,6 +341,7 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
             WTUR_W="kW",
             WMET_HorWdSpd="m/s",
             WMET_HorWdDir="deg",
+            WMET_HorWdDirRel="deg",
             WTUR_TurSt=None,
             WROT_BlPthAngVal="deg",
             WMET_EnvTmp="C",
@@ -274,12 +357,16 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
             WTUR_W=self.WTUR_W,
             WMET_HorWdSpd=self.WMET_HorWdSpd,
             WMET_HorWdDir=self.WMET_HorWdDir,
+            WMET_HorWdDirRel=self.WMET_HorWdDirRel,
             WTUR_TurSt=self.WTUR_TurSt,
             WROT_BlPthAngVal=self.WROT_BlPthAngVal,
             WMET_EnvTmp=self.WMET_EnvTmp,
             WTUR_SupWh=self.WTUR_SupWh,
         )
         self.col_map_reversed = {v: k for k, v in self.col_map.items()}
+
+    def __repr__(self):
+        return _make_single_repr("SCADAMetaData", self)
 
 
 @define(auto_attribs=True)
@@ -335,6 +422,9 @@ class MeterMetaData(FromDictMixin):  # noqa: F821
             MMTR_SupWh=self.MMTR_SupWh,
         )
 
+    def __repr__(self):
+        return _make_single_repr("MeterMetaData", self)
+
 
 @define(auto_attribs=True)
 class TowerMetaData(FromDictMixin):  # noqa: F821
@@ -387,6 +477,9 @@ class TowerMetaData(FromDictMixin):  # noqa: F821
             time=self.time,
             asset_id=self.asset_id,
         )
+
+    def __repr__(self):
+        return _make_single_repr("TowerMetaData", self)
 
 
 @define(auto_attribs=True)
@@ -459,6 +552,9 @@ class StatusMetaData(FromDictMixin):  # noqa: F821
             status_text=self.status_text,
         )
 
+    def __repr__(self):
+        return _make_single_repr("StatusMetaData", self)
+
 
 @define(auto_attribs=True)
 class CurtailMetaData(FromDictMixin):  # noqa: F821
@@ -517,6 +613,9 @@ class CurtailMetaData(FromDictMixin):  # noqa: F821
             IAVL_ExtPwrDnWh=self.IAVL_ExtPwrDnWh,
             IAVL_DnWh=self.IAVL_DnWh,
         )
+
+    def __repr__(self):
+        return _make_single_repr("CurtailMetaData", self)
 
 
 @define(auto_attribs=True)
@@ -594,6 +693,9 @@ class AssetMetaData(FromDictMixin):  # noqa: F821
             elevation=self.elevation,
             type=self.type,
         )
+
+    def __repr__(self):
+        return _make_single_repr("AssetMetaData", self)
 
 
 def convert_reanalysis(value: dict[str, dict]):
@@ -682,6 +784,9 @@ class ReanalysisMetaData(FromDictMixin):  # noqa: F821
             WMETR_AirDen=self.WMETR_AirDen,
             WMETR_EnvPres=self.WMETR_EnvPres,
         )
+
+    def __repr__(self):
+        return _make_single_repr("ReanalysisMetaData", self)
 
 
 @define(auto_attribs=True)
@@ -879,3 +984,6 @@ class PlantMetaData(FromDictMixin):  # noqa: F821
                 else:
                     frequency[name] = reqs.intersection(req)
         return frequency
+
+    def __repr__(self):
+        return _make_combined_repr(self)

@@ -5,7 +5,6 @@ from pathlib import Path
 
 import yaml
 import pytest
-from examples import project_ENGIE
 from numpy.testing import assert_array_equal
 from pandas.testing import assert_frame_equal
 
@@ -14,8 +13,7 @@ from openoa.schema import ANALYSIS_REQUIREMENTS, ReanalysisMetaData
 from openoa.schema.schema import create_schema, create_analysis_schema
 
 
-example_data_path = Path(__file__).parents[2].resolve() / "examples" / "data" / "la_haute_borne"
-example_data_path_str = str(example_data_path)
+from test.conftest import project_ENGIE, example_data_path_str  # isort: skip
 
 
 class TestPlantData(unittest.TestCase):
@@ -280,6 +278,9 @@ class TestSchema(unittest.TestCase):
             # Check that the correct required columns are pulled
             assert self.wake_schema[key].keys() == dict.keys()
             # Check for matching frequencies
+            if key == "asset":
+                assert "frequency" not in self.wake_schema[key]
+                continue
             assert set(dict["frequency"]) == set(self.wake_schema[key]["frequency"])
 
     def test_combined_schema(self):
@@ -334,14 +335,24 @@ class TestSchema(unittest.TestCase):
                 "IAVL_DnWh": {"name": "IAVL_DnWh", "dtype": "float", "units": "kWh"},
                 "frequency": ["min", "MS", "M", "D", "N", "W", "us", "T", "S", "U", "L", "H", "ms"],
             },
+            "asset": {
+                "latitude": {"name": "latitude", "dtype": "float", "units": "WGS84"},
+                "longitude": {"name": "longitude", "dtype": "float", "units": "WGS84"},
+                "rated_power": {"name": "rated_power", "dtype": "float", "units": "kW"},
+            },
         }
 
         # A direct comparison is not possible because the frequency ordering is different
         # between the two dictionaries.
         # Check for matching required data types
+        print(correct_schema.keys())
+        print(combined_schema.keys())
         assert correct_schema.keys() == combined_schema.keys()
         for key, dict in combined_schema.items():
             # Check that the correct required columns are pulled
             assert correct_schema[key].keys() == dict.keys()
             # Check for matching frequencies
+            if key == "asset":
+                assert "frequenct" not in correct_schema[key]
+                continue
             assert set(dict["frequency"]) == set(correct_schema[key]["frequency"])
