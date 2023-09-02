@@ -10,7 +10,6 @@ from setuptools import setup, find_packages
 
 # Core dependencies
 REQUIRED = [
-    "statsmodels",
     "scikit-learn>=1.0",
     "requests>=2.21.0",
     "eia-python>=1.22",
@@ -26,9 +25,11 @@ REQUIRED = [
     "bokeh>=2.4",
     "attrs>=22",
     "pytz",
-    "pyyaml",
     "h5pyd",
+    "pyyaml",
     "pyspark",
+    "tabulate",
+    "statsmodels",
     "jupyterlab",
     "xarray",
     "dask",

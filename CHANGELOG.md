@@ -28,6 +28,12 @@ All notable changes to this project will be documented in this file. If you make
 - `utils.filters.bin_filter` was converted from a for loop to a vectorized method
 - `utils.filters.bin_filter` and `utils.timeseries.percent_nan` were converted to be nearly pure NumPy methods operating on NumPy arrays for significant speedups of the TIE analysis method.
 - `analysis.TurbineLongTermGrossEnergy.filter_turbine_data` was cleaned up for a minor gain in efficiency and readability.
+- Better `__repr__` methods for `PlantData` and `PlantMetaData`.
+  - Printing a `PlantData` object now provides a high level statistical summary of each of the
+    datasets in `PlantData`, alongside other key variables.
+  - Printing a `PlantMetaData` object now shows the default or provided column mapping with the
+    associated expected dtypes and units, alongside other key variables.
+
 
 ## 3.0rc2
 - Everything from release candidate 1
