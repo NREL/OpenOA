@@ -152,7 +152,7 @@ def subplot_powerRose_array(
             sp_h_frac,
         ]
 
-        powerRose_array(fig, rect, tid, shift, direction)
+        powerRose_array(project, fig, rect, tid, shift, direction)
 
 
 def powerRose_array(project, fig, rect, tid, model_eval, shift=[0], direction=1):
@@ -174,9 +174,9 @@ def powerRose_array(project, fig, rect, tid, model_eval, shift=[0], direction=1)
     ax_carthesian = fig.add_axes(rect, frameon=True)
 
     # plotting the line on the carthesian axis
-    X0 = project.asset.df.loc[project.asset.df.asset_id == tid, "longitude"]
-    Y0 = project.asset.df.loc[project.asset.df.asset_id == tid, "latitude"]
-    XY = project.asset.df.apply(
+    X0 = project.asset.loc[tid, "longitude"]
+    Y0 = project.asset.loc[tid, "latitude"]
+    XY = project.asset.apply(
         lambda r: map_wgs84_to_cartesian(X0, Y0, r["longitude"], r["latitude"]), axis=1
     )
     X = XY.apply(lambda r: r[0])
@@ -217,7 +217,7 @@ def powerRose_array(project, fig, rect, tid, model_eval, shift=[0], direction=1)
 
     # the polar plot
     cm = plt.get_cmap("jet")
-    ax_polar.set_color_cycle([cm(1.0 * i / len(shift)) for i in range(len(shift))])
+    ax_polar.set_prop_cycle(color=[cm(1.0 * i / len(shift)) for i in range(len(shift))])
     for i in range(len(shift)):
         ax_polar.plot(
             (model_eval["winddirection"] * direction + shift[i]) * np.pi / 180,
