@@ -43,9 +43,9 @@ set_styling()
 def map_wgs84_to_cartesian(
     longitude_origin: np.ndarray | float,
     latitude_origin: np.ndarray | float,
-    longitude_points: np.ndarray | float,
-    latitude_points: np.ndarray | float,
-):
+    longitude_points: np.ndarray | pd.Series | float,
+    latitude_points: np.ndarray | pd.Series | float,
+) -> tuple[np.ndarray, np.ndarray] | tuple[pd.Series, pd.Series] | tuple[float, float]:
     """Maps WGS-84 latitude and longitude to local cartesian coordinates using an origin coordinate
     pair.
 
@@ -54,15 +54,14 @@ def map_wgs84_to_cartesian(
             coordinate system origin.
         latitude_origin(:obj:`numpy array of shape (1, ) | float`): latitude of cartesian
             coordinate system origin.
-        longitude_points(:obj:`numpy array of shape (n, ) | float`): longitude(s) of points of
-            interest.
-        latitude_points(:obj:`numpy array of shape (n, ) | float`): latitude(s) of points of
-            interest.
+        longitude_points(:obj:`numpy array of shape (n, ) | pd.Series | float`): longitude(s) of
+            points of interest.
+        latitude_points(:obj:`numpy array of shape (n, ) | pd.Series | float`): latitude(s) of
+            points of interest.
 
     Returns:
-        Tuple representing cartesian coordinates (x, y); if arguments entered as scalars, returns
-        scalars in tuple, if arguments entered as numpy arrays, returns numpy arrays each of shape
-        (n,1)
+        Tuple representing cartesian coordinates (x, y); returned as a tuple of numpy arrays,
+        pandas Series, or scalars, dependent upon the originally passed data.
 
     """
     R = 6371e3  # Earth radius, in meters
