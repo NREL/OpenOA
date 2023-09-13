@@ -40,37 +40,53 @@ def set_styling() -> None:
 set_styling()
 
 
-def coordinateMapping(lon1, lat1, lon2, lat2):
-    """Map latitude and longitude to  local cartesian coordinates
+def map_wgs84_to_cartesian(
+    longitude_origin: np.ndarray | float,
+    latitude_origin: np.ndarray | float,
+    longitude_points: np.ndarray | float,
+    latitude_points: np.ndarray | float,
+):
+    """Maps WGS-84 latitude and longitude to local cartesian coordinates using an origin coordinate
+    pair.
 
     Args:
-        lon1(:obj:`numpy array of shape (1, ) or scalar`): longitude of cartesian coordinate system origin
-        lat1(:obj:`numpy array of shape (1, ) or scalar`): latitude of cartesian coordinate system origin
-        lon2(:obj:`numpy array of shape (n, ) or scalar`): longitude(s) of points of interest
-        lat2(:obj:`numpy array of shape (n, ) or scalar`): latitude(s) of points of interest
+        longitude_origin(:obj:`numpy array of shape (1, ) | float`): longitude of cartesian
+            coordinate system origin.
+        latitude_origin(:obj:`numpy array of shape (1, ) | float`): latitude of cartesian
+            coordinate system origin.
+        longitude_points(:obj:`numpy array of shape (n, ) | float`): longitude(s) of points of
+            interest.
+        latitude_points(:obj:`numpy array of shape (n, ) | float`): latitude(s) of points of
+            interest.
 
     Returns:
-        Tuple representing cartesian coordinates (x, y); if arguments entered as scalars, returns scalars in tuple,
-        if arguments entered as numpy arrays, returns numpy arrays each of shape (n,1)
+        Tuple representing cartesian coordinates (x, y); if arguments entered as scalars, returns
+        scalars in tuple, if arguments entered as numpy arrays, returns numpy arrays each of shape
+        (n,1)
 
     """
     R = 6371e3  # Earth radius, in meters
 
-    delta_phi = np.radians(lat2 - lat1)
-    delta_lambda = np.radians(lon2 - lon1)
+    delta_phi = np.radians(latitude_points - latitude_origin)
+    delta_lambda = np.radians(longitude_points - longitude_origin)
 
-    phi1 = np.radians(lat1)
-    phi2 = np.radians(lat2)
-    lambda1 = np.radians(lon1)
-    lambda2 = np.radians(lon2)
+    phi_origin = np.radians(latitude_origin)
+    phi_points = np.radians(latitude_points)
+    lambda_origin = np.radians(longitude_origin)
+    lambda_points = np.radians(longitude_points)
 
-    a = np.sin(delta_phi / 2) ** 2 + np.cos(phi1) * np.cos(phi2) * np.sin(delta_lambda / 2) ** 2
+    a = (
+        np.sin(delta_phi / 2) ** 2
+        + np.cos(phi_origin) * np.cos(phi_points) * np.sin(delta_lambda / 2) ** 2
+    )
     c = 2 * np.arctan2(np.sqrt(a), np.sqrt(1 - a))
 
     rho = R * c
 
-    a = np.sin(lambda2 - lambda1) * np.cos(phi2)
-    b = np.cos(phi1) * np.sin(phi2) - np.sin(phi1) * np.cos(phi2) * np.cos(lambda2 - lambda1)
+    a = np.sin(lambda_points - lambda_origin) * np.cos(phi_points)
+    b = np.cos(phi_origin) * np.sin(phi_points) - np.sin(phi_origin) * np.cos(phi_points) * np.cos(
+        lambda_points - lambda_origin
+    )
 
     theta = -1 * np.arctan2(a, b) + np.pi / 2
 
@@ -201,7 +217,7 @@ def powerRose_array(project, fig, rect, tid, model_eval, shift=[0], direction=1)
     X0 = project.asset.df.loc[project.asset.df.asset_id == tid, "longitude"]
     Y0 = project.asset.df.loc[project.asset.df.asset_id == tid, "latitude"]
     XY = project.asset.df.apply(
-        lambda r: coordinateMapping(X0, Y0, r["longitude"], r["latitude"]), axis=1
+        lambda r: map_wgs84_to_cartesian(X0, Y0, r["longitude"], r["latitude"]), axis=1
     )
     X = XY.apply(lambda r: r[0])
     Y = XY.apply(lambda r: r[1])
