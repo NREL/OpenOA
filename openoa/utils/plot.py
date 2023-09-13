@@ -18,6 +18,8 @@ from bokeh.palettes import Category10, viridis
 from bokeh.plotting import figure
 from matplotlib.ticker import StrMethodFormatter
 
+from openoa import PlantData
+
 
 NDArrayFloat = npt.NDArray[np.float64]
 
@@ -41,11 +43,11 @@ set_styling()
 
 
 def map_wgs84_to_cartesian(
-    longitude_origin: np.ndarray | float,
-    latitude_origin: np.ndarray | float,
-    longitude_points: np.ndarray | pd.Series | float,
-    latitude_points: np.ndarray | pd.Series | float,
-) -> tuple[np.ndarray, np.ndarray] | tuple[pd.Series, pd.Series] | tuple[float, float]:
+    longitude_origin: NDArrayFloat | float,
+    latitude_origin: NDArrayFloat | float,
+    longitude_points: NDArrayFloat | pd.Series | float,
+    latitude_points: NDArrayFloat | pd.Series | float,
+) -> tuple[NDArrayFloat, NDArrayFloat] | tuple[pd.Series, pd.Series] | tuple[float, float]:
     """Maps WGS-84 latitude and longitude to local cartesian coordinates using an origin coordinate
     pair.
 
@@ -93,47 +95,6 @@ def map_wgs84_to_cartesian(
     y = rho * np.sin(theta)
 
     return (x, y)
-
-
-def plot_array(project):
-    """Plot locations of turbines and met towers, with labels, on latitude/longitude grid
-
-    Args:
-        project(:obj:`plant object`): project to be plotted
-
-    Returns:
-        (None)
-    """
-    # Plot
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-
-    asset_groups = project.asset.df.groupby("type")
-
-    turbines = asset_groups.get_group("turbine")
-    X = turbines["longitude"]
-    Y = turbines["latitude"]
-    labels = turbines["asset_id"].tolist()
-
-    ax.scatter(X, Y, marker="o", color="k")
-    for label, x, y in zip(labels, X, Y):
-        ax.annotate(label, xy=(x, y), xytext=(-8, 5), textcoords="offset points", fontsize=6)
-
-    towers = asset_groups.get_group("tower")
-    X = towers["longitude"]
-    Y = towers["latitude"]
-    labels = towers["asset_id"].tolist()
-
-    ax.scatter(X, Y, marker="s", color="r")
-    for label, x, y in zip(labels, X, Y):
-        ax.annotate(
-            label, xy=(x, y), xytext=(-8, -10), textcoords="offset points", fontsize=6, color="r"
-        )
-
-    ax.set_xlabel("Longitude, [deg]")
-    ax.set_ylabel("Latitude, [deg]")
-
-    del X, Y, labels, x, y, label
 
 
 def subplot_powerRose_array(
