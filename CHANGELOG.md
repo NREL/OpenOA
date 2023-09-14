@@ -34,6 +34,21 @@ All notable changes to this project will be documented in this file. If you make
   - Printing a `PlantMetaData` object now shows the default or provided column mapping with the
     associated expected dtypes and units, alongside other key variables.
 
+### Deprecations
+
+- The following methods have been removed from the plotting library, `utils/plot.py` given that they have either been replaced with newer methods or have been unused and unmaintained for long enough that their original intent is lost. If you still use any of these, please let us know in the Issues, and we'll be happy to bring it up to date:
+  - `plot_array`
+  - `subplot_powerRose_array`
+  - `powerRose_array`
+  - `subplot_c1_c2`
+  - `subplot_c1_c2_flagged`
+  - `subplot_c1_c2_raw_flagged`
+  - `subplt_power_curve`
+  - `turbine_polar_line`
+  - `turbine_polar_4Dscatter`
+  - `turbine_polar_contourf`
+  - `turbine_polar_contour`
+
 
 ## 3.0rc2
 - Everything from release candidate 1
