@@ -296,10 +296,15 @@ def plot_by_id(
     id_col: str,
     x_axis: str,
     y_axis: str,
+    max_cols: int = 4,
+    xlim: tuple[float, float] = (None, None),
+    ylim: tuple[float, float] = (None, None),
+    xlabel: str | None = None,
+    ylabel: str | None = None,
     return_fig: bool = False,
+    figure_kwargs: dict = {},
+    plot_kwargs: dict = {},
 ) -> None:
-    # TODO: assume you do reset_index(drop=False) for a dataframe to pull this out given
-    # existing usage
     """Function to plot any two fields against each other in a dataframe with unique plots for each
     asset_id.
 
@@ -308,8 +313,21 @@ def plot_by_id(
         id_col(:obj:`str`): The asset_id column (or index column) in `df`.
         x_axis(:obj:`str`): Independent variable to plot, should align with a column in `df`.
         y_axis(:obj:`str`): Dependent variable to plot, should align with a column in `df`.
-        return_fig(:obj:`bool`): Indicator for if the figure and axes objects should be returned,
-            by default False.
+        max_cols(:obj:`int`, optional): The maximum number of columns in the plot. Defaults to 4.
+        xlim(:obj:`tuple[float, float]`, optional): A tuple of the x-axis (min, max) values.
+            Defaults to (None, None).
+        ylim(:obj:`tuple[float, float]`, optional): A tuple of the y-axis (min, max) values.
+            Defaults to (None, None).
+        xlabel(:obj:`str` | None): The x-axis label, if None, then :py:attr:`x_axis` will be used.
+            Defaults to None.
+        ylabel(:obj:`str` | None): The y-axis label, if None, then :py:attr:`x_axis` will be used.
+            Defaults to None.
+        return_fig(:obj:`bool`, optional): Set to True to return the figure and axes objects,
+            otherwise set to False. Defaults to False.
+        plot_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be passed
+            to `ax.scatter`. Defaults to {}.
+        legend_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be passed to
+            `ax.legend`. Defaults to {}.
 
     Returns:
         (:obj:`None`)
@@ -335,25 +353,31 @@ def plot_by_id(
 
     # Create the plotting parameters
     id_arrary = df.index.get_level_values(id_col).unique()
-    max_cols = 4
     num_id = id_arrary.size
     num_rows = int(np.ceil(num_id / max_cols))
 
+    # Set the plotting defaults, if None are set
+    xlabel = x_axis if xlabel is None else xlabel
+    ylabel = y_axis if ylabel is None else ylabel
+    figure_kwargs.setdefault("figsize", (15, num_rows * 5))
+    plot_kwargs.setdefault("s", 5)
+
     # Create the plot
-    fig, axes_list = plt.subplots(
-        num_rows, max_cols, sharex=True, sharey=True, figsize=(15, num_rows * 5)
-    )
+    fig, axes_list = plt.subplots(num_rows, max_cols, sharex=True, sharey=True, **figure_kwargs)
     for i, (t_id, ax) in enumerate(zip(id_arrary, axes_list.flatten())):
         scada = df.loc[t_id]
-        ax.scatter(scada[x_axis], scada[y_axis], s=5)
+        ax.scatter(scada[x_axis], scada[y_axis], **plot_kwargs)
 
         ax.set_title(t_id)
 
         # Only add axis labels for the bottom row and leftmost column
-        if np.floor(i / 4) + 1 == num_rows:
-            ax.set_xlabel(x_axis)
-        if i % 4 == 0:
-            ax.set_ylabel(y_axis)
+        if np.floor(i / max_cols) + 1 == num_rows:
+            ax.set_xlabel(xlabel)
+        if i % max_cols == 0:
+            ax.set_ylabel(ylabel)
+
+        ax.set_xlim(xlim)
+        ax.set_ylim(ylim)
 
     # Delete the extra axes
     num_axes = axes_list.size
@@ -601,7 +625,7 @@ def plot_plant_energy_losses_timeseries(
         figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
             that are passed to `plt.figure()`. Defaults to {}.
         plot_kwargs (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
-            `ax.scatter()`. Defaults to {}.
+            `ax.plot()`. Defaults to {}.
         legend_kwargs (:obj:`dict`, optional): Additional legend keyword arguments that are passed to
             `ax.legend()`. Defaults to {}.
 
