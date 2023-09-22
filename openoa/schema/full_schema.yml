@@ -59,6 +59,18 @@ tower:
     name: asset_id
     dtype: str
     units: null
+  WMET_HorWdSpd:
+    name: WMET_HorWdSpd
+    dtype: float
+    units: m/s
+  WMET_HorWdDir:
+    name: WMET_HorWdDir
+    dtype: float
+    units: deg
+  WMET_EnvTmp:
+    name: WMET_EnvTmp
+    dtype: float
+    units: C
   frequency: 10T
 status:
   time:

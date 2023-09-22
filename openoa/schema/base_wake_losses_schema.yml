@@ -11,19 +11,15 @@ scada:
     name: WMET_HorWdSpd
     dtype: float
     units: m/s
-  WMET_HorWdDir:
-    name: WMET_HorWdDir
-    dtype: float
-    units: deg
   frequency:
-  - T
-  - min
+  - us
   - ms
   - H
+  - min
+  - T
   - N
-  - us
-  - L
   - U
+  - L
   - S
 asset:
   latitude:
@@ -48,12 +44,12 @@ reanalysis:
     dtype: float
     units: deg
   frequency:
-  - T
-  - min
+  - us
   - ms
   - H
+  - min
+  - T
   - N
-  - us
-  - L
   - U
+  - L
   - S

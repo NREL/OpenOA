@@ -11,38 +11,26 @@ scada:
     name: WMET_HorWdSpd
     dtype: float
     units: m/s
-  frequency:
-  - us
-  - L
-  - ms
-  - H
-  - min
-  - T
-  - N
-  - U
-  - D
-  - S
-reanalysis:
-  WMETR_HorWdSpd:
-    name: WMETR_HorWdSpd
-    dtype: float
-    units: m/s
-  WMETR_HorWdDir:
-    name: WMETR_HorWdDir
+  WMET_HorWdDirRel:
+    name: WMET_HorWdDirRel
     dtype: float
     units: deg
-  WMETR_AirDen:
-    name: WMETR_AirDen
+  WROT_BlPthAngVal:
+    name: WROT_BlPthAngVal
     dtype: float
-    units: kg/m^3
+    units: deg
   frequency:
   - us
-  - L
   - ms
   - H
   - min
   - T
   - N
   - U
-  - D
+  - L
   - S
+asset:
+  rated_power:
+    name: rated_power
+    dtype: float
+    units: kW

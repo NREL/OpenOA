@@ -1,49 +1,26 @@
 {
   "asset": {
-    "latitude": {
-      "dtype": "float",
-      "name": "latitude",
-      "units": "WGS84"
-    },
-    "longitude": {
-      "dtype": "float",
-      "name": "longitude",
-      "units": "WGS84"
-    },
     "rated_power": {
       "dtype": "float",
       "name": "rated_power",
       "units": "kW"
     }
   },
-  "reanalysis": {
-    "WMETR_HorWdDir": {
+  "scada": {
+    "WMET_HorWdDirRel": {
       "dtype": "float",
-      "name": "WMETR_HorWdDir",
+      "name": "WMET_HorWdDirRel",
       "units": "deg"
     },
-    "WMETR_HorWdSpd": {
-      "dtype": "float",
-      "name": "WMETR_HorWdSpd",
-      "units": "m/s"
-    },
-    "frequency": [
-      "us",
-      "ms",
-      "H",
-      "min",
-      "T",
-      "N",
-      "U",
-      "L",
-      "S"
-    ]
-  },
-  "scada": {
     "WMET_HorWdSpd": {
       "dtype": "float",
       "name": "WMET_HorWdSpd",
       "units": "m/s"
+    },
+    "WROT_BlPthAngVal": {
+      "dtype": "float",
+      "name": "WROT_BlPthAngVal",
+      "units": "deg"
     },
     "WTUR_W": {
       "dtype": "float",

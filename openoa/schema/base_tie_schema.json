@@ -16,15 +16,15 @@
       "units": "m/s"
     },
     "frequency": [
-      "D",
+      "us",
       "L",
-      "min",
       "ms",
       "H",
-      "N",
-      "us",
+      "min",
       "T",
+      "N",
       "U",
+      "D",
       "S"
     ]
   },
@@ -45,15 +45,15 @@
       "units": null
     },
     "frequency": [
-      "D",
+      "us",
       "L",
-      "min",
       "ms",
       "H",
-      "N",
-      "us",
+      "min",
       "T",
+      "N",
       "U",
+      "D",
       "S"
     ]
   }
