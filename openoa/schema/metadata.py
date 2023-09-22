@@ -61,7 +61,7 @@ ANALYSIS_REQUIREMENTS = {
     },
     "WakeLosses": {
         "scada": {
-            "columns": ["asset_id", "WMET_HorWdSpd", "WMET_HorWdDir", "WTUR_W"],
+            "columns": ["asset_id", "WMET_HorWdSpd", "WTUR_W"],
             "freq": _at_least_hourly,
         },
         "reanalysis": {
@@ -95,6 +95,8 @@ ANALYSIS_REQUIREMENTS = {
 ANALYSIS_REQUIREMENTS["MonteCarloAEP-temp"] = deepcopy(ANALYSIS_REQUIREMENTS["MonteCarloAEP"])
 ANALYSIS_REQUIREMENTS["MonteCarloAEP-wd"] = deepcopy(ANALYSIS_REQUIREMENTS["MonteCarloAEP"])
 ANALYSIS_REQUIREMENTS["MonteCarloAEP-temp-wd"] = deepcopy(ANALYSIS_REQUIREMENTS["MonteCarloAEP"])
+ANALYSIS_REQUIREMENTS["WakeLosses-scada"] = deepcopy(ANALYSIS_REQUIREMENTS["WakeLosses"])
+ANALYSIS_REQUIREMENTS["WakeLosses-tower"] = deepcopy(ANALYSIS_REQUIREMENTS["WakeLosses"])
 
 ANALYSIS_REQUIREMENTS["MonteCarloAEP-temp"]["reanalysis"]["columns"].extend(["WMETR_EnvTmp"])
 ANALYSIS_REQUIREMENTS["MonteCarloAEP-temp"]["reanalysis"]["columns"].extend(
@@ -103,6 +105,12 @@ ANALYSIS_REQUIREMENTS["MonteCarloAEP-temp"]["reanalysis"]["columns"].extend(
 ANALYSIS_REQUIREMENTS["MonteCarloAEP-temp"]["reanalysis"]["columns"].extend(
     ["WMETR_EnvTmp", "WMETR_HorWdSpdU", "WMETR_HorWdSpdV"]
 )
+ANALYSIS_REQUIREMENTS["WakeLosses-scada"]["scada"]["columns"].append("WMET_HorWdDir")
+ANALYSIS_REQUIREMENTS["WakeLosses-tower"]["tower"] = {
+    "columns": ["asset_id", "WMET_HorWdSpd", "WTUR_W"],
+    "freq": _at_least_hourly,
+}
+["columns"].append("WMET_HorWdDir")
 
 
 def determine_analysis_requirements(
@@ -438,6 +446,12 @@ class TowerMetaData(FromDictMixin):  # noqa: F821
             Additional columns describing the datetime stamps are: `frequency`
         asset_id (str): The met tower identifier column in the met tower data, by default "asset_id". This data
             should be of type: `str`.
+        WMET_HorWdSpd (str): The measured windspeed, in m/s, column in the SCADA data, by default "WMET_HorWdSpd".
+            This data should be of type: `float`.
+        WMET_HorWdDir (str): The measured wind direction, in degrees, column in the SCADA data, by default
+            "WMET_HorWdDir". This data should be of type: `float`.
+        WMET_EnvTmp (str): The temperature column in the SCADA data, by default "WMET_EnvTmp". This
+            data should be of type: `float`.
         frequency (str): The frequency of `time` in the met tower data, by default "10T". The input
             should align with the `Pandas frequency offset aliases`_.
 
@@ -449,6 +463,9 @@ class TowerMetaData(FromDictMixin):  # noqa: F821
     # DataFrame columns
     time: str = field(default="time")
     asset_id: str = field(default="asset_id")
+    WMET_HorWdSpd: str = field(default="WMET_HorWdSpd")
+    WMET_HorWdDir: str = field(default="WMET_HorWdDir")
+    WMET_EnvTmp: str = field(default="WMET_EnvTmp")
 
     # Data about the columns
     frequency: str = field(default="10T")
@@ -461,6 +478,9 @@ class TowerMetaData(FromDictMixin):  # noqa: F821
         default=dict(
             time=np.datetime64,
             asset_id=str,
+            WMET_HorWdSpd=float,
+            WMET_HorWdDir=float,
+            WMET_EnvTmp=float,
         ),
         init=False,  # don't allow for user input
     )
@@ -468,6 +488,9 @@ class TowerMetaData(FromDictMixin):  # noqa: F821
         default=dict(
             time="datetim64[ns]",
             asset_id=None,
+            WMET_HorWdSpd="m/s",
+            WMET_HorWdDir="deg",
+            WMET_EnvTmp="C",
         ),
         init=False,  # don't allow for user input
     )

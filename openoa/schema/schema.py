@@ -127,6 +127,8 @@ if __name__ == "__main__":
     base_wake_schema = create_analysis_schema("WakeLosses")
     base_tie_schema = create_analysis_schema("TurbineLongTermGrossEnergy")
     base_electric_schema = create_analysis_schema("ElectricalLosses")
+    base_wake_schema = create_analysis_schema("WakeLosses")
+    base_yaw_misalignment_schema = create_analysis_schema("StaticYawMisalignment")
 
     # Save the analysis schemass
     with open(HERE / "full_schema.yml", "w") as f:
@@ -153,3 +155,13 @@ if __name__ == "__main__":
         yaml.dump(base_electric_schema, f, default_flow_style=False, sort_keys=False)
     with open(HERE / "base_electrical_losses_schema.json", "w") as f:
         json.dump(base_electric_schema, f, sort_keys=False, indent=2)
+
+    with open(HERE / "base_wake_losses_schema.yml", "w") as f:
+        yaml.dump(base_wake_schema, f, default_flow_style=False, sort_keys=False)
+    with open(HERE / "base_wake_losses_schema.json", "w") as f:
+        json.dump(base_wake_schema, f, sort_keys=False, indent=2)
+
+    with open(HERE / "base_yaw_misalignmental_losses_schema.yml", "w") as f:
+        yaml.dump(base_yaw_misalignment_schema, f, default_flow_style=False, sort_keys=False)
+    with open(HERE / "base_yaw_misalignmental_losses_schema.json", "w") as f:
+        json.dump(base_yaw_misalignment_schema, f, sort_keys=False, indent=2)
