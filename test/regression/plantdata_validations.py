@@ -182,7 +182,9 @@ class TestPlantDatPartial(unittest.TestCase):
             cls.curtail_df,
             cls.asset_df,
             cls.reanalysis_dict,
-        ) = project_ENGIE.prepare(path=example_data_path_str, return_value="dataframes")
+        ) = project_ENGIE.prepare(
+            path=example_data_path_str, return_value="dataframes", use_cleansed=False
+        )
 
     def setUp(self):
         """
@@ -291,6 +293,7 @@ class TestSchema(unittest.TestCase):
             "MonteCarloAEP",
             "TurbineLongTermGrossEnergy",
             "WakeLosses",
+            "StaticYawMisalignment",
         ]
         combined_schema = create_analysis_schema(analysis_types=analysis_types)
 
@@ -299,7 +302,8 @@ class TestSchema(unittest.TestCase):
                 "asset_id": {"name": "asset_id", "dtype": "str", "units": None},
                 "WTUR_W": {"name": "WTUR_W", "dtype": "float", "units": "kW"},
                 "WMET_HorWdSpd": {"name": "WMET_HorWdSpd", "dtype": "float", "units": "m/s"},
-                "WMET_HorWdDir": {"name": "WMET_HorWdDir", "dtype": "float", "units": "deg"},
+                "WMET_HorWdDirRel": {"name": "WMET_HorWdDirRel", "dtype": "float", "units": "deg"},
+                "WROT_BlPthAngVal": {"name": "WROT_BlPthAngVal", "dtype": "float", "units": "deg"},
                 "frequency": [
                     "H",
                     "S",
@@ -347,8 +351,6 @@ class TestSchema(unittest.TestCase):
         # A direct comparison is not possible because the frequency ordering is different
         # between the two dictionaries.
         # Check for matching required data types
-        print(correct_schema.keys())
-        print(combined_schema.keys())
         assert correct_schema.keys() == combined_schema.keys()
         for key, dict in combined_schema.items():
             # Check that the correct required columns are pulled
