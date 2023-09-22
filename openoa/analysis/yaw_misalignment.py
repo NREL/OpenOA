@@ -154,7 +154,7 @@ class StaticYawMisalignment(FromDictMixin):
     ws_bin_width: float = field(default=1.0, converter=float)
     vane_bin_width: float = field(default=1.0, converter=float)
     min_vane_bin_count: int = field(default=100, validator=attrs.validators.instance_of(int))
-    max_abs_vane_angle = field(default=25.0, converter=float)
+    max_abs_vane_angle: float = field(default=25.0, converter=float)
     pitch_thresh: float = field(default=0.5, converter=float)
     num_power_bins: int = field(default=25, validator=attrs.validators.instance_of(int))
     min_power_filter: float = field(
@@ -645,14 +645,54 @@ class StaticYawMisalignment(FromDictMixin):
 
 __defaults_UQ = StaticYawMisalignment.__attrs_attrs__.UQ.default
 __defaults_turbine_ids = StaticYawMisalignment.__attrs_attrs__.turbine_ids.default
+__defaults_num_sim = StaticYawMisalignment.__attrs_attrs__.num_sim.default
+__defaults_ws_bins = StaticYawMisalignment.__attrs_attrs__.ws_bins.default
+__defaults_ws_bin_width = StaticYawMisalignment.__attrs_attrs__.ws_bin_width.default
+__defaults_vane_bin_width = StaticYawMisalignment.__attrs_attrs__.vane_bin_width.default
+__defaults_min_vane_bin_count = StaticYawMisalignment.__attrs_attrs__.min_vane_bin_count.default
+__defaults_max_abs_vane_angle = StaticYawMisalignment.__attrs_attrs__.max_abs_vane_angle.default
+__defaults_pitch_thresh = StaticYawMisalignment.__attrs_attrs__.pitch_thresh.default
+__defaults_num_power_bins = StaticYawMisalignment.__attrs_attrs__.num_power_bins.default
+__defaults_min_power_filter = StaticYawMisalignment.__attrs_attrs__.min_power_filter.default
+__defaults_max_power_filter = StaticYawMisalignment.__attrs_attrs__.max_power_filter.default
+__defaults_power_bin_mad_thresh = StaticYawMisalignment.__attrs_attrs__.power_bin_mad_thresh.default
+__defaults_use_power_coeff = StaticYawMisalignment.__attrs_attrs__.use_power_coeff.default
 
 
 def create_StaticYawMisalignment(
     project: PlantData,
     turbine_ids: list[str] = __defaults_turbine_ids,
     UQ: bool = __defaults_UQ,
+    num_sim: int = __defaults_num_sim,
+    ws_bins: list[float] = __defaults_ws_bins,
+    ws_bin_width: float = __defaults_ws_bin_width,
+    vane_bin_width: float = __defaults_vane_bin_width,
+    min_vane_bin_count: int = __defaults_min_vane_bin_count,
+    max_abs_vane_angle: float = __defaults_max_abs_vane_angle,
+    pitch_thresh: float = __defaults_pitch_thresh,
+    num_power_bins: int = __defaults_num_power_bins,
+    min_power_filter: float = __defaults_min_power_filter,
+    max_power_filter: float | tuple[float, float] = __defaults_max_power_filter,
+    power_bin_mad_thresh: float | tuple[float, float] = __defaults_power_bin_mad_thresh,
+    use_power_coeff: bool = __defaults_use_power_coeff,
 ) -> StaticYawMisalignment:
-    return StaticYawMisalignment(project, turbine_ids, UQ)
+    return StaticYawMisalignment(
+        project=project,
+        turbine_ids=turbine_ids,
+        UQ=UQ,
+        num_sim=num_sim,
+        ws_bins=ws_bins,
+        ws_bin_width=ws_bin_width,
+        vane_bin_width=vane_bin_width,
+        min_vane_bin_count=min_vane_bin_count,
+        max_abs_vane_angle=max_abs_vane_angle,
+        pitch_thresh=pitch_thresh,
+        num_power_bins=num_power_bins,
+        min_power_filter=min_power_filter,
+        max_power_filter=max_power_filter,
+        power_bin_mad_thresh=power_bin_mad_thresh,
+        use_power_coeff=use_power_coeff,
+    )
 
 
 create_StaticYawMisalignment.__doc__ = StaticYawMisalignment.__doc__
