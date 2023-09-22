@@ -37,6 +37,7 @@ from openoa.plant import PlantData
 from openoa.utils import plot, filters
 from openoa.schema import FromDictMixin
 from openoa.logging import logging, logged_method_call
+from openoa.analysis._analysis_validators import validate_UQ_input, validate_half_closed_0_1_right
 
 
 logger = logging.getLogger(__name__)
@@ -102,15 +103,72 @@ class StaticYawMisalignment(FromDictMixin):
         UQ (:obj:`bool`, optional): Dertermines whether to perform uncertainty quantification using
             Monte Carlo simulation (True) or provide a single yaw misalignment estimate (False).
             Defaults to True.
+        num_sim (int, optional): Number of Monte Carlo iterations to perform. Only used if
+            :py:attr:`UQ` = True. Defaults to 100.
+        ws_bins (float, optional): Wind speed bin centers for which yaw misalignment detection
+            will be performed (m/s). Defaults to [5.0, 6.0, 7.0, 8.0].
+        ws_bin_width (float, optional): Wind speed bin size to use when detecting yaw
+            misalignment for individual wind seed bins (m/s). Defaults to 1 m/s.
+        vane_bin_width (float, optional): Wind vane bin size to use when detecting yaw
+            misalignment (degrees). Defaults to 1 degree.
+        min_vane_bin_count (int, optional): Minimum number of data points needed in a wind vane
+            bin for it to be included when detecting yaw misalignment. Defaults to 100.
+        max_abs_vane_angle (float, optional): Maximum absolute wind vane angle considered when
+            detecting yaw misalignment. Defaults to 25 degrees.
+        pitch_thresh (float, optional): Maximum blade pitch angle considered when detecting yaw
+            misalignment. Defaults to 0.5 degrees.
+        num_power_bins (int, optional): Number of power bins to use for power curve bin
+            filtering to remove outlier data points. Defaults to 25.
+        min_power_filter (float, optional): Minimum power threshold, defined as a fraction
+            of rated power, to which the power curve bin filter should be applied. Defaults to
+            0.01.
+        max_power_filter (tuple | float, optional): Maximum power threshold, defined as a fraction
+            of rated power, to which the power curve bin filter should be applied. This should be
+            a tuple when :py:attr:`UQ` = True (values are Monte-Carlo sampled within the specified
+            range) or a single value when :py:attr:`UQ` = False. If undefined (None), a value of
+            0.95 will be used if :py:attr:`UQ` = False and values of (0.92, 0.98) will be used if
+            :py:attr:`UQ` = True. Defaults to None.
+        power_bin_mad_thresh (tuple | float, optional): The filter threshold for each power bin
+            used to identify abnormal operation, expressed as the number of median absolute
+            deviations from the median wind speed. This should be a tuple when :py:attr:`UQ`
+            = True (values are Monte-Carlo sampled within the specified range) or a single value
+            when :py:attr:`UQ` = False. If undefined (None), a value of 7.0 will be used if
+            :py:attr:`UQ` = False and values of (4.0, 13.0) will be used if :py:attr:`UQ` = True.
+            Defaults to None.
+        use_power_coeff (bool, optional): If True, power performance as a function of wind vane
+            angle will be quantified by normalizing power by the cube of the wind speed,
+            approximating the power coefficient. If False, only power will be used. Defaults to False.
     """
 
     plant: PlantData = field(validator=attrs.validators.instance_of(PlantData))
     turbine_ids: list[str] = field(default=None)
     UQ: bool = field(default=True, converter=bool)
+    num_sim: int = field(default=100, converter=int)
+    ws_bins: list[float] = field(
+        default=[5.0, 6.0, 7.0, 8.0],
+        validator=attrs.validators.deep_iterable(
+            iterable_validator=attrs.validators.instance_of(list),
+            member_validator=attrs.validators.instance_of((int, float)),
+        ),
+    )
+    ws_bin_width: float = field(default=1.0, converter=float)
+    vane_bin_width: float = field(default=1.0, converter=float)
+    min_vane_bin_count: int = field(default=100, validator=attrs.validators.instance_of(int))
+    max_abs_vane_angle = field(default=25.0, converter=float)
+    pitch_thresh: float = field(default=0.5, converter=float)
+    num_power_bins: int = field(default=25, validator=attrs.validators.instance_of(int))
+    min_power_filter: float = field(
+        default=0.01, converter=float, validator=validate_half_closed_0_1_right
+    )
+    max_power_filter: float | tuple[float, float] = field(
+        default=(0.92, 0.98), validator=(validate_UQ_input, validate_half_closed_0_1_right)
+    )
+    power_bin_mad_thresh: float | tuple[float, float] = field(
+        default=(4.0, 10.0), validator=validate_UQ_input
+    )
+    use_power_coeff: bool = field(default=False, validator=attrs.validators.instance_of(bool))
 
     # Internally created attributes need to be given a type before usage
-    num_sim: int = field(init=False)
-    ws_bins: list[float] = field(init=False)
     inputs: pd.DataFrame = field(init=False)
     power_values_vane_ws: NDArrayFloat = field(init=False)
     yaw_misalignment_ws: NDArrayFloat = field(init=False)
@@ -123,16 +181,6 @@ class StaticYawMisalignment(FromDictMixin):
     yaw_misalignment_avg_ws: NDArrayFloat = field(init=False)
     yaw_misalignment_std_ws: NDArrayFloat = field(init=False)
     yaw_misalignment_95ci_ws: NDArrayFloat = field(init=False)
-    _ws_bin_width: float = field(init=False)
-    _vane_bin_width: float = field(init=False)
-    _min_vane_bin_count: int = field(init=False)
-    _max_abs_vane_angle: float = field(init=False)
-    _pitch_thresh: float = field(init=False)
-    _num_power_bins: int = field(init=False)
-    _min_power_filter: float = field(init=False)
-    _max_power_filter: float | tuple[float, float] = field(init=False)
-    _power_bin_mad_thresh: float | tuple[float, float] = field(init=False)
-    _use_power_coeff: bool = field(init=False)
     _run: pd.DataFrame = field(init=False)
     _vane_bins: list[float] = field(init=False)
     _df_turb: pd.DataFrame = field(init=False)
@@ -169,18 +217,18 @@ class StaticYawMisalignment(FromDictMixin):
     @logged_method_call
     def run(
         self,
-        num_sim: int = 100,
-        ws_bins: list[float] = [5.0, 6.0, 7.0, 8.0],
-        ws_bin_width: float = 1.0,
-        vane_bin_width: float = 1.0,
-        min_vane_bin_count: int = 100,
-        max_abs_vane_angle=25.0,
-        pitch_thresh: float = 0.5,
-        num_power_bins: int = 25,
-        min_power_filter: float = 0.01,
-        max_power_filter: float = None,
-        power_bin_mad_thresh: float = None,
-        use_power_coeff: bool = False,
+        num_sim: int | None = None,
+        ws_bins: list[float] | None = None,
+        ws_bin_width: float | None = None,
+        vane_bin_width: float | None = None,
+        min_vane_bin_count: int | None = None,
+        max_abs_vane_angle: float | None = None,
+        pitch_thresh: float | None = None,
+        num_power_bins: int | None = None,
+        min_power_filter: float | None = None,
+        max_power_filter: float | None = None,
+        power_bin_mad_thresh: float | None = None,
+        use_power_coeff: bool | None = None,
     ):
         """
         Estimates static yaw misalignment for each wind speed bin for each specified wind turbine.
@@ -230,38 +278,36 @@ class StaticYawMisalignment(FromDictMixin):
                 approximating the power coefficient. If False, only power will be used. Defaults to False.
         """
 
-        self.num_sim = num_sim
-        self.ws_bins = ws_bins
-        self._ws_bin_width = ws_bin_width
-        self._vane_bin_width = vane_bin_width
-        self._min_vane_bin_count = min_vane_bin_count
-        self._max_abs_vane_angle = max_abs_vane_angle
-        self._pitch_thresh = pitch_thresh
-        self._num_power_bins = num_power_bins
-        self._min_power_filter = min_power_filter
-        self._use_power_coeff = use_power_coeff
-
-        # Assign default parameter values depending on whether UQ is performed
+        if num_sim is not None:
+            self.num_sim = num_sim
+        if ws_bins is not None:
+            self.ws_bins = ws_bins
+        if ws_bin_width is not None:
+            self.ws_bin_width = ws_bin_width
+        if vane_bin_width is not None:
+            self.vane_bin_width = vane_bin_width
+        if min_vane_bin_count is not None:
+            self.min_vane_bin_count = min_vane_bin_count
+        if max_abs_vane_angle is not None:
+            self.max_abs_vane_angle = max_abs_vane_angle
+        if pitch_thresh is not None:
+            self.pitch_thresh = pitch_thresh
+        if num_power_bins is not None:
+            self.num_power_bins = num_power_bins
+        if min_power_filter is not None:
+            self.min_power_filter = min_power_filter
+        if use_power_coeff is not None:
+            self.use_power_coeff = use_power_coeff
         if max_power_filter is not None:
-            self._max_power_filter = max_power_filter
-        elif self.UQ:
-            self._max_power_filter = (0.92, 0.98)
-        else:
-            self._max_power_filter = 0.95
-
+            self.max_power_filter = max_power_filter
         if power_bin_mad_thresh is not None:
-            self._power_bin_mad_thresh = power_bin_mad_thresh
-        elif self.UQ:
-            self._power_bin_mad_thresh = (4.0, 10.0)
-        else:
-            self._power_bin_mad_thresh = 7.0
-
+            self.power_bin_mad_thresh = power_bin_mad_thresh
         # determine wind vane angle bins
-        max_abs_vane_angle_trunc = self._vane_bin_width * np.floor(
-            self._max_abs_vane_angle / self._vane_bin_width
+        max_abs_vane_angle_trunc = self.vane_bin_width * np.floor(
+            self.max_abs_vane_angle / self.vane_bin_width
         )
         self._vane_bins = np.arange(
-            -1 * max_abs_vane_angle_trunc, max_abs_vane_angle_trunc, self._vane_bin_width
+            -1 * max_abs_vane_angle_trunc, max_abs_vane_angle_trunc, self.vane_bin_width
         ).tolist()
 
         # Set up Monte Carlo simulation inputs if UQ = True or single simulation inputs if UQ = False.
@@ -284,8 +330,8 @@ class StaticYawMisalignment(FromDictMixin):
                 # Estimate static yaw misalginment for each wind speed bin
                 for k, ws in enumerate(self.ws_bins):
                     self._df_turb_ws = self._df_turb.loc[
-                        (self._df_turb["WMET_HorWdSpd"] >= (ws - self._ws_bin_width / 2))
-                        & (self._df_turb["WMET_HorWdSpd"] < (ws + self._ws_bin_width / 2))
+                        (self._df_turb["WMET_HorWdSpd"] >= (ws - self.ws_bin_width / 2))
+                        & (self._df_turb["WMET_HorWdSpd"] < (ws + self.ws_bin_width / 2))
                     ].copy()
 
                     # Randomly resample 10-minute periods for bootstrapping
@@ -342,11 +388,11 @@ class StaticYawMisalignment(FromDictMixin):
         if self.UQ:
             inputs = {
                 "power_bin_mad_thresh": np.random.randint(
-                    self._power_bin_mad_thresh[0], self._power_bin_mad_thresh[1] + 1, self.num_sim
+                    self.power_bin_mad_thresh[0], self.power_bin_mad_thresh[1] + 1, self.num_sim
                 ),
                 "max_power_filter": np.random.randint(
-                    self._max_power_filter[0] * 100,
-                    self._max_power_filter[1] * 100 + 1,
+                    self.max_power_filter[0] * 100,
+                    self.max_power_filter[1] * 100 + 1,
                     self.num_sim,
                 )
                 / 100.0,
@@ -382,8 +428,8 @@ class StaticYawMisalignment(FromDictMixin):
 
         elif not self.UQ:
             inputs = {
-                "power_bin_mad_thresh": [self._power_bin_mad_thresh],
-                "max_power_filter": [self._max_power_filter],
+                "power_bin_mad_thresh": [self.power_bin_mad_thresh],
+                "max_power_filter": [self.max_power_filter],
             }
             self.inputs = pd.DataFrame(inputs)
 
@@ -417,21 +463,19 @@ class StaticYawMisalignment(FromDictMixin):
         """
 
         # Limit to pitch angles below the specified threshold
-        self._df_turb = self._df_turb.loc[self._df_turb["WROT_BlPthAngVal"] <= self._pitch_thresh]
+        self._df_turb = self._df_turb.loc[self._df_turb["WROT_BlPthAngVal"] <= self.pitch_thresh]
 
         # Apply bin-based filter to flag samples for which wind speed is greater than a threshold from the median
         # wind speed in each power bin
         turb_capac = self.plant.asset.loc[turbine_id, "rated_power"]
-        bin_width_frac = (
-            self._run.max_power_filter - self._min_power_filter
-        ) / self._num_power_bins
+        bin_width_frac = (self._run.max_power_filter - self.min_power_filter) / self.num_power_bins
         flag_bin = filters.bin_filter(
             bin_col=self._df_turb["WTUR_W"],
             value_col=self._df_turb["WMET_HorWdSpd"],
             bin_width=bin_width_frac * turb_capac,
             threshold=self._run.power_bin_mad_thresh,
             center_type="median",
-            bin_min=self._min_power_filter * turb_capac,
+            bin_min=self.min_power_filter * turb_capac,
             bin_max=self._run.max_power_filter * turb_capac,
             threshold_type="mad",
             direction="all",
@@ -453,12 +497,12 @@ class StaticYawMisalignment(FromDictMixin):
             by wind vane angle.
         """
 
-        self._df_turb_ws["vane_bin"] = self._vane_bin_width * np.round(
-            self._df_turb_ws["WMET_HorWdDirRel"].values / self._vane_bin_width
+        self._df_turb_ws["vane_bin"] = self.vane_bin_width * np.round(
+            self._df_turb_ws["WMET_HorWdDirRel"].values / self.vane_bin_width
         )
 
         # Normalize by wind speed cubed if using power coefficient to determine power performance
-        if self._use_power_coeff:
+        if self.use_power_coeff:
             self._df_turb_ws["pow_ref"] = self._df_turb_ws["WMET_HorWdSpd"].values ** 3
         else:
             self._df_turb_ws["pow_ref"] = 1.0
@@ -475,8 +519,8 @@ class StaticYawMisalignment(FromDictMixin):
 
         # Remove bins with too few samples or vane angles that are too large
         df_bin = df_bin.loc[
-            (df_bin_count["WTUR_W"] > self._min_vane_bin_count)
-            & (np.abs(df_bin.index) <= self._max_abs_vane_angle)
+            (df_bin_count["WTUR_W"] > self.min_vane_bin_count)
+            & (np.abs(df_bin.index) <= self.max_abs_vane_angle)
         ]
 
         # Find best fit cosine curve parameters
@@ -542,7 +586,7 @@ class StaticYawMisalignment(FromDictMixin):
                 keys.
         """
 
-        if self._use_power_coeff:
+        if self.use_power_coeff:
             power_performance_label = "Normalized Cp (-)"
         else:
             power_performance_label = "Normalized Power (-)"
