@@ -31,7 +31,9 @@ class TestPlantData(unittest.TestCase):
             cls.curtail_df,
             cls.asset_df,
             cls.reanalysis_dict,
-        ) = project_ENGIE.prepare(path=example_data_path_str, return_value="dataframes")
+        ) = project_ENGIE.prepare(
+            path=example_data_path_str, return_value="dataframes", use_cleansed=False
+        )
 
     def setUp(self):
         """

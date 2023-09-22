@@ -26,7 +26,7 @@ class TestWakeLosses(unittest.TestCase):
         reset_prng()
 
         # Set up data to use for testing (ENGIE example plant)
-        self.project = project_ENGIE.prepare(example_data_path_str)
+        self.project = project_ENGIE.prepare(example_data_path_str, use_cleansed=False)
         self.project.analysis_type.append("WakeLosses")
         self.project.validate()
 

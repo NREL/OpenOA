@@ -1,3 +1,4 @@
+import copy
 import random
 import unittest
 
@@ -26,10 +27,10 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         reset_prng()
 
         # Set up data to use for testing (ENGIE example plant)
-        self.project = project_ENGIE.prepare(example_data_path_str)
+        self.project = project_ENGIE.prepare(example_data_path_str, use_cleansed=False)
 
         # Set up a new project with modified reanalysis start and end dates
-        self.project_rean = project_ENGIE.prepare(example_data_path_str)
+        self.project_rean = copy.deepcopy(self.project)
 
         self.project_rean.reanalysis["merra2"] = self.project_rean.reanalysis["merra2"].loc[
             :"2019-04-15 12:30"
