@@ -290,8 +290,12 @@ class WakeLosses(FromDictMixin):
         """
         logger.info("Initializing WakeLosses analysis object")
 
-        if set(("WakeLosses", "all")).intersection(self.plant.analysis_type) == set():
-            self.plant.analysis_type.append("WakeLosses")
+        if self.wind_direction_data_type == "scada":
+            if set(("WakeLosses-scada", "all")).intersection(self.plant.analysis_type) == set():
+                self.plant.analysis_type.append("WakeLosses-scada")
+        if self.wind_direction_data_type == "tower":
+            if set(("WakeLosses-tower", "all")).intersection(self.plant.analysis_type) == set():
+                self.plant.analysis_type.append("WakeLosses-tower")
 
         # Ensure the data are up to spec before continuing with initialization
         self.plant.validate()

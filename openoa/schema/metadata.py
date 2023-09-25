@@ -107,10 +107,9 @@ ANALYSIS_REQUIREMENTS["MonteCarloAEP-temp"]["reanalysis"]["columns"].extend(
 )
 ANALYSIS_REQUIREMENTS["WakeLosses-scada"]["scada"]["columns"].append("WMET_HorWdDir")
 ANALYSIS_REQUIREMENTS["WakeLosses-tower"]["tower"] = {
-    "columns": ["asset_id", "WMET_HorWdSpd", "WTUR_W"],
+    "columns": ["asset_id", "WMET_HorWdSpd", "WMET_HorWdDir"],
     "freq": _at_least_hourly,
 }
-["columns"].append("WMET_HorWdDir")
 
 
 def determine_analysis_requirements(
