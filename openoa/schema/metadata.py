@@ -498,6 +498,9 @@ class TowerMetaData(FromDictMixin):  # noqa: F821
         self.col_map = dict(
             time=self.time,
             asset_id=self.asset_id,
+            WMET_HorWdSpd=self.WMET_HorWdSpd,
+            WMET_HorWdDir=self.WMET_HorWdDir,
+            WMET_EnvTmp=self.WMET_EnvTmp,
         )
 
     def __repr__(self):
