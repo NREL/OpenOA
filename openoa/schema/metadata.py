@@ -113,7 +113,6 @@ ANALYSIS_REQUIREMENTS = {
 ANALYSIS_REQUIREMENTS["MonteCarloAEP-temp"] = deepcopy(ANALYSIS_REQUIREMENTS["MonteCarloAEP"])
 ANALYSIS_REQUIREMENTS["MonteCarloAEP-wd"] = deepcopy(ANALYSIS_REQUIREMENTS["MonteCarloAEP"])
 ANALYSIS_REQUIREMENTS["MonteCarloAEP-temp-wd"] = deepcopy(ANALYSIS_REQUIREMENTS["MonteCarloAEP"])
-
 ANALYSIS_REQUIREMENTS["MonteCarloAEP-temp"]["reanalysis"]["columns"].extend(["WMETR_EnvTmp"])
 ANALYSIS_REQUIREMENTS["MonteCarloAEP-wd"]["reanalysis"]["columns"].extend(
     ["WMETR_HorWdSpdU", "WMETR_HorWdSpdV"]
