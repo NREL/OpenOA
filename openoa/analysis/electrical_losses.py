@@ -71,7 +71,7 @@ class ElectricalLosses(FromDictMixin):
             should be given, otherwise, a scalar value should be provided.
     """
 
-    plant: PlantData
+    plant: PlantData = field(validator=attrs.validators.instance_of(PlantData))
     UQ: bool = field(default=False, validator=attrs.validators.instance_of(bool))
     num_sim: int = field(default=20000, converter=int)
     uncertainty_meter: float = field(default=0.005, validator=validate_half_closed_0_1_right)
@@ -97,11 +97,6 @@ class ElectricalLosses(FromDictMixin):
         """
         Initialize logging and post-initialization setup steps.
         """
-        if not isinstance(self.plant, PlantData):
-            raise TypeError(
-                f"The passed `plant` object must be of type `PlantData`, not: {type(self.plant)}"
-            )
-
         if set(("ElectricalLosses", "all")).intersection(self.plant.analysis_type) == set():
             self.plant.analysis_type.append("ElectricalLosses")
 

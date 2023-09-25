@@ -30,6 +30,7 @@ from openoa.utils import met_data_processing as mt
 from openoa.schema import FromDictMixin
 from openoa.logging import logging, logged_method_call
 from openoa.utils.machine_learning_setup import MachineLearningSetup
+from openoa.analysis._analysis_validators import validate_reanalysis_selections
 
 
 logger = logging.getLogger(__name__)
@@ -133,15 +134,18 @@ class MonteCarloAEP(FromDictMixin):
             :py:class:`openoa.utils.machine_learning_setup.MachineLearningSetup` class. Defaults to {}.
     """
 
-    plant: PlantData
+    plant: PlantData = field(validator=attrs.validators.instance_of(PlantData))
     reg_temperature: bool = field(default=False, converter=bool)
     reg_wind_direction: bool = field(default=False, converter=bool)
     reanalysis_products: list[str] = field(
         default=None,
         converter=convert_to_list,
-        validator=attrs.validators.deep_iterable(
-            iterable_validator=attrs.validators.instance_of(list),
-            member_validator=attrs.validators.instance_of((str, type(None))),
+        validator=(
+            attrs.validators.deep_iterable(
+                iterable_validator=attrs.validators.instance_of(list),
+                member_validator=attrs.validators.instance_of((str, type(None))),
+            ),
+            validate_reanalysis_selections,
         ),
     )
     uncertainty_meter: float = field(default=0.005, converter=float)
@@ -207,27 +211,11 @@ class MonteCarloAEP(FromDictMixin):
     _run: pd.DataFrame = field(init=False)
     results: pd.DataFrame = field(init=False)
 
-    @reanalysis_products.validator
-    def check_reanalysis_products(self, attribute: attrs.Attribute, value: list[str]) -> None:
-        """Checks that the provided reanalysis products actually exist in the reanalysis data."""
-        if value == [None]:
-            return
-        valid = [*self.plant.reanalysis]
-        invalid = list(set(value).difference(valid))
-        if invalid:
-            raise ValueError(
-                f"The following input to `reanalysis_products`: {invalid} are not contained in `plant.reanalysis`: {valid}"
-            )
-
     @logged_method_call
     def __attrs_post_init__(self):
         """
-        Initialize APE_MC analysis with data and parameters.
+        Initialize the Monte Carlo AEP analysis with data and parameters.
         """
-        if not isinstance(self.plant, PlantData):
-            raise TypeError(
-                f"The passed `plant` object must be of type `PlantData`, not: {type(self.plant)}"
-            )
 
         if self.reg_temperature and self.reg_wind_direction:
             analysis_type = "MonteCarloAEP-temp-wd"
@@ -248,8 +236,6 @@ class MonteCarloAEP(FromDictMixin):
         self.plant.validate()
 
         logger.info("Initializing MonteCarloAEP Analysis Object")
-
-        self.finalize_reanalysis_products()
 
         self.resample_freq = {"M": "MS", "D": "D", "H": "H"}[self.time_resolution]
         self.resample_hours = {"M": 30 * 24, "D": 1 * 24, "H": 1}[self.time_resolution]
@@ -275,22 +261,6 @@ class MonteCarloAEP(FromDictMixin):
         self.reanalysis_por = self.aggregate.loc[
             (self.aggregate.index >= self.start_por) & (self.aggregate.index <= self.end_por)
         ]
-
-    def finalize_reanalysis_products(self):
-        """Checks for the default None value, and if exists, reassigns ``reanalysis_products`` to
-        be all of the reanalysis keys from ``plant.`` If the "product", the default shell value
-        for ``plant.reanalysis`` and ``plant.metadata.reanalysis``, then an error is raised.
-
-        Raises:
-            ValueError: Raised if "product" is in ``reanalysis_products``.
-        """
-        if None in self.reanalysis_products:
-            self.reanalysis_products = [*self.plant.reanalysis]
-        if "product" in self.reanalysis_products:
-            raise ValueError(
-                "Neither `plant.reanalysis` nor `reanalysis_products` can have 'product',"
-                " as an input. 'product' is the empty default value and is reserved."
-            )
 
     @logged_method_call
     def run(
@@ -354,7 +324,6 @@ class MonteCarloAEP(FromDictMixin):
         self.num_sim = num_sim
         if reanalysis_products is not None:
             self.reanalysis_products = reanalysis_products
-            self.finalize_reanalysis_products()
         if reg_model is not None:
             self.reg_model = reg_model
         if uncertainty_meter is not None:

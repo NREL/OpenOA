@@ -30,7 +30,11 @@ from openoa.utils import plot, filters
 from openoa.utils import met_data_processing as met
 from openoa.schema import FromDictMixin
 from openoa.logging import logging, logged_method_call
-from openoa.analysis._analysis_validators import validate_UQ_input, validate_half_closed_0_1_right
+from openoa.analysis._analysis_validators import (
+    validate_UQ_input,
+    validate_half_closed_0_1_right,
+    validate_reanalysis_selections,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -205,9 +209,12 @@ class WakeLosses(FromDictMixin):
     reanalysis_products: list[str] = field(
         default=None,
         converter=convert_to_list,
-        validator=attrs.validators.deep_iterable(
-            iterable_validator=attrs.validators.instance_of(list),
-            member_validator=attrs.validators.instance_of((str, type(None))),
+        validator=(
+            attrs.validators.deep_iterable(
+                iterable_validator=attrs.validators.instance_of(list),
+                member_validator=attrs.validators.instance_of((str, type(None))),
+            ),
+            validate_reanalysis_selections,
         ),
     )
     end_date_lt: str | pd.Timestamp = field(default=None)
@@ -295,8 +302,6 @@ class WakeLosses(FromDictMixin):
         else:
             logger.info("Note: uncertainty quantification will NOT be performed in the calculation")
 
-        self.finalize_reanalysis_products()
-
         # set default start and end dates if undefined
         if self.start_date is None:
             self.start_date = self.plant.scada.index.get_level_values("time").min()
@@ -322,22 +327,6 @@ class WakeLosses(FromDictMixin):
 
         # Run preprocessing steps
         self._calculate_aggregate_dataframe()
-
-    def finalize_reanalysis_products(self):
-        """Checks for the default None value, and if exists, reassigns ``reanalysis_products`` to
-        be all of the reanalysis keys from ``plant.`` If the "product", the default shell value
-        for ``plant.reanalysis`` and ``plant.metadata.reanalysis``, then an error is raised.
-
-        Raises:
-            ValueError: Raised if "product" is in ``reanalysis_products``.
-        """
-        if None in self.reanalysis_products:
-            self.reanalysis_products = [*self.plant.reanalysis]
-        if "product" in self.reanalysis_products:
-            raise ValueError(
-                "Neither `plant.reanalysis` nor `reanalysis_products` can have 'product',"
-                " as an input. 'product' is the empty default value and is reserved."
-            )
 
     @logged_method_call
     def run(
@@ -441,7 +430,6 @@ class WakeLosses(FromDictMixin):
             self.num_sim = num_sim
         if reanalysis_products is not None:
             self.reanalysis_products = reanalysis_products
-            self.finalize_reanalysis_products()
             logger.warning(
                 f"`reanalysis_products` has been changed, be sure the `end_date_lt`"
                 f"({self.end_date_lt}) is contained in the updated reanalyis products subset."

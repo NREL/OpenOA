@@ -26,7 +26,11 @@ from openoa.utils import met_data_processing as met
 from openoa.schema import FromDictMixin
 from openoa.logging import logging, logged_method_call
 from openoa.utils.power_curve import functions
-from openoa.analysis._analysis_validators import validate_UQ_input, validate_half_closed_0_1_right
+from openoa.analysis._analysis_validators import (
+    validate_UQ_input,
+    validate_half_closed_0_1_right,
+    validate_reanalysis_selections,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -90,15 +94,18 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
             be used. Defaults to (0.85, 0.95)
     """
 
-    plant: PlantData
+    plant: PlantData = field(validator=attrs.validators.instance_of(PlantData))
     UQ: bool = field(default=True, converter=bool)
     num_sim: int = field(default=20000, converter=int)
     reanalysis_products: list[str] = field(
         default=None,
         converter=convert_to_list,
-        validator=attrs.validators.deep_iterable(
-            iterable_validator=attrs.validators.instance_of(list),
-            member_validator=attrs.validators.instance_of((str, type(None))),
+        validator=(
+            attrs.validators.deep_iterable(
+                iterable_validator=attrs.validators.instance_of(list),
+                member_validator=attrs.validators.instance_of((str, type(None))),
+            ),
+            validate_reanalysis_selections,
         ),
     )
     uncertainty_scada: float = field(default=0.005, converter=float)
@@ -136,11 +143,6 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
         """
         Runs any non-automated setup steps for the analysis class.
         """
-        if not isinstance(self.plant, PlantData):
-            raise TypeError(
-                f"The passed `plant` object must be of type `PlantData`, not: {type(self.plant)}"
-            )
-
         if (
             set(("TurbineLongTermGrossEnergy", "all")).intersection(self.plant.analysis_type)
             == set()
@@ -151,8 +153,6 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
         self.plant.validate()
 
         logger.info("Initializing TurbineLongTermGrossEnergy Object")
-
-        self.finalize_reanalysis_products()
 
         # Check that selected UQ is allowed
         if self.UQ:
@@ -169,22 +169,6 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
         # Initially sort the different turbine data into dictionary entries
         logger.info("Processing SCADA data into dictionaries by turbine (this can take a while)")
         self.sort_scada_by_turbine()
-
-    def finalize_reanalysis_products(self):
-        """Checks for the default None value, and if exists, reassigns ``reanalysis_products`` to
-        be all of the reanalysis keys from ``plant.`` If the "product", the default shell value
-        for ``plant.reanalysis`` and ``plant.metadata.reanalysis``, then an error is raised.
-
-        Raises:
-            ValueError: Raised if "product" is in ``reanalysis_products``.
-        """
-        if None in self.reanalysis_products:
-            self.reanalysis_products = [*self.plant.reanalysis]
-        if "product" in self.reanalysis_products:
-            raise ValueError(
-                "Neither `plant.reanalysis` nor `reanalysis_products` can have 'product',"
-                " as an input. 'product' is the empty default value and is reserved."
-            )
 
     @logged_method_call
     def run(
@@ -233,7 +217,6 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
                 )
         if reanalysis_products is not None:
             self.reanalysis_products = reanalysis_products
-            self.finalize_reanalysis_products()
         if uncertainty_scada is not None:
             self.uncertainty_scada = uncertainty_scada
         if wind_bin_threshold is not None:

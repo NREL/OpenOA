@@ -88,3 +88,35 @@ def validate_half_closed_0_1_left(cls, attribute: attrs.Attribute, value: float 
             raise ValueError(
                 f"The values provided to '{attribute.name}' ({value}) must be in the range (0, 1]."
             )
+
+
+def validate_reanalysis_selections(
+    cls, attribute: attrs.Attribute, value: list[str] | None
+) -> None:
+    """Validates the inputs to ``reanalysis_products``, and if ``None`` is proviced, the associated
+    ``PlantData`` object's available reanalyis products are provided.
+
+    Args:
+        attribute (attrs.Attribute): The attribute data for :py:attr:`value`.
+        value (list[str] | None): The user-provided values to the class attribute.
+
+    Raises:
+        ValueError: Raised if "prodcut" is used in :py:attr:`reanalysis_products`.
+        ValueError: Raised if a reanalysis product key that doesn't exist in the base ``PlantData``
+            object is provided.
+    """
+    valid = [*cls.plant.reanalysis]
+    if None in value or value is None:
+        object.__setattr__(cls, "reanalysis_products", valid)
+        return
+    if "product" in value:
+        raise ValueError(
+            "Neither `plant.reanalysis` nor `reanalysis_products` can have 'product',"
+            " as an input. 'product' is the empty default value and is reserved."
+        )
+    invalid = list(set(value).difference(valid))
+    if invalid:
+        raise ValueError(
+            f"The following input to `reanalysis_products`: {invalid} are not contained"
+            f" in `plant.reanalysis`: {valid}"
+        )

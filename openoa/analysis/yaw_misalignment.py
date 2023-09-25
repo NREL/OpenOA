@@ -192,11 +192,6 @@ class StaticYawMisalignment(FromDictMixin):
         """
         Initialize logging and post-initialization setup steps.
         """
-        if not isinstance(self.plant, PlantData):
-            raise TypeError(
-                f"The passed `plant` object must be of type `PlantData`, not: {type(self.plant)}"
-            )
-
         if set(("StaticYawMisalignment", "all")).intersection(self.plant.analysis_type) == set():
             self.plant.analysis_type.append("StaticYawMisalignment")
 
