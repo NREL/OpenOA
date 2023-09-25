@@ -59,9 +59,27 @@ ANALYSIS_REQUIREMENTS = {
             "freq": _at_least_monthly,
         },
     },
-    "WakeLosses": {
+    "WakeLosses-scada": {
+        "scada": {
+            "columns": ["asset_id", "WMET_HorWdSpd", "WTUR_W", "WMET_HorWdDir"],
+            "freq": _at_least_hourly,
+        },
+        "reanalysis": {
+            "columns": ["WMETR_HorWdSpd", "WMETR_HorWdDir"],
+            "freq": _at_least_hourly,
+        },
+        "asset": {
+            "columns": ["latitude", "longitude", "rated_power"],
+            "freq": (),
+        },
+    },
+    "WakeLosses-tower": {
         "scada": {
             "columns": ["asset_id", "WMET_HorWdSpd", "WTUR_W"],
+            "freq": _at_least_hourly,
+        },
+        "tower": {
+            "columns": ["asset_id", "WMET_HorWdSpd", "WMET_HorWdDir"],
             "freq": _at_least_hourly,
         },
         "reanalysis": {
@@ -95,21 +113,14 @@ ANALYSIS_REQUIREMENTS = {
 ANALYSIS_REQUIREMENTS["MonteCarloAEP-temp"] = deepcopy(ANALYSIS_REQUIREMENTS["MonteCarloAEP"])
 ANALYSIS_REQUIREMENTS["MonteCarloAEP-wd"] = deepcopy(ANALYSIS_REQUIREMENTS["MonteCarloAEP"])
 ANALYSIS_REQUIREMENTS["MonteCarloAEP-temp-wd"] = deepcopy(ANALYSIS_REQUIREMENTS["MonteCarloAEP"])
-ANALYSIS_REQUIREMENTS["WakeLosses-scada"] = deepcopy(ANALYSIS_REQUIREMENTS["WakeLosses"])
-ANALYSIS_REQUIREMENTS["WakeLosses-tower"] = deepcopy(ANALYSIS_REQUIREMENTS["WakeLosses"])
 
 ANALYSIS_REQUIREMENTS["MonteCarloAEP-temp"]["reanalysis"]["columns"].extend(["WMETR_EnvTmp"])
-ANALYSIS_REQUIREMENTS["MonteCarloAEP-temp"]["reanalysis"]["columns"].extend(
+ANALYSIS_REQUIREMENTS["MonteCarloAEP-wd"]["reanalysis"]["columns"].extend(
     ["WMETR_HorWdSpdU", "WMETR_HorWdSpdV"]
 )
-ANALYSIS_REQUIREMENTS["MonteCarloAEP-temp"]["reanalysis"]["columns"].extend(
+ANALYSIS_REQUIREMENTS["MonteCarloAEP-temp-wd"]["reanalysis"]["columns"].extend(
     ["WMETR_EnvTmp", "WMETR_HorWdSpdU", "WMETR_HorWdSpdV"]
 )
-ANALYSIS_REQUIREMENTS["WakeLosses-scada"]["scada"]["columns"].append("WMET_HorWdDir")
-ANALYSIS_REQUIREMENTS["WakeLosses-tower"]["tower"] = {
-    "columns": ["asset_id", "WMET_HorWdSpd", "WMET_HorWdDir"],
-    "freq": _at_least_hourly,
-}
 
 
 def determine_analysis_requirements(
