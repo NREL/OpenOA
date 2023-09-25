@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import datetime
+from copy import deepcopy
 
 import attrs
 import numpy as np
@@ -71,7 +72,7 @@ class ElectricalLosses(FromDictMixin):
             should be given, otherwise, a scalar value should be provided.
     """
 
-    plant: PlantData = field(validator=attrs.validators.instance_of(PlantData))
+    plant: PlantData = field(converter=deepcopy, validator=attrs.validators.instance_of(PlantData))
     UQ: bool = field(default=False, validator=attrs.validators.instance_of(bool))
     num_sim: int = field(default=20000, converter=int)
     uncertainty_meter: float = field(default=0.005, validator=validate_half_closed_0_1_right)

@@ -24,6 +24,7 @@
 from __future__ import annotations
 
 import random
+from copy import deepcopy
 
 import attrs
 import numpy as np
@@ -140,7 +141,7 @@ class StaticYawMisalignment(FromDictMixin):
             approximating the power coefficient. If False, only power will be used. Defaults to False.
     """
 
-    plant: PlantData = field(validator=attrs.validators.instance_of(PlantData))
+    plant: PlantData = field(converter=deepcopy, validator=attrs.validators.instance_of(PlantData))
     turbine_ids: list[str] = field(default=None)
     UQ: bool = field(default=True, converter=bool)
     num_sim: int = field(default=100, converter=int)

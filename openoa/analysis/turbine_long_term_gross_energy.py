@@ -8,6 +8,7 @@ output is a 'waterfall' plot linking the EYA-estimated and operational-estiamted
 from __future__ import annotations
 
 import random
+from copy import deepcopy
 from typing import Callable
 
 import attrs
@@ -94,7 +95,7 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
             be used. Defaults to (0.85, 0.95)
     """
 
-    plant: PlantData = field(validator=attrs.validators.instance_of(PlantData))
+    plant: PlantData = field(converter=deepcopy, validator=attrs.validators.instance_of(PlantData))
     UQ: bool = field(default=True, converter=bool)
     num_sim: int = field(default=20000, converter=int)
     reanalysis_products: list[str] = field(

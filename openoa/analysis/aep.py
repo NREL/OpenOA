@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import random
 import datetime
+from copy import deepcopy
 
 import attrs
 import numpy as np
@@ -134,7 +135,7 @@ class MonteCarloAEP(FromDictMixin):
             :py:class:`openoa.utils.machine_learning_setup.MachineLearningSetup` class. Defaults to {}.
     """
 
-    plant: PlantData = field(validator=attrs.validators.instance_of(PlantData))
+    plant: PlantData = field(converter=deepcopy, validator=attrs.validators.instance_of(PlantData))
     reg_temperature: bool = field(default=False, converter=bool)
     reg_wind_direction: bool = field(default=False, converter=bool)
     reanalysis_products: list[str] = field(

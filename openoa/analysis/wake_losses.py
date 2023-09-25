@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import random
+from copy import deepcopy
 
 import attrs
 import numpy as np
@@ -196,7 +197,7 @@ class WakeLosses(FromDictMixin):
             :py:attr:`assume_no_wakes_high_ws_LT_corr` = True. Defaults to 13 m/s.
     """
 
-    plant: PlantData = field(validator=attrs.validators.instance_of(PlantData))
+    plant: PlantData = field(converter=deepcopy, validator=attrs.validators.instance_of(PlantData))
     wind_direction_col: str = field(default="WMET_HorWdDir", converter=str)
     wind_direction_data_type: str = field(
         default="scada", validator=attrs.validators.in_(("scada", "tower"))
