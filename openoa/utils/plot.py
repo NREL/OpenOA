@@ -324,10 +324,10 @@ def plot_by_id(
             Defaults to None.
         return_fig(:obj:`bool`, optional): Set to True to return the figure and axes objects,
             otherwise set to False. Defaults to False.
+        figure_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be passed to
+            `plt.figure()`. Defaults to {}.
         plot_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be passed
             to `ax.scatter`. Defaults to {}.
-        legend_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be passed to
-            `ax.legend`. Defaults to {}.
 
     Returns:
         (:obj:`None`)
