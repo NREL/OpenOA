@@ -906,7 +906,7 @@ class PlantData:
                     )
                     continue
                 for sub_name, df in df.items():
-                    logger.info(f"Validating data types in the {sub_name} {name} data")
+                    logger.info(f"Validating the data types in the {sub_name} {name} data")
                     error_cols[f"{name}-{sub_name}"] = dtype_converter(
                         df, column_types=column_map[name][sub_name]
                     )
