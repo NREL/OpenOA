@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+import logging
 import itertools
 from typing import Callable, Optional, Sequence
 from pathlib import Path
@@ -17,18 +18,27 @@ from shapely.geometry import Point
 
 import openoa.utils.timeseries as ts
 import openoa.utils.met_data_processing as met
-from openoa.logging import logging, logged_method_call
+from openoa.logging import setup_logging, logged_method_call
 from openoa.schema.metadata import ANALYSIS_REQUIREMENTS, PlantMetaData
 from openoa.utils.metadata_fetch import attach_eia_data
 from openoa.utils.unit_conversion import convert_power_to_energy
 
 
+setup_logging(level="WARNING")
 logger = logging.getLogger(__name__)
 
 
 # ****************************************
 # Validators, Loading, and General methods
 # ****************************************
+
+
+def set_log_level(value: str) -> None:
+    """Update the logging level."""
+    valid = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
+    if value not in valid:
+        raise ValueError(f"`log_level` is invalid. Please use one of: {valid}")
+    logging.getLogger().setLevel(value)
 
 
 def _analysis_filter(
@@ -397,6 +407,7 @@ class PlantData:
             error message highlighting the appropriate issues.
     """
 
+    log_level: str = field(default="WARNING", converter=set_log_level)
     metadata: PlantMetaData = field(
         default={},
         converter=PlantMetaData.load,
@@ -421,7 +432,6 @@ class PlantData:
     reanalysis: dict[str, pd.DataFrame] | None = field(
         default=None, converter=load_to_pandas_dict  # noqa: F821
     )
-    preprocess: Callable | None = field(default=None)  # Not currently in use
 
     # No user initialization required for attributes defined below here
     # Error catching in validation
@@ -433,6 +443,7 @@ class PlantData:
     asset_direction_matrix: pd.DataFrame = field(init=False)
 
     def __attrs_post_init__(self):
+        """Post-initialization hook."""
         self._calculate_reanalysis_columns()
         self._set_index_columns()
         self._validate_frequency()
@@ -462,11 +473,6 @@ class PlantData:
 
         # Change the column names to the -25 convention for easier use in the rest of the code base
         self.update_column_names()
-
-        if self.preprocess is not None:
-            self.preprocess(
-                self
-            )  # TODO: should be a user-defined method to run the data cleansing steps
 
     @scada.validator
     @meter.validator

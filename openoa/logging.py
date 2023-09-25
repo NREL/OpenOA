@@ -2,31 +2,30 @@ import os
 import json
 import logging
 import logging.config
+from pathlib import Path
 
 
-def setup_logging(default_path="logging.json", default_level=logging.INFO, env_key="LOG_CFG"):
+def setup_logging(
+    console: bool = True,
+    level: str = "WARNING",
+    configuration: str = "logging.json",
+    env_key="LOG_CFG",
+):
     """Setup logging configuration"""
-    path = default_path
-    value = os.getenv(env_key, None)
-    if value:
-        path = value
-    if os.path.exists(path):
-        with open(path, "rt") as f:
-            config = json.load(f)
-        logging.config.dictConfig(config)
+    if (value := os.getenv(env_key, None)) is not None:
+        configuration = value
+    configuration = Path(configuration).resolve()
+    if configuration.is_file():
+        with configuration.open("rt") as f:
+            logging.config.dictConfig(json.loads(f), level=level)
     else:
-        logging.basicConfig(level=default_level)
-
-
-setup_logging()
+        logging.basicConfig(level=level)
 
 
 def logged_method_call(the_method, msg="call"):
     def _wrapper(self, *args, **kwargs):
         logger = logging.getLogger(the_method.__module__)
-        logger.debug(
-            "{}#{}.{}: {}".format(self.__class__.__name__, id(self), the_method.__name__, msg)
-        )
+        logger.debug(f"{self.__class__.__name__}#{id(self)}.{the_method.__name__}: {msg}")
         return the_method(self, *args, **kwargs)
 
     _wrapper.__doc__ = the_method.__doc__
