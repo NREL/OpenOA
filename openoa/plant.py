@@ -17,9 +17,13 @@ from shapely.geometry import Point
 
 import openoa.utils.timeseries as ts
 import openoa.utils.met_data_processing as met
+from openoa.logging import logging, logged_method_call
 from openoa.schema.metadata import ANALYSIS_REQUIREMENTS, PlantMetaData
 from openoa.utils.metadata_fetch import attach_eia_data
 from openoa.utils.unit_conversion import convert_power_to_energy
+
+
+logger = logging.getLogger(__name__)
 
 
 # ****************************************
@@ -258,6 +262,7 @@ def dtype_converter(df: pd.DataFrame, column_types={}) -> list[str]:
     return errors
 
 
+@logged_method_call
 def load_to_pandas(data: str | Path | pd.DataFrame) -> pd.DataFrame | None:
     """Loads the input data or filepath to apandas DataFrame.
 
@@ -273,6 +278,7 @@ def load_to_pandas(data: str | Path | pd.DataFrame) -> pd.DataFrame | None:
     if data is None:
         return data
     elif isinstance(data, (str, Path)):
+        logger.info(f"Loading {data} to a pandas DataFrame")
         return pd.read_csv(data)
     elif isinstance(data, pd.DataFrame):
         return data
@@ -637,50 +643,53 @@ class PlantData:
 
     def _set_index_columns(self) -> None:
         """Sets the index value for each of the `PlantData` objects that are not `None`."""
-        if self.scada is not None:
-            time_col = self.metadata.scada.col_map["time"]
-            id_col = self.metadata.scada.col_map["asset_id"]
-            self.scada[time_col] = pd.DatetimeIndex(self.scada[time_col])
-            self.scada = self.scada.set_index([time_col, id_col])
-            self.scada.index.names = ["time", "asset_id"]
+        with attrs.validators.disabled():
+            if self.scada is not None:
+                time_col = self.metadata.scada.col_map["time"]
+                id_col = self.metadata.scada.col_map["asset_id"]
+                self.scada[time_col] = pd.DatetimeIndex(self.scada[time_col])
+                self.scada = self.scada.set_index([time_col, id_col])
+                self.scada.index.names = ["time", "asset_id"]
 
-        if self.meter is not None:
-            time_col = self.metadata.meter.col_map["time"]
-            self.meter[time_col] = pd.DatetimeIndex(self.meter[time_col])
-            self.meter = self.meter.set_index([time_col])
-            self.meter.index.name = "time"
+            if self.meter is not None:
+                time_col = self.metadata.meter.col_map["time"]
+                self.meter[time_col] = pd.DatetimeIndex(self.meter[time_col])
+                self.meter = self.meter.set_index([time_col])
+                self.meter.index.name = "time"
 
-        if self.status is not None:
-            time_col = self.metadata.status.col_map["time"]
-            id_col = self.metadata.status.col_map["asset_id"]
-            self.status[time_col] = pd.DatetimeIndex(self.status[time_col])
-            self.status = self.status.set_index([time_col, id_col])
-            self.status.index.names = ["time", "asset_id"]
+            if self.status is not None:
+                time_col = self.metadata.status.col_map["time"]
+                id_col = self.metadata.status.col_map["asset_id"]
+                self.status[time_col] = pd.DatetimeIndex(self.status[time_col])
+                self.status = self.status.set_index([time_col, id_col])
+                self.status.index.names = ["time", "asset_id"]
 
-        if self.tower is not None:
-            time_col = self.metadata.tower.col_map["time"]
-            id_col = self.metadata.tower.col_map["asset_id"]
-            self.tower[time_col] = pd.DatetimeIndex(self.tower[time_col])
-            self.tower = self.tower.set_index([time_col, id_col])
-            self.tower.index.names = ["time", "asset_id"]
+            if self.tower is not None:
+                time_col = self.metadata.tower.col_map["time"]
+                id_col = self.metadata.tower.col_map["asset_id"]
+                self.tower[time_col] = pd.DatetimeIndex(self.tower[time_col])
+                self.tower = self.tower.set_index([time_col, id_col])
+                self.tower.index.names = ["time", "asset_id"]
 
-        if self.curtail is not None:
-            time_col = self.metadata.curtail.col_map["time"]
-            self.curtail[time_col] = pd.DatetimeIndex(self.curtail[time_col])
-            self.curtail = self.curtail.set_index([time_col])
-            self.curtail.index.name = "time"
+            if self.curtail is not None:
+                time_col = self.metadata.curtail.col_map["time"]
+                self.curtail[time_col] = pd.DatetimeIndex(self.curtail[time_col])
+                self.curtail = self.curtail.set_index([time_col])
+                self.curtail.index.name = "time"
 
-        if self.asset is not None:
-            id_col = self.metadata.asset.col_map["asset_id"]
-            self.asset = self.asset.set_index([id_col])
-            self.asset.index.name = "asset_id"
+            if self.asset is not None:
+                id_col = self.metadata.asset.col_map["asset_id"]
+                self.asset = self.asset.set_index([id_col])
+                self.asset.index.name = "asset_id"
 
-        if self.reanalysis is not None:
-            for name in self.reanalysis:
-                time_col = self.metadata.reanalysis[name].col_map["time"]
-                self.reanalysis[name][time_col] = pd.DatetimeIndex(self.reanalysis[name][time_col])
-                self.reanalysis[name] = self.reanalysis[name].set_index([time_col])
-                self.reanalysis[name].index.name = "time"
+            if self.reanalysis is not None:
+                for name in self.reanalysis:
+                    time_col = self.metadata.reanalysis[name].col_map["time"]
+                    self.reanalysis[name][time_col] = pd.DatetimeIndex(
+                        self.reanalysis[name][time_col]
+                    )
+                    self.reanalysis[name] = self.reanalysis[name].set_index([time_col])
+                    self.reanalysis[name].index.name = "time"
 
     def _unset_index_columns(self) -> None:
         """Resets the index for each of the data types. This is intended solely for the use with
@@ -721,6 +730,7 @@ class PlantData:
         )
         return values
 
+    @logged_method_call
     def to_csv(
         self,
         save_path: str | Path,
@@ -775,36 +785,44 @@ class PlantData:
 
         with open((save_path / metadata).with_suffix(".yml"), "w") as f:
             yaml.safe_dump(meta, f, default_flow_style=False, sort_keys=False)
+
         if self.scada is not None:
-            self.scada.reset_index(drop=False).to_csv(
-                (save_path / scada).with_suffix(".csv"), index=False
-            )
+            scada_fn = (save_path / scada).with_suffix(".csv")
+            self.scada.reset_index(drop=False).to_csv(scada_fn, index=False)
+            logger.info(f"SCADA data saved to: {scada_fn}")
+
         if self.status is not None:
-            self.status.reset_index(drop=False).to_csv(
-                (save_path / status).with_suffix(".csv"), index=False
-            )
+            status_fn = (save_path / status).with_suffix(".csv")
+            self.status.reset_index(drop=False).to_csv(status_fn, index=False)
+            logger.info(f"Status data saved to: {status_fn}")
+
         if self.tower is not None:
-            self.tower.reset_index(drop=False).to_csv(
-                (save_path / tower).with_suffix(".csv"), index=False
-            )
+            tower_fn = (save_path / tower).with_suffix(".csv")
+            self.tower.reset_index(drop=False).to_csv(tower_fn, index=False)
+            logger.info(f"Tower data saved to: {tower_fn}")
+
         if self.meter is not None:
-            self.meter.reset_index(drop=False).to_csv(
-                (save_path / meter).with_suffix(".csv"), index=False
-            )
+            meter_fn = (save_path / meter).with_suffix(".csv")
+            self.meter.reset_index(drop=False).to_csv(meter_fn, index=False)
+            logger.info(f"Meter data saved to: {meter_fn}")
+
         if self.curtail is not None:
-            self.curtail.reset_index(drop=False).to_csv(
-                (save_path / curtail).with_suffix(".csv"), index=False
-            )
+            curtail_fn = (save_path / curtail).with_suffix(".csv")
+            self.curtail.reset_index(drop=False).to_csv(curtail_fn, index=False)
+            logger.info(f"SCADA data saved to: {curtail_fn}")
+
         if self.asset is not None:
-            self.asset.reset_index(drop=False).to_csv(
-                (save_path / asset).with_suffix(".csv"), index=False
-            )
+            asset_fn = (save_path / asset).with_suffix(".csv")
+            self.asset.reset_index(drop=False).to_csv(asset_fn, index=False)
+            logger.info(f"Asset data saved to: {asset_fn}")
+
         if self.reanalysis is not None:
             for name, df in self.reanalysis.items():
-                df.reset_index(drop=False).to_csv(
-                    (save_path / f"{reanalysis}_{name}").with_suffix(".csv"), index=False
-                )
+                reanalysis_fn = (save_path / f"{reanalysis}_{name}").with_suffix(".csv")
+                df.reset_index(drop=False).to_csv(reanalysis_fn, index=False)
+                logger.info(f"{name} reanalysis data saved to: {reanalysis_fn}")
 
+    @logged_method_call
     def _validate_column_names(self, category: str = "all") -> dict[str, list[str]]:
         """Validates that the column names in each of the data types matches the mapping
         provided in the `metadata` object.
@@ -831,14 +849,16 @@ class PlantData:
                     )
                     continue
                 for sub_name, df in df.items():
+                    logger.info(f"Validating column names in the {sub_name} {name} data")
                     missing_cols[f"{name}-{sub_name}"] = column_validator(
                         df, column_names=column_map[name][sub_name]
                     )
-                continue
-
-            missing_cols[name] = column_validator(df, column_names=column_map[name])
+            else:
+                logger.info(f"Validating column names in the {name} data")
+                missing_cols[name] = column_validator(df, column_names=column_map[name])
         return missing_cols
 
+    @logged_method_call
     def _validate_dtypes(self, category: str = "all") -> dict[str, list[str]]:
         """Validates the dtype for each column for the specified `category`.
 
@@ -858,12 +878,12 @@ class PlantData:
         column_map = {}
         for name in column_name_map:
             if name == "reanalysis":
-                column_map["reanalysis"] = {}
-                for name in column_name_map["reanalysis"]:
-                    column_map["reanalysis"][name] = dict(
+                column_map[name] = {}
+                for sub_name in column_name_map[name]:
+                    column_map[name][sub_name] = dict(
                         zip(
-                            column_name_map["reanalysis"][name].values(),
-                            column_dtype_map["reanalysis"][name].values(),
+                            column_name_map[name][sub_name].values(),
+                            column_dtype_map[name][sub_name].values(),
                         )
                     )
             else:
@@ -886,14 +906,16 @@ class PlantData:
                     )
                     continue
                 for sub_name, df in df.items():
+                    logger.info(f"Validating data types in the {sub_name} {name} data")
                     error_cols[f"{name}-{sub_name}"] = dtype_converter(
                         df, column_types=column_map[name][sub_name]
                     )
-                continue
-
-            error_cols[name] = dtype_converter(df, column_types=column_map[name])
+            else:
+                logger.info(f"Validating the data types in the {name} data")
+                error_cols[name] = dtype_converter(df, column_types=column_map[name])
         return error_cols
 
+    @logged_method_call
     def _validate_frequency(self, category: str = "all") -> list[str]:
         """Internal method to check the actual datetime frequencies against the required
         frequencies for the specified analysis types, and produces a list of data types
@@ -931,15 +953,17 @@ class PlantData:
                 continue
             if name == "reanalysis":
                 for sub_name, freq in freq.items():
+                    logger.info(f"Validating the frequency of the {sub_name} {name} data")
                     is_valid = frequency_validator(freq, frequency_requirements.get(name), True)
                     is_valid |= frequency_validator(freq, frequency_requirements.get(name), False)
                     if not is_valid:
                         invalid_freq.update({f"{name}-{sub_name}": freq})
-                continue
-            is_valid = frequency_validator(freq, frequency_requirements.get(name), True)
-            is_valid |= frequency_validator(freq, frequency_requirements.get(name), False)
-            if not is_valid:
-                invalid_freq.update({name: freq})
+            else:
+                logger.info(f"Validating the frequency of the {name} data")
+                is_valid = frequency_validator(freq, frequency_requirements.get(name), True)
+                is_valid |= frequency_validator(freq, frequency_requirements.get(name), False)
+                if not is_valid:
+                    invalid_freq.update({name: freq})
 
         return invalid_freq
 
@@ -982,12 +1006,15 @@ class PlantData:
             raise ValueError(error_message)
         self.update_column_names()
 
+    @logged_method_call
     def _calculate_reanalysis_columns(self) -> None:
         """Calculates extra variables such as wind direction from the provided
         reanalysis data if they don't already exist.
         """
         if self.reanalysis is None:
             return
+
+        logger.info("Calculating extra variables for the reanalysis data")
         reanalysis = {}
         for name, df in self.reanalysis.items():
             col_map = self.metadata.reanalysis[name].col_map
@@ -1001,8 +1028,8 @@ class PlantData:
 
             wd = col_map["WMETR_HorWdDir"]
             if wd not in df and has_u_v:
-                # TODO: added .values to fix an issue where df[u] and df[v] with ANY NaN values would cause df[wd]
-                # to be all NaN. Is there a better to fix this?
+                # TODO: added .values to fix an issue where df[u] and df[v] with ANY NaN values
+                # would cause df[wd] to be all NaN. Is there a better to fix this?
                 df[wd] = met.compute_wind_direction(df[u], df[v]).values
 
             dens = col_map["WMETR_AirDen"]
@@ -1013,8 +1040,10 @@ class PlantData:
                 df[dens] = met.compute_air_density(df[temp], df[sp])
 
             reanalysis[name] = df
-        self.reanalysis = reanalysis
+        with attrs.validators.disabled():
+            self.reanalysis = reanalysis
 
+    @logged_method_call
     def parse_asset_geometry(
         self,
         reference_system: str = "epsg:4326",
@@ -1042,6 +1071,7 @@ class PlantData:
         Returns: None
             Sets the asset "geometry" column.
         """
+        logger.info("Parsing the geometry of the asset coordinate data")
         if utm_zone is None:
             # calculate zone
             if reference_longitude is None:
@@ -1058,6 +1088,7 @@ class PlantData:
         # TODO: Should this get a new name that's in line with the -25 convention?
         self.asset["geometry"] = [Point(lat, lon) for lat, lon in zip(lats, lons)]
 
+    @logged_method_call
     def update_column_names(self, to_original: bool = False) -> None:
         """Renames the columns of each dataframe to the be the keys from the
         `metadata.xx.col_map` that was passed during initialization.
@@ -1069,25 +1100,31 @@ class PlantData:
         meta = self.metadata
         reverse = not to_original  # flip the boolean to correctly map between the col_map entries
 
-        if self.scada is not None:
-            self.scada = rename_columns(self.scada, meta.scada.col_map, reverse=reverse)
-        if self.meter is not None:
-            self.meter = rename_columns(self.meter, meta.meter.col_map, reverse=reverse)
-        if self.tower is not None:
-            self.tower = rename_columns(self.tower, meta.tower.col_map, reverse=reverse)
-        if self.status is not None:
-            self.status = rename_columns(self.status, meta.status.col_map, reverse=reverse)
-        if self.curtail is not None:
-            self.curtail = rename_columns(self.curtail, meta.curtail.col_map, reverse=reverse)
-        if self.asset is not None:
-            self.asset = rename_columns(self.asset, meta.asset.col_map, reverse=reverse)
-        if self.reanalysis is not None:
-            reanalysis = {}
-            for name, df in self.reanalysis.items():
-                reanalysis[name] = rename_columns(
-                    df, meta.reanalysis[name].col_map, reverse=reverse
-                )
-            self.reanalysis = reanalysis
+        if to_original:
+            logger.info("Converting column names back to their original naming convention")
+        else:
+            logger.info("Converting column names to OpenOA conventions")
+
+        with attrs.validators.disabled():
+            if self.scada is not None:
+                self.scada = rename_columns(self.scada, meta.scada.col_map, reverse=reverse)
+            if self.meter is not None:
+                self.meter = rename_columns(self.meter, meta.meter.col_map, reverse=reverse)
+            if self.tower is not None:
+                self.tower = rename_columns(self.tower, meta.tower.col_map, reverse=reverse)
+            if self.status is not None:
+                self.status = rename_columns(self.status, meta.status.col_map, reverse=reverse)
+            if self.curtail is not None:
+                self.curtail = rename_columns(self.curtail, meta.curtail.col_map, reverse=reverse)
+            if self.asset is not None:
+                self.asset = rename_columns(self.asset, meta.asset.col_map, reverse=reverse)
+            if self.reanalysis is not None:
+                reanalysis = {}
+                for name, df in self.reanalysis.items():
+                    reanalysis[name] = rename_columns(
+                        df, meta.reanalysis[name].col_map, reverse=reverse
+                    )
+                self.reanalysis = reanalysis
 
     def calculate_turbine_energy(self) -> None:
         energy_col = self.metadata.scada.WTUR_SupWh
