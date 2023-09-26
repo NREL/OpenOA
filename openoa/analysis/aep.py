@@ -72,12 +72,6 @@ class MonteCarloAEPResult(object):
     pass
 
 
-def _convert_time_resolution_string(x: str):
-    if x == "M":
-        return "MS"
-    return x
-
-
 # Long Term AEP
 @define(auto_attribs=True)
 class MonteCarloAEP(FromDictMixin):
