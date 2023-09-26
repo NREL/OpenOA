@@ -1,10 +1,22 @@
 {
-  "reanalysis": {
-    "WMETR_AirDen": {
+  "asset": {
+    "latitude": {
       "dtype": "float",
-      "name": "WMETR_AirDen",
-      "units": "kg/m^3"
+      "name": "latitude",
+      "units": "WGS84"
     },
+    "longitude": {
+      "dtype": "float",
+      "name": "longitude",
+      "units": "WGS84"
+    },
+    "rated_power": {
+      "dtype": "float",
+      "name": "rated_power",
+      "units": "kW"
+    }
+  },
+  "reanalysis": {
     "WMETR_HorWdDir": {
       "dtype": "float",
       "name": "WMETR_HorWdDir",
@@ -19,7 +31,6 @@
       "H",
       "ms",
       "U",
-      "D",
       "us",
       "min",
       "T",
@@ -29,6 +40,11 @@
     ]
   },
   "scada": {
+    "WMET_HorWdDir": {
+      "dtype": "float",
+      "name": "WMET_HorWdDir",
+      "units": "deg"
+    },
     "WMET_HorWdSpd": {
       "dtype": "float",
       "name": "WMET_HorWdSpd",
@@ -48,7 +64,6 @@
       "H",
       "ms",
       "U",
-      "D",
       "us",
       "min",
       "T",

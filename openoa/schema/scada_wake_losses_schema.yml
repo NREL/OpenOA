@@ -11,17 +11,33 @@ scada:
     name: WMET_HorWdSpd
     dtype: float
     units: m/s
+  WMET_HorWdDir:
+    name: WMET_HorWdDir
+    dtype: float
+    units: deg
   frequency:
   - H
   - ms
   - U
-  - D
   - us
   - min
   - T
   - L
   - N
   - S
+asset:
+  latitude:
+    name: latitude
+    dtype: float
+    units: WGS84
+  longitude:
+    name: longitude
+    dtype: float
+    units: WGS84
+  rated_power:
+    name: rated_power
+    dtype: float
+    units: kW
 reanalysis:
   WMETR_HorWdSpd:
     name: WMETR_HorWdSpd
@@ -31,15 +47,10 @@ reanalysis:
     name: WMETR_HorWdDir
     dtype: float
     units: deg
-  WMETR_AirDen:
-    name: WMETR_AirDen
-    dtype: float
-    units: kg/m^3
   frequency:
   - H
   - ms
   - U
-  - D
   - us
   - min
   - T

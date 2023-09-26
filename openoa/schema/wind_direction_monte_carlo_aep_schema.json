@@ -59,6 +59,16 @@
       "name": "WMETR_HorWdSpd",
       "units": "m/s"
     },
+    "WMETR_HorWdSpdU": {
+      "dtype": "float",
+      "name": "WMETR_HorWdSpdU",
+      "units": "m/s"
+    },
+    "WMETR_HorWdSpdV": {
+      "dtype": "float",
+      "name": "WMETR_HorWdSpdV",
+      "units": "m/s"
+    },
     "frequency": [
       "W",
       "H",

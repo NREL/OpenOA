@@ -27,7 +27,7 @@ class TestWakeLosses(unittest.TestCase):
 
         # Set up data to use for testing (ENGIE example plant)
         self.project = project_ENGIE.prepare(example_data_path_str, use_cleansed=False)
-        self.project.analysis_type.append("WakeLosses")
+        self.project.analysis_type.append("WakeLosses-scada")
         self.project.validate()
 
         # Apply estimated northing calibration to SCADA wind directions

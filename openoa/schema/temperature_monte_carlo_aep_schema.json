@@ -54,6 +54,11 @@
       "name": "WMETR_AirDen",
       "units": "kg/m^3"
     },
+    "WMETR_EnvTmp": {
+      "dtype": "float",
+      "name": "WMETR_EnvTmp",
+      "units": "K"
+    },
     "WMETR_HorWdSpd": {
       "dtype": "float",
       "name": "WMETR_HorWdSpd",

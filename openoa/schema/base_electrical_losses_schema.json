@@ -6,18 +6,18 @@
       "units": "kWh"
     },
     "frequency": [
-      "M",
-      "MS",
-      "us",
-      "L",
-      "ms",
-      "H",
-      "T",
-      "min",
-      "N",
       "W",
+      "H",
+      "ms",
       "U",
       "D",
+      "us",
+      "M",
+      "min",
+      "MS",
+      "T",
+      "L",
+      "N",
       "S"
     ]
   },
@@ -33,15 +33,15 @@
       "units": null
     },
     "frequency": [
-      "us",
-      "L",
-      "ms",
       "H",
-      "min",
-      "T",
-      "N",
+      "ms",
       "U",
       "D",
+      "us",
+      "min",
+      "T",
+      "L",
+      "N",
       "S"
     ]
   }

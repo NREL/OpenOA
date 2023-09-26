@@ -45,6 +45,10 @@ reanalysis:
     name: WMETR_HorWdSpd
     dtype: float
     units: m/s
+  WMETR_EnvTmp:
+    name: WMETR_EnvTmp
+    dtype: float
+    units: K
   WMETR_AirDen:
     name: WMETR_AirDen
     dtype: float
