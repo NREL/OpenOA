@@ -20,7 +20,7 @@ from tabulate import tabulate
 
 
 # Datetime frequency checks
-_at_least_monthly = ("M", "MS", "W", "D", "H", "T", "min", "S", "L", "ms", "U", "us", "N")
+_at_least_monthly = ("MS", "W", "D", "H", "T", "min", "S", "L", "ms", "U", "us", "N")
 _at_least_daily = ("D", "H", "T", "min", "S", "L", "ms", "U", "us", "N")
 _at_least_hourly = ("H", "T", "min", "S", "L", "ms", "U", "us", "N")
 
