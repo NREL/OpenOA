@@ -298,30 +298,6 @@ def daylight_savings_plot(
     # Get data for one of the turbines
     df_dst = df.loc[df[id_col] == df[id_col].unique()[0]]
     df_full = df_dst.copy()
-
-    # Locate the missing timestamps, convert to UTC, and recreate DST and UTC-offset columns
-    # missing_original_df = pd.DataFrame([], columns=df.columns)
-    # missing_local_df = pd.DataFrame([], columns=df.columns)
-    # missing_utc_df = pd.DataFrame([], columns=df.columns)
-
-    # missing_original = ts.find_time_gaps(df_dst[time_col], freq)
-    # missing_local = ts.find_time_gaps(df_dst[t_local], freq)
-    # missing_utc = ts.find_time_gaps(df_dst[t_utc], freq)
-
-    # missing_original_df[time_col] = missing_original
-    # missing_local_df[t_local] = pd.DatetimeIndex(missing_local)
-    # missing_utc_df[t_utc] = pd.DatetimeIndex(missing_utc)
-    # missing_utc_df[t_local] = pd.DatetimeIndex(missing_utc).tz_convert(local_tz)
-    # missing_local_df[t_utc] = pd.DatetimeIndex(missing_local).tz_convert("UTC")
-
-    # missing_df = (
-    #     pd.concat([missing_utc_df, missing_local_df])
-    #     .drop_duplicates(subset=[t_local, t_utc])
-    #     .set_index(t_utc, drop=False)
-    # )
-
-    # Append and resort the missing timestamps, then convert to local time
-    # df_full = df_full.append(missing_df).sort_values(time_col)
     try:
         df_full = df_full.tz_convert(local_tz)
     except TypeError:
