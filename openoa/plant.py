@@ -415,7 +415,6 @@ class PlantData:
     reanalysis: dict[str, pd.DataFrame] | None = field(
         default=None, converter=load_to_pandas_dict  # noqa: F821
     )
-    preprocess: Callable | None = field(default=None)  # Not currently in use
 
     # No user initialization required for attributes defined below here
     # Error catching in validation
@@ -443,7 +442,6 @@ class PlantData:
             raise ValueError(error_message)
 
         # Post-validation data manipulations
-        # TODO: Need to have a class level input for the user-preferred projection system
         # TODO: Why does the non-WGS84 projection matter?
         self.calculate_asset_geometries()
         if self.asset is not None:
@@ -456,11 +454,6 @@ class PlantData:
 
         # Change the column names to the -25 convention for easier use in the rest of the code base
         self.update_column_names()
-
-        if self.preprocess is not None:
-            self.preprocess(
-                self
-            )  # TODO: should be a user-defined method to run the data cleansing steps
 
     @scada.validator
     @meter.validator
@@ -974,9 +967,6 @@ class PlantData:
         self._set_index_columns()
         self._errors["frequency"] = self._validate_frequency()
 
-        # TODO: Check for extra columns?
-        # TODO: Define other checks?
-
         error_message = _compose_error_message(self._errors, self.metadata, self.analysis_type)
         if error_message:
             raise ValueError(error_message)
@@ -1001,8 +991,8 @@ class PlantData:
 
             wd = col_map["WMETR_HorWdDir"]
             if wd not in df and has_u_v:
-                # TODO: added .values to fix an issue where df[u] and df[v] with ANY NaN values would cause df[wd]
-                # to be all NaN. Is there a better to fix this?
+                # .values to fix an issue where df[u] and df[v] with ANY NaN values
+                # would cause df[wd] to be all NaN.
                 df[wd] = met.compute_wind_direction(df[u], df[v]).values
 
             dens = col_map["WMETR_AirDen"]
@@ -1055,7 +1045,6 @@ class PlantData:
             self.asset[self.metadata.asset.longitude].values,
         )
 
-        # TODO: Should this get a new name that's in line with the -25 convention?
         self.asset["geometry"] = [Point(lat, lon) for lat, lon in zip(lats, lons)]
 
     def update_column_names(self, to_original: bool = False) -> None:
