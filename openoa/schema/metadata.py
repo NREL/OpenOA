@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import itertools
 from copy import deepcopy
-from typing import Any
 from pathlib import Path
 
 import yaml
@@ -12,6 +11,11 @@ import numpy as np
 import pandas as pd
 from attrs import field, define
 from tabulate import tabulate
+
+from openoa.logging import logging, logged_method_call
+
+
+logger = logging.getLogger(__name__)
 
 
 # *************************************************************************
@@ -190,22 +194,20 @@ class FromDictMixin:
     """
 
     @classmethod
+    @logged_method_call
     def from_dict(cls, data: dict):
         """Maps a data dictionary to an `attrs`-defined class.
-        TODO: Add an error to ensure that either none or all the parameters are passed in
         Args:
-            data : dict
-                The data dictionary to be mapped.
+            data (dict): The data dictionary to be mapped.
         Returns:
-            cls
-                The `attrs`-defined class.
+            (cls): An intialized object of the `attrs`-defined class (`cls`).
         """
         # Get all parameters from the input dictionary that map to the class initialization
-        kwargs = {
-            a.name: data[a.name]
-            for a in cls.__attrs_attrs__  # type: ignore
-            if a.name in data and a.init
-        }
+        kwarg_names = [a.name for a in cls.__attrs_attrs__ if a.init]
+        matching = [name for name in kwarg_names if name in data]
+        non_matching = [name for name in data if name not in kwarg_names]
+        logger.info(f"No matches for provided kwarg inputs: {non_matching}")
+        kwargs = {name: data[name] for name in matching}
 
         # Map the inputs must be provided: 1) must be initialized, 2) no default value defined
         required_inputs = [
