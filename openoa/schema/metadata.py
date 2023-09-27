@@ -834,6 +834,14 @@ class PlantMetaData(FromDictMixin):  # noqa: F821
     Args:
         latitude (`float`): The wind power plant's center point latitude.
         longitude (`float`): The wind power plant's center point longitude.
+        reference_system (:obj:`str`, optional): Used to define the coordinate reference system
+            (CRS). Defaults to the European Petroleum Survey Group (EPSG) code 4326 to be used with
+            the World Geodetic System reference system, WGS 84.
+        utm_zone (:obj:`int`, optional): UTM zone. If set to None (default), then calculated from
+            the longitude.
+        reference_longitude (:obj:`float`, optional): Reference longitude for calculating the UTM
+            zone. If None (default), then taken as the average longitude of all assets when the
+            geometry is parsed.
         capacity (`float`): The capacity of the plant in MW
         scada (`SCADAMetaData`): A dictionary containing the `SCADAMetaData`
             column mapping and frequency parameters. See `SCADAMetaData` for more details.
@@ -855,6 +863,9 @@ class PlantMetaData(FromDictMixin):  # noqa: F821
 
     latitude: float = field(default=0, converter=float)
     longitude: float = field(default=0, converter=float)
+    reference_system: str = field(default="epsg:4326")
+    reference_longitude: float = field(default=None)
+    utm_zone: int = field(default=None)
     capacity: float = field(default=0, converter=float)
     scada: SCADAMetaData = field(default={}, converter=SCADAMetaData.from_dict)
     meter: MeterMetaData = field(default={}, converter=MeterMetaData.from_dict)

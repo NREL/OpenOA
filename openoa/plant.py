@@ -1007,9 +1007,9 @@ class PlantData:
 
     def parse_asset_geometry(
         self,
-        reference_system: str = "epsg:4326",
-        utm_zone: int = None,
-        reference_longitude: Optional[float] = None,
+        reference_system: str | None = None,
+        utm_zone: int | None = None,
+        reference_longitude: float | None = None,
     ) -> None:
         """Calculate UTM coordinates from latitude/longitude.
 
@@ -1021,22 +1021,35 @@ class PlantData:
         Ref: http://geopandas.org/projections.html
 
         Args:
-            reference_system (:obj:`str`, optional): Used to define the coordinate reference system (CRS).
+            reference_system (:obj:`str`, optional): Used to define the coordinate reference system
+                (CRS). If None is used, then the `metadata.reference_system` value will be used.
                 Defaults to the European Petroleum Survey Group (EPSG) code 4326 to be used with
                 the World Geodetic System reference system, WGS 84.
-            utm_zone (:obj:`int`, optional): UTM zone. If set to None (default), then calculated from
-                the longitude.
-            reference_longitude (:obj:`float`, optional): Reference longitude for calculating the UTM zone. If
-                None (default), then taken as the average longitude of all assets.
+            utm_zone (:obj:`int`, optional): UTM zone.  If None is used, then the
+                `metadata.utm_zone` value will be used. Defaults to the being calculated from
+                :py:attr:`reference_longitude`.
+            reference_longitude (:obj:`float`, optional): Reference longitude for calculating the
+                UTM zone. If None is used, then the `metadata.reference_longitude` value will be
+                used. Defaults to the mean of `asset.longitude`.
 
         Returns: None
             Sets the asset "geometry" column.
         """
+        # Check for metadata inputs
         if utm_zone is None:
-            # calculate zone
+            utm_zone = self.metadata.utm_zone
+        if reference_longitude is None:
+            reference_longitude = self.metadata.reference_longitude
+        if reference_system is None:
+            reference_system = self.metadata.reference_system
+
+        # Calculate the UTM Zone as needed
+        if utm_zone is None:
             if reference_longitude is None:
                 longitude = self.asset[self.metadata.asset.longitude].mean()
+                self.metadata.reference_longitude = longitude
             utm_zone = int(np.floor((180 + longitude) / 6.0)) + 1
+            self.metadata.utm_zone = utm_zone
 
         to_crs = f"+proj=utm +zone={utm_zone} +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
         transformer = Transformer.from_crs(reference_system.upper(), to_crs)
