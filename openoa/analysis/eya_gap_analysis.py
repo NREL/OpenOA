@@ -152,6 +152,7 @@ class EYAGapAnalysis(FromDictMixin):
         self.compiled_data = self.compile_data()  # Compile EYA and OA data
         logger.info("Gap analysis complete")
 
+    @logged_method_call
     def compile_data(self):
         """
         Compiles the EYA and OA metrics, and computes the differences.
@@ -160,6 +161,7 @@ class EYAGapAnalysis(FromDictMixin):
             :obj:`list[float]`: The list of EYA AEP, and differences in turbine gross energy,
                 availability losses, electrical losses, and unaccounted losses.
         """
+        logger.info("Compiling EYA and OA data")
 
         # Calculate EYA ideal turbine energy
         eya_turbine_ideal_energy = (

@@ -18,7 +18,7 @@ from shapely.geometry import Point
 
 import openoa.utils.timeseries as ts
 import openoa.utils.met_data_processing as met
-from openoa.logging import setup_logging, logged_method_call
+from openoa.logging import set_log_level, setup_logging, logged_method_call
 from openoa.schema.metadata import ANALYSIS_REQUIREMENTS, PlantMetaData
 from openoa.utils.metadata_fetch import attach_eia_data
 from openoa.utils.unit_conversion import convert_power_to_energy
@@ -33,14 +33,7 @@ logger = logging.getLogger(__name__)
 # ****************************************
 
 
-def set_log_level(value: str) -> None:
-    """Update the logging level."""
-    valid = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
-    if value not in valid:
-        raise ValueError(f"`log_level` is invalid. Please use one of: {valid}")
-    logging.getLogger().setLevel(value)
-
-
+@logged_method_call
 def _analysis_filter(
     error_dict: dict, metadata: PlantMetaData, analysis_types: list[str] = ["all"]
 ) -> dict:
@@ -106,6 +99,7 @@ def _analysis_filter(
     return error_dict
 
 
+@logged_method_call
 def _compose_error_message(
     error_dict: dict, metadata: PlantMetaData, analysis_types: list[str] = ["all"]
 ) -> str:
@@ -150,6 +144,7 @@ def _compose_error_message(
     return "\n".join(messages)
 
 
+@logged_method_call
 def frequency_validator(
     actual_freq: str | int | float | None,
     desired_freq: Optional[str | None | set[str]],
@@ -221,6 +216,7 @@ def convert_to_list(
     return list(value)
 
 
+@logged_method_call
 def column_validator(df: pd.DataFrame, column_names={}) -> None | list[str]:
     """Validates that the column names exist as provided for each expected column.
 
@@ -243,6 +239,7 @@ def column_validator(df: pd.DataFrame, column_names={}) -> None | list[str]:
     return []
 
 
+@logged_method_call
 def dtype_converter(df: pd.DataFrame, column_types={}) -> list[str]:
     """Converts the columns provided in `column_types` of `df` to the appropriate data
     type.
@@ -316,6 +313,7 @@ def load_to_pandas_dict(
     return data
 
 
+@logged_method_call
 def rename_columns(df: pd.DataFrame, col_map: dict, reverse: bool = True) -> pd.DataFrame:
     """Renames the pandas DataFrame columns using col_map. Intended to be used in
     conjunction with the a data objects meta data column mapping (reverse=True).
@@ -480,6 +478,7 @@ class PlantData:
     @status.validator
     @curtail.validator
     @asset.validator
+    @logged_method_call
     def data_validator(self, instance: attrs.Attribute, value: pd.DataFrame | None) -> None:
         """Validator function for each of the data buckets in `PlantData` that checks
         that the appropriate columns exist for each dataframe, each column is of the
@@ -504,6 +503,7 @@ class PlantData:
             self._errors["dtype"].update(self._validate_dtypes(category=name))
 
     @reanalysis.validator
+    @logged_method_call
     def reanalysis_validator(
         self, instance: attrs.Attribute, value: dict[str, pd.DataFrame] | None
     ) -> None:
@@ -647,6 +647,7 @@ class PlantData:
         else:
             return repr(display(Markdown(self.__generate_markdown_repr())))
 
+    @logged_method_call
     def _set_index_columns(self) -> None:
         """Sets the index value for each of the `PlantData` objects that are not `None`."""
         with attrs.validators.disabled():
@@ -697,6 +698,7 @@ class PlantData:
                     self.reanalysis[name] = self.reanalysis[name].set_index([time_col])
                     self.reanalysis[name].index.name = "time"
 
+    @logged_method_call
     def _unset_index_columns(self) -> None:
         """Resets the index for each of the data types. This is intended solely for the use with
         the :py:meth:`validate` to ensure the validation methods are able to find the index columns
@@ -973,6 +975,7 @@ class PlantData:
 
         return invalid_freq
 
+    @logged_method_call
     def validate(self, metadata: Optional[dict | str | Path | PlantMetaData] = None) -> None:
         """Secondary method to validate the plant data objects after loading or changing
         data with option to provide an updated `metadata` object/file as well
@@ -985,6 +988,7 @@ class PlantData:
         Raises:
             ValueError: Raised at the end if errors are caught in the validation steps.
         """
+        logger.info("Post-intialization data validation")
         # Put the index columns back into the column space to ensure success of re-validation
         self._unset_index_columns()
 
@@ -1131,6 +1135,7 @@ class PlantData:
                     )
                 self.reanalysis = reanalysis
 
+    @logged_method_call
     def calculate_turbine_energy(self) -> None:
         energy_col = self.metadata.scada.WTUR_SupWh
         power_col = self.metadata.scada.WTUR_W
@@ -1202,6 +1207,7 @@ class PlantData:
 
     # NOTE: v2 AssetData methods
 
+    @logged_method_call
     def calculate_asset_distance_matrix(self) -> pd.DataFrame:
         """Calculates the distance between all assets on the site with `np.inf` for the distance
         between an asset and itself.
@@ -1264,6 +1270,7 @@ class PlantData:
         row_ix = self.tower_ids if tower_id is None else tower_id
         return self.asset_distance_matrix.loc[row_ix, self.tower_ids]
 
+    @logged_method_call
     def calculate_asset_direction_matrix(self) -> pd.DataFrame:
         """Calculates the direction between all assets on the site with `np.inf` for the direction
         between an asset and itself, for all assets.
@@ -1419,6 +1426,7 @@ class PlantData:
 
         return list(self.asset.index[freestream_indices])
 
+    @logged_method_call
     def calculate_nearest_neighbor(
         self, turbine_ids: list | np.ndarray = None, tower_ids: list | np.ndarray = None
     ) -> None:
@@ -1497,5 +1505,5 @@ class PlantData:
 # Define additional class methods for custom loading methods
 # **********************************************************
 
-# TODO: Document this
+# Add the method for fetching and attaching the EIA plant data to the project
 setattr(PlantData, "attach_eia_data", attach_eia_data)

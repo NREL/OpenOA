@@ -39,3 +39,11 @@ def logged_function_call(the_function, msg="call"):
         return the_function(*args, **kwargs)
 
     return _wrapper
+
+
+def set_log_level(value: str) -> None:
+    """Update the logging level."""
+    valid = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
+    if value not in valid:
+        raise ValueError(f"`log_level` is invalid. Please use one of: {valid}")
+    logging.getLogger().setLevel(value)

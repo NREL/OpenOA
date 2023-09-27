@@ -439,6 +439,7 @@ class StaticYawMisalignment(FromDictMixin):
 
         self._df_turb = self._df_turb.loc[~flag_bin]
 
+    @logged_method_call
     def _estimate_static_yaw_misalignment(self):
         """
         Estimates static yaw misalignment for a single turbine and wind speed bin by fitting a
