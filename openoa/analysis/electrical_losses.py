@@ -183,8 +183,7 @@ class ElectricalLosses(FromDictMixin):
                 / integer_multiplier,
             }
             self.inputs = pd.DataFrame(inputs)
-
-        if not self.UQ:
+        else:
             inputs = {
                 "meter_data_fraction": 1,
                 "scada_data_fraction": 1,
@@ -192,7 +191,6 @@ class ElectricalLosses(FromDictMixin):
             }
             self.inputs = pd.DataFrame(inputs, index=[0])
 
-        # TODO: self.inputs = pd.DataFrame(inputs)
         self.electrical_losses = np.empty([self.num_sim, 1])
 
     @logged_method_call
