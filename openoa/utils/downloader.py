@@ -49,6 +49,9 @@ from openoa.logging import logging
 logger = logging.getLogger()
 
 
+BYTES_MB = 1024 * 104
+
+
 def download_file(url: str, outfile: str | Path) -> None:
     """
     Download a file from the web, based on its url, and save to the outfile.
@@ -69,9 +72,7 @@ def download_file(url: str, outfile: str | Path) -> None:
         result.raise_for_status()
         try:
             with outfile.open("wb") as f:
-                for chunk in tqdm(
-                    result.iter_content(chunk_size=1024 * 1024), desc="MB downloaded"
-                ):
+                for chunk in tqdm(result.iter_content(chunk_size=BYTES_MB), desc="MB downloaded"):
                     if chunk:
                         f.write(chunk)
 
@@ -150,7 +151,7 @@ def download_zenodo_data(record_id: int, outfile_path: str | Path) -> None:
             # download and unzip if the checksum isn't correct
             else:
                 logger.info(f"Downloading: {file_name}")
-                logger.info(f"File size: {f['size']/(1024*1024):,.2f} MB")
+                logger.info(f"File size: {f['size']/(BYTES_MB):,.2f} MB")
 
                 download_file(url_file, outfile)
 
@@ -163,7 +164,7 @@ def download_zenodo_data(record_id: int, outfile_path: str | Path) -> None:
         # download and unzip if the file doesn't exist
         else:
             logger.info(f"\nDownloading: {file_name}")
-            logger.info(f"File size: {f['size']/(1024*1024):,.2f} MB")
+            logger.info(f"File size: {f['size']/(BYTES_MB):,.2f} MB")
 
             download_file(url_file, outfile)
 
