@@ -32,7 +32,7 @@ class EYAGAPAnalysis(unittest.TestCase):
             wake_losses=0.087,
         )
 
-        self.project = project_ENGIE.prepare(example_data_path_str)
+        self.project = project_ENGIE.prepare(example_data_path_str, use_cleansed=False)
 
         # AEP (GWh/yr), gross energy (GWh/yr), availability loss (fraction), electrical loss (fraction),
         # turbine performance loss (fraction), blade degradation loss (fraction), wake loss (fraction)

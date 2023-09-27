@@ -313,6 +313,9 @@ def test_TowerMetaData():
     meta_dict = dict(
         asset_id="the_IDs",
         frequency="D",
+        WMET_HorWdSpd="windspeed",
+        WMET_HorWdDir="winddir",
+        WMET_EnvTmp="TempC",
     )
     valid_map = deepcopy(meta_dict)
     valid_map.update(dict(time="time"))

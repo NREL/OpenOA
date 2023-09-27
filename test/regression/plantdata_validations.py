@@ -31,7 +31,9 @@ class TestPlantData(unittest.TestCase):
             cls.curtail_df,
             cls.asset_df,
             cls.reanalysis_dict,
-        ) = project_ENGIE.prepare(path=example_data_path_str, return_value="dataframes")
+        ) = project_ENGIE.prepare(
+            path=example_data_path_str, return_value="dataframes", use_cleansed=False
+        )
 
     def setUp(self):
         """
@@ -180,7 +182,9 @@ class TestPlantDatPartial(unittest.TestCase):
             cls.curtail_df,
             cls.asset_df,
             cls.reanalysis_dict,
-        ) = project_ENGIE.prepare(path=example_data_path_str, return_value="dataframes")
+        ) = project_ENGIE.prepare(
+            path=example_data_path_str, return_value="dataframes", use_cleansed=False
+        )
 
     def setUp(self):
         """
@@ -237,7 +241,7 @@ class TestSchema(unittest.TestCase):
         with open(schema_path / "base_tie_schema.yml", "r") as f:
             self.tie_schema = yaml.safe_load(f)
 
-        with open(schema_path / "base_wake_losses_schema.yml", "r") as f:
+        with open(schema_path / "scada_wake_losses_schema.yml", "r") as f:
             self.wake_schema = yaml.safe_load(f)
 
     def test_full_schema(self):
@@ -272,7 +276,7 @@ class TestSchema(unittest.TestCase):
             # Check for matching frequencies
             assert set(dict["frequency"]) == set(self.tie_schema[key]["frequency"])
 
-        wake_schema = create_analysis_schema("WakeLosses")
+        wake_schema = create_analysis_schema("WakeLosses-scada")
         assert self.wake_schema.keys() == wake_schema.keys()
         for key, dict in wake_schema.items():
             # Check that the correct required columns are pulled
@@ -288,7 +292,8 @@ class TestSchema(unittest.TestCase):
             "ElectricalLosses",
             "MonteCarloAEP",
             "TurbineLongTermGrossEnergy",
-            "WakeLosses",
+            "WakeLosses-scada",
+            "StaticYawMisalignment",
         ]
         combined_schema = create_analysis_schema(analysis_types=analysis_types)
 
@@ -297,7 +302,9 @@ class TestSchema(unittest.TestCase):
                 "asset_id": {"name": "asset_id", "dtype": "str", "units": None},
                 "WTUR_W": {"name": "WTUR_W", "dtype": "float", "units": "kW"},
                 "WMET_HorWdSpd": {"name": "WMET_HorWdSpd", "dtype": "float", "units": "m/s"},
-                "WMET_HorWdDir": {"name": "WMET_HorWdDir", "dtype": "float", "units": "deg"},
+                "WMET_HorWdDir": {"name": "WMET_HorWdDir", "dtype": "float", "units": "m/s"},
+                "WMET_HorWdDirRel": {"name": "WMET_HorWdDirRel", "dtype": "float", "units": "deg"},
+                "WROT_BlPthAngVal": {"name": "WROT_BlPthAngVal", "dtype": "float", "units": "deg"},
                 "frequency": [
                     "H",
                     "S",
@@ -328,12 +335,12 @@ class TestSchema(unittest.TestCase):
             },
             "meter": {
                 "MMTR_SupWh": {"name": "MMTR_SupWh", "dtype": "float", "units": "kWh"},
-                "frequency": ["min", "MS", "M", "D", "N", "W", "us", "T", "S", "U", "L", "H", "ms"],
+                "frequency": ["min", "MS", "D", "N", "W", "us", "T", "S", "U", "L", "H", "ms"],
             },
             "curtail": {
                 "IAVL_ExtPwrDnWh": {"name": "IAVL_ExtPwrDnWh", "dtype": "float", "units": "kWh"},
                 "IAVL_DnWh": {"name": "IAVL_DnWh", "dtype": "float", "units": "kWh"},
-                "frequency": ["min", "MS", "M", "D", "N", "W", "us", "T", "S", "U", "L", "H", "ms"],
+                "frequency": ["min", "MS", "D", "N", "W", "us", "T", "S", "U", "L", "H", "ms"],
             },
             "asset": {
                 "latitude": {"name": "latitude", "dtype": "float", "units": "WGS84"},
@@ -345,8 +352,6 @@ class TestSchema(unittest.TestCase):
         # A direct comparison is not possible because the frequency ordering is different
         # between the two dictionaries.
         # Check for matching required data types
-        print(correct_schema.keys())
-        print(combined_schema.keys())
         assert correct_schema.keys() == combined_schema.keys()
         for key, dict in combined_schema.items():
             # Check that the correct required columns are pulled

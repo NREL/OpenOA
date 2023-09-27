@@ -1,0 +1,98 @@
+{
+  "asset": {
+    "latitude": {
+      "dtype": "float",
+      "name": "latitude",
+      "units": "WGS84"
+    },
+    "longitude": {
+      "dtype": "float",
+      "name": "longitude",
+      "units": "WGS84"
+    },
+    "rated_power": {
+      "dtype": "float",
+      "name": "rated_power",
+      "units": "kW"
+    }
+  },
+  "reanalysis": {
+    "WMETR_HorWdDir": {
+      "dtype": "float",
+      "name": "WMETR_HorWdDir",
+      "units": "deg"
+    },
+    "WMETR_HorWdSpd": {
+      "dtype": "float",
+      "name": "WMETR_HorWdSpd",
+      "units": "m/s"
+    },
+    "frequency": [
+      "us",
+      "ms",
+      "U",
+      "L",
+      "min",
+      "S",
+      "H",
+      "N",
+      "T"
+    ]
+  },
+  "scada": {
+    "WMET_HorWdSpd": {
+      "dtype": "float",
+      "name": "WMET_HorWdSpd",
+      "units": "m/s"
+    },
+    "WTUR_W": {
+      "dtype": "float",
+      "name": "WTUR_W",
+      "units": "kW"
+    },
+    "asset_id": {
+      "dtype": "str",
+      "name": "asset_id",
+      "units": null
+    },
+    "frequency": [
+      "us",
+      "ms",
+      "U",
+      "L",
+      "min",
+      "S",
+      "H",
+      "N",
+      "T"
+    ]
+  },
+  "tower": {
+    "WMET_HorWdDir": {
+      "dtype": "float",
+      "name": "WMET_HorWdDir",
+      "units": "deg"
+    },
+    "WMET_HorWdSpd": {
+      "dtype": "float",
+      "name": "WMET_HorWdSpd",
+      "units": "m/s"
+    },
+    "asset_id": {
+      "dtype": "str",
+      "name": "asset_id",
+      "units": null
+    },
+    "frequency": [
+      "us",
+      "ms",
+      "U",
+      "L",
+      "min",
+      "S",
+      "H",
+      "N",
+      "T"
+    ]
+  }
+}

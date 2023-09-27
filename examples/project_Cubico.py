@@ -335,7 +335,7 @@ def prepare(asset: str = "kelmarsh", return_value: str = "plantdata") -> PlantDa
         "asset": {
             "elevation": "Elevation (m)",
             "hub_height": "Hub Height (m)",
-            "id": "Title",
+            "asset_id": "Title",
             "latitude": "Latitude",
             "longitude": "Longitude",
             "rated_power": "Rated power (kW)",
@@ -392,7 +392,7 @@ def prepare(asset: str = "kelmarsh", return_value: str = "plantdata") -> PlantDa
             "WMET_HorWdDir": "Wind direction (°)",
             "WMET_HorWdSpd": "Wind speed (m/s)",
             "WROT_BlPthAngVal": "Blade angle (pitch position) A (°)",
-            "WTUR_TurNam": "Turbine",
+            "asset_id": "Turbine",
             "WTUR_W": "Power (kW)",
             "frequency": "10T",
             "time": "Timestamp",

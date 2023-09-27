@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import random
 import datetime
+from copy import deepcopy
 
 import attrs
 import numpy as np
@@ -22,7 +23,7 @@ from matplotlib.markers import MarkerStyle
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import KFold
 
-from openoa.plant import PlantData
+from openoa.plant import PlantData, convert_to_list
 from openoa.utils import plot, filters
 from openoa.utils import timeseries as tm
 from openoa.utils import unit_conversion as un
@@ -30,6 +31,7 @@ from openoa.utils import met_data_processing as mt
 from openoa.schema import FromDictMixin
 from openoa.logging import logging, logged_method_call
 from openoa.utils.machine_learning_setup import MachineLearningSetup
+from openoa.analysis._analysis_validators import validate_reanalysis_selections
 
 
 logger = logging.getLogger(__name__)
@@ -70,12 +72,6 @@ class MonteCarloAEPResult(object):
     pass
 
 
-def _convert_time_resolution_string(x: str):
-    if x == "M":
-        return "MS"
-    return x
-
-
 # Long Term AEP
 @define(auto_attribs=True)
 class MonteCarloAEP(FromDictMixin):
@@ -97,8 +93,13 @@ class MonteCarloAEP(FromDictMixin):
 
     Args:
         plant(:obj:`PlantData`): PlantData object from which PlantAnalysis should draw data.
-        reanal_products(obj:`list[str]`) : List of reanalysis products to use for Monte Carlo
-            sampling. Defaults to ["merra2", "ncep2", "era5"].
+        reg_temperature(:obj:`bool`): Indicator to include temperature (True) or not (False) as a
+            regression input. Defaults to False.
+        reg_wind_direction(:obj:`bool`): Indicator to include wind direction (True) or not (False) as
+            a regression input. Defaults to False.
+        reanalysis_products(obj:`list[str]`) : List of reanalysis products to use for Monte Carlo
+            sampling. Defaults to None, which pulls all the products contained in
+            :py:attr:`plant.reanalysis`.
         uncertainty_meter(:obj:`float`): Uncertainty on revenue meter data. Defaults to 0.005.
         uncertainty_losses(:obj:`float`): Uncertainty on long-term losses. Defaults to 0.05.
         uncertainty_windiness(:obj:`tuple[int, int]`): number of years to use for the windiness
@@ -126,18 +127,20 @@ class MonteCarloAEP(FromDictMixin):
             points. Defaults to "lin".
         ml_setup_kwargs(:obj:`kwargs`): Keyword arguments to
             :py:class:`openoa.utils.machine_learning_setup.MachineLearningSetup` class. Defaults to {}.
-        reg_temperature(:obj:`bool`): Indicator to include temperature (True) or not (False) as a
-            regression input. Defaults to False.
-        reg_wind_direction(:obj:`bool`): Indicator to include wind direction (True) or not (False) as
-            a regression input. Defaults to False.
     """
 
-    plant: PlantData
+    plant: PlantData = field(converter=deepcopy, validator=attrs.validators.instance_of(PlantData))
+    reg_temperature: bool = field(default=False, converter=bool)
+    reg_wind_direction: bool = field(default=False, converter=bool)
     reanalysis_products: list[str] = field(
-        default=["merra2", "ncep2", "era5"],
-        validator=attrs.validators.deep_iterable(
-            iterable_validator=attrs.validators.instance_of(list),
-            member_validator=attrs.validators.instance_of(str),
+        default=None,
+        converter=convert_to_list,
+        validator=(
+            attrs.validators.deep_iterable(
+                iterable_validator=attrs.validators.instance_of(list),
+                member_validator=attrs.validators.instance_of((str, type(None))),
+            ),
+            validate_reanalysis_selections,
         ),
     )
     uncertainty_meter: float = field(default=0.005, converter=float)
@@ -174,8 +177,6 @@ class MonteCarloAEP(FromDictMixin):
         default="lin", converter=str, validator=attrs.validators.in_(("lin", "gbm", "etr", "gam"))
     )
     ml_setup_kwargs: dict = field(default={}, converter=dict)
-    reg_temperature: bool = field(default=False, converter=bool)
-    reg_wind_direction: bool = field(default=False, converter=bool)
 
     # Internally created attributes need to be given a type before usage
     resample_freq: str = field(init=False)
@@ -195,7 +196,6 @@ class MonteCarloAEP(FromDictMixin):
     )
     _reanalysis_aggregate: pd.DataFrame = field(init=False)
     num_sim: int = field(init=False)
-    reanalysis_subset: list[str] = field(init=False)
     long_term_losses: tuple[pd.Series, pd.Series] = field(init=False)
     mc_inputs: pd.DataFrame = field(init=False)
     _mc_num_points: NDArrayFloat = field(init=False)
@@ -206,28 +206,26 @@ class MonteCarloAEP(FromDictMixin):
     _run: pd.DataFrame = field(init=False)
     results: pd.DataFrame = field(init=False)
 
-    @reanalysis_products.validator
-    def check_reanalysis_products(self, attribute: attrs.Attribute, value: list[str]) -> None:
-        """Checks that the provided reanalysis products actually exist in the reanalysis data."""
-        valid = [*self.plant.reanalysis]
-        invalid = list(set(value).difference(valid))
-        if invalid:
-            raise ValueError(
-                f"The following input to `reanalysis_products`: {invalid} are not contained in `plant.reanalysis`: {valid}"
-            )
-
     @logged_method_call
     def __attrs_post_init__(self):
         """
-        Initialize APE_MC analysis with data and parameters.
+        Initialize the Monte Carlo AEP analysis with data and parameters.
         """
-        if not isinstance(self.plant, PlantData):
-            raise TypeError(
-                f"The passed `plant` object must be of type `PlantData`, not: {type(self.plant)}"
-            )
 
-        if set(("MonteCarloAEP", "all")).intersection(self.plant.analysis_type) == set():
-            self.plant.analysis_type.append("MonteCarloAEP")
+        if self.reg_temperature and self.reg_wind_direction:
+            analysis_type = "MonteCarloAEP-temp-wd"
+            self.reanalysis_vars.extend(["WMETR_EnvTmp", "WMETR_HorWdSpdU", "WMETR_HorWdSpdV"])
+        elif self.reg_temperature:
+            analysis_type = "MonteCarloAEP-temp"
+            self.reanalysis_vars.append("WMETR_EnvTmp")
+        elif self.reg_wind_direction:
+            analysis_type = "MonteCarloAEP-wd"
+            self.reanalysis_vars.extend(["WMETR_HorWdSpdU", "WMETR_HorWdSpdV"])
+        else:
+            analysis_type = "MonteCarloAEP"
+
+        if set((analysis_type, "all")).intersection(self.plant.analysis_type) == set():
+            self.plant.analysis_type.append(analysis_type)
 
         # Ensure the data are up to spec before continuing with initialization
         self.plant.validate()
@@ -241,13 +239,6 @@ class MonteCarloAEP(FromDictMixin):
         if self.end_date_lt is not None:
             # Set to the bottom of the bottom of the hour
             self.end_date_lt = pd.to_datetime(self.end_date_lt).replace(minute=0)
-
-        # Build list of regression variables
-        # self.reanalysis_vars = []  # Recreate because of data persistency bug
-        if self.reg_temperature:
-            self.reanalysis_vars.append("WMETR_EnvTmp")
-        if self.reg_wind_direction:
-            self.reanalysis_vars.extend(["WMETR_HorWdSpdU", "WMETR_HorWdSpdV"])
 
         # Monthly data can only use robust linear regression because of limited number of data
         if (self.time_resolution == "M") & (self.reg_model != "lin"):
@@ -267,22 +258,89 @@ class MonteCarloAEP(FromDictMixin):
         ]
 
     @logged_method_call
-    def run(self, num_sim: int, reanalysis_subset: list[str] = None):
+    def run(
+        self,
+        num_sim: int,
+        reg_model: str = None,
+        reanalysis_products: list[str] = None,
+        uncertainty_meter: float = None,
+        uncertainty_losses: float = None,
+        uncertainty_windiness: float | tuple[float, float] = None,
+        uncertainty_loss_max: float | tuple[float, float] = None,
+        outlier_detection: bool = None,
+        uncertainty_outlier: float | tuple[float, float] = None,
+        uncertainty_nan_energy: float = None,
+        time_resolution: str = None,
+        end_date_lt: str | pd.Timestamp | None = None,
+        ml_setup_kwargs: dict = None,
+    ) -> None:
         """
-        Perform pre-processing of data into an internal representation for which the analysis can run more quickly.
+        Process all appropriate data and run the MonteCarlo AEP analysis.
+
+        .. note:: If None is provided to any of the inputs, then the last used input value will be
+            used for the analysis, and if no prior values were set, then this is the model's defaults.
 
         Args:
             num_sim(:obj:`int`): number of simulations to perform
-            reanalysis_subset(:obj:`list[str]`): list of reanalysis abbreviations indicating which
-                reanalysis products to use for operational analysis.
+            reanal_products(obj:`list[str]`) : List of reanalysis products to use for Monte Carlo
+                sampling. Defaults to None, which pulls all the products contained in
+                :py:attr:`plant.reanalysis`.
+            uncertainty_meter(:obj:`float`): Uncertainty on revenue meter data. Defaults to 0.005.
+            uncertainty_losses(:obj:`float`): Uncertainty on long-term losses. Defaults to 0.05.
+            uncertainty_windiness(:obj:`tuple[int, int]`): number of years to use for the windiness
+                correction. Defaults to (10, 20).
+            uncertainty_loss_max(:obj:`tuple[int, int]`): Threshold for the combined availabilty and
+                curtailment monthly loss threshold. Defaults to (10, 20).
+            outlier_detection(:obj:`bool`): whether to perform (True) or not (False - default) outlier
+                detection filtering. Defaults to False.
+            uncertainty_outlier(:obj:`tuple[float, float]`): Min and max thresholds (Monte-Carlo
+                sampled) for the outlier detection filter. At monthly resolution, this is the tuning
+                constant for Huber's t function for a robust linear regression. At daily/hourly
+                resolution, this is the number of stdev of wind speed used as threshold for the bin
+                filter. Defaults to (1, 3).
+            uncertainty_nan_energy(:obj:`float`): Threshold to flag days/months based on NaNs. Defaults
+                to 0.01.
+            time_resolution(:obj:`string`): whether to perform the AEP calculation at monthly ("M"),
+                daily ("D") or hourly ("H") time resolution. Defaults to "M".
+            end_date_lt(:obj:`string` or :obj:`pandas.Timestamp`): The last date to use for the
+                long-term correction. Note that only the component of the date corresponding to the
+                time_resolution argument is considered. If None, the end of the last complete month of
+                reanalysis data will be used. Defaults to None.
+            reg_model(:obj:`string`): Which model to use for the regression ("lin" for linear, "gam" for,
+                general additive, "gbm" for gradient boosting, or "etr" for extra treees). At monthly
+                time resolution only linear regression is allowed because of the reduced number of data
+                points. Defaults to "lin".
+            ml_setup_kwargs(:obj:`kwargs`): Keyword arguments to
+                :py:class:`openoa.utils.machine_learning_setup.MachineLearningSetup` class. Defaults to {}.
 
         Returns:
             None
         """
         self.num_sim = num_sim
-        self.reanalysis_subset = (
-            self.reanalysis_products if reanalysis_subset is None else reanalysis_subset
-        )
+        if reanalysis_products is not None:
+            self.reanalysis_products = reanalysis_products
+        if reg_model is not None:
+            self.reg_model = reg_model
+        if uncertainty_meter is not None:
+            self.uncertainty_meter = uncertainty_meter
+        if uncertainty_losses is not None:
+            self.uncertainty_losses = uncertainty_losses
+        if uncertainty_windiness is not None:
+            self.uncertainty_windiness = uncertainty_windiness
+        if uncertainty_loss_max is not None:
+            self.uncertainty_loss_max = uncertainty_loss_max
+        if outlier_detection is not None:
+            self.outlier_detection = outlier_detection
+        if uncertainty_outlier is not None:
+            self.uncertainty_outlier = uncertainty_outlier
+        if uncertainty_nan_energy is not None:
+            self.uncertainty_nan_energy = uncertainty_nan_energy
+        if time_resolution is not None:
+            self.time_resolution = time_resolution
+        if end_date_lt is not None:
+            self.end_date_lt = end_date_lt
+        if ml_setup_kwargs is not None:
+            self.ml_setup_kwargs = ml_setup_kwargs
 
         # Write parameters of run to the log file
         logged_params = dict(
@@ -292,7 +350,7 @@ class MonteCarloAEP(FromDictMixin):
             uncertainty_windiness=self.uncertainty_windiness,
             uncertainty_nan_energy=self.uncertainty_nan_energy,
             num_sim=self.num_sim,
-            reanalysis_subset=self.reanalysis_subset,
+            reanalysis_products=self.reanalysis_products,
         )
         logger.info("Running with parameters: {}".format(logged_params))
 
@@ -633,7 +691,7 @@ class MonteCarloAEP(FromDictMixin):
         """
 
         # Create extra long list of renanalysis product names to sample from
-        reanal_list = list(np.repeat(self.reanalysis_subset, self.num_sim))
+        reanal_list = list(np.repeat(self.reanalysis_products, self.num_sim))
 
         inputs = {
             "reanalysis_product": np.asarray(random.sample(reanal_list, self.num_sim)),
@@ -1493,21 +1551,21 @@ def create_MonteCarloAEP(
     reg_wind_direction: bool = __defaults_reg_wind_direction,
 ) -> MonteCarloAEP:
     return MonteCarloAEP(
-        project,
-        reanalysis_products,
-        uncertainty_meter,
-        uncertainty_losses,
-        uncertainty_windiness,
-        uncertainty_loss_max,
-        outlier_detection,
-        uncertainty_outlier,
-        uncertainty_nan_energy,
-        time_resolution,
-        end_date_lt,
-        reg_model,
-        ml_setup_kwargs,
-        reg_temperature,
-        reg_wind_direction,
+        plant=project,
+        reanalysis_products=reanalysis_products,
+        uncertainty_meter=uncertainty_meter,
+        uncertainty_losses=uncertainty_losses,
+        uncertainty_windiness=uncertainty_windiness,
+        uncertainty_loss_max=uncertainty_loss_max,
+        outlier_detection=outlier_detection,
+        uncertainty_outlier=uncertainty_outlier,
+        uncertainty_nan_energy=uncertainty_nan_energy,
+        time_resolution=time_resolution,
+        end_date_lt=end_date_lt,
+        reg_model=reg_model,
+        ml_setup_kwargs=ml_setup_kwargs,
+        reg_temperature=reg_temperature,
+        reg_wind_direction=reg_wind_direction,
     )
 
 

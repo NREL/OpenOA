@@ -197,6 +197,21 @@
     }
   },
   "tower": {
+    "WMET_EnvTmp": {
+      "dtype": "float",
+      "name": "WMET_EnvTmp",
+      "units": "C"
+    },
+    "WMET_HorWdDir": {
+      "dtype": "float",
+      "name": "WMET_HorWdDir",
+      "units": "deg"
+    },
+    "WMET_HorWdSpd": {
+      "dtype": "float",
+      "name": "WMET_HorWdSpd",
+      "units": "m/s"
+    },
     "asset_id": {
       "dtype": "str",
       "name": "asset_id",
