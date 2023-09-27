@@ -335,12 +335,12 @@ class TestSchema(unittest.TestCase):
             },
             "meter": {
                 "MMTR_SupWh": {"name": "MMTR_SupWh", "dtype": "float", "units": "kWh"},
-                "frequency": ["min", "MS", "M", "D", "N", "W", "us", "T", "S", "U", "L", "H", "ms"],
+                "frequency": ["min", "MS", "D", "N", "W", "us", "T", "S", "U", "L", "H", "ms"],
             },
             "curtail": {
                 "IAVL_ExtPwrDnWh": {"name": "IAVL_ExtPwrDnWh", "dtype": "float", "units": "kWh"},
                 "IAVL_DnWh": {"name": "IAVL_DnWh", "dtype": "float", "units": "kWh"},
-                "frequency": ["min", "MS", "M", "D", "N", "W", "us", "T", "S", "U", "L", "H", "ms"],
+                "frequency": ["min", "MS", "D", "N", "W", "us", "T", "S", "U", "L", "H", "ms"],
             },
             "asset": {
                 "latitude": {"name": "latitude", "dtype": "float", "units": "WGS84"},

@@ -16,15 +16,15 @@ scada:
     dtype: float
     units: deg
   frequency:
-  - H
+  - us
   - ms
   - U
-  - us
-  - min
-  - T
   - L
-  - N
+  - min
   - S
+  - H
+  - N
+  - T
 asset:
   latitude:
     name: latitude
@@ -48,12 +48,12 @@ reanalysis:
     dtype: float
     units: deg
   frequency:
-  - H
+  - us
   - ms
   - U
-  - us
-  - min
-  - T
   - L
-  - N
+  - min
   - S
+  - H
+  - N
+  - T
