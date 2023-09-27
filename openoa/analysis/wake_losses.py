@@ -195,6 +195,12 @@ class WakeLosses(FromDictMixin):
             during the long term-correction process. This wind speed corresponds to the wind
             speed measured at freestream wind turbines. Only used if
             :py:attr:`assume_no_wakes_high_ws_LT_corr` = True. Defaults to 13 m/s.
+        min_ws_bin_lin_reg (float, optional): The minimum wind speed bin to consider when finding
+            linear regression from SCADA freestream wind speeds to reanalysis wind speeds. Defaults
+            to 3.0
+        bin_count_thresh_lin_reg (int, optional): The minimum number of samples required in a wind
+            speed bin to include when finding linear regression from SCADA freestream wind speeds to
+            reanalysis wind speeds. Defaults to 50.
     """
 
     plant: PlantData = field(converter=deepcopy, validator=attrs.validators.instance_of(PlantData))
@@ -240,6 +246,8 @@ class WakeLosses(FromDictMixin):
     num_years_LT: int | tuple[int, int] = field(default=(10, 20), validator=validate_UQ_input)
     assume_no_wakes_high_ws_LT_corr: bool = field(default=True)
     no_wakes_ws_thresh_LT_corr: float = field(default=13.0)
+    min_ws_bin_lin_reg: float = field(default=3.0)
+    bin_count_thresh_lin_reg: int = field(default=50, validator=attrs.validators.instance_of(int))
 
     # Internally created attributes need to be given a type before usage
     turbine_ids: list[str] = field(init=False)
@@ -351,6 +359,8 @@ class WakeLosses(FromDictMixin):
         num_years_LT: int | None = None,
         assume_no_wakes_high_ws_LT_corr: bool | None = None,
         no_wakes_ws_thresh_LT_corr: float | None = None,
+        min_ws_bin_lin_reg: float | None = None,
+        bin_count_thresh_lin_reg: int | None = None,
     ):
         """
         Estimates wake losses by comparing wind plant energy production to energy production of the
@@ -429,6 +439,12 @@ class WakeLosses(FromDictMixin):
                 during the long term-correction process. This wind speed corresponds to the wind
                 speed measured at freestream wind turbines. Only used if
                 :py:attr:`assume_no_wakes_high_ws_LT_corr` = True. Defaults to 13 m/s.
+            min_ws_bin_lin_reg (float, optional): The minimum wind speed bin to consider when
+                finding linear regression from SCADA freestream wind speeds to reanalysis wind
+                speeds. Defaults to 3.0
+            bin_count_thresh_lin_reg (int, optional): The minimum number of samples required in a
+                wind speed bin to include when finding linear regression from SCADA freestream wind
+                speeds to reanalysis wind speeds. Defaults to 50.
         """
         # Assign default parameter values depending on whether UQ is performed
         if num_sim is not None:
@@ -465,6 +481,10 @@ class WakeLosses(FromDictMixin):
             self.assume_no_wakes_high_ws_LT_corr = assume_no_wakes_high_ws_LT_corr
         if no_wakes_ws_thresh_LT_corr is not None:
             self.no_wakes_ws_thresh_LT_corr = no_wakes_ws_thresh_LT_corr
+        if min_ws_bin_lin_reg is not None:
+            self.min_ws_bin_lin_reg = min_ws_bin_lin_reg
+        if bin_count_thresh_lin_reg is not None:
+            self.bin_count_thresh_lin_reg = bin_count_thresh_lin_reg
 
         # Set up Monte Carlo simulation inputs if UQ = True or single simulation inputs if UQ = False.
         self._setup_monte_carlo_inputs()
@@ -1031,15 +1051,6 @@ class WakeLosses(FromDictMixin):
             tuple[float, np.ndarray, np.ndarray, np.ndarray, np.ndarray]: The estimated long term-corrected wake
                 losses, an array containing the estimated turbine-level long term-corrected wake losses, and arrays containing the long-term corrected plant and turbine-level wake losses as well as the normalized wind plant energy productionbinned by wind direction
         """
-
-        # TODO: make arguments?
-        # The minimum wind speed bin to consider when finding linear regression from SCADA freestream wind speeds to
-        # reanalysis wind speeds
-        min_ws_bin_lin_reg = 3.0
-        # The minimum number of samples required in a wind speed bin to include when finding linear regression from
-        # SCADA freestream wind speeds to reanalysis wind speeds
-        bin_count_thresh_lin_reg = 50
-
         # First, create hourly data frame for LT correction to match resolution of reanalysis data
         df_1hr = self.aggregate_df_sample[
             [
@@ -1061,8 +1072,8 @@ class WakeLosses(FromDictMixin):
         df_ws_bin = df_1hr.groupby(("windspeed_mean_freestream_bin", "")).mean()
         df_ws_bin_count = df_1hr.groupby(("windspeed_mean_freestream_bin", "")).count()
 
-        valid_ws_bins = (df_ws_bin.index >= min_ws_bin_lin_reg) & (
-            df_ws_bin_count["windspeed_mean_freestream"] >= bin_count_thresh_lin_reg
+        valid_ws_bins = (df_ws_bin.index >= self.min_ws_bin_lin_reg) & (
+            df_ws_bin_count["windspeed_mean_freestream"] >= self.bin_count_thresh_lin_reg
         )
 
         # Find linear regression mapping from SCADA freestream wind speed to reanalysis wind speeds and use to correct
