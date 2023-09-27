@@ -892,6 +892,10 @@ class MonteCarloAEP(FromDictMixin):
         # Machine learning models
         else:
             ml = MachineLearningSetup(algorithm=self.reg_model, **self.ml_setup_kwargs)
+            if self.plant.log_level in ("WARNING", "ERROR", "CRITICAL", "INFO"):
+                verbosity = 0
+            else:
+                verbosity = 2
             # Memoized approach for optimized hyperparameters
             if self._run.reanalysis_product in self.opt_model:
                 self.opt_model[(self._run.reanalysis_product)].fit(
@@ -904,6 +908,7 @@ class MonteCarloAEP(FromDictMixin):
                     n_iter_search=20,
                     report=False,
                     cv=KFold(n_splits=5),
+                    verbose=verbosity,
                 )
                 # Store optimized hyperparameters for each reanalysis product
                 self.opt_model[(self._run.reanalysis_product)] = ml.opt_model
