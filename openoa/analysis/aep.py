@@ -1,9 +1,3 @@
-# TODO:
-# - Finish refactoring from Timeseries Table to PlantData (test and verify)
-# - Rename API to openoa.analysis.aep.long_term_monte_carlo_method
-# - Make AnalysisResult into an attrs dataclass, and Analysis object.
-# - Refactor the class to be more modular and performant. Add QMC method.
-
 from __future__ import annotations
 
 import random
@@ -64,15 +58,8 @@ def get_annual_values(data):
     return data.resample("12MS").sum().values
 
 
-class MonteCarloAEPResult(object):
-    """
-    Result object of a MonteCarlo AEP Analysis
-    """
-
-    pass
-
-
-# Long Term AEP
+# TODO: Split this into a more generic naming convention to have other AEP methods, such as QMC
+# TODO: Create an analysis result class that could be used for better results aggregation
 @define(auto_attribs=True)
 class MonteCarloAEP(FromDictMixin):
     """
@@ -415,7 +402,6 @@ class MonteCarloAEP(FromDictMixin):
             1. Populate monthly/daily data frame with energy data summed from 10-min QC'd data
             2. For each monthly/daily value, find percentage of NaN data used in creating it and flag if percentage is
                greater than 0
-
         """
         df = self.plant.meter  # Get the meter data frame
 
@@ -447,15 +433,7 @@ class MonteCarloAEP(FromDictMixin):
 
     @logged_method_call
     def process_loss_estimates(self):
-        """
-        Append availability and curtailment losses to monthly data frame
-
-        Args:
-            (None)
-
-        Returns:
-            (None)
-        """
+        """Append availability and curtailment losses to monthly data frame."""
         df = self.plant.curtail.copy()
 
         curt_aggregate = np.divide(
@@ -518,7 +496,6 @@ class MonteCarloAEP(FromDictMixin):
             - calculate monthly/daily average wind direction
             - calculate monthly/daily average temperature
             - append monthly/daily averages to monthly/daily energy data frame
-
         """
 
         # Identify start and end dates for long-term correction
@@ -568,9 +545,7 @@ class MonteCarloAEP(FromDictMixin):
 
         # Define empty data frame that spans our period of interest
         self._reanalysis_aggregate = pd.DataFrame(
-            index=pd.date_range(
-                start=start_date, end=end_date, freq=self.resample_freq
-            ),  # tz="UTC"),
+            index=pd.date_range(start=start_date, end=end_date, freq=self.resample_freq),
             dtype=float,
         )
 
@@ -624,8 +599,6 @@ class MonteCarloAEP(FromDictMixin):
                     )
                 )  # Calculate wind direction
 
-        # TODO JP: Had to localize the timezone after V3 update. Is there a better way to do this?
-        # self.aggregate.index = self.aggregate.index.tz_localize("UTC")
         self.aggregate = self.aggregate.join(
             self._reanalysis_aggregate
         )  # Merge monthly reanalysis data to monthly energy data frame
@@ -641,13 +614,6 @@ class MonteCarloAEP(FromDictMixin):
                 != self.aggregate.loc[p, "num_days_actual"]
             ):
                 self.aggregate.drop(p, inplace=True)  # Drop the row from data frame
-
-        # Unsure why this is any different
-        # ix = [0, -1]
-        # ix_drop = np.where(
-        #     self.aggregate["num_days_expected"].iloc[ix] == self.aggregate["num_days_actual"].iloc[ix]
-        # )
-        # self.aggregate.drop(self.aggregate.iloc[ix].index[ix_drop], inplace=True)
 
     @logged_method_call
     def calculate_long_term_losses(self):
@@ -678,16 +644,11 @@ class MonteCarloAEP(FromDictMixin):
 
         self.long_term_losses = (avail_long_term, curt_long_term)
 
+    @logged_method_call
     def setup_monte_carlo_inputs(self):
         """
         Create and populate the data frame defining the simulation parameters.
         This data frame is stored as self.mc_inputs
-
-        Args:
-            (None)
-
-        Returns:
-            (None)
         """
 
         # Create extra long list of renanalysis product names to sample from
@@ -1100,8 +1061,6 @@ class MonteCarloAEP(FromDictMixin):
             1. The reanalysis product
             2. The number of years to use in the long-term correction
 
-        Args:
-           (None)
         Returns:
            :obj:`pandas.DataFrame`: the windiness-corrected or 'long-term' monthly/daily wind speeds
         """
