@@ -1046,8 +1046,7 @@ class PlantData:
                 df[dens] = met.compute_air_density(df[temp], df[sp])
 
             reanalysis[name] = df
-        with attrs.validators.disabled():
-            self.reanalysis = reanalysis
+        self.reanalysis = reanalysis
 
     @logged_method_call
     def parse_asset_geometry(
