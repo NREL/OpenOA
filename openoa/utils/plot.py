@@ -181,11 +181,6 @@ def plot_windfarm(
     Returns:
         Bokeh_plot(:obj:`axes handle`): windfarm map
 
-    """
-    """
-    TODO: Add this back in when it can be debugged
-    lats, lons = transformer.transform(...) -> ValueError: not enough values to unpack (expected 2, got 0)
-
     Example:
         .. bokeh-plot::
 
