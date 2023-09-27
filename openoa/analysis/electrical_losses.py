@@ -162,6 +162,7 @@ class ElectricalLosses(FromDictMixin):
         self.setup_inputs()
         self.calculate_electrical_losses()
 
+    @logged_method_call
     def setup_inputs(self):
         """
         Create and populate the data frame defining the simulation parameters.

@@ -23,5 +23,3 @@ def __attach_methods():
 
 
 __attach_methods()
-
-# TODO: Add analysis results computation methods to PlantData
