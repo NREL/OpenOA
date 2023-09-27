@@ -490,9 +490,10 @@ class PlantData:
             value (pd.DataFrame | None): The attribute's user-provided value. A
                 dictionary of dataframes is expected for reanalysis data only.
         """
-        if self.analysis_type == [None]:
-            return
         name = instance.name
+        if self.analysis_type == [None]:
+            logger.info(f"Skipping data validation for {name} because `analysis_type=None`.")
+            return
         if value is None:
             columns = list(getattr(self.metadata, name).col_map.values())
             self._errors["missing"].update({name: columns})
@@ -530,6 +531,7 @@ class PlantData:
                 )
 
         if self.analysis_type == [None]:
+            logger.info(f"Skipping data validation for {name} because `analysis_type=None`.")
             return
 
         if value is None:
@@ -1007,9 +1009,6 @@ class PlantData:
 
         self._set_index_columns()
         self._errors["frequency"] = self._validate_frequency()
-
-        # TODO: Check for extra columns?
-        # TODO: Define other checks?
 
         error_message = _compose_error_message(self._errors, self.metadata, self.analysis_type)
         if error_message:
