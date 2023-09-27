@@ -442,7 +442,6 @@ class PlantData:
             raise ValueError(error_message)
 
         # Post-validation data manipulations
-        # TODO: Why does the non-WGS84 projection matter?
         self.calculate_asset_geometries()
         if self.asset is not None:
             self.parse_asset_geometry()
@@ -1457,5 +1456,4 @@ class PlantData:
 # Define additional class methods for custom loading methods
 # **********************************************************
 
-# TODO: Document this
 setattr(PlantData, "attach_eia_data", attach_eia_data)
