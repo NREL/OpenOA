@@ -678,6 +678,7 @@ class MonteCarloAEP(FromDictMixin):
 
         self.long_term_losses = (avail_long_term, curt_long_term)
 
+    @logged_method_call
     def setup_monte_carlo_inputs(self):
         """
         Create and populate the data frame defining the simulation parameters.

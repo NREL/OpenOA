@@ -290,6 +290,7 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
 
         self._inputs = pd.DataFrame(inputs)
 
+    @logged_method_call
     def prepare_scada(self) -> None:
         """
         Performs the following manipulations:
@@ -344,6 +345,7 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
             )
             dic[t].sort_index(inplace=True)
 
+    @logged_method_call
     def filter_turbine_data(self) -> None:
         """
         Apply a set of filtering algorithms to the turbine wind speed vs power curve to flag
@@ -397,6 +399,7 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
                 | scada_df.flag_frozen
             )
 
+    @logged_method_call
     def setup_daily_reanalysis_data(self) -> None:
         """
         Process reanalysis data to daily means for later use in the GAM model.
@@ -425,6 +428,7 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
         # Store the results for re-use
         self.reanalysis_memo[self._run.reanalysis_product] = df_daily
 
+    @logged_method_call
     def filter_sum_impute_scada(self) -> None:
         """
         Filter SCADA data for unflagged data, gather SCADA energy data into daily sums, and correct daily summed
@@ -498,6 +502,7 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
         # Drop data that could not be imputed
         self.scada_valid.dropna(subset=["energy_imputed"], inplace=True)
 
+    @logged_method_call
     def setupturbine_model_dict(self) -> None:
         """Setup daily atmospheric variable averages and daily energy sums by turbine."""
         reanalysis = self.daily_reanalysis
@@ -509,6 +514,7 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
                 .dropna(subset=["energy_imputed", "WMETR_HorWdSpd"])
             )
 
+    @logged_method_call
     def fit_model(self) -> None:
         """Fit the daily turbine energy sum and atmospheric variable averages using a GAM model
         using wind speed, wind direction, and air density.
@@ -533,6 +539,7 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
             )
         self._model_results = mod_results
 
+    @logged_method_call
     def apply_model(self, i: int) -> None:
         """
         Apply the model to the reanalysis data to calculate long-term gross energy for each turbine.
