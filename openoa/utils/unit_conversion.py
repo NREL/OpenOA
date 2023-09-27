@@ -2,10 +2,7 @@
 This module provides basic methods for unit conversion and calculation of basic wind plant variables
 """
 
-
 from __future__ import annotations
-
-from multiprocessing.sharedctypes import Value
 
 import numpy as np
 import pandas as pd
