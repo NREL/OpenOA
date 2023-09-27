@@ -1,0 +1,59 @@
+scada:
+  asset_id:
+    name: asset_id
+    dtype: str
+    units: null
+  WTUR_W:
+    name: WTUR_W
+    dtype: float
+    units: kW
+  WMET_HorWdSpd:
+    name: WMET_HorWdSpd
+    dtype: float
+    units: m/s
+  WMET_HorWdDir:
+    name: WMET_HorWdDir
+    dtype: float
+    units: deg
+  frequency:
+  - us
+  - ms
+  - U
+  - L
+  - min
+  - S
+  - H
+  - N
+  - T
+asset:
+  latitude:
+    name: latitude
+    dtype: float
+    units: WGS84
+  longitude:
+    name: longitude
+    dtype: float
+    units: WGS84
+  rated_power:
+    name: rated_power
+    dtype: float
+    units: kW
+reanalysis:
+  WMETR_HorWdSpd:
+    name: WMETR_HorWdSpd
+    dtype: float
+    units: m/s
+  WMETR_HorWdDir:
+    name: WMETR_HorWdDir
+    dtype: float
+    units: deg
+  frequency:
+  - us
+  - ms
+  - U
+  - L
+  - min
+  - S
+  - H
+  - N
+  - T

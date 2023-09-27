@@ -28,11 +28,66 @@ All notable changes to this project will be documented in this file. If you make
 - `utils.filters.bin_filter` was converted from a for loop to a vectorized method
 - `utils.filters.bin_filter` and `utils.timeseries.percent_nan` were converted to be nearly pure NumPy methods operating on NumPy arrays for significant speedups of the TIE analysis method.
 - `analysis.TurbineLongTermGrossEnergy.filter_turbine_data` was cleaned up for a minor gain in efficiency and readability.
+- Analysis class API redesign
+  - Analysis classes can be created from a `PlantData` object, like the following:
+
+    ```python
+    from openoa import PlantData
+
+    project = PlantData("""your kwargs""")
+    aep = project.MonteCarloAEP("""your analysis settings""")
+    ```
+
+  - A deep copy of the original `PlantData` object is now stored in the analysis class so that the project data is stable between uses, allowing more flexibility for users running a variety of analyses.
+  - All analysis inputs are able to be provided at the initialization or run level, allowing more flexibility for when analyses are designed and modified. Additionally, the analysis defaults are set at initialization, so settings are only changed between runs if the users specifies a change.
+  - The only settings that cannot be modified in an analysis run are those that change the underlying data settings, which will now require a new analysis method. See the following example:
+
+  ```python
+  from openoa import PlantData
+
+  project = PlantData()  # note: kwargs must actually be provided to create a PlantData object
+
+  # Use and validate of the SCADA temperature data
+  aep = project.MonteCarloAEP(reg_temperature=True)
+
+  # No longer allowed because this adds a new wind direction data requirement, which may
+  # not have been validated
+  aep.run(reg_wind_direction=True)
+
+  # New method for running variations on the underlying data, which do not modify the original
+  # project data in any way
+  aep_temp = project.MonteCarloAEP(reg_temperature=True)
+  aep_wd = project.MonteCarloAEP(reg_wind_direction=True)
+
+  # Compare your results
+  ...
+  ```
+
+  - Analysis requirements and minimum schema have been provided in the `openoa/schema` library. To review a dictionary of the minimal data requirements for an anaylsis, users may view the `ANALYSIS_REQUIREMENTS` found in `openoa/schema/metadata.py`, or be importing it and viewing as a dictionary `from openoa.schema.metadata import ANALYSIS_REQUIREMENTS`. Alternatively there is a simple landing page for analysis-specific schema files available in the [schema readme](openoa/schema/README.md)
+
 - Better `__repr__` methods for `PlantData` and `PlantMetaData`.
   - Printing a `PlantData` object now provides a high level statistical summary of each of the
     datasets in `PlantData`, alongside other key variables.
   - Printing a `PlantMetaData` object now shows the default or provided column mapping with the
     associated expected dtypes and units, alongside other key variables.
+  - Creating a class will take all of the same parameters, moving all data validation parameters to the front of the arguments for each class, so check your class initializations when changing versions.
+  - `AnalysisClass.run()` now takes all of the same arguments as the class initialization, except for those that modify what data will be validated. For example, `MonteCarloAEP` has arguments `reg_temperature` and `reg_wind_direction`, which flag if additional columns should be present in the reanalysis data, therefore modifying the data validation requirements. As such, they will not be able to updated in `run()`, and a new analysis class instance will need to be created.
+  - `reanalysis_subset` is being replaced with `reanalysis_products` in all cases to use a consistent naming convention across classes.
+
+### Deprecations
+
+- The following methods have been removed from the plotting library, `utils/plot.py` given that they have either been replaced with newer methods or have been unused and unmaintained for long enough that their original intent is lost. If you still use any of these, please let us know in the Issues, and we'll be happy to bring it up to date:
+  - `plot_array`
+  - `subplot_powerRose_array`
+  - `powerRose_array`
+  - `subplot_c1_c2`
+  - `subplot_c1_c2_flagged`
+  - `subplot_c1_c2_raw_flagged`
+  - `subplt_power_curve`
+  - `turbine_polar_line`
+  - `turbine_polar_4Dscatter`
+  - `turbine_polar_contourf`
+  - `turbine_polar_contour`
 
 
 ## 3.0rc2

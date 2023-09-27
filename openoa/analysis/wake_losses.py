@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import random
+from copy import deepcopy
 
 import attrs
 import numpy as np
@@ -25,11 +26,16 @@ from tqdm import tqdm
 from attrs import field, define
 from sklearn.linear_model import LinearRegression
 
-from openoa.plant import PlantData
+from openoa.plant import PlantData, convert_to_list
 from openoa.utils import plot, filters
 from openoa.utils import met_data_processing as met
 from openoa.schema import FromDictMixin
 from openoa.logging import logging, logged_method_call
+from openoa.analysis._analysis_validators import (
+    validate_UQ_input,
+    validate_half_closed_0_1_right,
+    validate_reanalysis_selections,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -117,25 +123,123 @@ class WakeLosses(FromDictMixin):
             loss analysis. If None, the earliest SCADA datetime will be used. Default is None.
         end_date (:obj:`pandas.Timestamp` or :obj:`string`, optional): End datetime for wake loss
             analysis. If None, the latest SCADA datetime will be used. Default is None.
-        reanal_products (:obj:`list`, optional): List of reanalysis products to use for long-term
+        reanalysis_products (:obj:`list`, optional): List of reanalysis products to use for long-term
             correction. If UQ = True, a single product will be selected form this list each Monte
             Carlo iteration. Defaults to ["merra2", "era5"].
         end_date_lt (:obj:`string` or :obj:`pandas.Timestamp`): The last date to use for the
             long-term correction. If None, the most recent date common to all reanalysis products
             will be used.
+        wd_bin_width (float, optional): Wind direction bin size when identifying freestream wind
+            turbines (degrees). Defaults to 5 degrees.
+        freestream_sector_width (tuple | float, optional): Wind direction sector size to use when
+            identifying freestream wind turbines (degrees). If no turbines are located upstream
+            of a particular turbine within the sector, the turbine will be classified as a
+            freestream turbine. When :py:attr:`UQ` = True, then this should be a tuple of the
+            lower and upper bounds for the Monte Carlo sampling, and when :py:attr:`UQ` = False
+            this should be a single value. If None, then a default value of 90 degrees will be
+            used if :py:attr:`UQ` = False and a default value of (50, 110) will be used if
+            :py:attr:`UQ` = True. Defaults to None.
+        freestream_power_method (str, optional): Method used to determine the representative power
+            prouction of the freestream turbines ("mean", "median", "max"). Defaults to "mean".
+        freestream_wind_speed_method (str, optional): Method used to determine the representative
+            wind speed of the freestream turbines ("mean", "median"). Defaults to "mean".
+        correct_for_derating (bool, optional): Indicates whether derated, curtailed, or otherwise
+            unavailable turbines should be flagged and excluded from the calculation of ideal
+            freestream wind plant power production for a given time stamp. If True, ideal
+            freestream power production will be calculated as the sum of the derated turbine
+            powers added to the mean power of the freestream turbines in normal operation
+            multiplied by the number of turbines operating normally in the wind plant. Defaults
+            to True.
+        derating_filter_wind_speed_start (tuple | float, optional): The wind speed above which
+            turbines will be flagged as derated/curtailed/shutdown if power is less than 1% of
+            rated power (m/s). Only used when :py:attr:`correct_for_derating` is True. This should
+            be a tuple when :py:attr:`UQ` = True (values are Monte-Carlo sampled within the
+            specified range) or a single value when :py:attr:`UQ` = False. If undefined (None), a
+            value of 4.5 m/s will be used if :py:attr:`UQ` = False and values of (4.0, 5.0) will
+            be used if :py:attr:`UQ` = True. Defaults to None.
+        max_power_filter (tuple | float, optional): Maximum power threshold, defined as a fraction
+            of rated power, to which the power curve bin filter should be applied. Only used when
+            :py:attr:`correct_for_derating` = True. This should be a tuple when :py:attr:`UQ` =
+            True (values are Monte-Carlo sampled within the specified range) or a single value
+            when :py:attr:`UQ` = False. If undefined (None), a value of 0.95 will be used if
+            :py:attr:`UQ` = False and values of (0.92, 0.98) will be used if :py:attr:`UQ` =
+            True. Defaults to None.
+        wind_bin_mad_thresh (tuple | float, optional): The filter threshold for each power bin
+            used to identify derated/curtailed/shutdown turbines, expressed as the number of
+            median absolute deviations above the median wind speed. Only used when
+            :py:attr:`correct_for_derating` is True. This should be a tuple when
+            :py:attr:`UQ` = True (values are Monte-Carlo sampled within the specified range) or
+            a single value when :py:attr:`UQ` = False. If undefined (None), a value of 7.0 will
+            be used if :py:attr:`UQ` = False and values of (4.0, 13.0) will be used if
+            :py:attr:`UQ` = True. Defaults to None.
+        wd_bin_width_LT_corr (float, optional): Size of wind direction bins used to calculate
+            long-term frequencies from historical reanalysis data and correct wake losses during
+            the period of record (degrees). Defaults to 5 degrees.
+        ws_bin_width_LT_corr (float, optional): Size of wind speed bins used to calculate
+            long-term frequencies from historical reanalysis data and correct wake losses during
+            the period of record (m/s). Defaults to 1 m/s.
+        num_years_LT (tuple | int, optional): Number of years of historical reanalysis data to
+            use for long-term correction. This should be a tuple when :py:attr:`UQ` = True
+            (values are Monte-Carlo sampled within the specified range) or a single value when
+            :py:attr:`UQ` = False. If undefined (None), a value of 20 will be used if
+            :py:attr:`UQ` = False and values of (10, 20) will be used if :py:attr:`UQ` = True.
+            Defaults to None.
+        assume_no_wakes_high_ws_LT_corr (bool, optional): If True, wind direction and wind speed
+            bins for which operational data are missing above a certain wind speed threshold are
+            corrected by assigning the wind turbines' rated power to both the actual and
+            potential power production variables during the long term-correction process. This
+            assumes there are no wake losses above the wind speed threshold. Defaults to True.
+        no_wakes_ws_thresh_LT_corr (float, optional): The wind speed threshold (inclusive) above
+            which rated power is assigned to both the actual and potential power production
+            variables if operational data are missing for any wind direction and wind speed bin
+            during the long term-correction process. This wind speed corresponds to the wind
+            speed measured at freestream wind turbines. Only used if
+            :py:attr:`assume_no_wakes_high_ws_LT_corr` = True. Defaults to 13 m/s.
     """
 
-    plant: PlantData = field(validator=attrs.validators.instance_of(PlantData))
+    plant: PlantData = field(converter=deepcopy, validator=attrs.validators.instance_of(PlantData))
     wind_direction_col: str = field(default="WMET_HorWdDir", converter=str)
     wind_direction_data_type: str = field(
         default="scada", validator=attrs.validators.in_(("scada", "tower"))
     )
     wind_direction_asset_ids: list[str] = field(default=None)
     UQ: bool = field(default=True, converter=bool)
+    num_sim: int = field(default=100, converter=int)
     start_date: str | pd.Timestamp = field(default=None)
     end_date: str | pd.Timestamp = field(default=None)
-    reanal_products: list[str] = field(default=["merra2", "era5"])
+    reanalysis_products: list[str] = field(
+        default=None,
+        converter=convert_to_list,
+        validator=(
+            attrs.validators.deep_iterable(
+                iterable_validator=attrs.validators.instance_of(list),
+                member_validator=attrs.validators.instance_of((str, type(None))),
+            ),
+            validate_reanalysis_selections,
+        ),
+    )
     end_date_lt: str | pd.Timestamp = field(default=None)
+    wd_bin_width: float = field(default=5.0)
+    freestream_sector_width: float | tuple[float, float] = field(
+        default=(50.0, 110.0), validator=validate_UQ_input
+    )
+    freestream_power_method: str = field(default="mean")
+    freestream_wind_speed_method: str = field(default="mean")
+    correct_for_derating: bool = field(default=True)
+    derating_filter_wind_speed_start: float | tuple[float, float] = field(
+        default=(4.0, 5.0), validator=validate_UQ_input
+    )
+    max_power_filter: float | tuple[float, float] = field(
+        default=(0.92, 0.98), validator=validate_UQ_input
+    )
+    wind_bin_mad_thresh: float | tuple[float, float] = field(
+        default=(4.0, 13.0), validator=validate_UQ_input
+    )
+    wd_bin_width_LT_corr: float = field(default=5.0)
+    ws_bin_width_LT_corr: float = field(default=1.0)
+    num_years_LT: int | tuple[int, int] = field(default=(10, 20), validator=validate_UQ_input)
+    assume_no_wakes_high_ws_LT_corr: bool = field(default=True)
+    no_wakes_ws_thresh_LT_corr: float = field(default=13.0)
 
     # Internally created attributes need to be given a type before usage
     turbine_ids: list[str] = field(init=False)
@@ -166,26 +270,18 @@ class WakeLosses(FromDictMixin):
     turbine_wake_losses_lt_std: float = field(init=False)
     wake_losses_por_std: float = field(init=False)
     turbine_wake_losses_por_std: float = field(init=False)
-    num_sim: int = field(init=False)
-    _wd_bin_width_LT_corr: float = field(init=False)
-    _ws_bin_width_LT_corr: float = field(init=False)
-    _assume_no_wakes_high_ws_LT_corr: bool = field(init=False)
-    _no_wakes_ws_thresh_LT_corr: float = field(init=False)
-    _freestream_sector_width: float | tuple[float, float] = field(init=False)
-    _derating_filter_wind_speed_start: float | tuple[float, float] = field(init=False)
-    _max_power_filter: float | tuple[float, float] = field(init=False)
-    _wind_bin_mad_thresh: float | tuple[float, float] = field(init=False)
-    _num_years_LT: float | tuple[float, float] = field(init=False)
     _run: pd.DataFrame = field(init=False)
 
-    @reanal_products.validator
+    @reanalysis_products.validator
     def check_reanalysis_products(self, attribute: attrs.Attribute, value: list[str]) -> None:
         """Checks that the provided reanalysis products actually exist in the reanalysis data."""
+        if value == [None]:
+            return
         valid = [*self.plant.reanalysis]
         invalid = list(set(value).difference(valid))
         if invalid:
             raise ValueError(
-                f"The following input to `reanal_products`: {invalid} are not contained in `plant.reanalysis`: {valid}"
+                f"The following input to `reanalysis_products`: {invalid} are not contained in `plant.reanalysis`: {valid}"
             )
 
     @logged_method_call
@@ -195,8 +291,12 @@ class WakeLosses(FromDictMixin):
         """
         logger.info("Initializing WakeLosses analysis object")
 
-        if set(("WakeLosses", "all")).intersection(self.plant.analysis_type) == set():
-            self.plant.analysis_type.append("WakeLosses")
+        if self.wind_direction_data_type == "scada":
+            if set(("WakeLosses-scada", "all")).intersection(self.plant.analysis_type) == set():
+                self.plant.analysis_type.append("WakeLosses-scada")
+        if self.wind_direction_data_type == "tower":
+            if set(("WakeLosses-tower", "all")).intersection(self.plant.analysis_type) == set():
+                self.plant.analysis_type.append("WakeLosses-tower")
 
         # Ensure the data are up to spec before continuing with initialization
         self.plant.validate()
@@ -227,7 +327,7 @@ class WakeLosses(FromDictMixin):
         else:
             # Find most recent time common to all reanalysis products
             self.end_date_lt = min(
-                [self.plant.reanalysis[product].index.max() for product in self.reanal_products]
+                [self.plant.reanalysis[product].index.max() for product in self.reanalysis_products]
             ).replace(minute=30)
 
         # Run preprocessing steps
@@ -236,25 +336,29 @@ class WakeLosses(FromDictMixin):
     @logged_method_call
     def run(
         self,
-        num_sim: int = 100,
-        wd_bin_width: float = 5.0,
-        freestream_sector_width: float = None,
-        freestream_power_method: str = "mean",
-        freestream_wind_speed_method: str = "mean",
-        correct_for_derating: bool = True,
-        derating_filter_wind_speed_start: float = None,
-        max_power_filter: float = None,
-        wind_bin_mad_thresh: float = None,
-        wd_bin_width_LT_corr: float = 5.0,
-        ws_bin_width_LT_corr: float = 1.0,
-        num_years_LT: int = None,
-        assume_no_wakes_high_ws_LT_corr: bool = True,
-        no_wakes_ws_thresh_LT_corr: float = 13.0,
+        num_sim: int | None = None,
+        reanalysis_products: list[str] | None = None,
+        wd_bin_width: float | None = None,
+        freestream_sector_width: float | None = None,
+        freestream_power_method: str | None = None,
+        freestream_wind_speed_method: str | None = None,
+        correct_for_derating: bool | None = None,
+        derating_filter_wind_speed_start: float | None = None,
+        max_power_filter: float | None = None,
+        wind_bin_mad_thresh: float | None = None,
+        wd_bin_width_LT_corr: float | None = None,
+        ws_bin_width_LT_corr: float | None = None,
+        num_years_LT: int | None = None,
+        assume_no_wakes_high_ws_LT_corr: bool | None = None,
+        no_wakes_ws_thresh_LT_corr: float | None = None,
     ):
         """
         Estimates wake losses by comparing wind plant energy production to energy production of the
         turbines identified as operating in freestream conditions. Wake losses are expressed as a
         fractional loss (e.g., 0.05 indicates a wake loss values of 5%).
+
+        .. note:: If None is provided to any of the inputs, then the last used input value will be
+            used for the analysis, and if no prior values were set, then this is the model's defaults.
 
         Args:
             num_sim (int, optional): Number of Monte Carlo iterations to perform. Only used if
@@ -326,48 +430,41 @@ class WakeLosses(FromDictMixin):
                 speed measured at freestream wind turbines. Only used if
                 :py:attr:`assume_no_wakes_high_ws_LT_corr` = True. Defaults to 13 m/s.
         """
-
-        self.num_sim = num_sim
-        self._wd_bin_width_LT_corr = wd_bin_width_LT_corr
-        self._ws_bin_width_LT_corr = ws_bin_width_LT_corr
-        self._assume_no_wakes_high_ws_LT_corr = assume_no_wakes_high_ws_LT_corr
-        self._no_wakes_ws_thresh_LT_corr = no_wakes_ws_thresh_LT_corr
-
         # Assign default parameter values depending on whether UQ is performed
+        if num_sim is not None:
+            self.num_sim = num_sim
+        if reanalysis_products is not None:
+            self.reanalysis_products = reanalysis_products
+            logger.warning(
+                f"`reanalysis_products` has been changed, be sure the `end_date_lt`"
+                f"({self.end_date_lt}) is contained in the updated reanalyis products subset."
+            )
+        if wd_bin_width is not None:
+            self.wd_bin_width = wd_bin_width
         if freestream_sector_width is not None:
-            self._freestream_sector_width = freestream_sector_width
-        elif self.UQ:
-            self._freestream_sector_width = (50.0, 110.0)
-        else:
-            self._freestream_sector_width = 90.0
-
+            self.freestream_sector_width = freestream_sector_width
+        if freestream_power_method is not None:
+            self.freestream_power_method = freestream_power_method
+        if freestream_wind_speed_method is not None:
+            self.freestream_wind_speed_method = freestream_wind_speed_method
+        if correct_for_derating is not None:
+            self.correct_for_derating = correct_for_derating
         if derating_filter_wind_speed_start is not None:
-            self._derating_filter_wind_speed_start = derating_filter_wind_speed_start
-        elif self.UQ:
-            self._derating_filter_wind_speed_start = (4.0, 5.0)
-        else:
-            self._derating_filter_wind_speed_start = 4.5
-
+            self.derating_filter_wind_speed_start = derating_filter_wind_speed_start
         if max_power_filter is not None:
-            self._max_power_filter = max_power_filter
-        elif self.UQ:
-            self._max_power_filter = (0.92, 0.98)
-        else:
-            self._max_power_filter = 0.95
-
+            self.max_power_filter = max_power_filter
         if wind_bin_mad_thresh is not None:
-            self._wind_bin_mad_thresh = wind_bin_mad_thresh
-        elif self.UQ:
-            self._wind_bin_mad_thresh = (4.0, 13.0)
-        else:
-            self._wind_bin_mad_thresh = 7.0
-
+            self.wind_bin_mad_thresh = wind_bin_mad_thresh
+        if wd_bin_width_LT_corr is not None:
+            self.wd_bin_width_LT_corr = wd_bin_width_LT_corr
+        if ws_bin_width_LT_corr is not None:
+            self.ws_bin_width_LT_corr = ws_bin_width_LT_corr
         if num_years_LT is not None:
-            self._num_years_LT = num_years_LT
-        elif self.UQ:
-            self._num_years_LT = (10, 20)
-        else:
-            self._num_years_LT = 20
+            self.num_years_LT = num_years_LT
+        if assume_no_wakes_high_ws_LT_corr is not None:
+            self.assume_no_wakes_high_ws_LT_corr = assume_no_wakes_high_ws_LT_corr
+        if no_wakes_ws_thresh_LT_corr is not None:
+            self.no_wakes_ws_thresh_LT_corr = no_wakes_ws_thresh_LT_corr
 
         # Set up Monte Carlo simulation inputs if UQ = True or single simulation inputs if UQ = False.
         self._setup_monte_carlo_inputs()
@@ -379,7 +476,7 @@ class WakeLosses(FromDictMixin):
             for t in self.turbine_ids:
                 self.aggregate_df[("derate_flag", t)] = False
 
-            if correct_for_derating:
+            if self.correct_for_derating:
                 self._identify_derating()
 
             # Randomly resample 10-minute periods for bootstrapping
@@ -393,7 +490,7 @@ class WakeLosses(FromDictMixin):
             self.aggregate_df_sample["power_mean_freestream"] = np.nan
             self.aggregate_df_sample["windspeed_mean_freestream"] = np.nan
 
-            wd_bins = np.arange(0.0, 360.0, wd_bin_width)
+            wd_bins = np.arange(0.0, 360.0, self.wd_bin_width)
 
             # Create columns for turbine power and wind speed during normal operation (NaN otherwise)
             for t in self.turbine_ids:
@@ -442,34 +539,38 @@ class WakeLosses(FromDictMixin):
                 # between 0 and 360 degrees
                 _agg_wd = self.aggregate_df_sample["wind_direction_ref"]
                 if wd == 0.0:
-                    wd_bin_flag = _agg_wd >= 360.0 - 0.5 * wd_bin_width
-                    wd_bin_flag |= _agg_wd < (freestream_sector_wds[i_wd + 1] - 0.5 * wd_bin_width)
+                    wd_bin_flag = _agg_wd >= 360.0 - 0.5 * self.wd_bin_width
+                    wd_bin_flag |= _agg_wd < (
+                        freestream_sector_wds[i_wd + 1] - 0.5 * self.wd_bin_width
+                    )
                 elif i_wd < len(freestream_sector_wds) - 1:
-                    wd_bin_flag = _agg_wd >= (wd - 0.5 * wd_bin_width)
-                    wd_bin_flag &= _agg_wd < (freestream_sector_wds[i_wd + 1] - 0.5 * wd_bin_width)
+                    wd_bin_flag = _agg_wd >= (wd - 0.5 * self.wd_bin_width)
+                    wd_bin_flag &= _agg_wd < (
+                        freestream_sector_wds[i_wd + 1] - 0.5 * self.wd_bin_width
+                    )
                 elif (i_wd == len(freestream_sector_wds) - 1) & (freestream_sector_wds[0] == 0.0):
-                    wd_bin_flag = _agg_wd >= (wd - 0.5 * wd_bin_width)
-                    wd_bin_flag &= _agg_wd < (360.0 - 0.5 * wd_bin_width)
+                    wd_bin_flag = _agg_wd >= (wd - 0.5 * self.wd_bin_width)
+                    wd_bin_flag &= _agg_wd < (360.0 - 0.5 * self.wd_bin_width)
                 else:  # last wind direction in dictionary and first wind direction is not zero:
-                    wd_bin_flag = _agg_wd >= (wd - 0.5 * wd_bin_width)
-                    wd_bin_flag |= _agg_wd < (freestream_sector_wds[0] - 0.5 * wd_bin_width)
+                    wd_bin_flag = _agg_wd >= (wd - 0.5 * self.wd_bin_width)
+                    wd_bin_flag |= _agg_wd < (freestream_sector_wds[0] - 0.5 * self.wd_bin_width)
 
                 # Assign representative energy and wind speed of freestream turbines. If correct_for_derating
                 # is True, only freestream turbines operating normally will be considered.
 
                 _power = self.aggregate_df_sample.loc[wd_bin_flag, "power_normal"]
-                if freestream_power_method == "mean":
+                if self.freestream_power_method == "mean":
                     _power = _power[freestream_turbine_ids].mean(axis=1)
-                elif freestream_power_method == "median":
+                elif self.freestream_power_method == "median":
                     _power = _power[freestream_turbine_ids].median(axis=1)
-                elif freestream_power_method == "max":
+                elif self.freestream_power_method == "max":
                     _power = _power[freestream_turbine_ids].max(axis=1)
                 self.aggregate_df_sample.loc[wd_bin_flag, "power_mean_freestream"] = _power
 
                 _ws = self.aggregate_df_sample.loc[wd_bin_flag, "windspeed_normal"]
-                if freestream_wind_speed_method == "mean":
+                if self.freestream_wind_speed_method == "mean":
                     _ws = _ws[freestream_turbine_ids].mean(axis=1)
-                elif freestream_wind_speed_method == "median":
+                elif self.freestream_wind_speed_method == "median":
                     _ws = _ws[freestream_turbine_ids].median(axis=1)
                 self.aggregate_df_sample.loc[wd_bin_flag, "windspeed_mean_freestream"] = _ws
 
@@ -511,9 +612,9 @@ class WakeLosses(FromDictMixin):
             # bin wake losses by wind direction
             # group wind farm efficiency by wind direction bin
             self.aggregate_df_sample["wind_direction_bin"] = (
-                self._wd_bin_width_LT_corr
+                self.wd_bin_width_LT_corr
                 * (
-                    self.aggregate_df_sample["wind_direction_ref"] / self._wd_bin_width_LT_corr
+                    self.aggregate_df_sample["wind_direction_ref"] / self.wd_bin_width_LT_corr
                 ).round()
             )
             self.aggregate_df_sample.loc[
@@ -537,7 +638,6 @@ class WakeLosses(FromDictMixin):
                 ] = self.aggregate_df_sample.loc[
                     self.aggregate_df_sample[("derate_flag", t)], ("WTUR_W", t)
                 ]
-
                 turbine_wake_losses_por[i] = (
                     1
                     - self.aggregate_df_sample[("WTUR_W", t)].sum()
@@ -552,7 +652,7 @@ class WakeLosses(FromDictMixin):
             ).values
 
             turbine_wake_losses_por_wd = np.empty(
-                [len(self.turbine_ids), int(360.0 / self._wd_bin_width_LT_corr)]
+                [len(self.turbine_ids), int(360.0 / self.wd_bin_width_LT_corr)]
             )
             for i, t in enumerate(self.turbine_ids):
                 turbine_wake_losses_por_wd[i, :] = (
@@ -605,54 +705,54 @@ class WakeLosses(FromDictMixin):
                 df_wd_bin["actual_plant_power"].values / df_wd_bin["actual_plant_power"].sum()
             )
 
-            wake_losses_lt_all_products = np.empty([len(self.reanal_products), 1])
+            wake_losses_lt_all_products = np.empty([len(self.reanalysis_products), 1])
             turbine_wake_losses_lt_all_products = np.empty(
-                [len(self.reanal_products), len(self.turbine_ids)]
+                [len(self.reanalysis_products), len(self.turbine_ids)]
             )
 
             wake_losses_lt_wd_all_products = np.empty(
-                [len(self.reanal_products), int(360.0 / self._wd_bin_width_LT_corr)]
+                [len(self.reanalysis_products), int(360.0 / self.wd_bin_width_LT_corr)]
             )
             turbine_wake_losses_lt_wd_all_products = np.empty(
                 [
-                    len(self.reanal_products),
+                    len(self.reanalysis_products),
                     len(self.turbine_ids),
-                    int(360.0 / self._wd_bin_width_LT_corr),
+                    int(360.0 / self.wd_bin_width_LT_corr),
                 ]
             )
             energy_lt_wd_all_products = np.empty(
-                [len(self.reanal_products), int(360.0 / self._wd_bin_width_LT_corr)]
+                [len(self.reanalysis_products), int(360.0 / self.wd_bin_width_LT_corr)]
             )
 
             wake_losses_por_ws_all_products = np.empty(
-                [len(self.reanal_products), int(30.0 / self._ws_bin_width_LT_corr) + 1]
+                [len(self.reanalysis_products), int(30.0 / self.ws_bin_width_LT_corr) + 1]
             )
             turbine_wake_losses_por_ws_all_products = np.empty(
                 [
-                    len(self.reanal_products),
+                    len(self.reanalysis_products),
                     len(self.turbine_ids),
-                    int(30.0 / self._ws_bin_width_LT_corr) + 1,
+                    int(30.0 / self.ws_bin_width_LT_corr) + 1,
                 ]
             )
             energy_por_ws_all_products = np.empty(
-                [len(self.reanal_products), int(30.0 / self._ws_bin_width_LT_corr) + 1]
+                [len(self.reanalysis_products), int(30.0 / self.ws_bin_width_LT_corr) + 1]
             )
 
             wake_losses_lt_ws_all_products = np.empty(
-                [len(self.reanal_products), int(30.0 / self._ws_bin_width_LT_corr) + 1]
+                [len(self.reanalysis_products), int(30.0 / self.ws_bin_width_LT_corr) + 1]
             )
             turbine_wake_losses_lt_ws_all_products = np.empty(
                 [
-                    len(self.reanal_products),
+                    len(self.reanalysis_products),
                     len(self.turbine_ids),
-                    int(30.0 / self._ws_bin_width_LT_corr) + 1,
+                    int(30.0 / self.ws_bin_width_LT_corr) + 1,
                 ]
             )
             energy_lt_ws_all_products = np.empty(
-                [len(self.reanal_products), int(30.0 / self._ws_bin_width_LT_corr) + 1]
+                [len(self.reanalysis_products), int(30.0 / self.ws_bin_width_LT_corr) + 1]
             )
 
-            for i_rean, product in enumerate(self.reanal_products):
+            for i_rean, product in enumerate(self.reanalysis_products):
                 self._run.reanalysis_product = product
 
                 (
@@ -725,29 +825,29 @@ class WakeLosses(FromDictMixin):
 
         if self.UQ:
             inputs = {
-                "reanalysis_product": random.choices(self.reanal_products, k=self.num_sim),
+                "reanalysis_product": random.choices(self.reanalysis_products, k=self.num_sim),
                 "freestream_sector_width": np.random.randint(
-                    self._freestream_sector_width[0],
-                    self._freestream_sector_width[1] + 1,
+                    self.freestream_sector_width[0],
+                    self.freestream_sector_width[1] + 1,
                     self.num_sim,
                 ),
                 "wind_bin_mad_thresh": np.random.randint(
-                    self._wind_bin_mad_thresh[0], self._wind_bin_mad_thresh[1] + 1, self.num_sim
+                    self.wind_bin_mad_thresh[0], self.wind_bin_mad_thresh[1] + 1, self.num_sim
                 ),
                 "derating_filter_wind_speed_start": np.random.randint(
-                    self._derating_filter_wind_speed_start[0] * 10,
-                    self._derating_filter_wind_speed_start[1] * 10 + 1,
+                    self.derating_filter_wind_speed_start[0] * 10,
+                    self.derating_filter_wind_speed_start[1] * 10 + 1,
                     self.num_sim,
                 )
                 / 10.0,
                 "max_power_filter": np.random.randint(
-                    self._max_power_filter[0] * 100,
-                    self._max_power_filter[1] * 100 + 1,
+                    self.max_power_filter[0] * 100,
+                    self.max_power_filter[1] * 100 + 1,
                     self.num_sim,
                 )
                 / 100.0,
                 "num_years_LT": np.random.randint(
-                    self._num_years_LT[0], self._num_years_LT[1] + 1, self.num_sim
+                    self.num_years_LT[0], self.num_years_LT[1] + 1, self.num_sim
                 ),
             }
             self.inputs = pd.DataFrame(inputs)
@@ -759,50 +859,48 @@ class WakeLosses(FromDictMixin):
 
             # For saving wake losses and energy production binned by wind direction
             self.wake_losses_por_wd = np.empty(
-                [self.num_sim, int(360.0 / self._wd_bin_width_LT_corr)]
+                [self.num_sim, int(360.0 / self.wd_bin_width_LT_corr)]
             )
             self.turbine_wake_losses_por_wd = np.empty(
-                [self.num_sim, len(self.turbine_ids), int(360.0 / self._wd_bin_width_LT_corr)]
+                [self.num_sim, len(self.turbine_ids), int(360.0 / self.wd_bin_width_LT_corr)]
             )
             self.wake_losses_lt_wd = np.empty(
-                [self.num_sim, int(360.0 / self._wd_bin_width_LT_corr)]
+                [self.num_sim, int(360.0 / self.wd_bin_width_LT_corr)]
             )
             self.turbine_wake_losses_lt_wd = np.empty(
-                [self.num_sim, len(self.turbine_ids), int(360.0 / self._wd_bin_width_LT_corr)]
+                [self.num_sim, len(self.turbine_ids), int(360.0 / self.wd_bin_width_LT_corr)]
             )
 
-            self.energy_por_wd = np.empty([self.num_sim, int(360.0 / self._wd_bin_width_LT_corr)])
-            self.energy_lt_wd = np.empty([self.num_sim, int(360.0 / self._wd_bin_width_LT_corr)])
+            self.energy_por_wd = np.empty([self.num_sim, int(360.0 / self.wd_bin_width_LT_corr)])
+            self.energy_lt_wd = np.empty([self.num_sim, int(360.0 / self.wd_bin_width_LT_corr)])
 
             # For saving wake losses and energy production binned by wind speed
             self.wake_losses_por_ws = np.empty(
-                [self.num_sim, int(30.0 / self._ws_bin_width_LT_corr) + 1]
+                [self.num_sim, int(30.0 / self.ws_bin_width_LT_corr) + 1]
             )
             self.turbine_wake_losses_por_ws = np.empty(
-                [self.num_sim, len(self.turbine_ids), int(30.0 / self._ws_bin_width_LT_corr) + 1]
+                [self.num_sim, len(self.turbine_ids), int(30.0 / self.ws_bin_width_LT_corr) + 1]
             )
             self.wake_losses_lt_ws = np.empty(
-                [self.num_sim, int(30.0 / self._ws_bin_width_LT_corr) + 1]
+                [self.num_sim, int(30.0 / self.ws_bin_width_LT_corr) + 1]
             )
             self.turbine_wake_losses_lt_ws = np.empty(
-                [self.num_sim, len(self.turbine_ids), int(30.0 / self._ws_bin_width_LT_corr) + 1]
+                [self.num_sim, len(self.turbine_ids), int(30.0 / self.ws_bin_width_LT_corr) + 1]
             )
 
-            self.energy_por_ws = np.empty(
-                [self.num_sim, int(30.0 / self._ws_bin_width_LT_corr) + 1]
-            )
-            self.energy_lt_ws = np.empty([self.num_sim, int(30.0 / self._ws_bin_width_LT_corr) + 1])
+            self.energy_por_ws = np.empty([self.num_sim, int(30.0 / self.ws_bin_width_LT_corr) + 1])
+            self.energy_lt_ws = np.empty([self.num_sim, int(30.0 / self.ws_bin_width_LT_corr) + 1])
 
         elif not self.UQ:
             inputs = {
-                "reanalysis_product": self.reanal_products,
-                "freestream_sector_width": len(self.reanal_products)
-                * [self._freestream_sector_width],
-                "wind_bin_mad_thresh": len(self.reanal_products) * [self._wind_bin_mad_thresh],
-                "derating_filter_wind_speed_start": len(self.reanal_products)
-                * [self._derating_filter_wind_speed_start],
-                "max_power_filter": len(self.reanal_products) * [self._max_power_filter],
-                "num_years_LT": len(self.reanal_products) * [self._num_years_LT],
+                "reanalysis_product": self.reanalysis_products,
+                "freestream_sector_width": len(self.reanalysis_products)
+                * [self.freestream_sector_width],
+                "wind_bin_mad_thresh": len(self.reanalysis_products) * [self.wind_bin_mad_thresh],
+                "derating_filter_wind_speed_start": len(self.reanalysis_products)
+                * [self.derating_filter_wind_speed_start],
+                "max_power_filter": len(self.reanalysis_products) * [self.max_power_filter],
+                "num_years_LT": len(self.reanalysis_products) * [self.num_years_LT],
             }
             self.inputs = pd.DataFrame(inputs)
 
@@ -869,7 +967,7 @@ class WakeLosses(FromDictMixin):
 
         # combine all wind speed and wind direction reanalysis variables into aggregate data frame
 
-        for product in self.reanal_products:
+        for product in self.reanalysis_products:
             df_rean = self.plant.reanalysis[product][["WMETR_HorWdSpd", "WMETR_HorWdDir"]].copy()
 
             # Drop minute field
@@ -978,9 +1076,9 @@ class WakeLosses(FromDictMixin):
             df_1hr["windspeed_mean_freestream"].values.reshape(-1, 1)
         )
 
-        # adjust the _no_wakes_ws_thresh_LT_corr parameter to relect the SCADA wind speed correction as well
+        # adjust the no_wakes_ws_thresh_LT_corr parameter to relect the SCADA wind speed correction as well
         no_wakes_ws_corr_thresh_LT_corr = np.round(
-            reg.predict(np.array(self._no_wakes_ws_thresh_LT_corr).reshape(1, -1))[0]
+            reg.predict(np.array(self.no_wakes_ws_thresh_LT_corr).reshape(1, -1))[0]
         )
 
         # get reanalysis data and limit date range
@@ -993,12 +1091,12 @@ class WakeLosses(FromDictMixin):
             )
         ]
         df_reanal["windspeed_bin"] = (
-            self._ws_bin_width_LT_corr
-            * (df_reanal["WMETR_HorWdSpd"] / self._ws_bin_width_LT_corr).round()
+            self.ws_bin_width_LT_corr
+            * (df_reanal["WMETR_HorWdSpd"] / self.ws_bin_width_LT_corr).round()
         )
         df_reanal["wind_direction_bin"] = (
-            self._wd_bin_width_LT_corr
-            * (df_reanal["WMETR_HorWdDir"] / self._wd_bin_width_LT_corr).round()
+            self.wd_bin_width_LT_corr
+            * (df_reanal["WMETR_HorWdDir"] / self.wd_bin_width_LT_corr).round()
         )
         df_reanal.loc[df_reanal["wind_direction_bin"] == 360.0, "wind_direction_bin"] = 0.0
 
@@ -1011,15 +1109,15 @@ class WakeLosses(FromDictMixin):
         # Weight wake losses in each wind direction and wind speed bin by long-term frequencies to
         # estimate long-term wake losses
         df_1hr["windspeed_bin"] = (
-            self._ws_bin_width_LT_corr
+            self.ws_bin_width_LT_corr
             * (
                 df_1hr[f"windspeed_mean_freestream_corr_{self._run.reanalysis_product}"]
-                / self._ws_bin_width_LT_corr
+                / self.ws_bin_width_LT_corr
             ).round()
         )
         df_1hr["wind_direction_bin"] = (
-            self._wd_bin_width_LT_corr
-            * (df_1hr["wind_direction_ref"] / self._wd_bin_width_LT_corr).round()
+            self.wd_bin_width_LT_corr
+            * (df_1hr["wind_direction_ref"] / self.wd_bin_width_LT_corr).round()
         )
         df_1hr.loc[df_1hr["wind_direction_bin"] == 360.0, "wind_direction_bin"] = 0.0
 
@@ -1027,7 +1125,7 @@ class WakeLosses(FromDictMixin):
         df_1hr_ws_por_bin = df_1hr.groupby(("windspeed_bin", "")).sum()
 
         # reindex to fill in missing wind speed bins
-        index = np.arange(0.0, 31.0, self._ws_bin_width_LT_corr).tolist()
+        index = np.arange(0.0, 31.0, self.ws_bin_width_LT_corr).tolist()
         df_1hr_ws_por_bin = df_1hr_ws_por_bin.reindex(index)
 
         wake_losses_por_ws = (
@@ -1041,7 +1139,7 @@ class WakeLosses(FromDictMixin):
         )
 
         turbine_wake_losses_por_ws = np.empty(
-            [len(self.turbine_ids), int(30.0 / self._ws_bin_width_LT_corr) + 1]
+            [len(self.turbine_ids), int(30.0 / self.ws_bin_width_LT_corr) + 1]
         )
         for i, t in enumerate(self.turbine_ids):
             turbine_wake_losses_por_ws[i, :] = (
@@ -1055,7 +1153,7 @@ class WakeLosses(FromDictMixin):
 
         # If specified, assume no wake losses at wind speeds above a given threshold for bins where
         # data are missing by assigning rated power to the actual and potential power production
-        if self._assume_no_wakes_high_ws_LT_corr:
+        if self.assume_no_wakes_high_ws_LT_corr:
             fill_inds = (df_1hr_bin[("actual_plant_power", "")].isna()) & (
                 df_1hr_bin.index.get_level_values(1) >= no_wakes_ws_corr_thresh_LT_corr
             )
@@ -1107,7 +1205,7 @@ class WakeLosses(FromDictMixin):
         )
 
         turbine_wake_losses_lt_wd = np.empty(
-            [len(self.turbine_ids), int(360.0 / self._wd_bin_width_LT_corr)]
+            [len(self.turbine_ids), int(360.0 / self.wd_bin_width_LT_corr)]
         )
         for i, t in enumerate(self.turbine_ids):
             turbine_wake_losses_lt_wd[i, :] = (
@@ -1118,7 +1216,7 @@ class WakeLosses(FromDictMixin):
         df_1hr_ws_bin = df_1hr_bin.groupby(level=[1]).sum()
 
         # reindex to fill in missing wind speed bins
-        index = np.arange(0.0, 31.0, self._ws_bin_width_LT_corr).tolist()
+        index = np.arange(0.0, 31.0, self.ws_bin_width_LT_corr).tolist()
         df_1hr_ws_bin = df_1hr_ws_bin.reindex(index)
 
         wake_losses_lt_ws = (
@@ -1130,7 +1228,7 @@ class WakeLosses(FromDictMixin):
         )
 
         turbine_wake_losses_lt_ws = np.empty(
-            [len(self.turbine_ids), int(30.0 / self._ws_bin_width_LT_corr) + 1]
+            [len(self.turbine_ids), int(30.0 / self.ws_bin_width_LT_corr) + 1]
         )
         for i, t in enumerate(self.turbine_ids):
             turbine_wake_losses_lt_ws[i, :] = (
@@ -1202,7 +1300,7 @@ class WakeLosses(FromDictMixin):
                 returned for further tinkering/saving.
         """
 
-        wd_bins = np.arange(0.0, 360.0, self._wd_bin_width_LT_corr)
+        wd_bins = np.arange(0.0, 360.0, self.wd_bin_width_LT_corr)
 
         if turbine_id is None:
             efficiency_data_por = self.wake_losses_por_wd
@@ -1294,7 +1392,7 @@ class WakeLosses(FromDictMixin):
                 returned for further tinkering/saving.
         """
 
-        ws_bins_orig = np.arange(0.0, 31.0, self._ws_bin_width_LT_corr)
+        ws_bins_orig = np.arange(0.0, 31.0, self.ws_bin_width_LT_corr)
 
         if xlim == (None, None):
             # Default to the range 4 - 20 m/s
@@ -1304,7 +1402,7 @@ class WakeLosses(FromDictMixin):
             ws_min = np.max([0.0, np.floor(xlim[0])])
             ws_max = np.min([ws_bins_orig[-1], np.ceil(xlim[1])])
 
-        ws_bins = np.arange(ws_min, ws_max + 1, self._ws_bin_width_LT_corr)
+        ws_bins = np.arange(ws_min, ws_max + 1, self.ws_bin_width_LT_corr)
         mask = (ws_bins_orig >= ws_min) & (ws_bins_orig <= ws_max)
 
         if turbine_id is None:
@@ -1359,10 +1457,32 @@ __defaults_wind_direction_col = WakeLosses.__attrs_attrs__.wind_direction_col.de
 __defaults_wind_direction_data_type = WakeLosses.__attrs_attrs__.wind_direction_data_type.default
 __defaults_wind_direction_asset_ids = WakeLosses.__attrs_attrs__.wind_direction_asset_ids.default
 __defaults_UQ = WakeLosses.__attrs_attrs__.UQ.default
+__defaults_num_sim = WakeLosses.__attrs_attrs__.num_sim.default
 __defaults_start_date = WakeLosses.__attrs_attrs__.start_date.default
 __defaults_end_date = WakeLosses.__attrs_attrs__.end_date.default
-__defaults_reanal_products = WakeLosses.__attrs_attrs__.reanal_products.default
+__defaults_reanalysis_products = WakeLosses.__attrs_attrs__.reanalysis_products.default
 __defaults_end_date_lt = WakeLosses.__attrs_attrs__.end_date_lt.default
+__defaults_wd_bin_width = WakeLosses.__attrs_attrs__.wd_bin_width.default
+__defaults_freestream_sector_width = WakeLosses.__attrs_attrs__.freestream_sector_width.default
+__defaults_freestream_power_method = WakeLosses.__attrs_attrs__.freestream_power_method.default
+__defaults_freestream_wind_speed_method = (
+    WakeLosses.__attrs_attrs__.freestream_wind_speed_method.default
+)
+__defaults_correct_for_derating = WakeLosses.__attrs_attrs__.correct_for_derating.default
+__defaults_derating_filter_wind_speed_start = (
+    WakeLosses.__attrs_attrs__.derating_filter_wind_speed_start.default
+)
+__defaults_max_power_filter = WakeLosses.__attrs_attrs__.max_power_filter.default
+__defaults_wind_bin_mad_thresh = WakeLosses.__attrs_attrs__.wind_bin_mad_thresh.default
+__defaults_wd_bin_width_LT_corr = WakeLosses.__attrs_attrs__.wd_bin_width_LT_corr.default
+__defaults_ws_bin_width_LT_corr = WakeLosses.__attrs_attrs__.ws_bin_width_LT_corr.default
+__defaults_num_years_LT = WakeLosses.__attrs_attrs__.num_years_LT.default
+__defaults_assume_no_wakes_high_ws_LT_corr = (
+    WakeLosses.__attrs_attrs__.assume_no_wakes_high_ws_LT_corr.default
+)
+__defaults_no_wakes_ws_thresh_LT_corr = (
+    WakeLosses.__attrs_attrs__.no_wakes_ws_thresh_LT_corr.default
+)
 
 
 def create_WakeLosses(
@@ -1371,21 +1491,49 @@ def create_WakeLosses(
     wind_direction_data_type: str = __defaults_wind_direction_data_type,
     wind_direction_asset_ids: list[str] = __defaults_wind_direction_asset_ids,
     UQ: bool = __defaults_UQ,
+    num_sim: int = __defaults_num_sim,
     start_date: str | pd.Timestamp = __defaults_start_date,
     end_date: str | pd.Timestamp = __defaults_end_date,
-    reanal_products: list[str] = __defaults_reanal_products,
+    reanalysis_products: list[str] = __defaults_reanalysis_products,
     end_date_lt: str | pd.Timestamp = __defaults_end_date_lt,
+    wd_bin_width: float = __defaults_wd_bin_width,
+    freestream_sector_width: float = __defaults_freestream_sector_width,
+    freestream_power_method: str = __defaults_freestream_power_method,
+    freestream_wind_speed_method: str = __defaults_freestream_wind_speed_method,
+    correct_for_derating: bool = __defaults_correct_for_derating,
+    derating_filter_wind_speed_start: float = __defaults_derating_filter_wind_speed_start,
+    max_power_filter: float = __defaults_max_power_filter,
+    wind_bin_mad_thresh: float = __defaults_wind_bin_mad_thresh,
+    wd_bin_width_LT_corr: float = __defaults_wd_bin_width_LT_corr,
+    ws_bin_width_LT_corr: float = __defaults_ws_bin_width_LT_corr,
+    num_years_LT: int = __defaults_num_years_LT,
+    assume_no_wakes_high_ws_LT_corr: bool = __defaults_assume_no_wakes_high_ws_LT_corr,
+    no_wakes_ws_thresh_LT_corr: float = __defaults_no_wakes_ws_thresh_LT_corr,
 ) -> WakeLosses:
     return WakeLosses(
-        project,
-        wind_direction_col,
-        wind_direction_data_type,
-        wind_direction_asset_ids,
-        UQ,
-        start_date,
-        end_date,
-        reanal_products,
-        end_date_lt,
+        plant=project,
+        wind_direction_col=wind_direction_col,
+        wind_direction_data_type=wind_direction_data_type,
+        wind_direction_asset_ids=wind_direction_asset_ids,
+        UQ=UQ,
+        num_sim=num_sim,
+        start_date=start_date,
+        end_date=end_date,
+        reanalysis_products=reanalysis_products,
+        end_date_lt=end_date_lt,
+        wd_bin_width=wd_bin_width,
+        freestream_sector_width=freestream_sector_width,
+        freestream_power_method=freestream_power_method,
+        freestream_wind_speed_method=freestream_wind_speed_method,
+        correct_for_derating=correct_for_derating,
+        derating_filter_wind_speed_start=derating_filter_wind_speed_start,
+        max_power_filter=max_power_filter,
+        wind_bin_mad_thresh=wind_bin_mad_thresh,
+        wd_bin_width_LT_corr=wd_bin_width_LT_corr,
+        ws_bin_width_LT_corr=ws_bin_width_LT_corr,
+        num_years_LT=num_years_LT,
+        assume_no_wakes_high_ws_LT_corr=assume_no_wakes_high_ws_LT_corr,
+        no_wakes_ws_thresh_LT_corr=no_wakes_ws_thresh_LT_corr,
     )
 
 

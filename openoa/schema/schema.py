@@ -124,9 +124,14 @@ if __name__ == "__main__":
     # Get the schemas
     full_schema = create_schema()
     base_mc_aep_schema = create_analysis_schema("MonteCarloAEP")
-    base_wake_schema = create_analysis_schema("WakeLosses")
+    temp_mc_aep_schema = create_analysis_schema("MonteCarloAEP-temp")
+    wd_mc_aep_schema = create_analysis_schema("MonteCarloAEP-wd")
+    temp_wd_mc_aep_schema = create_analysis_schema("MonteCarloAEP-temp-wd")
+    scada_wake_schema = create_analysis_schema("WakeLosses-scada")
+    tower_wake_schema = create_analysis_schema("WakeLosses-tower")
     base_tie_schema = create_analysis_schema("TurbineLongTermGrossEnergy")
     base_electric_schema = create_analysis_schema("ElectricalLosses")
+    base_yaw_misalignment_schema = create_analysis_schema("StaticYawMisalignment")
 
     # Save the analysis schemass
     with open(HERE / "full_schema.yml", "w") as f:
@@ -139,10 +144,30 @@ if __name__ == "__main__":
     with open(HERE / "base_monte_carlo_aep_schema.json", "w") as f:
         json.dump(base_mc_aep_schema, f, sort_keys=False, indent=2)
 
-    with open(HERE / "base_wake_losses_schema.yml", "w") as f:
-        yaml.dump(base_wake_schema, f, default_flow_style=False, sort_keys=False)
-    with open(HERE / "base_wake_losses_schema.json", "w") as f:
-        json.dump(base_wake_schema, f, sort_keys=False, indent=2)
+    with open(HERE / "temperature_monte_carlo_aep_schema.yml", "w") as f:
+        yaml.dump(temp_mc_aep_schema, f, default_flow_style=False, sort_keys=False)
+    with open(HERE / "temperature_monte_carlo_aep_schema.json", "w") as f:
+        json.dump(temp_mc_aep_schema, f, sort_keys=False, indent=2)
+
+    with open(HERE / "temperature_wind_direction_monte_carlo_aep_schema.yml", "w") as f:
+        yaml.dump(temp_wd_mc_aep_schema, f, default_flow_style=False, sort_keys=False)
+    with open(HERE / "temperature_wind_direction_monte_carlo_aep_schema.json", "w") as f:
+        json.dump(temp_wd_mc_aep_schema, f, sort_keys=False, indent=2)
+
+    with open(HERE / "wind_direction_monte_carlo_aep_schema.yml", "w") as f:
+        yaml.dump(wd_mc_aep_schema, f, default_flow_style=False, sort_keys=False)
+    with open(HERE / "wind_direction_monte_carlo_aep_schema.json", "w") as f:
+        json.dump(wd_mc_aep_schema, f, sort_keys=False, indent=2)
+
+    with open(HERE / "scada_wake_losses_schema.yml", "w") as f:
+        yaml.dump(scada_wake_schema, f, default_flow_style=False, sort_keys=False)
+    with open(HERE / "scada_wake_losses_schema.json", "w") as f:
+        json.dump(scada_wake_schema, f, sort_keys=False, indent=2)
+
+    with open(HERE / "tower_wake_losses_schema.yml", "w") as f:
+        yaml.dump(tower_wake_schema, f, default_flow_style=False, sort_keys=False)
+    with open(HERE / "tower_wake_losses_schema.json", "w") as f:
+        json.dump(tower_wake_schema, f, sort_keys=False, indent=2)
 
     with open(HERE / "base_tie_schema.yml", "w") as f:
         yaml.dump(base_tie_schema, f, default_flow_style=False, sort_keys=False)
@@ -153,3 +178,8 @@ if __name__ == "__main__":
         yaml.dump(base_electric_schema, f, default_flow_style=False, sort_keys=False)
     with open(HERE / "base_electrical_losses_schema.json", "w") as f:
         json.dump(base_electric_schema, f, sort_keys=False, indent=2)
+
+    with open(HERE / "base_yaw_misalignmental_losses_schema.yml", "w") as f:
+        yaml.dump(base_yaw_misalignment_schema, f, default_flow_style=False, sort_keys=False)
+    with open(HERE / "base_yaw_misalignmental_losses_schema.json", "w") as f:
+        json.dump(base_yaw_misalignment_schema, f, sort_keys=False, indent=2)

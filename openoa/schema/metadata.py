@@ -20,7 +20,7 @@ from tabulate import tabulate
 
 
 # Datetime frequency checks
-_at_least_monthly = ("M", "MS", "W", "D", "H", "T", "min", "S", "L", "ms", "U", "us", "N")
+_at_least_monthly = ("MS", "W", "D", "H", "T", "min", "S", "L", "ms", "U", "us", "N")
 _at_least_daily = ("D", "H", "T", "min", "S", "L", "ms", "U", "us", "N")
 _at_least_hourly = ("H", "T", "min", "S", "L", "ms", "U", "us", "N")
 
@@ -36,10 +36,6 @@ ANALYSIS_REQUIREMENTS = {
         },
         "reanalysis": {
             "columns": ["WMETR_HorWdSpd", "WMETR_AirDen"],
-            "conditional_columns": {
-                "reg_temperature": ["WMETR_EnvTmp"],
-                "reg_wind_direction": ["WMETR_HorWdSpdU", "WMETR_HorWdSpdV"],
-            },
             "freq": _at_least_monthly,
         },
     },
@@ -63,9 +59,27 @@ ANALYSIS_REQUIREMENTS = {
             "freq": _at_least_monthly,
         },
     },
-    "WakeLosses": {
+    "WakeLosses-scada": {
         "scada": {
-            "columns": ["asset_id", "WMET_HorWdSpd", "WMET_HorWdDir", "WTUR_W"],
+            "columns": ["asset_id", "WMET_HorWdSpd", "WTUR_W", "WMET_HorWdDir"],
+            "freq": _at_least_hourly,
+        },
+        "reanalysis": {
+            "columns": ["WMETR_HorWdSpd", "WMETR_HorWdDir"],
+            "freq": _at_least_hourly,
+        },
+        "asset": {
+            "columns": ["latitude", "longitude", "rated_power"],
+            "freq": (),
+        },
+    },
+    "WakeLosses-tower": {
+        "scada": {
+            "columns": ["asset_id", "WMET_HorWdSpd", "WTUR_W"],
+            "freq": _at_least_hourly,
+        },
+        "tower": {
+            "columns": ["asset_id", "WMET_HorWdSpd", "WMET_HorWdDir"],
             "freq": _at_least_hourly,
         },
         "reanalysis": {
@@ -94,6 +108,18 @@ ANALYSIS_REQUIREMENTS = {
         },
     },
 }
+
+# Add the analysis variations
+ANALYSIS_REQUIREMENTS["MonteCarloAEP-temp"] = deepcopy(ANALYSIS_REQUIREMENTS["MonteCarloAEP"])
+ANALYSIS_REQUIREMENTS["MonteCarloAEP-wd"] = deepcopy(ANALYSIS_REQUIREMENTS["MonteCarloAEP"])
+ANALYSIS_REQUIREMENTS["MonteCarloAEP-temp-wd"] = deepcopy(ANALYSIS_REQUIREMENTS["MonteCarloAEP"])
+ANALYSIS_REQUIREMENTS["MonteCarloAEP-temp"]["reanalysis"]["columns"].extend(["WMETR_EnvTmp"])
+ANALYSIS_REQUIREMENTS["MonteCarloAEP-wd"]["reanalysis"]["columns"].extend(
+    ["WMETR_HorWdSpdU", "WMETR_HorWdSpdV"]
+)
+ANALYSIS_REQUIREMENTS["MonteCarloAEP-temp-wd"]["reanalysis"]["columns"].extend(
+    ["WMETR_EnvTmp", "WMETR_HorWdSpdU", "WMETR_HorWdSpdV"]
+)
 
 
 def determine_analysis_requirements(
@@ -429,6 +455,12 @@ class TowerMetaData(FromDictMixin):  # noqa: F821
             Additional columns describing the datetime stamps are: `frequency`
         asset_id (str): The met tower identifier column in the met tower data, by default "asset_id". This data
             should be of type: `str`.
+        WMET_HorWdSpd (str): The measured windspeed, in m/s, column in the SCADA data, by default "WMET_HorWdSpd".
+            This data should be of type: `float`.
+        WMET_HorWdDir (str): The measured wind direction, in degrees, column in the SCADA data, by default
+            "WMET_HorWdDir". This data should be of type: `float`.
+        WMET_EnvTmp (str): The temperature column in the SCADA data, by default "WMET_EnvTmp". This
+            data should be of type: `float`.
         frequency (str): The frequency of `time` in the met tower data, by default "10T". The input
             should align with the `Pandas frequency offset aliases`_.
 
@@ -440,6 +472,9 @@ class TowerMetaData(FromDictMixin):  # noqa: F821
     # DataFrame columns
     time: str = field(default="time")
     asset_id: str = field(default="asset_id")
+    WMET_HorWdSpd: str = field(default="WMET_HorWdSpd")
+    WMET_HorWdDir: str = field(default="WMET_HorWdDir")
+    WMET_EnvTmp: str = field(default="WMET_EnvTmp")
 
     # Data about the columns
     frequency: str = field(default="10T")
@@ -452,6 +487,9 @@ class TowerMetaData(FromDictMixin):  # noqa: F821
         default=dict(
             time=np.datetime64,
             asset_id=str,
+            WMET_HorWdSpd=float,
+            WMET_HorWdDir=float,
+            WMET_EnvTmp=float,
         ),
         init=False,  # don't allow for user input
     )
@@ -459,6 +497,9 @@ class TowerMetaData(FromDictMixin):  # noqa: F821
         default=dict(
             time="datetim64[ns]",
             asset_id=None,
+            WMET_HorWdSpd="m/s",
+            WMET_HorWdDir="deg",
+            WMET_EnvTmp="C",
         ),
         init=False,  # don't allow for user input
     )
@@ -467,6 +508,9 @@ class TowerMetaData(FromDictMixin):  # noqa: F821
         self.col_map = dict(
             time=self.time,
             asset_id=self.asset_id,
+            WMET_HorWdSpd=self.WMET_HorWdSpd,
+            WMET_HorWdDir=self.WMET_HorWdDir,
+            WMET_EnvTmp=self.WMET_EnvTmp,
         )
 
     def __repr__(self):

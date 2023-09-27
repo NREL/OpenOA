@@ -13,7 +13,7 @@ class TestElectricalLosses(unittest.TestCase):
     def setUp(self):
         np.random.seed(42)
         # Set up data to use for testing (ENGIE data)
-        self.project = project_ENGIE.prepare(example_data_path_str)
+        self.project = project_ENGIE.prepare(example_data_path_str, use_cleansed=False)
         self.project.analysis_type.append("ElectricalLosses")
         self.project.validate()
 
@@ -42,7 +42,7 @@ class TestElectricalLossesUQ(unittest.TestCase):
     def setUp(self):
         np.random.seed(42)
         # Set up data to use for testing (ENGIE data)
-        self.project = project_ENGIE.prepare(example_data_path_str)
+        self.project = project_ENGIE.prepare(example_data_path_str, use_cleansed=False)
         self.project.analysis_type.append("ElectricalLosses")
         self.project.validate()
 

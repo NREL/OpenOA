@@ -1,0 +1,47 @@
+{
+  "asset": {
+    "rated_power": {
+      "dtype": "float",
+      "name": "rated_power",
+      "units": "kW"
+    }
+  },
+  "scada": {
+    "WMET_HorWdDirRel": {
+      "dtype": "float",
+      "name": "WMET_HorWdDirRel",
+      "units": "deg"
+    },
+    "WMET_HorWdSpd": {
+      "dtype": "float",
+      "name": "WMET_HorWdSpd",
+      "units": "m/s"
+    },
+    "WROT_BlPthAngVal": {
+      "dtype": "float",
+      "name": "WROT_BlPthAngVal",
+      "units": "deg"
+    },
+    "WTUR_W": {
+      "dtype": "float",
+      "name": "WTUR_W",
+      "units": "kW"
+    },
+    "asset_id": {
+      "dtype": "str",
+      "name": "asset_id",
+      "units": null
+    },
+    "frequency": [
+      "us",
+      "ms",
+      "U",
+      "L",
+      "min",
+      "S",
+      "H",
+      "N",
+      "T"
+    ]
+  }
+}

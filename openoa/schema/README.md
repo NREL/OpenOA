@@ -57,19 +57,48 @@ The minimum data specification to be able to run an electrical losses analysis.
 
 [JSON](base_monte_carlo_aep_schema.json) [YAML](base_monte_carlo_aep_schema.yml)
 
-The minimum data specification for the base Monte Carlo AEP analysis. More robust
-schema is on the way for the variations on the base analysis.
+The minimum data specification for the base Monte Carlo AEP analysis.
+
+### Monte Carlo AEP with Temperature
+
+[JSON](temperature_monte_carlo_aep_schema.json) [YAML](temperature_monte_carlo_aep_schema.yml)
+
+Used for when `reg_temperature=True`.
+
+### Monte Carlo AEP with Wind Direction
+
+[JSON](wind_direction_monte_carlo_aep_schema.json) [YAML](wind_direction_monte_carlo_aep_schema.yml)
+
+Used for when `reg_wind_direction=True`.
+
+### Monte Carlo AEP with Temperature and Wind Direction
+
+[JSON](temperature_wind_direction_monte_carlo_aep_schema.json) [YAML](temperature_wind_direction_monte_carlo_aep_schema.yml)
+
+Used for when `reg_temperature=True` and `reg_wind_direction=True`.
 
 ## Base Turbine Ideal Energy
 
 [JSON](base_tie_schema.json) [YAML](base_tie_schema.yml)
 
-The minimum data specification for the base turbine ideal energy analysis. More robust
-schema is on the way for the variations on the base analysis.
+The minimum data specification for the base turbine ideal energy analysis.
 
-## Base Wake Losses
+## Wake Losses
 
-[JSON](base_wake_losses_schema.json) [YAML](base_wake_losses_schema.yml)
+### Wake Losses using SCADA Wind Variables
 
-The minimum data specification for the base wake losses analysis. More robust
-schema is on the way for the variations on the base analysis.
+[JSON](scada_wake_losses_schema.json) [YAML](scada_wake_losses_schema.yml)
+
+The default wake loss schema, using SCADA windspeed and wind direction inputs.
+
+### Wake Losses using Tower Wind Variables
+
+[JSON](tower_wake_losses_schema.json) [YAML](tower_wake_losses_schema.yml)
+
+The modified wake loss schema, using met tower data for windspeed and wind direction inputs.
+
+## Base Static Yaw Misalignment
+
+[JSON](base_yaw_misalignmental_losses_schema.json) [YAML](base_yaw_misalignmental_losses_schema.yml)
+
+The minimum data specification for the base static yaw misalignment analysis.
