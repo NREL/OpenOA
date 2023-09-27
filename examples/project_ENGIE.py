@@ -160,7 +160,7 @@ def load_cleansed_data(path: str | Path, return_value="plantdata") -> PlantData:
 
 
 def prepare(
-    path: str | Path = "data/la_haute_borne", return_value="plantdata", use_cleansed: bool = True
+    path: str | Path = "data/la_haute_borne", return_value="plantdata", use_cleansed: bool = False
 ):
     """
     Do all loading and preparation of the data for this plant.
@@ -168,7 +168,7 @@ def prepare(
     - path (str): Path to la_haute_borne data folder. If it doesn't exist, we will try to extract a zip file of the same name.
     - scada_df (pandas.DataFrame): Override the scada dataframe with one provided by the user.
     - return_value (str): "plantdata" will return a fully constructed PlantData object. "dataframes" will return a list of dataframes instead.
-    - use_cleansed (bool): Use previously prepared data if the the "cleansed" folder exists above the main `path`. Defaults to True.
+    - use_cleansed (bool): Use previously prepared data if the the "cleansed" folder exists above the main `path`. Defaults to False.
     """
 
     if type(path) == str:
