@@ -226,7 +226,8 @@ myst_enable_extensions = [
 ]
 
 # toggle this between auto/off to rerun full documentation build
-nb_execution_mode = "off"  # Should be coming from the examples folder
+nb_execution_mode = "auto"  # Should be coming from the examples folder
+nb_execution_excludepatterns = ["examples/*"]
 
 myst_heading_anchors = 3
 
