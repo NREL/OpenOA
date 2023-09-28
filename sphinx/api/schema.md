@@ -46,10 +46,11 @@ plant = PlantData(
 ```
 
 The following sections will show how each of the data should be configured, and where to check for
-these settings in the code itself. It should be noted that neither the {py:attr}`XMetaData.dtypes` (where "X" represents a specific data type), nor the
-{py:attr}`XMetaData.units`, can be set manually, or updated as they are exclusively for reference to users.
+these settings in the code itself. It should be noted that neither the meta data class
+{py:attr}`dtypes` (where "X" represents a specific data type), nor the meta data {py:attr}`units`,
+can be set manually, or updated as they are exclusively for reference to users.
 
-Each of the {py:class}`XMetaData` classes accept the inputs of the elements under the column "Field Name" in
+Each of the meta data classes accept the inputs of the elements under the column "Field Name" in
 the following subsections, in addition to the frequency ({py:attr}`freq`) for time-dependent inputs. All
 other attributes of the metadata classes for user reference, and therefore immutable. After setting
 each of the inputs, users can access the dictionary elements {py:attr}`col_map`, {py:attr}`dtypes`, and {py:attr}`units` to
