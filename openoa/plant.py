@@ -1104,9 +1104,7 @@ class PlantData:
         if utm_zone is None:
             if reference_longitude is None:
                 longitude = self.asset[self.metadata.asset.longitude].mean()
-                self.metadata.reference_longitude = longitude
             utm_zone = int(np.floor((180 + longitude) / 6.0)) + 1
-            self.metadata.utm_zone = utm_zone
 
         to_crs = f"+proj=utm +zone={utm_zone} +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
         transformer = Transformer.from_crs(reference_system.upper(), to_crs)
