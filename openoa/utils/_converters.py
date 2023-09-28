@@ -15,15 +15,15 @@ import pandas as pd
 
 
 def _list_of_len(x: list, length: int) -> list:
-    """Converts a list of dynamic length to one of length `length` by repeating the elements of `x`
+    """Converts a list of dynamic length to one of length `length` by repeating the elements of :py:attr:`x`
     until the desired length is reached.
 
     Args:
         x (`list`): The list to be expanded.
-        length (`int`): The desired length of `x`
+        length (`int`): The desired length of :py:attr:`x`
 
     Returns:
-        list: A list of length `length` with repeating elements of `x`.
+        list: A list of length :py:attr:`length` with repeating elements of :py:attr:`x`.
     """
     if (actual := len(x)) == length:
         return x
@@ -31,15 +31,15 @@ def _list_of_len(x: list, length: int) -> list:
 
 
 def _check_cols_in_df(data, *args):
-    """Ensures that the columm names provided to `args` are contained in the pandas `DataFrame`, `data`.
+    """Ensures that the columm names provided to :py:attr:`args` are contained in the pandas ``DataFrame``, :py:attr:`data`.
 
     Args:
         data (obj:`pandas.DataFrame`): The DataFrame object containing a dynamic-length list of
-            columns contained in `args`.
-        args : Desired column names of `data`, or `None`.
+            columns contained in :py:attr:`args`.
+        args : Desired column names of :py:attr:`data`, or ``None``.
 
     Raises:
-        ValueError: Raised if one of the values provided to `args` is not column or `None`.
+        ValueError: Raised if one of the values provided to :py:attr:`args` is not column or ``None``.
     """
     if any(isinstance(arg, pd.Series) for arg in args):
         raise TypeError(
@@ -51,16 +51,16 @@ def _check_cols_in_df(data, *args):
 
 def _get_arguments(args: list, kwargs: dict, arg_ix_list: list[int], data_cols: list[str]) -> list:
     """Gets the desired arguments from a combined list of indices their corresponding argument names
-    from the `args` and `kwargs` passsed to a function.
+    from the :py:attr:`args` and :py:attr:`kwargs` passsed to a function.
 
     Args:
         args (:obj:`list`): The orginal function arguments
         kwargs (:obj:`dict`): The original function keyword arguments
-        arg_ix_list (:obj:`list[int]`): The indicies within `args` of the values of `data_cols`.
-        data_cols (:obj:`list[str]`): The names of the desired `args` or `kwargs`.
+        arg_ix_list (:obj:`list[int]`): The indicies within :py:attr:`args` of the values of :py:attr:`data_cols`.
+        data_cols (:obj:`list[str]`): The names of the desired :py:attr:`args` or :py:attr:`kwargs`.
 
     Returns:
-        `list`: A list of the extracted values or None if it does not exist.
+        ``list``: A list of the extracted values or None if it does not exist.
     """
     arg_list = []
     for ix, name in zip(arg_ix_list, data_cols):
@@ -80,14 +80,14 @@ def _get_arguments(args: list, kwargs: dict, arg_ix_list: list[int], data_cols: 
 def _update_arguments(
     args: list, kwargs: dict, arg_ix_list: list, data_cols: list, arg_list: list
 ) -> tuple[list, dict]:
-    """Update the `args` and `kwargs` for a set of updated arguments contained in `arg_list`.
+    """Update the :py:attr:`args` and :py:attr:`kwargs` for a set of updated arguments contained in :py:attr:`arg_list`.
 
     Args:
         args (`list`): The originally passed function arguments.
         kwargs (`dict`): The originally passed function keyword arguments.
         arg_ix_list (`list`): The indices of the arguments to update.
         data_cols (`list`): The names of the arguments to update.
-        arg_list (`list`): The new argument values, corresponding to both `arg_ix_list` and `data_cols`.
+        arg_list (`list`): The new argument values, corresponding to both :py:attr:`arg_ix_list` and :py:attr:`data_cols`.
 
     Returns:
         tuple[list, dict]: _description_
@@ -109,28 +109,28 @@ def convert_args_to_lists(length: int, *args) -> list[list]:
 
     Args:
         length (int): The length of the argument list.
-        args: A series of arguments to be converted series of individual lists of length `length` for
+        args: A series of arguments to be converted series of individual lists of length :py:attr:`length` for
             each argument passed.
 
     Returns:
-        list[list]: A list of lists of length `length` for each argument passed.
+        list[list]: A list of lists of length :py:attr:`length` for each argument passed.
     """
     return [a if isinstance(a, list) else [a] * length for a in args]
 
 
 def df_to_series(data: pd.DataFrame, *args: str) -> tuple[pd.Series, ...]:
-    """Converts a `DataFrame` and dynamic number of column names to a an equal number of pandas `Series`
-    corresponding to the column names. If `None` is passed as an argument to args, then `None` will
+    """Converts a ``DataFrame`` and dynamic number of column names to a an equal number of pandas ``Series``
+    corresponding to the column names. If ``None`` is passed as an argument to args, then ``None`` will
     be returned in place of a Series to maintain consistent ordering of inputs and outputs.
 
     Args:
-        data (obj:`pandas.DataFrame`): The `DataFrame` object containg the column names in `args`.
+        data (obj:`pandas.DataFrame`): The ``DataFrame`` object containg the column names in :py:attr:`args`.
         args(obj:`str`): A dynamic number of strings that make up the column names that need to be
-            returned back as pandas `Series` objects.
+            returned back as pandas ``Series`` objects.
 
     Raises:
-        ValueError: Raised if `data` is not a pandas `DataFrame`.
-        ValueError: Raised if any of the args passed is not contained in `data`.
+        ValueError: Raised if :py:attr:`data` is not a pandas ``DataFrame``.
+        ValueError: Raised if any of the args passed is not contained in ``data``.
 
     Returns:
         tuple[pandas.Series, ...]: A pandas `Series` for each of the column names passed in `args`
@@ -157,13 +157,13 @@ def df_to_series(data: pd.DataFrame, *args: str) -> tuple[pd.Series, ...]:
 
 
 def multiple_df_to_single_df(*args: pd.DataFrame, align_col: str | None = None) -> pd.DataFrame:
-    """Convert multiple `DataFrames` to a single `DataFrame` either along the index, when `align_col`
-    is None, or along the `align_col` when a value is provided.
+    """Convert multiple ``DataFrames`` to a single ``DataFrame`` either along the index, when :py:attr:`align_col`
+    is None, or along the :py:attr:`align_col` when a value is provided.
 
     Args:
-        args(:obj:`pandas.DataFrame`): A dynamic number of DataFrame inputs that need to be joined.
-        align_col(:obj:`str` | `None`, optional): The common column shared among `args`, or the index,
-            if `None`. Defaults to None.
+        args(:obj:`pandas.DataFrame`): A dynamic number of ``DataFrame`` inputs that need to be joined.
+        align_col(:obj:`str` | :obj:`None`, optional): The common column shared among :py:attr:`args`, or the index,
+            if ``None``. Defaults to None.
 
     Raises:
         TypeError: Raised if any of the passed arguments isn't a pandas `DataFrame`
@@ -185,17 +185,17 @@ def multiple_df_to_single_df(*args: pd.DataFrame, align_col: str | None = None) 
 
 
 def series_to_df(*args: pd.Series, names: list[str] = None) -> tuple[pd.DataFrame, list[str | int]]:
-    """Convert a dynamic number of pandas `Series` to a single pandas `DataFrame` by concatenating
+    """Convert a dynamic number of pandas ``Series`` to a single pandas ``DataFrame`` by concatenating
     with an outer join, so the any missing values being filled with a NaN value, and each argument
-    becomes a column of the resulting `DataFrame`.
+    becomes a column of the resulting ``DataFrame``.
 
     Args:
-        args(:obj:`pandas.Series`): A series of of pandas `Series` objects that share a common axis.
+        args(:obj:`pandas.Series`): A series of of pandas ``Series`` objects that share a common axis.
         names(:obj:`list[str]`): A list of alternative names for the Series to be used as the column
-            name in the returned DataFrame and list of new args in place of None.
+            name in the returned ``DataFrame`` and list of new args in place of None.
 
     Returns:
-        tuple[pandas.DataFrame, list[str | int, ...]]: A single data structure combining all the
+        ``tuple[pandas.DataFrame, list[str | int, ...]]``: A single data structure combining all the
             passed arguments, and the `name` associated with each passed `Series`.
     """
     if not all(isinstance(el, pd.Series) for el in args):
@@ -214,20 +214,20 @@ def series_to_df(*args: pd.Series, names: list[str] = None) -> tuple[pd.DataFram
 
 
 def series_method(data_cols: list[str] = None):
-    """Wrapper method for methods that operate on pandas `Series`, and not `DataFrame`s that allows
-    the passing of column names that are potentially contained in a pandas `DataFrame` to be pulled
-    out as separate pandas `Series` objects to be passed back to the method. This is a convenience
-    wrapper that reduces the amount of boilerplate required to enable both `DataFrame` and `Series`
+    """Wrapper method for methods that operate on pandas ``Series``, and not ``DataFrame``s that allows
+    the passing of column names that are potentially contained in a pandas ``DataFrame`` to be pulled
+    out as separate pandas ``Series`` objects to be passed back to the method. This is a convenience
+    wrapper that reduces the amount of boilerplate required to enable both ``DataFrame`` and ``Series``
     arguments to be used interchangably in a single method's API.
 
     Args:
         data_cols (list[str], optional): The names of the method arguments that should be converted
-            from `str` to pandas `Series` when `data` is provided as a pandas `DataFrame` to the
+            from ``str`` to pandas ``Series`` when ``data`` is provided as a pandas ``DataFrame`` to the
             focal method. Defaults to None.
     """
 
     def decorator(func: Callable):
-        """Gathes the arg indices from `data_cols` to be used in `wrapper`."""
+        """Gathes the arg indices from :py:attr:`data_cols` to be used in ``wrapper``."""
         argspec = getfullargspec(func)
         arg_ix_list = []
         if data_cols is not None:
@@ -257,19 +257,19 @@ def series_method(data_cols: list[str] = None):
 
 
 def dataframe_method(data_cols: list[str] = None):
-    """Wrapper method for methods that operate on a pandas `DataFrame`, and not `Series` that allows
-    the passing of the `Series`, so that they can be combined in a `DataFrame`and passed back to the
+    """Wrapper method for methods that operate on a pandas ``DataFrame``, and not ``Series`` that allows
+    the passing of the ``Series``, so that they can be combined in a ``DataFrame`` and passed back to the
     method. This is a convenience wrapper that reduces the amount of boilerplate required to enable
-    both `DataFrame` and `Series` arguments to be used interchangably in a single method's API.
+    both ``DataFrame`` and ``Series`` arguments to be used interchangably in a single method's API.
 
     Args:
         data_cols (list[str], optional): The names of the method arguments that should be converted
-            from a pandas `Series` to `str`, along with the creation of the `data` keyword argument
-            when the column data is passed as a `Series`. Defaults to None.
+            from a pandas ``Series`` to ``str``, along with the creation of the :py:attr:`data` keyword argument
+            when the column data is passed as a ``Series``. Defaults to None.
     """
 
     def decorator(func: Callable):
-        """Gathes the arg indices from `data_cols` to be used in `wrapper`."""
+        """Gathes the arg indices from :py:attr:`data_cols` to be used in ``wrapper``."""
         argspec = getfullargspec(func)
         arg_ix_list = []
         if data_cols is not None:

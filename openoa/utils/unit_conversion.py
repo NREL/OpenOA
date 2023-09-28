@@ -18,14 +18,14 @@ def convert_power_to_energy(
     Compute energy [kWh] from power [kw] and return the data column
 
     Args:
-        power_col(:obj:`str` | `pandas.Series`): The power data, in kW, or the name of the column
+        power_col(:obj:`str` | :obj:`pandas.Series`): The power data, in kW, or the name of the column
             in :py:attr:`data`.
         sample_rate_min(:obj:`float`): Sampling rate as a pandas offset alias, in minutes, to use
             for conversion. Defaults to "10T.
         data(:obj:`pandas.DataFrame`): The pandas DataFrame containing the col :py:attr:`power_col`.
 
     Returns:
-        :obj:`pandas.Series`: Energy in kWh that matches the length of the input data frame 'df'
+        :obj:`pandas.Series`: Energy in kWh that matches the length of the input data frame :py:attr:'df'
 
     """
     # Get the number of minutes in the sample_rate_min

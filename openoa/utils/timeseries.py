@@ -18,7 +18,7 @@ def offset_to_seconds(offset: int | float | str | np.datetime64) -> int | float:
     """Converts pandas datetime offset alias to its corresponding number of seconds.
 
     Args:
-        offset(:obj:`int` | `float` | `str` | `numpy.datetime64`): The pandas offset
+        offset(:obj:`int` | :obj:`float` | :obj:`str` | :obj:`numpy.datetime64`): The pandas offset
             alias or numpy timestamp to be converted to seconds. If a number (int or
             float) is passed, then it must be in nanoseconds, the Pandas default.
 
@@ -62,7 +62,7 @@ def determine_frequency(data: pd.DataFrame, index_col: str | None = None) -> str
             uses a MultiIndex, otherwise leave as None. Defaults to None.
 
     Returns:
-        :obj:`str` | `int` | `float`: The offset string or number of seconds between timestamps.
+        :obj:`str` | :obj:`int` | :obj:`float`: The offset string or number of seconds between timestamps.
     """
     # Get the timetamp index values
     index = data.index if index_col is None else data.index.get_level_values(index_col)
@@ -118,15 +118,15 @@ def convert_local_to_utc(d: str | datetime.datetime, tz_string: str) -> datetime
 def convert_dt_to_utc(
     dt_col: pd.Series | str, tz_string: str, data: pd.DataFrame = None
 ) -> pd.Series:
-    """Converts a pandas `Series` of timestamps, string-formatted or `datetime.datetime` objects
-        that are in a local timezone `tz_string` to a UTC encoded pandas `Series`.
+    """Converts a pandas ``Series`` of timestamps, string-formatted or ``datetime.datetime`` objects
+        that are in a local timezone ``tz_string`` to a UTC encoded pandas ``Series``.
 
     Args:
-        dt_col (:obj:`pandas.Series` | `str`): A pandas `Series` of datetime objects or
+        dt_col (:obj:`pandas.Series` | `str`): A pandas ``Series`` of datetime objects or
             string-encoded timestamps, or a the name of the column in `data`.
-        tz_string (str): The string name for the expected timezone of the provided timestamps in `dt_col`.
-        data (:obj:`pandas.DataFrame`, optional): The pandas `DataFrame` containing the timestamp
-            column: `dt_col`. Defaults to None.
+        tz_string (str): The string name for the expected timezone of the provided timestamps in :py:attr:`dt_col`.
+        data (:obj:`pandas.DataFrame`, optional): The pandas ``DataFrame`` containing the timestamp
+            column: :py:attr:`dt_col`. Defaults to None.
 
     Returns:
         pd.Series: _description_
@@ -147,15 +147,15 @@ def find_time_gaps(dt_col: pd.Series | str, freq: str, data: pd.DataFrame = None
     Finds gaps in `dt_col` based on the expected frequency, `freq`, and returns them.
 
     Args:
-        dt_col(:obj:`pandas.Series`): Pandas `Series` of `datetime.datetime` objects or the name
-            of the column in `data`.
+        dt_col(:obj:`pandas.Series`): Pandas ``Series`` of ``datetime.datetime`` objects or the name
+            of the column in :py:attr:`data`.
         freq(:obj:`string`): The expected frequency of the timestamps, which should align with
             the pandas timestamp conventions (https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases).
-        data (:obj:`pandas.DataFrame`, optional): The pandas `DataFrame` containing the timestamp
-            column: `dt_col`. Defaults to None.
+        data (:obj:`pandas.DataFrame`, optional): The pandas ``DataFrame`` containing the timestamp
+            column: :py:attr:`dt_col`. Defaults to None.
 
     Returns:
-        :obj:`pandas.Series`: Series of missing time stamps in datetime.datetime format
+        :obj:`pandas.Series`: Series of missing time stamps in ``datetime.datetime`` format
     """
     if isinstance(dt_col, pd.DatetimeIndex):
         dt_col = dt_col.to_series()
@@ -176,10 +176,10 @@ def find_duplicate_times(dt_col: pd.Series | str, data: pd.DataFrame = None):
     Find duplicate input data and report them. The first duplicated item is not reported, only subsequent duplicates.
 
     Args:
-        dt_col(:obj:`pandas.Series` | `str`): Pandas series of datetime.datetime objects or the name of the
-            column in `data`.
+        dt_col(:obj:`pandas.Series` | `str`): Pandas series of ``datetime.datetime`` objects or the name of the
+            column in :py:attr:`data`.
         data (:obj:`pandas.DataFrame`, optional): The pandas `DataFrame` containing the timestamp
-            column: `dt_col`. Defaults to None.
+            column: :py:attr:`dt_col`. Defaults to None.
 
     Returns:
         :obj:`pandas.Series`: Duplicates from input data
@@ -192,7 +192,7 @@ def find_duplicate_times(dt_col: pd.Series | str, data: pd.DataFrame = None):
 
 def gap_fill_data_frame(data: pd.DataFrame, dt_col: str, freq: str) -> pd.DataFrame:
     """
-    Insert any missing timestamps into `data` while filling the data columns with NaNs.
+    Insert any missing timestamps into :py:attr:`data` while filling the data columns with NaNs.
 
     Args:
         data(:obj:`pandas.DataFrame`): The dataframe with potentially missing timestamps.
@@ -220,9 +220,9 @@ def percent_nan(col: pd.Series | str, data: pd.DataFrame = None):
 
     Args:
         col(:obj:`pandas.Series`): The pandas `Series` to be checked for NaNs, or the name of the
-            column in `data`.
-        data (:obj:`pandas.DataFrame`, optional): The pandas `DataFrame` containing the timestamp
-            column: `col`. Defaults to None.
+            column in :py:attr:`data`.
+        data (:obj:`pandas.DataFrame`, optional): The pandas ``DataFrame`` containing the timestamp
+            column: :py:attr:`col`. Defaults to None.
 
     Returns:
         :obj:`float`: Percentage of NaN data in the data series
@@ -233,13 +233,13 @@ def percent_nan(col: pd.Series | str, data: pd.DataFrame = None):
 @series_method(data_cols=["dt_col"])
 def num_days(dt_col: pd.Series | str, data: pd.DataFrame = None) -> int:
     """
-    Calculates the number of non-duplicate days in `dt_col`.
+    Calculates the number of non-duplicate days in :py:attr:`dt_col`.
 
     Args:
-        dt_col(:obj:`pandas.Series` | str): A pandas `Series` with a timeseries index to be checked
+        dt_col(:obj:`pandas.Series` | str): A pandas ``Series`` with a timeseries index to be checked
             for the number of days contained in the data.
-        data (:obj:`pandas.DataFrame`, optional): The pandas `DataFrame` containing the timestamp
-            column: `dt_col` and having a timeseries index. Defaults to None.
+        data (:obj:`pandas.DataFrame`, optional): The pandas ``DataFrame`` containing the timestamp
+            column: :py:attr:`dt_col` and having a timeseries index. Defaults to None.
 
     Returns:
         :obj:`int`: Number of days in the data
@@ -253,10 +253,10 @@ def num_hours(dt_col: pd.Series | str, *, data: pd.DataFrame = None) -> int:
     Calculates the number of non-duplicate hours in `dt_col`.
 
     Args:
-        dt_col(:obj:`pandas.Series` | str): A pandas `Series` of timeseries data to be checked for
+        dt_col(:obj:`pandas.Series` | str): A pandas ``Series`` of timeseries data to be checked for
             the number of hours contained in the data
         data (:obj:`pandas.DataFrame`, optional): The pandas `DataFrame` containing the timestamp
-            column: `dt_col`. Defaults to None.
+            column: :py:attr:`dt_col`. Defaults to None.
 
     Returns:
         :obj:`int`: Number of hours in the data

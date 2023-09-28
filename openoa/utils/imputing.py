@@ -15,7 +15,7 @@ def asset_correlation_matrix(data: pd.DataFrame, value_col: str) -> pd.DataFrame
     alignment value) and asset_id values as its indices, respectively.
 
     Args:
-        data(:obj:`pandas.DataFrame`): input data frame such as `Plant.scada` that uses a
+        data(:obj:`pandas.DataFrame`): input data frame such as :py:attr:`PlantData.scada` that uses a
             MultiIndex with a timestamp and asset_id column for indices, in that order.
         value_col(:obj:`str`): the column containing the data values to be used when
             assessing correlation
@@ -52,14 +52,15 @@ def impute_data(
     4. Return the imputed results as well as the index matching the target data frame
 
     Args:
-        target_col(:obj:`str`): the name of the column in either `data` or `target_data` to be imputed
-        reference_col(:obj:`str`): the name of the column in either `data` or `reference_data` to be
-            used for imputation
-        data(:obj:`pandas.DataFrame`): input data frame such as `Plant.scada` that uses a
+        target_col(:obj:`str`): the name of the column in either :py:attr:`data` or
+            :py:attr:`target_data` to be imputed.
+        reference_col(:obj:`str`): the name of the column in either :py:attr:`data` or
+            :py:attr:`reference_data` to be used for imputation.
+        data(:obj:`pandas.DataFrame`): input data frame such as :py:attr:`PlantData.scada` that uses a
             MultiIndex with a timestamp and asset_id column for indices, in that order, by default None.
-        target_data(:obj:`pandas.DataFrame`): the `DataFrame` with  NaN data to be imputed
-        reference_data(:obj:`pandas.DataFrame`): the `SeDataFrameries` to be used in imputation
-        align_col(:obj:`str`): the name of the column that to join `target_data` and `reference_data`.
+        target_data(:obj:`pandas.DataFrame`): the ``DataFrame`` with  NaN data to be imputed.
+        reference_data(:obj:`pandas.DataFrame`): the ``DataFrame`` to be used in imputation
+        align_col(:obj:`str`): the name of the column that to join :py:attr:`target_data` and :py:attr:`reference_data`.
 
     Returns:
         :obj:`pandas.Series`: Copy of target_data_col series with NaN occurrences imputed where possible.
@@ -154,7 +155,7 @@ def impute_all_assets_by_correlation(
         c. The neighboring asset does not meet the specified correlation threshold, :py:attr:`r2_threshold`
 
     Args:
-        data(:obj:`pandas.DataFrame`): input data frame such as `Plant.scada` that uses a
+        data(:obj:`pandas.DataFrame`): input data frame such as :py:attr:`PlantData.scada` that uses a
             MultiIndex with a timestamp and asset_id column for indices, in that order.
         impute_col(:obj:`str`): the name of the column in `data` to be imputed.
         reference_col(:obj:`str`): the name of the column in `data` to be used in imputation.
