@@ -30,7 +30,7 @@ ERA5. Additionally, if defined, the `PlantData` can validate data for what's exp
 for any of the OpenOA analysis classes, as defined below.
 
 Analysis routines are provided in analysis classes, which each use the PlantData objects to ingest
-data. For complete documentation please see the `analysis API page <api/analysis>`_. OpenOA
+data. For complete documentation please see the `analysis API page <api/analysis.html>`_. OpenOA
 includes the following analysis classes:
 
 * ``MonteCarloAEP``: This routine estimates the long-term annual energy production (AEP) of a wind
@@ -56,7 +56,7 @@ includes the following analysis classes:
 
 Lower-level "toolkit" modules are provided in the utils subpackage. These methods are used
 throughout the analysis classes. They can also be used individually to support general wind plant
-data analysis activities. For complete documentation please see the `utils API page <api/utils>`_.
+data analysis activities. For complete documentation please see the `utils API page <api/utils.html>`_.
 Some examples of utils modules include:
 
 * **Quality Assurance**: This module provides quality assurance methods for identifying potential
@@ -72,7 +72,7 @@ Some examples of utils modules include:
 
 To interact with how each of these components of OpenOA are used, please visit our examples notebooks on
 `Binder <https://mybinder.org/v2/gh/NREL/OpenOA/develop_v3?filepath=examples>`_, or view them statically on the
-`examples page <examples/index>`_.
+`examples page <examples/index.html>`_.
 
 If you use this software in your work, please cite our JOSS article with the following BibTex::
 
