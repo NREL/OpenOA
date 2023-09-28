@@ -23,7 +23,6 @@
 
 from __future__ import annotations
 
-import random
 from copy import deepcopy
 
 import attrs
@@ -489,9 +488,9 @@ class StaticYawMisalignment(FromDictMixin):
 
         Returns:
             tuple[float, float, np.ndarray, np.ndarray]: The estimated static yaw misaligment, the
-            mean wind vane angle, and arrays containing the best-fit cosine curve parameters
-            (magnitude, offset (degrees), and cosine exponent) and power performance values binned
-            by wind vane angle.
+                mean wind vane angle, and arrays containing the best-fit cosine curve parameters
+                (magnitude, offset (degrees), and cosine exponent) and power performance values
+                binned by wind vane angle.
         """
 
         self._df_turb_ws["vane_bin"] = self.vane_bin_width * np.round(
@@ -564,20 +563,20 @@ class StaticYawMisalignment(FromDictMixin):
                 for the power performance vs. wind vane plots. Defaults to (None, None).
             return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
             figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
-                that are passed to `plt.figure()`. Defaults to None.
+                that are passed to ``plt.figure()``. Defaults to None.
             plot_kwargs_curve (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
-                `ax.plot()` for plotting lines for the power performance vs. wind vane plots. Defaults to {}.
+                ``ax.plot()`` for plotting lines for the power performance vs. wind vane plots. Defaults to {}.
             plot_kwargs_line (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
-                `ax.plot()` for plotting vertical lines indicating mean vane angle and vane angle where
+                ``ax.plot()`` for plotting vertical lines indicating mean vane angle and vane angle where
                 power is maximized. Defaults to {}.
-            plot_kwargs_fill (:obj:`dict`, optional): If `UQ` is True, additional plotting keyword arguments
-                that are passed to `ax.fill_between()` for plotting shading regions for 95% confidence
+            plot_kwargs_fill (:obj:`dict`, optional): If :py:attr:`UQ` is True, additional plotting keyword arguments
+                that are passed to ``ax.fill_between()`` for plotting shading regions for 95% confidence
                 intervals for power performance vs. wind vane. Defaults to {}.
             legend_kwargs (:obj:`dict`, optional): Additional legend keyword arguments that are passed to
-                `ax.legend()` for the power performance vs. wind vane plots. Defaults to {}.
+                ``ax.legend()`` for the power performance vs. wind vane plots. Defaults to {}.
         Returns:
             None | dict of tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes]:
-                If `return_fig` is True, then a dictionary containing the figure and axes object(s)
+                If :py:attr:`return_fig` is True, then a dictionary containing the figure and axes object(s)
                 corresponding to the yaw misalignment plots for each turbine are returned for further
                 tinkering/saving. The turbine names in the `turbine_ids` aregument are the dicitonary
                 keys.

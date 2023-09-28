@@ -43,6 +43,54 @@ ANALYSIS_REQUIREMENTS = {
             "freq": _at_least_monthly,
         },
     },
+    "MonteCarloAEP-temp": {
+        "meter": {
+            "columns": ["MMTR_SupWh"],
+            "freq": _at_least_monthly,
+        },
+        "curtail": {
+            "columns": ["IAVL_DnWh", "IAVL_ExtPwrDnWh"],
+            "freq": _at_least_monthly,
+        },
+        "reanalysis": {
+            "columns": ["WMETR_HorWdSpd", "WMETR_AirDen", "WMETR_EnvTmp"],
+            "freq": _at_least_monthly,
+        },
+    },
+    "MonteCarloAEP-wd": {
+        "meter": {
+            "columns": ["MMTR_SupWh"],
+            "freq": _at_least_monthly,
+        },
+        "curtail": {
+            "columns": ["IAVL_DnWh", "IAVL_ExtPwrDnWh"],
+            "freq": _at_least_monthly,
+        },
+        "reanalysis": {
+            "columns": ["WMETR_HorWdSpd", "WMETR_AirDen", "WMETR_HorWdSpdU", "WMETR_HorWdSpdV"],
+            "freq": _at_least_monthly,
+        },
+    },
+    "MonteCarloAEP-temp-wd": {
+        "meter": {
+            "columns": ["MMTR_SupWh"],
+            "freq": _at_least_monthly,
+        },
+        "curtail": {
+            "columns": ["IAVL_DnWh", "IAVL_ExtPwrDnWh"],
+            "freq": _at_least_monthly,
+        },
+        "reanalysis": {
+            "columns": [
+                "WMETR_HorWdSpd",
+                "WMETR_AirDen",
+                "WMETR_EnvTmp",
+                "WMETR_HorWdSpdU",
+                "WMETR_HorWdSpdV",
+            ],
+            "freq": _at_least_monthly,
+        },
+    },
     "TurbineLongTermGrossEnergy": {
         "scada": {
             "columns": ["asset_id", "WMET_HorWdSpd", "WTUR_W"],
@@ -112,18 +160,6 @@ ANALYSIS_REQUIREMENTS = {
         },
     },
 }
-
-# Add the analysis variations
-ANALYSIS_REQUIREMENTS["MonteCarloAEP-temp"] = deepcopy(ANALYSIS_REQUIREMENTS["MonteCarloAEP"])
-ANALYSIS_REQUIREMENTS["MonteCarloAEP-wd"] = deepcopy(ANALYSIS_REQUIREMENTS["MonteCarloAEP"])
-ANALYSIS_REQUIREMENTS["MonteCarloAEP-temp-wd"] = deepcopy(ANALYSIS_REQUIREMENTS["MonteCarloAEP"])
-ANALYSIS_REQUIREMENTS["MonteCarloAEP-temp"]["reanalysis"]["columns"].extend(["WMETR_EnvTmp"])
-ANALYSIS_REQUIREMENTS["MonteCarloAEP-wd"]["reanalysis"]["columns"].extend(
-    ["WMETR_HorWdSpdU", "WMETR_HorWdSpdV"]
-)
-ANALYSIS_REQUIREMENTS["MonteCarloAEP-temp-wd"]["reanalysis"]["columns"].extend(
-    ["WMETR_EnvTmp", "WMETR_HorWdSpdU", "WMETR_HorWdSpdV"]
-)
 
 
 def determine_analysis_requirements(

@@ -102,10 +102,14 @@ class EYAGapAnalysis(FromDictMixin):
     when defining the class, differences in EYA estimates and OA results are calculated, and then a
     'waterfall' plot is created showing the differences between the EYA and OA-estimated AEP values
     and how they are linked from differences in the three key metrics.
+
+    Args:
+        plant(:obj:`PlantData object`): PlantData object from which EYAGapAnalysis should draw data.
+        eya_estimates(:obj:`EYAEstimate`): Numpy array with EYA estimates listed in required order
+        oa_results(:obj:`OAResults`): Numpy array with OA results listed in required order.
     """
 
-    # plant: PlantData = field(validator=attrs.validators.instance_of((PlantData, type(None))))
-    plant: PlantData
+    plant: PlantData = field(validator=attrs.validators.instance_of((PlantData, type(None))))
     eya_estimates: EYAEstimate = field(converter=EYAEstimate.from_dict)
     oa_results: OAResults = field(converter=OAResults.from_dict)
 
@@ -115,18 +119,7 @@ class EYAGapAnalysis(FromDictMixin):
 
     @logged_method_call
     def __attrs_post_init__(self):
-        """
-        Initialize EYA gap analysis class with data and parameters.
-
-        Args:
-         plant(:obj:`PlantData object`): PlantData object from which EYAGapAnalysis should draw data.
-         eya_estimates(:obj:`numpy array`): Numpy array with EYA estimates listed in required order
-         oa_results(:obj:`numpy array`): Numpy array with OA results listed in required order.
-         make_fig(:obj:`boolean`): Indicate whether to produce the waterfall plot
-         save_fig_path(:obj:`boolean` or `string'): Provide path to save waterfall plot, or set to
-                                                    False to not save plot
-
-        """
+        """Initialize EYA gap analysis class with data and parameters."""
         if not (isinstance(self.plant, PlantData) or self.plant is None):
             raise TypeError(
                 f"The passed `plant` object must be of type `PlantData` or `None`, not: {type(self.plant)}"
@@ -215,11 +208,11 @@ class EYAGapAnalysis(FromDictMixin):
             return_fig(:obj:`bool`, optional): Set to True to return the figure and axes objects,
                 otherwise set to False. Defaults to False.
             figure_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be
-                passed to `plt.figure`. Defaults to {}.
+                passed to ``plt.figure()``. Defaults to {}.
             plot_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be
-                passed to `ax.plot`. Defaults to {}.
+                passed to ``ax.plot()``. Defaults to {}.
             legend_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be
-                passed to `ax.legend`. Defaults to {}.
+                passed to ``ax.legend()``. Defaults to {}.
 
         Returns:
             None | tuple[plt.Figure, plt.Axes]: If :py:attr:`return_fig`, then return the figure

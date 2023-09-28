@@ -839,8 +839,8 @@ class WakeLosses(FromDictMixin):
     @logged_method_call
     def _setup_monte_carlo_inputs(self):
         """
-        Create and populate the data frame defining the Monte Carlo simulation parameters. This data frame is stored as
-        self.inputs.
+        Create and populate the data frame defining the Monte Carlo simulation parameters. This
+        data frame is stored as ``self.inputs``.
         """
 
         if self.UQ:
@@ -1044,12 +1044,15 @@ class WakeLosses(FromDictMixin):
     @logged_method_call
     def _apply_LT_correction(self):
         """
-        Estimates long term-corrected wake losses by binning wake losses by wind direction and wind speed and weighting
-        by bin frequencies from long-term historical reanalysis data.
+        Estimates long term-corrected wake losses by binning wake losses by wind direction and wind
+        speed and weighting by bin frequencies from long-term historical reanalysis data.
 
         Returns:
-            tuple[float, np.ndarray, np.ndarray, np.ndarray, np.ndarray]: The estimated long term-corrected wake
-                losses, an array containing the estimated turbine-level long term-corrected wake losses, and arrays containing the long-term corrected plant and turbine-level wake losses as well as the normalized wind plant energy productionbinned by wind direction
+            tuple[float, np.ndarray, np.ndarray, np.ndarray, np.ndarray]: The estimated long
+                term-corrected wake losses, an array containing the estimated turbine-level long
+                term-corrected wake losses, and arrays containing the long-term corrected plant and
+                turbine-level wake losses as well as the normalized wind plant energy production
+                binned by wind direction
         """
         # First, create hourly data frame for LT correction to match resolution of reanalysis data
         df_1hr = self.aggregate_df_sample[
@@ -1076,8 +1079,8 @@ class WakeLosses(FromDictMixin):
             df_ws_bin_count["windspeed_mean_freestream"] >= self.bin_count_thresh_lin_reg
         )
 
-        # Find linear regression mapping from SCADA freestream wind speed to reanalysis wind speeds and use to correct
-        # SCADA freestream wind speeds
+        # Find linear regression mapping from SCADA freestream wind speed to reanalysis wind speeds
+        # and use to correct SCADA freestream wind speeds
         reg = LinearRegression().fit(
             df_ws_bin.loc[valid_ws_bins].index.values.reshape(-1, 1),
             df_ws_bin.loc[valid_ws_bins, f"WMETR_HorWdSpd_{self._run.reanalysis_product}"].values,
@@ -1295,19 +1298,19 @@ class WakeLosses(FromDictMixin):
             figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
                 that are passed to `plt.figure()`. Defaults to None.
             plot_kwargs_line (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
-                `ax.plot()` for plotting lines for the wind farm efficiency and, if `plot_norm_energy` is True,
+                ``ax.plot()`` for plotting lines for the wind farm efficiency and, if `plot_norm_energy` is True,
                 energy distributions subplots. Defaults to {}.
             plot_kwargs_fill (:obj:`dict`, optional): If `UQ` is True, additional plotting keyword arguments
-                that are passed to `ax.fill_between()` for plotting shading regions for 95% confidence
+                that are passed to ``ax.fill_between()`` for plotting shading regions for 95% confidence
                 intervals for the wind farm efficiency and, if `plot_norm_energy` is True, energy
                 distributions subplots. Defaults to {}.
             legend_kwargs (:obj:`dict`, optional): Additional legend keyword arguments that are passed to
-                `ax.legend()` for the wind farm efficiency and, if `plot_norm_energy` is True, energy
+                ``ax.legend()`` for the wind farm efficiency and, if `plot_norm_energy` is True, energy
                 distributions subplots. Defaults to {}.
         Returns:
             None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes] | tuple[matplotlib.pyplot.Figure, tuple [matplotlib.pyplot.Axes, matplotlib.pyplot.Axes]]:
-                If `return_fig` is True, then the figure and axes object(s), corresponding to the wake
-                loss plot or, if `plot_norm_energy` is True, wake loss and normalized energy plots, are
+                If :py:attr:`return_fig` is True, then the figure and axes object(s), corresponding to the wake
+                loss plot or, if :py:attr:`plot_norm_energy` is True, wake loss and normalized energy plots, are
                 returned for further tinkering/saving.
         """
 
@@ -1385,21 +1388,21 @@ class WakeLosses(FromDictMixin):
                 plot). Defaults to (None, None).
             return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
             figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
-                that are passed to `plt.figure()`. Defaults to None.
+                that are passed to ``plt.figure()``. Defaults to None.
             plot_kwargs_line (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
-                `ax.plot()` for plotting lines for the wind farm efficiency and, if `plot_norm_energy` is True,
+                ``ax.plot()`` for plotting lines for the wind farm efficiency and, if :py:attr:`plot_norm_energy` is True,
                 energy distributions subplots. Defaults to {}.
             plot_kwargs_fill (:obj:`dict`, optional): If `UQ` is True, additional plotting keyword arguments
-                that are passed to `ax.fill_between()` for plotting shading regions for 95% confidence
-                intervals for the wind farm efficiency and, if `plot_norm_energy` is True, energy
+                that are passed to ``ax.fill_between()`` for plotting shading regions for 95% confidence
+                intervals for the wind farm efficiency and, if :py:attr:`plot_norm_energy` is True, energy
                 distributions subplots. Defaults to {}.
             legend_kwargs (:obj:`dict`, optional): Additional legend keyword arguments that are passed to
-                `ax.legend()` for the wind farm efficiency and, if `plot_norm_energy` is True, energy
+                ``ax.legend()`` for the wind farm efficiency and, if :py:attr:`plot_norm_energy` is True, energy
                 distributions subplots. Defaults to {}.
         Returns:
             None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes] | tuple[matplotlib.pyplot.Figure, tuple [matplotlib.pyplot.Axes, matplotlib.pyplot.Axes]]:
-                If `return_fig` is True, then the figure and axes object(s), corresponding to the wake
-                loss plot or, if `plot_norm_energy` is True, wake loss and normalized energy plots, are
+                If :py:attr:`return_fig` is True, then the figure and axes object(s), corresponding to the wake
+                loss plot or, if :py:attr:`plot_norm_energy` is True, wake loss and normalized energy plots, are
                 returned for further tinkering/saving.
         """
 

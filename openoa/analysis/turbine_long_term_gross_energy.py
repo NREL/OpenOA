@@ -609,11 +609,11 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
             return_fig(:obj:`bool`, optional): Set to True to return the figure and axes objects,
                 otherwise set to False. Defaults to False.
             figure_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be passed
-                to `plt.figure`. Defaults to {}.
+                to ``plt.figure()``. Defaults to {}.
             plot_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be passed
-                to `ax.scatter`. Defaults to {}.
+                to ``ax.scatter()``. Defaults to {}.
             legend_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be passed
-                to `ax.legend`. Defaults to {}.
+                to ``ax.legend()``. Defaults to {}.
 
         Returns:
             None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes]: If `return_fig` is True, then
@@ -667,15 +667,15 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
             return_fig(:obj:`bool`, optional): Set to True to return the figure and axes objects,
                 otherwise set to False. Defaults to False.
             figure_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be passed
-                to `plt.figure`. Defaults to {}.
+                to ``plt.figure()``. Defaults to {}.
             plot_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be passed
-                to `ax.scatter`. Defaults to {}.
+                to ``ax.scatter()``. Defaults to {}.
             legend_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be passed
-                to `ax.legend`. Defaults to {}.
+                to ``ax.legend()``. Defaults to {}.
 
         Returns:
-            None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes]: If `return_fig` is True, then
-                the figure and axes objects are returned for further tinkering/saving.
+            None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes]: If :py:attr`return_fig`
+                is True, then the figure and axes objects are returned for further tinkering/saving.
         """
         turbines = list(self.turbine_model_dict.keys()) if turbines is None else turbines
         num_cols = len(turbines)

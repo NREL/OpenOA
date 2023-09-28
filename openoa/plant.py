@@ -37,16 +37,17 @@ logger = logging.getLogger(__name__)
 def _analysis_filter(
     error_dict: dict, metadata: PlantMetaData, analysis_types: list[str] = ["all"]
 ) -> dict:
-    """Filters the errors found by the analysis requirements  provided by the `analysis_types`.
+    """Filters the errors found by the analysis requirements  provided by the
+    :py:attr:`analysis_types`.
 
     Args:
-        error_dict (`dict`): The dictionary of errors separated by the keys:
+        error_dict (:obj:`dict`): The dictionary of errors separated by the keys:
             "missing", "dtype", and "frequency".
-        metadata (PlantMetaData): The ``PlantMetaData`` object containing the column
+        metadata (:obj:`PlantMetaData`): The ``PlantMetaData`` object containing the column
             mappings for each data type.
-        analysis_types (`list[str]`, optional): The list of analysis types to
+        analysis_types (:obj:`list[str]`, optional): The list of analysis types to
             consider for validation. If "all" is contained in the list, then all errors
-            are returned back, and if `None` is contained in the list, then no errors
+            are returned back, and if ``None`` is contained in the list, then no errors
             are returned, otherwise the union of analysis requirements is returned back.
             Defaults to ["all"].
 
@@ -103,12 +104,12 @@ def _analysis_filter(
 def _compose_error_message(
     error_dict: dict, metadata: PlantMetaData, analysis_types: list[str] = ["all"]
 ) -> str:
-    """Takes a dictionary of error messages from the `PlantData` validation routines,
+    """Takes a dictionary of error messages from the ``PlantData`` validation routines,
     filters out errors unrelated to the intended analysis types, and creates a
     human-readable error message.
 
     Args:
-        error_dict (dict): See `PlantData._errors` for more details.
+        error_dict (dict): See ``PlantData._errors`` for more details.
         metadata (PlantMetaData): The ``PlantMetaData`` object containing the column
             mappings for each data type.
         analysis_types (list[str], optional): The user-input analysis types, which are
@@ -154,16 +155,16 @@ def frequency_validator(
     to what is required.
 
     Args:
-        actual_freq(:obj:`str` | `int` | `float` | `None`): The frequency of the timestamp, either
-            as an offset alias or manually determined in seconds between timestamps.
+        actual_freq(:obj:`str` | :obj:`int` | :obj:`float` | :obj:`None`): The frequency of the
+            timestamp, either as an offset alias or manually determined in seconds between timestamps.
         desired_freq (Optional[str  |  None  |  set[str]]): Either the exact frequency,
             required or a set of options that are also valid, in which case any numeric
-            information encoded in `actual_freq` will be dropped.
-        exact(:obj:`bool`): If the provided frequency codes should be exact matches (`True`),
-            or, if `False`, the check should be for a combination of matches.
+            information encoded in ``actual_freq`` will be dropped.
+        exact(:obj:`bool`): If the provided frequency codes should be exact matches (``True``),
+            or, if ``False``, the check should be for a combination of matches.
 
     Returns:
-        bool: If the actual datetime frequency is sufficient, per the match requirements.
+        (:obj:`bool`): If the actual datetime frequency is sufficient, per the match requirements.
     """
     if desired_freq is None:
         return True
@@ -196,17 +197,13 @@ def convert_to_list(
     """Converts an unknown element that could be a list or single, non-sequence element
     to a list of elements.
 
-    Parameters
-    ----------
-    value : Sequence | str | int | float
-        The unknown element to be converted to a list of element(s).
-    manipulation: Callable | None
-        A function to be performed upon the individual elements, by default None.
+    Args:
+        value(:obj:`Sequence` | :obj:`str` | :obj:`int` | :obj:`float`): The unknown element to be
+            converted to a list of element(s).
+        manipulation(:obj:`Callable` | :obj:`None`) A function to be performed upon the individual elements, by default None.
 
-    Returns
-    -------
-    list
-        The new list of elements.
+    Returns:
+        (:ojb:`list`): The new list of elements.
     """
 
     if isinstance(value, (str, int, float)) or value is None:
@@ -241,8 +238,8 @@ def column_validator(df: pd.DataFrame, column_names={}) -> None | list[str]:
 
 @logged_method_call
 def dtype_converter(df: pd.DataFrame, column_types={}) -> list[str]:
-    """Converts the columns provided in `column_types` of `df` to the appropriate data
-    type.
+    """Converts the columns provided in :py:attr:`column_types` of :py:attr:`df` to the appropriate
+    data type.
 
     Args:
         df (pd.DataFrame): The DataFrame for type validation/conversion
@@ -280,7 +277,7 @@ def load_to_pandas(data: str | Path | pd.DataFrame) -> pd.DataFrame | None:
         ValueError: Raised if an invalid data type was passed.
 
     Returns:
-        pd.DataFrame | None: The passed `None` or the converted pandas DataFrame object.
+        pd.DataFrame | None: The passed ``None`` or the converted pandas DataFrame object.
     """
     if data is None:
         return data
@@ -296,14 +293,14 @@ def load_to_pandas(data: str | Path | pd.DataFrame) -> pd.DataFrame | None:
 def load_to_pandas_dict(
     data: dict[str | Path | pd.DataFrame],
 ) -> dict[str, pd.DataFrame] | None:
-    """Converts a dictionary of data or data locations to a dictionary of `pd.DataFrame`s
-    by iterating over the dictionary and passing each value to `load_to_pandas`.
+    """Converts a dictionary of data or data locations to a dictionary of ``pd.DataFrame``s
+    by iterating over the dictionary and passing each value to ``load_to_pandas``.
 
     Args:
         data (dict[str  |  Path  |  pd.DataFrame]): The input data.
 
     Returns:
-        dict[str, pd.DataFrame] | None: The passed `None` or the converted `pd.DataFrame`
+        dict[str, pd.DataFrame] | None: The passed ``None`` or the converted ``pd.DataFrame``
             object.
     """
     if data is None:
@@ -316,7 +313,7 @@ def load_to_pandas_dict(
 @logged_method_call
 def rename_columns(df: pd.DataFrame, col_map: dict, reverse: bool = True) -> pd.DataFrame:
     """Renames the pandas DataFrame columns using col_map. Intended to be used in
-    conjunction with the a data objects meta data column mapping (reverse=True).
+    conjunction with the a data objects meta data column mapping (``reverse=True``).
 
         Args:
             df (pd.DataFrame): The DataFrame to have its columns remapped.
@@ -352,11 +349,12 @@ class PlantData:
     Args:
         metadata (`PlantMetaData`): A nested dictionary of the schema definition
             for each of the data types that will be input, and some additional plant
-            parameters. See `PlantMetaData`, `SCADAMetaData`, `MeterMetaData`,
-            `TowerMetaData`, `StatusMetaData`, `CurtailMetaData`, `AssetMetaData`,
-            and/or `ReanalysisMetaData` for more information.
+            parameters. See ``PlantMetaData``, ``SCADAMetaData``, ``MeterMetaData``,
+            ``TowerMetaData``, ``StatusMetaData``, ``CurtailMetaData``, ``AssetMetaData``,
+            and/or ``ReanalysisMetaData`` for more information.
         analysis_type (`list[str]`): A single, or list of, analysis type(s) that
-            will be run, that are configured in `ANALYSIS_REQUIREMENTS`.
+            will be run, that are configured in ``ANALYSIS_REQUIREMENTS``. See
+            :py:attr:`openoa.schema.metadata.ANALYSIS_REQUIREMENTS` for requirements details.
 
             - None: Don't raise any errors for errors found in the data. This is intended
               for loading in messy data, but :py:meth:`validate` should be run later
@@ -365,37 +363,44 @@ class PlantData:
               align with the data provided, as well as data types and frequencies (where
               applicable).
             - "MonteCarloAEP": Checks the data components that are relevant to a Monte
-              Carlo AEP analysis. See `ANALYSIS_REQUIREMENTS` for requirements details.
+              Carlo AEP analysis.
+            - "MonteCarloAEP-temp": Checks the data components that are relevant to a
+              Monte Carlo AEP analysis with ambient temperature data.
+            - "MonteCarloAEP-wd": Checks the data components that are relevant to a
+              Monte Carlo AEP analysis using an additional wind direction data point.
+            - "MonteCarloAEP-temp-wd": Checks the data components that are relevant to a
+              Monte Carlo AEP analysis with ambient temperature and wind direction data.
             - "TurbineLongTermGrossEnergy": Checks the data components that are relevant
-              to a turbine long term gross energy analysis. See `ANALYSIS_REQUIREMENTS`
-              for requirements details.
+              to a turbine long term gross energy analysis.
             - "ElectricalLosses": Checks the data components that are relevant to an
-              electrical losses analysis. See `ANALYSIS_REQUIREMENTS` for requirements
-              details.
-            - "WakeLosses": Checks the data components that are relevant to a
-              wake losses analysis. See `ANALYSIS_REQUIREMENTS` for requirements
-              details.
+              electrical losses analysis.
+            - "WakeLosses-scada": Checks the data components that are relevant to a
+              wake losses analysis that uses the SCADA-based wind speed and direction
+              data.
+            - "WakeLosses-tower": Checks the data components that are relevant to a
+              wake losses analysis that uses the met tower-based wind speed and
+              direction data.
 
-        scada (`pd.DataFrame`): Either the SCADA data that's been pre-loaded to a
+        scada (``pd.DataFrame``): Either the SCADA data that's been pre-loaded to a
             pandas `DataFrame`, or a path to the location of the data to be imported.
             See :py:class:`SCADAMetaData` for column data specifications.
-        meter (`pd.DataFrame`): Either the meter data that's been pre-loaded to a
+        meter (``pd.DataFrame``): Either the meter data that's been pre-loaded to a
             pandas `DataFrame`, or a path to the location of the data to be imported.
             See :py:class:`MeterMetaData` for column data specifications.
-        tower (`pd.DataFrame`): Either the met tower data that's been pre-loaded
+        tower (``pd.DataFrame``): Either the met tower data that's been pre-loaded
             to a pandas `DataFrame`, or a path to the location of the data to be
-            imported. See :py:class:`TowerMetaDsata` for column data specifications.
-        status (`pd.DataFrame`): Either the status data that's been pre-loaded to
+            imported. See :py:class:`TowerMetaData` for column data specifications.
+        status (``pd.DataFrame``): Either the status data that's been pre-loaded to
             a pandas `DataFrame`, or a path to the location of the data to be imported.
             See :py:class:`StatusMetaData` for column data specifications.
-        curtail (`pd.DataFrame`): Either the curtailment data that's been
-            pre-loaded to a pandas `DataFrame`, or a path to the location of the data to
+        curtail (``pd.DataFrame``): Either the curtailment data that's been
+            pre-loaded to a pandas ``DataFrame``, or a path to the location of the data to
             be imported. See :py:class:`CurtailMetaData` for column data specifications.
-        asset (`pd.DataFrame`): Either the asset summary data that's been
+        asset (``pd.DataFrame``): Either the asset summary data that's been
             pre-loaded to a pandas `DataFrame`, or a path to the location of the data to
             be imported. See :py:class:`AssetMetaData` for column data specifications.
-        reanalysis (`dict[str, pd.DataFrame]`): Either the reanalysis data that's
-            been pre-loaded to a dictionary of pandas `DataFrame`s with keys indicating
+        reanalysis (``dict[str, pd.DataFrame]``): Either the reanalysis data that's
+            been pre-loaded to a dictionary of pandas ``DataFrame`` with keys indicating
             the data source, such as "era5" or "merra2", or a dictionary of paths to the
             location of the data to be imported following the same key naming convention.
             See :py:class:`ReanalysisMetaData` for column data specifications.
@@ -478,14 +483,14 @@ class PlantData:
     @asset.validator
     @logged_method_call
     def data_validator(self, instance: attrs.Attribute, value: pd.DataFrame | None) -> None:
-        """Validator function for each of the data buckets in `PlantData` that checks
+        """Validator function for each of the data buckets in ``PlantData`` that checks
         that the appropriate columns exist for each dataframe, each column is of the
         right type, and that the timestamp frequencies are appropriate for the given
-        `analysis_type`.
+        ``analysis_type``.
 
         Args:
-            instance (attrs.Attribute): The `attr` attribute details
-            value (pd.DataFrame | None): The attribute's user-provided value. A
+            instance (:obj:`attrs.Attribute`): The ``attrs.Attribute`` details
+            value (:obj:`pd.DataFrame | None`): The attribute's user-provided value. A
                 dictionary of dataframes is expected for reanalysis data only.
         """
         name = instance.name
@@ -510,13 +515,12 @@ class PlantData:
         product keys in the ``PlantMetaData.reanalysis`` metadata definition, and the following:
         appropriate columns exist for each dataframe, each column is of the right type,
         and that the timestamp frequencies are appropriate for the given
-        `analysis_type`.
+        ``analysis_type``.
 
         Args:
-            instance (attrs.Attribute): The `attr` attribute details
-            value (dict[str, pd.DataFrame] | None): The attribute's
-                user-provided value. A dictionary of dataframes is expected for
-                reanalysis data only.
+            instance (:obj:`attrs.Attribute`): The :py:attr:`attrs.Attribute` details.
+            value (:obj:`dict[str, pd.DataFrame]` | None): The attribute's user-provided value. A
+                dictionary of dataframes is expected for reanalysis data only.
         """
         name = instance.name
         if value is not None:
@@ -722,10 +726,10 @@ class PlantData:
 
     @property
     def data_dict(self) -> dict[str, pd.DataFrame]:
-        """Property that returns a dictionary of the data contained in the `PlantData` object.
+        """Property that returns a dictionary of the data contained in the ``PlantData`` object.
 
         Returns:
-            dict[str, pd.DataFrame]: A mapping of the data type's name and the `DataFrame`.
+            (:obj:`dict[str, pd.DataFrame]`): A mapping of the data type's name and the ``DataFrame``.
         """
         values = dict(
             scada=self.scada,
@@ -756,18 +760,25 @@ class PlantData:
 
         Args:
             save_path (str | Path): The folder where all the data should be saved.
-            with_openoa_col_names (bool, optional): Use the PlantData column names (True), or
+            with_openoa_col_names (bool, optional): Use the PlantData column names (``True``), or
                 convert the column names back to the originally provided values. Defaults to True.
-            metadata (str, optional): File name (without extension) to be used for the metadata. Defaults to "metadata".
-            scada (str, optional): File name (without extension) to be used for the SCADA data. Defaults to "scada".
-            meter (str, optional): File name (without extension) to be used for the meter data. Defaults to "meter".
-            tower (str, optional): File name (without extension) to be used for the tower data. Defaults to "tower".
-            asset (str, optional): File name (without extension) to be used for the asset data. Defaults to "scada".
-            status (str, optional): File name (without extension) to be used for the status data. Defaults to "status".
-            curtail (str, optional): File name (without extension) to be used for the curtailment data. Defaults to "curtail".
-            reanalysis (str, optional): Base file name (without extension) to be used for the reanalysis data, where
-                each dataset will use the name provided to form the following file name: {save_path}/{reanalysis}_{name}.
-                Defaults to "reanalysis".
+            metadata (str, optional): File name (without extension) to be used for the metadata.
+                Defaults to "metadata".
+            scada (str, optional): File name (without extension) to be used for the SCADA data.
+                Defaults to "scada".
+            meter (str, optional): File name (without extension) to be used for the meter data.
+                Defaults to "meter".
+            tower (str, optional): File name (without extension) to be used for the tower data.
+                Defaults to "tower".
+            asset (str, optional): File name (without extension) to be used for the asset data.
+                Defaults to "scada".
+            status (str, optional): File name (without extension) to be used for the status data.
+                Defaults to "status".
+            curtail (str, optional): File name (without extension) to be used for the curtailment
+                data. Defaults to "curtail".
+            reanalysis (str, optional): Base file name (without extension) to be used for the
+                reanalysis data, where each dataset will use the name provided to form the following
+                file name: {save_path}/{reanalysis}_{name}. Defaults to "reanalysis".
         """
         save_path = Path(save_path).resolve()
         if not save_path.exists():

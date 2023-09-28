@@ -328,11 +328,11 @@ class ElectricalLosses(FromDictMixin):
             return_fig(:obj:`bool`, optional): Set to True to return the figure and axes objects,
                 otherwise set to False. Defaults to False.
             figure_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be
-                passed to `plt.figure`. Defaults to {}.
+                passed to ``plt.figure()``. Defaults to {}.
             scatter_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be
-                passed to `ax.plot`. Defaults to {}.
+                passed to ``ax.plot()``. Defaults to {}.
             legend_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be
-                passed to `ax.legend`. Defaults to {}.
+                passed to ``ax.legend()``. Defaults to {}.
 
         Returns:
             None | tuple[plt.Figure, plt.Axes]: If :py:attr:`return_fig`, then return the figure

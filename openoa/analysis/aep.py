@@ -84,7 +84,7 @@ class MonteCarloAEP(FromDictMixin):
             regression input. Defaults to False.
         reg_wind_direction(:obj:`bool`): Indicator to include wind direction (True) or not (False) as
             a regression input. Defaults to False.
-        reanalysis_products(obj:`list[str]`) : List of reanalysis products to use for Monte Carlo
+        reanalysis_products(``list[str]``) : List of reanalysis products to use for Monte Carlo
             sampling. Defaults to None, which pulls all the products contained in
             :py:attr:`plant.reanalysis`.
         uncertainty_meter(:obj:`float`): Uncertainty on revenue meter data. Defaults to 0.005.
@@ -864,10 +864,10 @@ class MonteCarloAEP(FromDictMixin):
         wind speed, temperature and wind direction (if used)
 
         Args:
-            n(:obj:`int`): The Monte Carlo iteration number
+            n(:obj:`int`): The Monte Carlo iteration number.
 
         Returns:
-            :obj:`?`: trained regression model
+            A trained regression model.
         """
         reg_data = self.set_regression_data(n)  # Get regression data
 
@@ -1061,7 +1061,8 @@ class MonteCarloAEP(FromDictMixin):
     @logged_method_call
     def sample_long_term_reanalysis(self):
         """
-        This function returns the long-term monthly/daily wind speeds based on the Monte-Carlo generated sample of:
+        This function returns the long-term monthly/daily wind speeds based on the Monte-Carlo
+        generated sample of:
 
             1. The reanalysis product
             2. The number of years to use in the long-term correction
@@ -1165,8 +1166,8 @@ class MonteCarloAEP(FromDictMixin):
         plot_kwargs: dict = {},
         legend_kwargs: dict = {},
     ) -> None | tuple[plt.Figure, plt.Axes]:
-        """Make a plot of the normalized annual average wind speeds from reanalysis data to show general
-        trends for each, and highlighting the period of record for the plant data.
+        """Make a plot of the normalized annual average wind speeds from reanalysis data to show
+        general trends for each, and highlighting the period of record for the plant data.
 
         Args:
             aep (:obj:`openoa.analysis.MonteCarloAEP`): An initialized MonteCarloAEP object.
@@ -1176,15 +1177,15 @@ class MonteCarloAEP(FromDictMixin):
                 Defaults to (None, None).
             return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
             figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
-                that are passed to `plt.figure()`. Defaults to {}.
+                that are passed to ``plt.figure()``. Defaults to {}.
             plot_kwargs (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
-                `ax.plot()`. Defaults to {}.
+                ``ax.plot()``. Defaults to {}.
             legend_kwargs (:obj:`dict`, optional): Additional legend keyword arguments that are passed to
-                `ax.legend()`. Defaults to {}.
+                ``ax.legend()``. Defaults to {}.
 
         Returns:
-            None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes]: If `return_fig` is True, then
-                the figure and axes objects are returned for further tinkering/saving.
+            None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes]: If ``return_fig`` is
+                True, then the figure and axes objects are returned for further tinkering/saving.
         """
         return plot.plot_monthly_reanalysis_windspeed(
             data=self.plant.reanalysis,
@@ -1223,11 +1224,11 @@ class MonteCarloAEP(FromDictMixin):
                 Defaults to (None, None).
             return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
             figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
-                that are passed to `plt.figure()`. Defaults to {}.
+                that are passed to ``plt.figure()``. Defaults to {}.
             plot_kwargs (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
-                `ax.scatter()`. Defaults to {}.
+                ``ax.scatter()``. Defaults to {}.
             legend_kwargs (:obj:`dict`, optional): Additional legend keyword arguments that are passed to
-                `ax.legend()`. Defaults to {}.
+                ``ax.legend()``. Defaults to {}.
 
         Returns:
             None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes]: If `return_fig` is True, then
@@ -1346,11 +1347,11 @@ class MonteCarloAEP(FromDictMixin):
                 limits for the loss plot (bottom figure). Defaults to (None, None).
             return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
             figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
-                that are passed to `plt.figure()`. Defaults to {}.
+                that are passed to ``plt.figure()``. Defaults to {}.
             plot_kwargs (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
-                `ax.scatter()`. Defaults to {}.
+                ``ax.scatter()``. Defaults to {}.
             legend_kwargs (:obj:`dict`, optional): Additional legend keyword arguments that are passed to
-                `ax.legend()`. Defaults to {}.
+                ``ax.legend()``. Defaults to {}.
 
         Returns:
             None | tuple[matplotlib.pyplot.Figure, tuple[matplotlib.pyplot.Axes, matplotlib.pyplot.Axes]]:
@@ -1403,11 +1404,11 @@ class MonteCarloAEP(FromDictMixin):
                 y-axis plotting display limits for the curtailment subplot. Defaults to (None, None).
             return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
             figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
-                that are passed to `plt.figure()`. Defaults to {}.
+                that are passed to ``plt.figure()``. Defaults to {}.
             plot_kwargs (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
-                `ax.hist()`. Defaults to {}.
+                ``ax.hist()``. Defaults to {}.
             annotate_kwargs (:obj:`dict`, optional): Additional annotation keyword arguments that are
-                passed to `ax.annotate()`. Defaults to {}.
+                passed to ``ax.annotate()``. Defaults to {}.
 
         Returns:
             None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes]: If `return_fig` is True, then
@@ -1447,18 +1448,19 @@ class MonteCarloAEP(FromDictMixin):
             xlabel(:obj:`str`): The x-axis label.
             ylim (:obj:`tuple[float, float]`, optional): A tuple of the y-axis plotting display limits.
                 Defaults to None.
-            with_points (:obj:`bool`, optional): Flag to plot the individual points like a seaborn `swarmplot`. Defaults to False.
-                points_label(:obj:`bool` | None, optional): Legend label for the points, if plotting.
-            Defaults to None.
+            with_points (:obj:`bool`, optional): Flag to plot the individual points like a seaborn
+                ``swarmplot``. Defaults to False.
+            points_label(:obj:`bool` | None, optional): Legend label for the points, if plotting.
+                Defaults to None.
             return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
             figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
-                that are passed to `plt.figure()`. Defaults to {}.
+                that are passed to ``plt.figure()``. Defaults to {}.
             plot_kwargs_box (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
-                `ax.boxplot()`. Defahults to {}.
+                ``ax.boxplot()``. Defaults to {}.
             plot_kwargs_points (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
-                `ax.boxplot()`. Defaults to {}.
+                ``ax.boxplot()``. Defaults to {}.
             legend_kwargs (:obj:`dict`, optional): Additional legend keyword arguments that are passed to
-                `ax.legend()`. Defaults to {}.
+                ``ax.legend()``. Defaults to {}.
 
         Returns:
             None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes, dict]: If `return_fig` is
