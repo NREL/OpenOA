@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import itertools
 from copy import deepcopy
-from typing import Any
 from pathlib import Path
 
 import yaml
@@ -12,6 +11,11 @@ import numpy as np
 import pandas as pd
 from attrs import field, define
 from tabulate import tabulate
+
+from openoa.logging import logging, logged_method_call
+
+
+logger = logging.getLogger(__name__)
 
 
 # *************************************************************************
@@ -36,6 +40,54 @@ ANALYSIS_REQUIREMENTS = {
         },
         "reanalysis": {
             "columns": ["WMETR_HorWdSpd", "WMETR_AirDen"],
+            "freq": _at_least_monthly,
+        },
+    },
+    "MonteCarloAEP-temp": {
+        "meter": {
+            "columns": ["MMTR_SupWh"],
+            "freq": _at_least_monthly,
+        },
+        "curtail": {
+            "columns": ["IAVL_DnWh", "IAVL_ExtPwrDnWh"],
+            "freq": _at_least_monthly,
+        },
+        "reanalysis": {
+            "columns": ["WMETR_HorWdSpd", "WMETR_AirDen", "WMETR_EnvTmp"],
+            "freq": _at_least_monthly,
+        },
+    },
+    "MonteCarloAEP-wd": {
+        "meter": {
+            "columns": ["MMTR_SupWh"],
+            "freq": _at_least_monthly,
+        },
+        "curtail": {
+            "columns": ["IAVL_DnWh", "IAVL_ExtPwrDnWh"],
+            "freq": _at_least_monthly,
+        },
+        "reanalysis": {
+            "columns": ["WMETR_HorWdSpd", "WMETR_AirDen", "WMETR_HorWdSpdU", "WMETR_HorWdSpdV"],
+            "freq": _at_least_monthly,
+        },
+    },
+    "MonteCarloAEP-temp-wd": {
+        "meter": {
+            "columns": ["MMTR_SupWh"],
+            "freq": _at_least_monthly,
+        },
+        "curtail": {
+            "columns": ["IAVL_DnWh", "IAVL_ExtPwrDnWh"],
+            "freq": _at_least_monthly,
+        },
+        "reanalysis": {
+            "columns": [
+                "WMETR_HorWdSpd",
+                "WMETR_AirDen",
+                "WMETR_EnvTmp",
+                "WMETR_HorWdSpdU",
+                "WMETR_HorWdSpdV",
+            ],
             "freq": _at_least_monthly,
         },
     },
@@ -109,18 +161,6 @@ ANALYSIS_REQUIREMENTS = {
     },
 }
 
-# Add the analysis variations
-ANALYSIS_REQUIREMENTS["MonteCarloAEP-temp"] = deepcopy(ANALYSIS_REQUIREMENTS["MonteCarloAEP"])
-ANALYSIS_REQUIREMENTS["MonteCarloAEP-wd"] = deepcopy(ANALYSIS_REQUIREMENTS["MonteCarloAEP"])
-ANALYSIS_REQUIREMENTS["MonteCarloAEP-temp-wd"] = deepcopy(ANALYSIS_REQUIREMENTS["MonteCarloAEP"])
-ANALYSIS_REQUIREMENTS["MonteCarloAEP-temp"]["reanalysis"]["columns"].extend(["WMETR_EnvTmp"])
-ANALYSIS_REQUIREMENTS["MonteCarloAEP-wd"]["reanalysis"]["columns"].extend(
-    ["WMETR_HorWdSpdU", "WMETR_HorWdSpdV"]
-)
-ANALYSIS_REQUIREMENTS["MonteCarloAEP-temp-wd"]["reanalysis"]["columns"].extend(
-    ["WMETR_EnvTmp", "WMETR_HorWdSpdU", "WMETR_HorWdSpdV"]
-)
-
 
 def determine_analysis_requirements(
     which: str, analysis_type: str | list[str]
@@ -190,22 +230,20 @@ class FromDictMixin:
     """
 
     @classmethod
+    @logged_method_call
     def from_dict(cls, data: dict):
         """Maps a data dictionary to an `attrs`-defined class.
-        TODO: Add an error to ensure that either none or all the parameters are passed in
         Args:
-            data : dict
-                The data dictionary to be mapped.
+            data (dict): The data dictionary to be mapped.
         Returns:
-            cls
-                The `attrs`-defined class.
+            (cls): An intialized object of the `attrs`-defined class (`cls`).
         """
         # Get all parameters from the input dictionary that map to the class initialization
-        kwargs = {
-            a.name: data[a.name]
-            for a in cls.__attrs_attrs__  # type: ignore
-            if a.name in data and a.init
-        }
+        kwarg_names = [a.name for a in cls.__attrs_attrs__ if a.init]
+        matching = [name for name in kwarg_names if name in data]
+        non_matching = [name for name in data if name not in kwarg_names]
+        logger.info(f"No matches for provided kwarg inputs: {non_matching}")
+        kwargs = {name: data[name] for name in matching}
 
         # Map the inputs must be provided: 1) must be initialized, 2) no default value defined
         required_inputs = [
@@ -219,6 +257,52 @@ class FromDictMixin:
                 f"The class defintion for {cls.__name__} is missing the following inputs: {undefined}"
             )
         return cls(**kwargs)  # type: ignore
+
+
+@define(auto_attribs=True)
+class ResetValuesMixin:
+    """
+    A MixinClass that provides the methods to reset initialized or default values for analysis
+    parameters.
+    """
+
+    @logged_method_call
+    def set_values(self, value_dict: dict):
+        """Resets the parameters to the values provided in :py:attr:`value_dict`.
+
+        Args:
+            value_dict (dict): The parameter names (keys) and their values (values) as a dictionary.
+        """
+        for name, value in value_dict.items():
+            logger.debug(f"{name} being set back to {value}")
+            object.__setattr__(self, name, value)
+
+    @logged_method_call
+    def reset_defaults(self, which: str | list[str] | tuple[str] | None = None):
+        """Reset all or a subset of the analysis parameters back to their defaults.
+
+        Args:
+            which (str | list[str] | tuple[str] | None): The parameter(s) to reset back to their
+                defaults. If None, then all run parameters are reset. Defaults to None.
+
+        Raises:
+            ValueError: Raised if any of :py:attr:`which` are not included in ``self.run_parameters``.
+        """
+        logger.info("Resetting run parameters back to the class defaults")
+        # Define the analysis class run parameters
+        valid = self.run_parameters
+
+        # If None, set to all run parameterizations
+        if which is None:
+            which = valid
+
+        # Check that all values of which are valid
+        if invalid := set(which).difference(valid):
+            raise ValueError(f"Invalid arguments provided to reset_defaults: {invalid}")
+
+        # Reset the selected values back to their defaults
+        reset_dict = {a.name: a.default for a in attrs.fields(self) if a.name in which}
+        self.set_values(reset_dict)
 
 
 def _make_single_repr(name: str, meta_class) -> str:
@@ -288,25 +372,25 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
 
     Args:
         time (str): The datetime stamp for the SCADA data, by default "time". This data should be of
-            type: `np.datetime64[ns]`, or able to be converted to a pandas DatetimeIndex. Additional
+            type: ``np.datetime64[ns]``, or able to be converted to a pandas DatetimeIndex. Additional
             columns describing the datetime stamps are: `frequency`
         asset_id (str): The turbine identifier column in the SCADA data, by default "asset_id". This data should be of
-            type: `str`.
+            type: ``str``.
         WTUR_W (str): The power produced, in kW, column in the SCADA data, by default "WTUR_W".
-            This data should be of type: `float`.
+            This data should be of type: ``float``.
         WMET_HorWdSpd (str): The measured windspeed, in m/s, column in the SCADA data, by default "WMET_HorWdSpd".
-            This data should be of type: `float`.
+            This data should be of type: ``float``.
         WMET_HorWdDir (str): The measured wind direction, in degrees, column in the SCADA data, by default
-            "WMET_HorWdDir". This data should be of type: `float`.
+            "WMET_HorWdDir". This data should be of type: ``float``.
         WMET_HorWdDirRel (str): The measured wind direction relative to the nacelle orientation
             (i.e., the wind vane measurement), in degrees, column in the SCADA data, by default
-            "WMET_HorWdDirRel". This data should be of type: `float`.
+            "WMET_HorWdDirRel". This data should be of type: ``float``.
         WTUR_TurSt (str): The status code column in the SCADA data, by default "WTUR_TurSt". This data
-            should be of type: `str`.
+            should be of type: ``str``.
         WROT_BlPthAngVal (str): The pitch, in degrees, column in the SCADA data, by default "WROT_BlPthAngVal". This data
-            should be of type: `float`.
+            should be of type: ``float``.
         WMET_EnvTmp (str): The temperature column in the SCADA data, by default "WMET_EnvTmp". This
-            data should be of type: `float`.
+            data should be of type: ``float``.
         frequency (str): The frequency of `time` in the SCADA data, by default "10T". The input
             should align with the `Pandas frequency offset aliases`_.
 
@@ -394,10 +478,10 @@ class MeterMetaData(FromDictMixin):  # noqa: F821
 
     Args:
         time (str): The datetime stamp for the meter data, by default "time". This data should
-            be of type: `np.datetime64[ns]`, or able to be converted to a pandas DatetimeIndex.
-            Additional columns describing the datetime stamps are: `frequency`
+            be of type: ``np.datetime64[ns]``, or able to be converted to a pandas DatetimeIndex.
+            Additional columns describing the datetime stamps are: :py:attr:`frequency`
         MMTR_SupWh (str): The energy produced, in kWh, column in the meter data, by default
-            "MMTR_SupWh". This data should be of type: `float`.
+            "MMTR_SupWh". This data should be of type: ``float``.
         frequency (str): The frequency of `time` in the meter data, by default "10T". The input
             should align with the `Pandas frequency offset aliases`_.
 
@@ -451,16 +535,16 @@ class TowerMetaData(FromDictMixin):  # noqa: F821
 
     Args:
         time (str): The datetime stamp for the met tower data, by default "time". This data should
-            be of type: `np.datetime64[ns]`, or able to be converted to a pandas DatetimeIndex.
+            be of type: ``np.datetime64[ns]``, or able to be converted to a pandas DatetimeIndex.
             Additional columns describing the datetime stamps are: `frequency`
         asset_id (str): The met tower identifier column in the met tower data, by default "asset_id". This data
-            should be of type: `str`.
+            should be of type: ``str``.
         WMET_HorWdSpd (str): The measured windspeed, in m/s, column in the SCADA data, by default "WMET_HorWdSpd".
-            This data should be of type: `float`.
+            This data should be of type: ``float``.
         WMET_HorWdDir (str): The measured wind direction, in degrees, column in the SCADA data, by default
-            "WMET_HorWdDir". This data should be of type: `float`.
+            "WMET_HorWdDir". This data should be of type: ``float``.
         WMET_EnvTmp (str): The temperature column in the SCADA data, by default "WMET_EnvTmp". This
-            data should be of type: `float`.
+            data should be of type: ``float``.
         frequency (str): The frequency of `time` in the met tower data, by default "10T". The input
             should align with the `Pandas frequency offset aliases`_.
 
@@ -528,13 +612,13 @@ class StatusMetaData(FromDictMixin):  # noqa: F821
             be of type: `np.datetime64[ns]`, or able to be converted to a pandas DatetimeIndex.
             Additional columns describing the datetime stamps are: `frequency`
         asset_id (str): The turbine identifier column in the status data, by default "asset_id". This data
-            should be of type: `str`.
+            should be of type: ``str``.
         status_id (str): The status code identifier column in the status data, by default "asset_id". This data
-            should be of type: `str`.
+            should be of type: ``str``.
         status_code (str): The status code column in the status data, by default "asset_id". This data
-            should be of type: `str`.
+            should be of type: ``str``.
         status_text (str): The status text description column in the status data, by default "asset_id".
-            This data should be of type: `str`.
+            This data should be of type: ``str``.
         frequency (str): The frequency of `time` in the met tower data, by default "10T". The input
             should align with the `Pandas frequency offset aliases`_.
 
@@ -599,12 +683,12 @@ class CurtailMetaData(FromDictMixin):  # noqa: F821
 
     Args:
         time (str): The datetime stamp for the curtailment data, by default "time". This data should
-            be of type: `np.datetime64[ns]`, or able to be converted to a pandas DatetimeIndex.
+            be of type: ``np.datetime64[ns]``, or able to be converted to a pandas DatetimeIndex.
             Additional columns describing the datetime stamps are: `frequency`
         IAVL_ExtPwrDnWh (str): The curtailment, in kWh, column in the curtailment data, by default
-            "IAVL_ExtPwrDnWh". This data should be of type: `float`.
+            "IAVL_ExtPwrDnWh". This data should be of type: ``float``.
         IAVL_DnWh (str): The availability, in kWh, column in the curtailment data, by default
-            "IAVL_DnWh". This data should be of type: `float`.
+            "IAVL_DnWh". This data should be of type: ``float``.
         frequency (str): The frequency of `time` in the met tower data, by default "10T". The input
             should align with the `Pandas frequency offset aliases`_.
 
@@ -661,19 +745,19 @@ class AssetMetaData(FromDictMixin):  # noqa: F821
 
     Args:
         asset_id (str): The asset identifier column in the asset metadata, by default "asset_id"
-            This data should be of type: `str`.
+            This data should be of type: ``str``.
         latitude (str): The asset's latitudinal position, in WGS84, column in the asset metadata, by
-            default "latitude". This data should be of type: `float`.
+            default "latitude". This data should be of type: ``float``.
         longitude (str): The asset's longitudinal position, in WGS84, column in the asset metadata,
-            by default "longitude". This data should be of type: `float`.
+            by default "longitude". This data should be of type: ``float``.
         rated_power (str): The asset's rated power, in kW, column in the asset metadata, by default
-            "rated_power". This data should be of type: `float`.
+            "rated_power". This data should be of type: ``float``.
         hub_height (str): The asset's hub height, in m, column in the asset metadata, by default
-            "hub_height". This data should be of type: `float`.
+            "hub_height". This data should be of type: ``float``.
         elevation (str): The asset's elevation above sea level, in m, column in the asset metadata,
-            by default "elevation". This data should be of type: `float`.
+            by default "elevation". This data should be of type: ``float``.
         type (str): The type of asset column in the asset metadata, by default "type". This data
-            should be of type: `str`.
+            should be of type: ``str``.
     """
 
     # DataFrame columns
@@ -832,27 +916,38 @@ class PlantMetaData(FromDictMixin):  # noqa: F821
     Args:
         latitude (`float`): The wind power plant's center point latitude.
         longitude (`float`): The wind power plant's center point longitude.
+        reference_system (:obj:`str`, optional): Used to define the coordinate reference system
+            (CRS). Defaults to the European Petroleum Survey Group (EPSG) code 4326 to be used with
+            the World Geodetic System reference system, WGS 84.
+        utm_zone (:obj:`int`, optional): UTM zone. If set to None (default), then calculated from
+            the longitude.
+        reference_longitude (:obj:`float`, optional): Reference longitude for calculating the UTM
+            zone. If None (default), then taken as the average longitude of all assets when the
+            geometry is parsed.
         capacity (`float`): The capacity of the plant in MW
-        scada (`SCADAMetaData`): A dictionary containing the `SCADAMetaData`
-            column mapping and frequency parameters. See `SCADAMetaData` for more details.
-        meter (`MeterMetaData`): A dictionary containing the `MeterMetaData`
-            column mapping and frequency parameters. See `MeterMetaData` for more details.
-        tower (`TowerMetaData`): A dictionary containing the `TowerMetaData`
-            column mapping and frequency parameters. See `TowerMetaData` for more details.
-        status (`StatusMetaData`): A dictionary containing the `StatusMetaData`
-            column mapping parameters. See `StatusMetaData` for more details.
-        curtail (`CurtailMetaData`): A dictionary containing the `CurtailMetaData`
-            column mapping and frequency parameters. See `CurtailMetaData` for more details.
-        asset (`AssetMetaData`): A dictionary containing the `AssetMetaData`
-            column mapping parameters. See `AssetMetaData` for more details.
+        scada (`SCADAMetaData`): A dictionary containing the ``SCADAMetaData``
+            column mapping and frequency parameters. See ``SCADAMetaData`` for more details.
+        meter (`MeterMetaData`): A dictionary containing the ``MeterMetaData``
+            column mapping and frequency parameters. See ``MeterMetaData`` for more details.
+        tower (`TowerMetaData`): A dictionary containing the ``TowerMetaData``
+            column mapping and frequency parameters. See ``TowerMetaData`` for more details.
+        status (`StatusMetaData`): A dictionary containing the ``StatusMetaData``
+            column mapping parameters. See ``StatusMetaData`` for more details.
+        curtail (`CurtailMetaData`): A dictionary containing the ``CurtailMetaData``
+            column mapping and frequency parameters. See ``CurtailMetaData`` for more details.
+        asset (`AssetMetaData`): A dictionary containing the ``AssetMetaData``
+            column mapping parameters. See ``AssetMetaData`` for more details.
         reanalysis (`dict[str, ReanalysisMetaData]`): A dictionary containing the
-            reanalysis type (as keys, such as "era5" or "merra2") and `ReanalysisMetaData`
+            reanalysis type (as keys, such as "era5" or "merra2") and ``ReanalysisMetaData``
             column mapping and frequency parameters for each type of reanalysis data
-            provided. See `ReanalysisMetaData` for more details.
+            provided. See ``ReanalysisMetaData`` for more details.
     """
 
     latitude: float = field(default=0, converter=float)
     longitude: float = field(default=0, converter=float)
+    reference_system: str = field(default="epsg:4326")
+    reference_longitude: float = field(default=None)
+    utm_zone: int = field(default=None)
     capacity: float = field(default=0, converter=float)
     scada: SCADAMetaData = field(default={}, converter=SCADAMetaData.from_dict)
     meter: MeterMetaData = field(default={}, converter=MeterMetaData.from_dict)

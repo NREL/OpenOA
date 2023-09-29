@@ -9,5 +9,6 @@ from openoa.schema.metadata import (
     TowerMetaData,
     StatusMetaData,
     CurtailMetaData,
+    ResetValuesMixin,
     ReanalysisMetaData,
 )

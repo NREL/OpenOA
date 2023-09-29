@@ -23,7 +23,6 @@
 
 from __future__ import annotations
 
-import random
 from copy import deepcopy
 
 import attrs
@@ -36,7 +35,7 @@ from scipy.optimize import curve_fit
 
 from openoa.plant import PlantData
 from openoa.utils import plot, filters
-from openoa.schema import FromDictMixin
+from openoa.schema import FromDictMixin, ResetValuesMixin
 from openoa.logging import logging, logged_method_call
 from openoa.analysis._analysis_validators import validate_UQ_input, validate_half_closed_0_1_right
 
@@ -62,7 +61,7 @@ def cos_curve(x, A, Offset, cos_exp):
 
 
 @define(auto_attribs=True)
-class StaticYawMisalignment(FromDictMixin):
+class StaticYawMisalignment(FromDictMixin, ResetValuesMixin):
     """
     A method for estimating static yaw misalignment for different wind speed bins for each specified
     wind turbine as well as the average static yaw misalignment over all wind speed bins using
@@ -187,6 +186,23 @@ class StaticYawMisalignment(FromDictMixin):
     _df_turb: pd.DataFrame = field(init=False)
     _df_turb_ws: pd.DataFrame = field(init=False)
     _curve_fit_params_ws: NDArrayFloat = field(init=False)
+    run_parameters: list[str] = field(
+        init=False,
+        default=[
+            "num_sim",
+            "ws_bins",
+            "ws_bin_width",
+            "vane_bin_width",
+            "min_vane_bin_count",
+            "max_abs_vane_angle",
+            "pitch_thresh",
+            "num_power_bins",
+            "min_power_filter",
+            "max_power_filter",
+            "power_bin_mad_thresh",
+            "use_power_coeff",
+        ],
+    )
 
     @logged_method_call
     def __attrs_post_init__(self):
@@ -273,30 +289,42 @@ class StaticYawMisalignment(FromDictMixin):
                 angle will be quantified by normalizing power by the cube of the wind speed,
                 approximating the power coefficient. If False, only power will be used. Defaults to False.
         """
-
+        initial_parameters = {}
         if num_sim is not None:
+            initial_parameters["num_sim"] = self.num_sim
             self.num_sim = num_sim
         if ws_bins is not None:
+            initial_parameters["ws_bins"] = self.ws_bins
             self.ws_bins = ws_bins
         if ws_bin_width is not None:
+            initial_parameters["ws_bin_width"] = self.ws_bin_width
             self.ws_bin_width = ws_bin_width
         if vane_bin_width is not None:
+            initial_parameters["vane_bin_width"] = self.vane_bin_width
             self.vane_bin_width = vane_bin_width
         if min_vane_bin_count is not None:
+            initial_parameters["min_vane_bin_count"] = self.min_vane_bin_count
             self.min_vane_bin_count = min_vane_bin_count
         if max_abs_vane_angle is not None:
+            initial_parameters["max_abs_vane_angle"] = self.max_abs_vane_angle
             self.max_abs_vane_angle = max_abs_vane_angle
         if pitch_thresh is not None:
+            initial_parameters["pitch_thresh"] = self.pitch_thresh
             self.pitch_thresh = pitch_thresh
         if num_power_bins is not None:
+            initial_parameters["num_power_bins"] = self.num_power_bins
             self.num_power_bins = num_power_bins
         if min_power_filter is not None:
+            initial_parameters["min_power_filter"] = self.min_power_filter
             self.min_power_filter = min_power_filter
         if use_power_coeff is not None:
+            initial_parameters["use_power_coeff"] = self.use_power_coeff
             self.use_power_coeff = use_power_coeff
         if max_power_filter is not None:
+            initial_parameters["max_power_filter"] = self.max_power_filter
             self.max_power_filter = max_power_filter
         if power_bin_mad_thresh is not None:
+            initial_parameters["power_bin_mad_thresh"] = self.power_bin_mad_thresh
             self.power_bin_mad_thresh = power_bin_mad_thresh
         # determine wind vane angle bins
         max_abs_vane_angle_trunc = self.vane_bin_width * np.floor(
@@ -372,6 +400,8 @@ class StaticYawMisalignment(FromDictMixin):
             self.yaw_misalignment_95ci_ws = np.percentile(
                 self.yaw_misalignment_ws, [2.5, 97.5], 0
             ).transpose((1, 2, 0))
+
+        self.set_values(initial_parameters)
 
     @logged_method_call
     def _setup_monte_carlo_inputs(self):
@@ -489,9 +519,9 @@ class StaticYawMisalignment(FromDictMixin):
 
         Returns:
             tuple[float, float, np.ndarray, np.ndarray]: The estimated static yaw misaligment, the
-            mean wind vane angle, and arrays containing the best-fit cosine curve parameters
-            (magnitude, offset (degrees), and cosine exponent) and power performance values binned
-            by wind vane angle.
+                mean wind vane angle, and arrays containing the best-fit cosine curve parameters
+                (magnitude, offset (degrees), and cosine exponent) and power performance values
+                binned by wind vane angle.
         """
 
         self._df_turb_ws["vane_bin"] = self.vane_bin_width * np.round(
@@ -564,20 +594,20 @@ class StaticYawMisalignment(FromDictMixin):
                 for the power performance vs. wind vane plots. Defaults to (None, None).
             return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
             figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
-                that are passed to `plt.figure()`. Defaults to None.
+                that are passed to ``plt.figure()``. Defaults to None.
             plot_kwargs_curve (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
-                `ax.plot()` for plotting lines for the power performance vs. wind vane plots. Defaults to {}.
+                ``ax.plot()`` for plotting lines for the power performance vs. wind vane plots. Defaults to {}.
             plot_kwargs_line (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
-                `ax.plot()` for plotting vertical lines indicating mean vane angle and vane angle where
+                ``ax.plot()`` for plotting vertical lines indicating mean vane angle and vane angle where
                 power is maximized. Defaults to {}.
-            plot_kwargs_fill (:obj:`dict`, optional): If `UQ` is True, additional plotting keyword arguments
-                that are passed to `ax.fill_between()` for plotting shading regions for 95% confidence
+            plot_kwargs_fill (:obj:`dict`, optional): If :py:attr:`UQ` is True, additional plotting keyword arguments
+                that are passed to ``ax.fill_between()`` for plotting shading regions for 95% confidence
                 intervals for power performance vs. wind vane. Defaults to {}.
             legend_kwargs (:obj:`dict`, optional): Additional legend keyword arguments that are passed to
-                `ax.legend()` for the power performance vs. wind vane plots. Defaults to {}.
+                ``ax.legend()`` for the power performance vs. wind vane plots. Defaults to {}.
         Returns:
             None | dict of tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes]:
-                If `return_fig` is True, then a dictionary containing the figure and axes object(s)
+                If :py:attr:`return_fig` is True, then a dictionary containing the figure and axes object(s)
                 corresponding to the yaw misalignment plots for each turbine are returned for further
                 tinkering/saving. The turbine names in the `turbine_ids` aregument are the dicitonary
                 keys.

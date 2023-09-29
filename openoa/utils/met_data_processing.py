@@ -50,7 +50,7 @@ def circular_mean(x: pd.DataFrame | pd.Series | np.ndarray, axis: int = 0):
         x(pd.DataFrame | pd.Series | np.ndarray): A pandas DataFrame or Series, or a numpy array
             containing wind direction data in degrees.
         axis(int): The axis to which the circular mean will be applied. This value must be less than
-            the number of dimensions in x. Defaults to 0.
+            the number of dimensions in :py:attr:`x`. Defaults to 0.
 
     Returns:
         pd.Series | float | np.ndarray: The circular mean of the wind directions along the specified
@@ -77,11 +77,11 @@ def compute_wind_direction(
     """Compute wind direction given u and v wind vector components
 
     Args:
-        u(:obj:`pandas.Series` | `str`): A pandas `Series` of the zonal component of the wind,
-            in m/s, or the name of the column in `data`.
-        v(:obj:`pandas.Series` | `str`): A pandas `Series` of the meridional component of the wind,
-            in m/s, or the name of the column in `data`.
-        data(:obj:`pandas.DataFrame`): The pandas `DataFrame` containg the columns `u` and `v`.
+        u(:obj:`pandas.Series` | `str`): A pandas ``Series`` of the zonal component of the wind,
+            in m/s, or the name of the column in :py:attr:`data`.
+        v(:obj:`pandas.Series` | `str`): A pandas ``Series`` of the meridional component of the wind,
+            in m/s, or the name of the column in :py:attr:`data`.
+        data(:obj:`pandas.DataFrame`): The pandas ``DataFrame`` containg the columns :py:attr:`u` and :py:attr:`v`.
 
     Returns:
         :obj:`pandas.Series`: wind direction; units of degrees
@@ -97,15 +97,15 @@ def compute_u_v_components(
     """Compute vector components of the horizontal wind given wind speed and direction
 
     Args:
-        wind_speed(:obj:`pandas.Series` | `str`): A pandas `Series` of the horizontal wind speed, in
-            m/s, or the name of the column in `data`.
+        wind_speed(:obj:`pandas.Series` | `str`): A pandas ``Series`` of the horizontal wind speed, in
+            m/s, or the name of the column in :py:attr:`data`.
         wind_dir(:obj:`pandas.Series` | `str`): A pandas `Series` of the wind direction, in degrees,
-            or the name of the column in `data`.
-        data(:obj:`pandas.DataFrame`): The pandas `DataFrame` containg the columns `wind_speed` and
-            `wind_direction`.
+            or the name of the column in :py:attr:`data`.
+        data(:obj:`pandas.DataFrame`): The pandas ``DataFrame`` containg the columns :py:attr:`wind_speed` and
+            :py:attr:`wind_dir`.
 
     Raises:
-        ValueError: Raised if any of the `wind_speed` or `wind_dir` values are negative.
+        ValueError: Raised if any of the :py:attr:`wind_speed` or :py:attr:`wind_dir` values are negative.
 
     Returns:
         (tuple):
@@ -140,18 +140,18 @@ def compute_air_density(
     Humidity values are optional. According to the IEC a humiditiy of 50% (0.5) is set as default value.
 
     Args:
-        temp_col(:obj:`pandas.Series` | `str`): A pandas `Series` of the temperature values, in
-            Kelvin, or the name of the column in `data`.
+        temp_col(:obj:`pandas.Series` | `str`): A pandas ``Series`` of the temperature values, in
+            Kelvin, or the name of the column in :py:attr:`data`.
         pres_col(:obj:`pandas.Series` | `str`): A pandas `Series` of the pressure values, in Pascals,
-            or the name of the column in `data`.
+            or the name of the column in :py:attr:`data`.
         humi_col(:obj:`pandas.Series` | `str`): An optional pandas `Series` of the relative humidity
-            values, as a decimal in the range (0, 1), or the name of the column in `data`, by default
-            None.
-        data(:obj:`pandas.DataFrame`): The pandas `DataFrame` containg the columns `temp_col` and
-            `pres_col`, and optionally `humi_col`.
+            values, as a decimal in the range (0, 1), or the name of the column in :py:attr:`data`.
+            Defaults to None.
+        data(:obj:`pandas.DataFrame`): The pandas ``DataFrame`` containg the columns :py:attr:`temp_col` and
+            :py:attr:`pres_col`, and optionally :py:attr:`humi_col`.
 
     Raises:
-        ValueError: Raised if any of the `temp_col` or `pres_col`, or `humi_col` values are negative.
+        ValueError: Raised if any of the :py:attr:`temp_col` or :py:attr:`pres_col`, or :py:attr:`humi_col` values are negative.
 
     Returns:
         :obj:`pandas.Series`: Rho, calcualted air density; units of kg/m3
@@ -188,22 +188,22 @@ def pressure_vertical_extrapolation(
     The hydostatic equation is used to peform the extrapolation.
 
     Args:
-        p0(:obj:`pandas.Series`): A pandas `Series` of the pressure at height z0, in Pascals, or the
+        p0(:obj:`pandas.Series`): A pandas ``Series`` of the pressure at height z0, in Pascals, or the
             name of the column in `data`.
-        temp_avg(:obj:`pandas.Series`): A pandas `Series` of the mean temperature between z0 and z1,
-            in Kelvin, or the name of the column in `data`.
-        z0(:obj:`pandas.Series`): A pandas `Series` of the height above surface, in meters, or the
-            name of the column in `data`.
-        z1(:obj:`pandas.Series`): A pandas `Series` of the extrapolation height, in meters, or the
-            name of the column in `data`.
-        data(:obj:`pandas.DataFrame`): The pandas `DataFrame` containg the columns `p0`, `temp_avg`,
-            `z0`, and `z1`.
+        temp_avg(:obj:`pandas.Series`): A pandas ``Series`` of the mean temperature between z0 and z1,
+            in Kelvin, or the name of the column in :py:attr:`data`.
+        z0(:obj:`pandas.Series`): A pandas ``Series`` of the height above surface, in meters, or the
+            name of the column in :py:attr:`data`.
+        z1(:obj:`pandas.Series`): A pandas ``Series`` of the extrapolation height, in meters, or the
+            name of the column in :py:attr:`data`.
+        data(:obj:`pandas.DataFrame`): The pandas ``DataFrame`` containg the columns :py:attr:`p0`,
+            :py:attr:`temp_avg`, :py:attr:`z0`, and :py:attr:`z1`.
 
     Raises:
-        ValueError: Raised if any of the `p0` or `temp_avg` values are negative.
+        ValueError: Raised if any of the :py:attr:`p0` or :py:attr:`temp_avg` values are negative.
 
     Returns:
-        :obj:`pandas.Series`: p1, extrapolated pressure at z1, in Pascals
+        :obj:`pandas.Series`: :py:attr:`p1`, extrapolated pressure at :py:attr:`z1`, in Pascals
     """
     if np.any(p0 < 0):
         raise ValueError("Negative values exist in the `p0` data.")
@@ -222,11 +222,11 @@ def air_density_adjusted_wind_speed(
 
     Args:
         wind_col(:obj:`pandas.Series` | `str`): A pandas `Series` containing the wind speed data,
-            in m/s, or the name of the column in `data`
+            in m/s, or the name of the column in :py:attr:`data`
         density_col(:obj:`pandas.Series` | `str`): A pandas `Series` containing the air density data,
-            in kg/m3, or the name of the column in `data`
-        data(:obj:`pandas.DataFrame`): The pandas `DataFrame` containg the columns `wind_col` and
-            `density_col`.
+            in kg/m3, or the name of the column in :py:attr:`data`
+        data(:obj:`pandas.DataFrame`): The pandas `DataFrame` containg the columns :py:attr:`wind_col` and
+            :py:attr:`density_col`.
 
     Returns:
         :obj:`pandas.Series`: density-adjusted wind speeds, in m/s
@@ -242,11 +242,12 @@ def compute_turbulence_intensity(
     Compute turbulence intensity
 
     Args:
-        mean_col(:obj:`pandas.Series` | `str`): A pandas `Series` containing the wind speed mean
-            data, in m/s, or the name of the column in `data`.
-        std_col(:obj:`pandas.Series` | `str`): A pandas `Series` containing the wind speed standard
-            deviation data, in m/s, or the name of the column in `data`.
-        data(:obj:`pandas.DataFrame`): The pandas `DataFrame` containg the columns `mean_col` and `std_col`.
+        mean_col(:obj:`pandas.Series` | `str`): A pandas ``Series`` containing the wind speed mean
+            data, in m/s, or the name of the column in :py:attr:`data`.
+        std_col(:obj:`pandas.Series` | `str`): A pandas ``Series`` containing the wind speed standard
+            deviation data, in m/s, or the name of the column in :py:attr:`data`.
+        data(:obj:`pandas.DataFrame`): The pandas `DataFrame` containg the columns
+            `:py:attr:mean_col` and :py:attr:`std_col`.
 
     Returns:
         :obj:`pd.Series`: turbulence intensity, (unitless ratio)
@@ -264,9 +265,9 @@ def compute_shear(
     The shear coefficient is obtained by evaluating the expression for an OLS regression coefficient.
 
     Args:
-        data(:obj:`pandas.DataFrame`): A pandas `DataFrame` with wind speed columns that correspond
-            to the keys of `ws_heights`.
-        ws_heights(:obj:`dict[str, float]`): A dictionary with wind speed column names of `data` as
+        data(:obj:`pandas.DataFrame`): A pandas ``DataFrame`` with wind speed columns that correspond
+            to the keys of :py:attr:`ws_heights`.
+        ws_heights(:obj:`dict[str, float]`): A dictionary with wind speed column names of :py:attr:`data` as
             keys and their respective sensor heights (m) as values.
         return_reference_values(:obj: `bool`): If True, this function returns a three element tuple
             where the first element is the array of shear exponents, the second element is the
@@ -334,13 +335,13 @@ def extrapolate_windspeed(
     Extrapolates wind speed vertically using the Power Law.
 
     Args:
-        v1(:obj: `pandas.Series` | `float` | `str`): A pandas `Series` of the wind
-            speed measurements at the reference height, or the name of the column in `data`.
+        v1(:obj: `pandas.Series` | `float` | `str`): A pandas ``Series`` of the wind
+            speed measurements at the reference height, or the name of the column in :py:attr:`data`.
         z1(:obj:`float`): Height of reference wind speed measurements; units in meters
         z2(:obj:`float`): Target extrapolation height; units in meters
-        shear(:obj: `pandas.Series` | `float` | `str`): A pandas `Series` of the shear
-            values, or the name of the column in `data`.
-        data(:obj:`pandas.DataFrame`): The pandas `DataFrame` containg the columns `v1` and `shear`.
+        shear(:obj: `pandas.Series` | `float` | `str`): A pandas ``Series`` of the shear
+            values, or the name of the column in :py:attr:`data`.
+        data(:obj:`pandas.DataFrame`): The pandas ``DataFrame`` containg the columns :py:attr:`v1` and :py:attr:`shear`.
 
     Returns:
         :obj: (`pandas.Series` | `numpy.array` | `float`): Wind speed extrapolated to target height.
@@ -360,13 +361,14 @@ def compute_veer(
     Compute veer between wind direction measurements
 
     Args:
-        wind_a(:obj:`pandas.Series` | `str`): A pandas `Series` containing the wind direction mean
-            data, in degrees, or the name of the column in `data`.
-        height_a(:obj:`float`): sensor height for `wind_a`
-        wind_b(:obj:`pandas.Series` | `str`): A pandas `Series` containing the wind direction mean
-            data, in degrees, or the name of the column in `data`.
-        height_b(:obj:`float`): sensor height for `wind_b`
-        data(:obj:`pandas.DataFrame`): The pandas `DataFrame` containg the columns `wind_a`, and `wind_b`.
+        wind_a(:obj:`pandas.Series` | `str`): A pandas ``Series`` containing the wind direction mean
+            data, in degrees, or the name of the column in :py:attr:`data`.
+        height_a(:obj:`float`): sensor height for :py:attr:`wind_a`
+        wind_b(:obj:`pandas.Series` | `str`): A pandas ``Series`` containing the wind direction mean
+            data, in degrees, or the name of the column in :py:attr:`data`.
+        height_b(:obj:`float`): sensor height for :py:attr:`wind_b`
+        data(:obj:`pandas.DataFrame`): The pandas ``DataFrame`` containg the columns
+            :py:attr:`wind_a`, and :py:attr:`wind_b`.
 
     Returns:
         veer(:obj:`array`): veer (deg/m)

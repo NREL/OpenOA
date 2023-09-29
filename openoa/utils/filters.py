@@ -5,8 +5,6 @@ intended for application in wind plant operational energy analysis, particularly
 
 from __future__ import annotations
 
-from typing import Any, Type
-
 import numpy as np
 import scipy as sp
 import pandas as pd
@@ -30,22 +28,22 @@ def range_flag(
 
     Args:
         data (:obj:`pandas.Series` | `pandas.DataFrame`): data frame containing the column to be flagged;
-            can either be a `pandas.Series` or `pandas.DataFrame`. If a `pandas.DataFrame`, a list of
+            can either be a ``pandas.Series`` or ``pandas.DataFrame``. If a ``pandas.DataFrame``, a list of
             threshold values and columns (if checking a subset of the columns) must be provided.
-        col (:obj:`list[str]`): column(s) in `data` to be flagged, by default None. Only required when
-            the `data` is a `pandas.DataFrame` and a subset of the columns will be checked. Must be
-            the same length as `lower` and `upper`.
-        lower (:obj:`float` | `list[float]`): lower threshold (inclusive) for each element of `data`,
-            if it's a `pd.Series`, or the list of lower thresholds for each column in `col`. If the same
+        col (:obj:`list[str]`): column(s) in :pyattr:`data` to be flagged, by default None. Only
+            required when the `data` is a ``pandas.DataFrame`` and a subset of the columns will be
+            checked. Must be the same length as :py:attr:`lower` and :py:attr:`upper`.
+        lower (:obj:`float` | `list[float]`): lower threshold (inclusive) for each element of :py:attr:`data`,
+            if it's a ``pd.Series``, or the list of lower thresholds for each column in `col`. If the same
             threshold is applied to each column, then pass the single value, otherwise, it must be
-            the same length as `col` and `upper`.
-        upper (:obj:`float` | `list[float]`): upper threshold (inclusive) for each element of `data`,
-            if it's a `pd.Series`, or the list of upper thresholds for each column in `col`. If the same
+            the same length as :py:attr:`col` and :py:attr:`upper`.
+        upper (:obj:`float` | `list[float]`): upper threshold (inclusive) for each element of :py:attr:`data`,
+            if it's a ``pd.Series``, or the list of upper thresholds for each column in :py:attr:`col`. If the same
             threshold is applied to each column, then pass the single value, otherwise, it must be
-            the same length as `lower` and `col`.
+            the same length as :py:attr:`lower` and :py:attr:`col`.
 
     Returns:
-        :obj:`pandas.Series` | `pandas.DataFrame`: Series or DataFrame (depending on `data` type) with
+        :obj:`pandas.Series` | `pandas.DataFrame`: Series or DataFrame (depending on :py:attr:`data` type) with
             boolean entries.
     """
     # Prepare the inputs to be standardized for use with DataFrames
@@ -75,16 +73,17 @@ def unresponsive_flag(
 
     Args:
         data (:obj:`pandas.Series` | `pandas.DataFrame`): data frame containing the column to be flagged;
-            can either be a `pandas.Series` or `pandas.DataFrame`. If a `pandas.DataFrame`, a list of
+            can either be a `pandas.Series` or ``pandas.DataFrame``. If a ``pandas.DataFrame``, a list of
             threshold values and columns (if checking a subset of the columns) must be provided.
         col (:obj:`list[str]`): column(s) in `data` to be flagged, by default None. Only required when
-            the `data` is a `pandas.DataFrame` and a subset of the columns will be checked. Must be
-            the same length as `lower` and `upper`.
+            the `data` is a ``pandas.DataFrame`` and a subset of the columns will be checked. Must be
+            the same length as :py:attr:`lower` and :py:attr:`upper`.
         threshold (:obj:`int`): number of intervals over which measurment does not change for each
-            element of `data`, regardless if it's a `pd.Series` or `pd.DataFrame`, by default 3.
+            element of :py:attr:`data`, regardless if it's a ``pd.Series`` or ``pd.DataFrame``.
+            Defaults to 3.
 
     Returns:
-        :obj:`pandas.Series` | `pandas.DataFrame`: Series or DataFrame (depending on `data` type) with
+        :obj:`pandas.Series` | `pandas.DataFrame`: Series or DataFrame (depending on ``data`` type) with
             boolean entries.
     """
     # Prepare the inputs to be standardized for use with DataFrames
@@ -122,18 +121,18 @@ def std_range_flag(
 
     Args:
         data (:obj:`pandas.Series` | `pandas.DataFrame`): data frame containing the column to be flagged;
-            can either be a `pandas.Series` or `pandas.DataFrame`. If a `pandas.DataFrame`, a list of
+            can either be a ``pandas.Series`` or ``pandas.DataFrame``. If a ``pandas.DataFrame``, a list of
             threshold values and columns (if checking a subset of the columns) must be provided.
-        col (:obj:`list[str]`): column(s) in `data` to be flagged, by default None. Only required when
-            the `data` is a `pandas.DataFrame` and a subset of the columns will be checked. Must be
-            the same length as `lower` and `upper`.
-        threshold (:obj:`float` | `list[float]`): multiplicative factor on the standard deviation of `data`,
-            if it's a `pd.Series`, or the list of multiplicative factors on the standard deviation for
-            each column in `col`. If the same factor is applied to each column, then pass the single
-            value, otherwise, it must be the same length as `col` and `upper`.
+        col (:obj:`list[str]`): column(s) in :py:attr:`data` to be flagged, by default None. Only required when
+            the :py:attr:`data` is a `pandas.DataFrame` and a subset of the columns will be checked. Must be
+            the same length as :py:attr:`lower` and :py:attr:`upper`.
+        threshold (:obj:`float` | `list[float]`): multiplicative factor on the standard deviation of :py:attr:`data`,
+            if it's a ``pd.Series``, or the list of multiplicative factors on the standard deviation for
+            each column in :py:attr:`col`. If the same factor is applied to each column, then pass the single
+            value, otherwise, it must be the same length as :py:attr:`col` and :py:attr:`upper`.
 
     Returns:
-        :obj:`pandas.Series` | `pandas.DataFrame`: Series or DataFrame (depending on `data` type) with
+        :obj:`pandas.Series` | `pandas.DataFrame`: Series or DataFrame (depending on :py:attr:`data` type) with
             boolean entries.
     """
     # Prepare the inputs to be standardized for use with DataFrames
@@ -169,7 +168,7 @@ def window_range_flag(
     the measurements in `value_col` are outside of the range [`value_min`, `value_max`].
 
     Args:
-        data (:obj:`pandas.DataFrame`): data frame containing the columns `window_col` and
+        data (:obj:`pandas.DataFrame`): data frame containing the columns :py:attr:`window_col` and
             `value_col`, by default None.
         window_col (:obj:`str` | `pandas.Series`): Name of the column or  used to define the window
             range or the data as a pandas Series, by default None.
@@ -205,9 +204,9 @@ def bin_filter(
     median or mean, and flagging can be applied directionally (i.e. above or below the center, or both)
 
     Args:
-        bin_col(:obj:`pandas.Series` | `str`): The Series or column in `data` to be used for binning.
-        value_col(:obj:`pandas.Series`): The Series or column in `data` to be flagged.
-        bin_width(:obj:`float`): Width of bin in units of `bin_col`
+        bin_col(:obj:`pandas.Series` | `str`): The Series or column in :py:attr:`data` to be used for binning.
+        value_col(:obj:`pandas.Series`): The Series or column in :py:attr:`data` to be flagged.
+        bin_width(:obj:`float`): Width of bin in units of :py:attr:`bin_col`
         threshold(:obj:`float`): Outlier threshold (multiplicative factor of std of `value_col` in bin)
         bin_min(:obj:`float`): Minimum bin value below which flag should not be applied
         bin_max(:obj:`float`): Maximum bin value above which flag should not be applied
@@ -215,7 +214,7 @@ def bin_filter(
             based threshold
         center_type(:obj:`str`): Option to use a 'mean' or 'median' center for each bin
         direction(:obj:`str`): Option to apply flag only to data 'above' or 'below' the mean, by default 'all'
-        data(:obj:`pd.DataFrame`): DataFrame containing both `bin_col` and `value_col`, if data
+        data(:obj:`pd.DataFrame`): DataFrame containing both :py:attr:`bin_col` and :py:attr:`value_col`, if data
             are part of the same DataFrame, by default None.
 
     Returns:
@@ -299,13 +298,13 @@ def cluster_mahalanobis_2d(
     points with distances outside of `dist_thresh` are flagged; distinguishes between asset IDs.
 
     Args:
-        data_col1(:obj:`pandas.Series` | `str`): Series or column `data` corresponding to the first
+        data_col1(:obj:`pandas.Series` | `str`): Series or column :py:attr:`data` corresponding to the first
             data column in a 2D cluster analysis
-        data_col2(:obj:`pandas.Series` | `str`): Series or column `data` corresponding to the second
+        data_col2(:obj:`pandas.Series` | `str`): Series or column :py:attr:`data` corresponding to the second
             data column in a 2D cluster analysis
         n_clusters(:obj:`int`):' number of clusters to use
         dist_thresh(:obj:`float`): maximum Mahalanobis distance within each cluster for data to be remain unflagged
-        data(:obj:`pd.DataFrame`): DataFrame containing both `data_col1` and `data_col2`, if data
+        data(:obj:`pd.DataFrame`): DataFrame containing both :py:attr:`data_col1` and :py:attr:`data_col2`, if data
             are part of the same DataFrame, by default None.
 
     Returns:

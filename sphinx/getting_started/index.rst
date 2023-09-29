@@ -30,8 +30,8 @@ Source
     pip install -e .
 
 
-Installation, Using, and Contributing
-*************************************
+Installation and Contributing
+*****************************
 .. toctree::
     :maxdepth: 2
 

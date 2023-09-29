@@ -85,8 +85,8 @@ def determine_offset_dst(df: pd.DataFrame, local_tz: str) -> pd.DataFrames:
     """Creates a column of "utc_offset" and "is_dst".
 
     Args:
-        df(:obj:`pd.DataFrame`): The dataframe object to manipulate with a tz-aware pd.DatetimeIndex.
-        local_tz(:obj: 'String'): The `pytz`-compatible timezone for the input `time_field`, by
+        df(:obj:`pd.DataFrame`): The dataframe object to manipulate with a tz-aware ``pandas.DatetimeIndex``.
+        local_tz(:obj: 'String'): The ``pytz``-compatible timezone for the input `time_field`, by
             default UTC. This should be in the format of "Country/City" or "Region/City" such as
             "America/Denver" or "Europe/Paris".
 
@@ -116,26 +116,26 @@ def convert_datetime_column(
     df: pd.DataFrame, time_col: str, local_tz: str, tz_aware: bool
 ) -> pd.DataFrame:
     """Converts the passed timestamp data to a pandas-encoded Datetime, and creates a
-    corresponding localized and UTC timestamp using the `time_field` column name with either
-    "localized" or "utc", respectively. The `_df` object then uses the local timezone
+    corresponding localized and UTC timestamp using the :py:attr:`time_field` column name with either
+    "localized" or "utc", respectively. The ``_df`` object then uses the local timezone
     timestamp for its index.
 
     Args:
-        df(:obj: `pd.DataFrame`): The SCADA `pd.DataFrame`
-        time_col(:obj: `string`): The string name of datetime stamp column in `df`.
-        local_tz(:obj: 'string'): The `pytz`-compatible timezone for the input `time_field`, by
+        df(:obj: `pd.DataFrame`): The SCADA ``pd.DataFrame``
+        time_col(:obj: `string`): The string name of datetime stamp column in ``df``.
+        local_tz(:obj: 'string'): The ``pytz``-compatible timezone for the input :py:attr:`time_field`, by
             default UTC. This should be in the format of "Country/City" or "Region/City" such as
             "America/Denver" or "Europe/Paris".
-        tz_aware(:obj: `bool`): Indicator for if the provided data in `time_col` has the timezone
-            information embedded (`True`), or not (`False`).
+        tz_aware(:obj: `bool`): Indicator for if the provided data in :py:attr:`time_col` has the timezone
+            information embedded (``True``), or not (``False``).
 
     Returns:
-        (:obj: `pd.DataFrame`): The updated `pd.DataFrame` with an index of `pd.DatetimeIndex` with
+        (:obj: `pd.DataFrame`): The updated ``pd.DataFrame`` with an index of ``pd.DatetimeIndex`` with
             UTC time-encoding, and the following new columns:
-            - `time_col`_utc: A UTC-converted timestamp column
-            - `time_col`_localized: The fully converted and localized timestamp column
+            - :py:attr:`time_col`_utc: A UTC-converted timestamp column
+            - :py:attr:`time_col`_localized: The fully converted and localized timestamp column
             - utc_offset: The difference, in hours between the localized and UTC time
-            - is_dst: Indicator for whether of not the timestamp is considered to be DST (`True`) or not (`False`)
+            - is_dst: Indicator for whether of not the timestamp is considered to be DST (``True``) or not (``False``)
     """
     # Create the necessary columns for processing
     t_utc = f"{time_col}_utc"
@@ -179,20 +179,20 @@ def duplicate_time_identification(
     df: pd.DataFrame, time_col: str, id_col: str
 ) -> tuple[pd.Series, None | pd.Series, None | pd.Series]:
     """Identifies the time duplications on the modified SCADA data frame to highlight the
-    duplications from the original time data (`time_col`), the UTC timestamps, and the localized
+    duplications from the original time data (:py:attr:`time_col`), the UTC timestamps, and the localized
     timestamps, if the latter are available.
 
     Args:
-        df (:obj: `pd.DataFrame`): The resulting SCADA dataframe from `convert_datetime_column()`, otherwise
-            the UTC and localized column checks will return `None`.
+        df (:obj: `pd.DataFrame`): The resulting SCADA dataframe from :py:meth:`convert_datetime_column()`, otherwise
+            the UTC and localized column checks will return ``None``.
         time_col (:obj: `str`): The string name of the timestamp column.
         id_col (:obj: `str`): The string name of the turbine asset_id column, to ensure that duplicates
             aren't based off multiple turbine's data.
 
     Returns:
         (tuple[pd.Series, None | pd.Series, None | pd.Series]): The dataframe subsets with duplicate
-            timestamps based on the original timestamp column, the localized timestamp column (`None`
-            if the column does not exist), and the UTC-converted timestamp column (`None` if the
+            timestamps based on the original timestamp column, the localized timestamp column (``None``
+            if the column does not exist), and the UTC-converted timestamp column (``None`` if the
             column does not exist).
     """
     # Create the necessary columns for processing
@@ -220,16 +220,16 @@ def gap_time_identification(
     the latter are available.
 
     Args:
-        df (:obj: `pd.DataFrame`): The resulting SCADA dataframe from `convert_datetime_column()`, otherwise
-            the UTC and localized column checks will return `None`.
+        df (:obj: `pd.DataFrame`): The resulting SCADA dataframe from :py:meth:`convert_datetime_column()`, otherwise
+            the UTC and localized column checks will return `1`.
         time_col (:obj: `str`): The string name of the timestamp column.
         freq (:obj: `str`): The expected frequency of the timestamps, which should align with
             the pandas timestamp conventions (https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases).
 
     Returns:
         (tuple[pd.Series, None | pd.Series, None | pd.Series]): The dataframe subsets with duplicate
-            timestamps based on the original timestamp column, the localized timestamp column (`None`
-            if the column does not exist), and the UTC-converted timestamp column (`None` if the
+            timestamps based on the original timestamp column, the localized timestamp column (``None``
+            if the column does not exist), and the UTC-converted timestamp column (``None`` if the
             column does not exist).
     """
     # Create the necessary columns for processing
@@ -250,15 +250,15 @@ def gap_time_identification(
 
 
 def describe(df: pd.DataFrame, **kwargs) -> pd.DataFrame:
-    """Thin wrapper for `pd.DataFrame.describe()`, but transposes the results to be easier to read.`
+    """Thin wrapper for ``pd.DataFrame.describe()``, but transposes the results to be easier to read.
 
     Args:
-        df (:obj: `pd.DataFrame`): The resulting SCADA dataframe from `convert_datetime_column()`, otherwise
-            the UTC and localized column checks will return `None`.
-        kwargs (:obj: `dict`): Dictionary of additional arguments to pass to `df.describe()`.
+        df (:obj: `pd.DataFrame`): The resulting SCADA dataframe from :py:meth:`convert_datetime_column()`, otherwise
+            the UTC and localized column checks will return ``None``.
+        kwargs (:obj: `dict`): Dictionary of additional arguments to pass to ``df.describe()``.
 
     Returns:
-        pd.DataFrame: The results of `df.describe().T`.
+        pd.DataFrame: The results of ``df.describe().T``.
     """
     return df.describe(**kwargs).T
 
@@ -277,14 +277,14 @@ def daylight_savings_plot(
     UTC-converted timestamps.
 
     Args:
-        df (:obj: `pd.DataFrame`): The resulting SCADA dataframe from `convert_datetime_column()`.
-        local_tz(:obj: 'String'): The `pytz`-compatible timezone for the input `time_field`, by
+        df (:obj: `pd.DataFrame`): The resulting SCADA dataframe from :py:meth:`convert_datetime_column()`.
+        local_tz(:obj: 'String'): The ``pytz``-compatible timezone for the input :py:attr:`time_field`, by
             default UTC. This should be in the format of "Country/City" or "Region/City" such as
             "America/Denver" or "Europe/Paris".
-        id_col (:obj: `str`): The string name of the turbine asset_id column in `df`, to ensure that
+        id_col (:obj: `str`): The string name of the turbine asset_id column in :py:attr:`df`, to ensure that
             duplicates aren't based off multiple turbine's data.
-        time_col (:obj: `str`): The string name of the timestamp column in `df`.
-        power_col(:obj: 'str'): String name of the power column in `df`.
+        time_col (:obj: `str`): The string name of the timestamp column in :py:attr:`df`.
+        power_col(:obj: 'str'): String name of the power column in :py:attr:`df`.
         freq (:obj: `str`): The expected frequency of the timestamps, which should align with
             the pandas timestamp conventions (https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases).
         hour_window(:obj: 'int'): number of hours, before and after the Daylight Savings Time
@@ -298,30 +298,6 @@ def daylight_savings_plot(
     # Get data for one of the turbines
     df_dst = df.loc[df[id_col] == df[id_col].unique()[0]]
     df_full = df_dst.copy()
-
-    # Locate the missing timestamps, convert to UTC, and recreate DST and UTC-offset columns
-    # missing_original_df = pd.DataFrame([], columns=df.columns)
-    # missing_local_df = pd.DataFrame([], columns=df.columns)
-    # missing_utc_df = pd.DataFrame([], columns=df.columns)
-
-    # missing_original = ts.find_time_gaps(df_dst[time_col], freq)
-    # missing_local = ts.find_time_gaps(df_dst[t_local], freq)
-    # missing_utc = ts.find_time_gaps(df_dst[t_utc], freq)
-
-    # missing_original_df[time_col] = missing_original
-    # missing_local_df[t_local] = pd.DatetimeIndex(missing_local)
-    # missing_utc_df[t_utc] = pd.DatetimeIndex(missing_utc)
-    # missing_utc_df[t_local] = pd.DatetimeIndex(missing_utc).tz_convert(local_tz)
-    # missing_local_df[t_utc] = pd.DatetimeIndex(missing_local).tz_convert("UTC")
-
-    # missing_df = (
-    #     pd.concat([missing_utc_df, missing_local_df])
-    #     .drop_duplicates(subset=[t_local, t_utc])
-    #     .set_index(t_utc, drop=False)
-    # )
-
-    # Append and resort the missing timestamps, then convert to local time
-    # df_full = df_full.append(missing_df).sort_values(time_col)
     try:
         df_full = df_full.tz_convert(local_tz)
     except TypeError:
@@ -585,23 +561,23 @@ def wtk_diurnal_plot(
     end_date: str = "2013-12-31",
     return_fig: bool = False,
 ) -> None:
-    """Plots the WTK diurnal wind profile alongside the hourly power averages from the `scada_df`
+    """Plots the WTK diurnal wind profile alongside the hourly power averages from the :py:attr:`scada_df`
 
     Args:
         wtk_df (:obj: `pd.DataFrame` | `None`): The WTK diurnal profile data produced in
             `wtk_diurnal_prep`. If `None`, then this method will be run internally as the following
-            keyword arguments are provided: `latitude`, `longitude`, `fn`, `start_date`, and
-            `end_date`.
-        scada_df (:obj: `pd.DataFrame` | None): The SCADA data that was produced in `convert_datetime_column`.
-        time_col (:obj: `str`): The name of the time column in `scada_df`.
-        power_col (:obj: `str`): The name of the power column in `scada_df`
+            keyword arguments are provided: :py:attr:`latitude`, :py:attr:`longitude`, :py:attr:`fn`,
+            :py:attr:`start_date`, and :py:attr:`end_date`.
+        scada_df (:obj: `pd.DataFrame` | None): The SCADA data that was produced in :py:meth:`convert_datetime_column`.
+        time_col (:obj: `str`): The name of the time column in :py:attr:`scada_df`.
+        power_col (:obj: `str`): The name of the power column in :py:attr:`scada_df`
         latitude (:obj: `float`): The latitude of the wind power plant's center.
         longitude (:obj: `float`): The longitude of the wind power plant's center.
         fn (:obj: `str`, optional): WTK API file path and location. Defaults to "/nrel/wtk-us.h5".
         start_date (:obj: `str` | None, optional): Starting date for the WTK data. If None, then it
-            uses the starting date of `scada_df`. Defaults to None.
+            uses the starting date of :py:attr:`scada_df`. Defaults to None.
         end_date (:obj: `str` | None, optional): Ending date for the WTK data. If None, then it
-            uses the ending date of `scada_df`. Defaults to None.
+            uses the ending date of :py:attr:`scada_df`. Defaults to None.
         return_fig(:obj:`String`): Indicator for if the figure and axes objects should be returned,
             by default False.
     """

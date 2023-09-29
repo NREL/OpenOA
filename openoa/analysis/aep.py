@@ -1,9 +1,3 @@
-# TODO:
-# - Finish refactoring from Timeseries Table to PlantData (test and verify)
-# - Rename API to openoa.analysis.aep.long_term_monte_carlo_method
-# - Make AnalysisResult into an attrs dataclass, and Analysis object.
-# - Refactor the class to be more modular and performant. Add QMC method.
-
 from __future__ import annotations
 
 import random
@@ -28,7 +22,7 @@ from openoa.utils import plot, filters
 from openoa.utils import timeseries as tm
 from openoa.utils import unit_conversion as un
 from openoa.utils import met_data_processing as mt
-from openoa.schema import FromDictMixin
+from openoa.schema import FromDictMixin, ResetValuesMixin
 from openoa.logging import logging, logged_method_call
 from openoa.utils.machine_learning_setup import MachineLearningSetup
 from openoa.analysis._analysis_validators import validate_reanalysis_selections
@@ -64,17 +58,10 @@ def get_annual_values(data):
     return data.resample("12MS").sum().values
 
 
-class MonteCarloAEPResult(object):
-    """
-    Result object of a MonteCarlo AEP Analysis
-    """
-
-    pass
-
-
-# Long Term AEP
+# TODO: Split this into a more generic naming convention to have other AEP methods, such as QMC
+# TODO: Create an analysis result class that could be used for better results aggregation
 @define(auto_attribs=True)
-class MonteCarloAEP(FromDictMixin):
+class MonteCarloAEP(FromDictMixin, ResetValuesMixin):
     """
     A serial (Pandas-driven) implementation of the benchmark PRUF operational
     analysis implementation. This module collects standard processing and
@@ -97,7 +84,7 @@ class MonteCarloAEP(FromDictMixin):
             regression input. Defaults to False.
         reg_wind_direction(:obj:`bool`): Indicator to include wind direction (True) or not (False) as
             a regression input. Defaults to False.
-        reanalysis_products(obj:`list[str]`) : List of reanalysis products to use for Monte Carlo
+        reanalysis_products(``list[str]``) : List of reanalysis products to use for Monte Carlo
             sampling. Defaults to None, which pulls all the products contained in
             :py:attr:`plant.reanalysis`.
         uncertainty_meter(:obj:`float`): Uncertainty on revenue meter data. Defaults to 0.005.
@@ -205,6 +192,24 @@ class MonteCarloAEP(FromDictMixin):
     _mc_slope: NDArrayFloat = field(init=False)
     _run: pd.DataFrame = field(init=False)
     results: pd.DataFrame = field(init=False)
+    run_parameters: list[str] = field(
+        init=False,
+        default=[
+            "num_sim",
+            "reg_model",
+            "reanalysis_products",
+            "uncertainty_meter",
+            "uncertainty_losses",
+            "uncertainty_windiness",
+            "uncertainty_loss_max",
+            "outlier_detection",
+            "uncertainty_outlier",
+            "uncertainty_nan_energy",
+            "time_resolution",
+            "end_date_lt",
+            "ml_setup_kwargs",
+        ],
+    )
 
     @logged_method_call
     def __attrs_post_init__(self):
@@ -317,29 +322,42 @@ class MonteCarloAEP(FromDictMixin):
             None
         """
         self.num_sim = num_sim
+        initial_parameters = {}
         if reanalysis_products is not None:
+            initial_parameters["reanalysis_products"] = self.reanalysis_products
             self.reanalysis_products = reanalysis_products
         if reg_model is not None:
+            initial_parameters["reg_model"] = self.reg_model
             self.reg_model = reg_model
         if uncertainty_meter is not None:
+            initial_parameters["uncertainty_meter"] = self.uncertainty_meter
             self.uncertainty_meter = uncertainty_meter
         if uncertainty_losses is not None:
+            initial_parameters["uncertainty_losses"] = self.uncertainty_losses
             self.uncertainty_losses = uncertainty_losses
         if uncertainty_windiness is not None:
+            initial_parameters["uncertainty_windiness"] = self.uncertainty_windiness
             self.uncertainty_windiness = uncertainty_windiness
         if uncertainty_loss_max is not None:
+            initial_parameters["uncertainty_loss_max"] = self.uncertainty_loss_max
             self.uncertainty_loss_max = uncertainty_loss_max
         if outlier_detection is not None:
+            initial_parameters["outlier_detection"] = self.outlier_detection
             self.outlier_detection = outlier_detection
         if uncertainty_outlier is not None:
+            initial_parameters["uncertainty_outlier"] = self.uncertainty_outlier
             self.uncertainty_outlier = uncertainty_outlier
         if uncertainty_nan_energy is not None:
+            initial_parameters["uncertainty_nan_energy"] = self.uncertainty_nan_energy
             self.uncertainty_nan_energy = uncertainty_nan_energy
         if time_resolution is not None:
+            initial_parameters["time_resolution"] = self.time_resolution
             self.time_resolution = time_resolution
         if end_date_lt is not None:
+            initial_parameters["end_date_lt"] = self.end_date_lt
             self.end_date_lt = end_date_lt
         if ml_setup_kwargs is not None:
+            initial_parameters["ml_setup_kwargs"] = self.ml_setup_kwargs
             self.ml_setup_kwargs = ml_setup_kwargs
 
         # Write parameters of run to the log file
@@ -361,6 +379,9 @@ class MonteCarloAEP(FromDictMixin):
 
         # Log the completion of the run
         logger.info("Run completed")
+
+        # Reset the class arguments back to the initialized values
+        self.set_values(initial_parameters)
 
     @logged_method_call
     def groupby_time_res(self, df):
@@ -415,7 +436,6 @@ class MonteCarloAEP(FromDictMixin):
             1. Populate monthly/daily data frame with energy data summed from 10-min QC'd data
             2. For each monthly/daily value, find percentage of NaN data used in creating it and flag if percentage is
                greater than 0
-
         """
         df = self.plant.meter  # Get the meter data frame
 
@@ -447,15 +467,7 @@ class MonteCarloAEP(FromDictMixin):
 
     @logged_method_call
     def process_loss_estimates(self):
-        """
-        Append availability and curtailment losses to monthly data frame
-
-        Args:
-            (None)
-
-        Returns:
-            (None)
-        """
+        """Append availability and curtailment losses to monthly data frame."""
         df = self.plant.curtail.copy()
 
         curt_aggregate = np.divide(
@@ -518,7 +530,6 @@ class MonteCarloAEP(FromDictMixin):
             - calculate monthly/daily average wind direction
             - calculate monthly/daily average temperature
             - append monthly/daily averages to monthly/daily energy data frame
-
         """
 
         # Identify start and end dates for long-term correction
@@ -568,9 +579,7 @@ class MonteCarloAEP(FromDictMixin):
 
         # Define empty data frame that spans our period of interest
         self._reanalysis_aggregate = pd.DataFrame(
-            index=pd.date_range(
-                start=start_date, end=end_date, freq=self.resample_freq
-            ),  # tz="UTC"),
+            index=pd.date_range(start=start_date, end=end_date, freq=self.resample_freq),
             dtype=float,
         )
 
@@ -624,8 +633,6 @@ class MonteCarloAEP(FromDictMixin):
                     )
                 )  # Calculate wind direction
 
-        # TODO JP: Had to localize the timezone after V3 update. Is there a better way to do this?
-        # self.aggregate.index = self.aggregate.index.tz_localize("UTC")
         self.aggregate = self.aggregate.join(
             self._reanalysis_aggregate
         )  # Merge monthly reanalysis data to monthly energy data frame
@@ -641,13 +648,6 @@ class MonteCarloAEP(FromDictMixin):
                 != self.aggregate.loc[p, "num_days_actual"]
             ):
                 self.aggregate.drop(p, inplace=True)  # Drop the row from data frame
-
-        # Unsure why this is any different
-        # ix = [0, -1]
-        # ix_drop = np.where(
-        #     self.aggregate["num_days_expected"].iloc[ix] == self.aggregate["num_days_actual"].iloc[ix]
-        # )
-        # self.aggregate.drop(self.aggregate.iloc[ix].index[ix_drop], inplace=True)
 
     @logged_method_call
     def calculate_long_term_losses(self):
@@ -683,12 +683,6 @@ class MonteCarloAEP(FromDictMixin):
         """
         Create and populate the data frame defining the simulation parameters.
         This data frame is stored as self.mc_inputs
-
-        Args:
-            (None)
-
-        Returns:
-            (None)
         """
 
         # Create extra long list of renanalysis product names to sample from
@@ -904,10 +898,10 @@ class MonteCarloAEP(FromDictMixin):
         wind speed, temperature and wind direction (if used)
 
         Args:
-            n(:obj:`int`): The Monte Carlo iteration number
+            n(:obj:`int`): The Monte Carlo iteration number.
 
         Returns:
-            :obj:`?`: trained regression model
+            A trained regression model.
         """
         reg_data = self.set_regression_data(n)  # Get regression data
 
@@ -932,6 +926,10 @@ class MonteCarloAEP(FromDictMixin):
         # Machine learning models
         else:
             ml = MachineLearningSetup(algorithm=self.reg_model, **self.ml_setup_kwargs)
+            if self.plant.log_level in ("WARNING", "ERROR", "CRITICAL", "INFO"):
+                verbosity = 0
+            else:
+                verbosity = 2
             # Memoized approach for optimized hyperparameters
             if self._run.reanalysis_product in self.opt_model:
                 self.opt_model[(self._run.reanalysis_product)].fit(
@@ -944,6 +942,7 @@ class MonteCarloAEP(FromDictMixin):
                     n_iter_search=20,
                     report=False,
                     cv=KFold(n_splits=5),
+                    verbose=verbosity,
                 )
                 # Store optimized hyperparameters for each reanalysis product
                 self.opt_model[(self._run.reanalysis_product)] = ml.opt_model
@@ -1096,13 +1095,12 @@ class MonteCarloAEP(FromDictMixin):
     @logged_method_call
     def sample_long_term_reanalysis(self):
         """
-        This function returns the long-term monthly/daily wind speeds based on the Monte-Carlo generated sample of:
+        This function returns the long-term monthly/daily wind speeds based on the Monte-Carlo
+        generated sample of:
 
             1. The reanalysis product
             2. The number of years to use in the long-term correction
 
-        Args:
-           (None)
         Returns:
            :obj:`pandas.DataFrame`: the windiness-corrected or 'long-term' monthly/daily wind speeds
         """
@@ -1202,8 +1200,8 @@ class MonteCarloAEP(FromDictMixin):
         plot_kwargs: dict = {},
         legend_kwargs: dict = {},
     ) -> None | tuple[plt.Figure, plt.Axes]:
-        """Make a plot of the normalized annual average wind speeds from reanalysis data to show general
-        trends for each, and highlighting the period of record for the plant data.
+        """Make a plot of the normalized annual average wind speeds from reanalysis data to show
+        general trends for each, and highlighting the period of record for the plant data.
 
         Args:
             aep (:obj:`openoa.analysis.MonteCarloAEP`): An initialized MonteCarloAEP object.
@@ -1213,15 +1211,15 @@ class MonteCarloAEP(FromDictMixin):
                 Defaults to (None, None).
             return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
             figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
-                that are passed to `plt.figure()`. Defaults to {}.
+                that are passed to ``plt.figure()``. Defaults to {}.
             plot_kwargs (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
-                `ax.plot()`. Defaults to {}.
+                ``ax.plot()``. Defaults to {}.
             legend_kwargs (:obj:`dict`, optional): Additional legend keyword arguments that are passed to
-                `ax.legend()`. Defaults to {}.
+                ``ax.legend()``. Defaults to {}.
 
         Returns:
-            None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes]: If `return_fig` is True, then
-                the figure and axes objects are returned for further tinkering/saving.
+            None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes]: If ``return_fig`` is
+                True, then the figure and axes objects are returned for further tinkering/saving.
         """
         return plot.plot_monthly_reanalysis_windspeed(
             data=self.plant.reanalysis,
@@ -1260,11 +1258,11 @@ class MonteCarloAEP(FromDictMixin):
                 Defaults to (None, None).
             return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
             figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
-                that are passed to `plt.figure()`. Defaults to {}.
+                that are passed to ``plt.figure()``. Defaults to {}.
             plot_kwargs (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
-                `ax.scatter()`. Defaults to {}.
+                ``ax.scatter()``. Defaults to {}.
             legend_kwargs (:obj:`dict`, optional): Additional legend keyword arguments that are passed to
-                `ax.legend()`. Defaults to {}.
+                ``ax.legend()``. Defaults to {}.
 
         Returns:
             None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes]: If `return_fig` is True, then
@@ -1383,11 +1381,11 @@ class MonteCarloAEP(FromDictMixin):
                 limits for the loss plot (bottom figure). Defaults to (None, None).
             return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
             figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
-                that are passed to `plt.figure()`. Defaults to {}.
+                that are passed to ``plt.figure()``. Defaults to {}.
             plot_kwargs (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
-                `ax.scatter()`. Defaults to {}.
+                ``ax.scatter()``. Defaults to {}.
             legend_kwargs (:obj:`dict`, optional): Additional legend keyword arguments that are passed to
-                `ax.legend()`. Defaults to {}.
+                ``ax.legend()``. Defaults to {}.
 
         Returns:
             None | tuple[matplotlib.pyplot.Figure, tuple[matplotlib.pyplot.Axes, matplotlib.pyplot.Axes]]:
@@ -1440,11 +1438,11 @@ class MonteCarloAEP(FromDictMixin):
                 y-axis plotting display limits for the curtailment subplot. Defaults to (None, None).
             return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
             figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
-                that are passed to `plt.figure()`. Defaults to {}.
+                that are passed to ``plt.figure()``. Defaults to {}.
             plot_kwargs (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
-                `ax.hist()`. Defaults to {}.
+                ``ax.hist()``. Defaults to {}.
             annotate_kwargs (:obj:`dict`, optional): Additional annotation keyword arguments that are
-                passed to `ax.annotate()`. Defaults to {}.
+                passed to ``ax.annotate()``. Defaults to {}.
 
         Returns:
             None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes]: If `return_fig` is True, then
@@ -1484,18 +1482,19 @@ class MonteCarloAEP(FromDictMixin):
             xlabel(:obj:`str`): The x-axis label.
             ylim (:obj:`tuple[float, float]`, optional): A tuple of the y-axis plotting display limits.
                 Defaults to None.
-            with_points (:obj:`bool`, optional): Flag to plot the individual points like a seaborn `swarmplot`. Defaults to False.
-                points_label(:obj:`bool` | None, optional): Legend label for the points, if plotting.
-            Defaults to None.
+            with_points (:obj:`bool`, optional): Flag to plot the individual points like a seaborn
+                ``swarmplot``. Defaults to False.
+            points_label(:obj:`bool` | None, optional): Legend label for the points, if plotting.
+                Defaults to None.
             return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
             figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
-                that are passed to `plt.figure()`. Defaults to {}.
+                that are passed to ``plt.figure()``. Defaults to {}.
             plot_kwargs_box (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
-                `ax.boxplot()`. Defahults to {}.
+                ``ax.boxplot()``. Defaults to {}.
             plot_kwargs_points (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
-                `ax.boxplot()`. Defaults to {}.
+                ``ax.boxplot()``. Defaults to {}.
             legend_kwargs (:obj:`dict`, optional): Additional legend keyword arguments that are passed to
-                `ax.legend()`. Defaults to {}.
+                ``ax.legend()``. Defaults to {}.
 
         Returns:
             None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes, dict]: If `return_fig` is

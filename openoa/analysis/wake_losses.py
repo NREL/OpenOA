@@ -29,7 +29,7 @@ from sklearn.linear_model import LinearRegression
 from openoa.plant import PlantData, convert_to_list
 from openoa.utils import plot, filters
 from openoa.utils import met_data_processing as met
-from openoa.schema import FromDictMixin
+from openoa.schema import FromDictMixin, ResetValuesMixin
 from openoa.logging import logging, logged_method_call
 from openoa.analysis._analysis_validators import (
     validate_UQ_input,
@@ -44,7 +44,7 @@ plot.set_styling()
 
 
 @define(auto_attribs=True)
-class WakeLosses(FromDictMixin):
+class WakeLosses(FromDictMixin, ResetValuesMixin):
     """
     A serial implementation of a method for estimating wake losses from SCADA data. Wake losses are
     estimated for the entire wind plant as well as for each individual turbine for a) the period of
@@ -195,6 +195,12 @@ class WakeLosses(FromDictMixin):
             during the long term-correction process. This wind speed corresponds to the wind
             speed measured at freestream wind turbines. Only used if
             :py:attr:`assume_no_wakes_high_ws_LT_corr` = True. Defaults to 13 m/s.
+        min_ws_bin_lin_reg (float, optional): The minimum wind speed bin to consider when finding
+            linear regression from SCADA freestream wind speeds to reanalysis wind speeds. Defaults
+            to 3.0
+        bin_count_thresh_lin_reg (int, optional): The minimum number of samples required in a wind
+            speed bin to include when finding linear regression from SCADA freestream wind speeds to
+            reanalysis wind speeds. Defaults to 50.
     """
 
     plant: PlantData = field(converter=deepcopy, validator=attrs.validators.instance_of(PlantData))
@@ -240,6 +246,8 @@ class WakeLosses(FromDictMixin):
     num_years_LT: int | tuple[int, int] = field(default=(10, 20), validator=validate_UQ_input)
     assume_no_wakes_high_ws_LT_corr: bool = field(default=True)
     no_wakes_ws_thresh_LT_corr: float = field(default=13.0)
+    min_ws_bin_lin_reg: float = field(default=3.0)
+    bin_count_thresh_lin_reg: int = field(default=50, validator=attrs.validators.instance_of(int))
 
     # Internally created attributes need to be given a type before usage
     turbine_ids: list[str] = field(init=False)
@@ -271,6 +279,28 @@ class WakeLosses(FromDictMixin):
     wake_losses_por_std: float = field(init=False)
     turbine_wake_losses_por_std: float = field(init=False)
     _run: pd.DataFrame = field(init=False)
+    run_parameters: list[str] = field(
+        init=False,
+        default=[
+            "num_sim",
+            "reanalysis_products",
+            "wd_bin_width",
+            "freestream_sector_width",
+            "freestream_power_method",
+            "freestream_wind_speed_method",
+            "correct_for_derating",
+            "derating_filter_wind_speed_start",
+            "max_power_filter",
+            "wind_bin_mad_thresh",
+            "wd_bin_width_LT_corr",
+            "ws_bin_width_LT_corr",
+            "num_years_LT",
+            "assume_no_wakes_high_ws_LT_corr",
+            "no_wakes_ws_thresh_LT_corr",
+            "min_ws_bin_lin_reg",
+            "bin_count_thresh_lin_reg",
+        ],
+    )
 
     @reanalysis_products.validator
     def check_reanalysis_products(self, attribute: attrs.Attribute, value: list[str]) -> None:
@@ -351,6 +381,8 @@ class WakeLosses(FromDictMixin):
         num_years_LT: int | None = None,
         assume_no_wakes_high_ws_LT_corr: bool | None = None,
         no_wakes_ws_thresh_LT_corr: float | None = None,
+        min_ws_bin_lin_reg: float | None = None,
+        bin_count_thresh_lin_reg: int | None = None,
     ):
         """
         Estimates wake losses by comparing wind plant energy production to energy production of the
@@ -429,42 +461,74 @@ class WakeLosses(FromDictMixin):
                 during the long term-correction process. This wind speed corresponds to the wind
                 speed measured at freestream wind turbines. Only used if
                 :py:attr:`assume_no_wakes_high_ws_LT_corr` = True. Defaults to 13 m/s.
+            min_ws_bin_lin_reg (float, optional): The minimum wind speed bin to consider when
+                finding linear regression from SCADA freestream wind speeds to reanalysis wind
+                speeds. Defaults to 3.0
+            bin_count_thresh_lin_reg (int, optional): The minimum number of samples required in a
+                wind speed bin to include when finding linear regression from SCADA freestream wind
+                speeds to reanalysis wind speeds. Defaults to 50.
         """
+        initial_parameters = {}
         # Assign default parameter values depending on whether UQ is performed
         if num_sim is not None:
+            initial_parameters["num_sim"] = num_sim
             self.num_sim = num_sim
         if reanalysis_products is not None:
+            initial_parameters["reanalysis_products"] = reanalysis_products
             self.reanalysis_products = reanalysis_products
             logger.warning(
                 f"`reanalysis_products` has been changed, be sure the `end_date_lt`"
                 f"({self.end_date_lt}) is contained in the updated reanalyis products subset."
             )
         if wd_bin_width is not None:
+            initial_parameters["wd_bin_width"] = self.wd_bin_width
             self.wd_bin_width = wd_bin_width
         if freestream_sector_width is not None:
+            initial_parameters["freestream_sector_width"] = self.freestream_sector_width
             self.freestream_sector_width = freestream_sector_width
         if freestream_power_method is not None:
+            initial_parameters["freestream_power_method"] = self.freestream_power_method
             self.freestream_power_method = freestream_power_method
         if freestream_wind_speed_method is not None:
+            initial_parameters["freestream_wind_speed_method"] = self.freestream_wind_speed_method
             self.freestream_wind_speed_method = freestream_wind_speed_method
         if correct_for_derating is not None:
+            initial_parameters["correct_for_derating"] = correct_for_derating
             self.correct_for_derating = correct_for_derating
         if derating_filter_wind_speed_start is not None:
+            initial_parameters[
+                "derating_filter_wind_speed_start"
+            ] = self.derating_filter_wind_speed_start
             self.derating_filter_wind_speed_start = derating_filter_wind_speed_start
         if max_power_filter is not None:
+            initial_parameters["max_power_filter"] = self.max_power_filter
             self.max_power_filter = max_power_filter
         if wind_bin_mad_thresh is not None:
+            initial_parameters["wind_bin_mad_thresh"] = self.wind_bin_mad_thresh
             self.wind_bin_mad_thresh = wind_bin_mad_thresh
         if wd_bin_width_LT_corr is not None:
+            initial_parameters["wd_bin_width_LT_corr"] = self.wd_bin_width_LT_corr
             self.wd_bin_width_LT_corr = wd_bin_width_LT_corr
         if ws_bin_width_LT_corr is not None:
+            initial_parameters["ws_bin_width_LT_corr"] = self.ws_bin_width_LT_corr
             self.ws_bin_width_LT_corr = ws_bin_width_LT_corr
         if num_years_LT is not None:
+            initial_parameters["num_years_LT"] = self.num_years_LT
             self.num_years_LT = num_years_LT
         if assume_no_wakes_high_ws_LT_corr is not None:
+            initial_parameters[
+                "assume_no_wakes_high_ws_LT_corr"
+            ] = self.assume_no_wakes_high_ws_LT_corr
             self.assume_no_wakes_high_ws_LT_corr = assume_no_wakes_high_ws_LT_corr
         if no_wakes_ws_thresh_LT_corr is not None:
+            initial_parameters["no_wakes_ws_thresh_LT_corr"] = self.no_wakes_ws_thresh_LT_corr
             self.no_wakes_ws_thresh_LT_corr = no_wakes_ws_thresh_LT_corr
+        if min_ws_bin_lin_reg is not None:
+            initial_parameters["min_ws_bin_lin_reg"] = self.min_ws_bin_lin_reg
+            self.min_ws_bin_lin_reg = min_ws_bin_lin_reg
+        if bin_count_thresh_lin_reg is not None:
+            initial_parameters["bin_count_thresh_lin_reg"] = self.bin_count_thresh_lin_reg
+            self.bin_count_thresh_lin_reg = bin_count_thresh_lin_reg
 
         # Set up Monte Carlo simulation inputs if UQ = True or single simulation inputs if UQ = False.
         self._setup_monte_carlo_inputs()
@@ -816,11 +880,13 @@ class WakeLosses(FromDictMixin):
             self.wake_losses_por_std = np.std(self.wake_losses_por)
             self.turbine_wake_losses_por_std = np.std(self.turbine_wake_losses_por, axis=0)
 
+        self.set_values(initial_parameters)
+
     @logged_method_call
     def _setup_monte_carlo_inputs(self):
         """
-        Create and populate the data frame defining the Monte Carlo simulation parameters. This data frame is stored as
-        self.inputs.
+        Create and populate the data frame defining the Monte Carlo simulation parameters. This
+        data frame is stored as ``self.inputs``.
         """
 
         if self.UQ:
@@ -1024,22 +1090,16 @@ class WakeLosses(FromDictMixin):
     @logged_method_call
     def _apply_LT_correction(self):
         """
-        Estimates long term-corrected wake losses by binning wake losses by wind direction and wind speed and weighting
-        by bin frequencies from long-term historical reanalysis data.
+        Estimates long term-corrected wake losses by binning wake losses by wind direction and wind
+        speed and weighting by bin frequencies from long-term historical reanalysis data.
 
         Returns:
-            tuple[float, np.ndarray, np.ndarray, np.ndarray, np.ndarray]: The estimated long term-corrected wake
-                losses, an array containing the estimated turbine-level long term-corrected wake losses, and arrays containing the long-term corrected plant and turbine-level wake losses as well as the normalized wind plant energy productionbinned by wind direction
+            tuple[float, np.ndarray, np.ndarray, np.ndarray, np.ndarray]: The estimated long
+                term-corrected wake losses, an array containing the estimated turbine-level long
+                term-corrected wake losses, and arrays containing the long-term corrected plant and
+                turbine-level wake losses as well as the normalized wind plant energy production
+                binned by wind direction
         """
-
-        # TODO: make arguments?
-        # The minimum wind speed bin to consider when finding linear regression from SCADA freestream wind speeds to
-        # reanalysis wind speeds
-        min_ws_bin_lin_reg = 3.0
-        # The minimum number of samples required in a wind speed bin to include when finding linear regression from
-        # SCADA freestream wind speeds to reanalysis wind speeds
-        bin_count_thresh_lin_reg = 50
-
         # First, create hourly data frame for LT correction to match resolution of reanalysis data
         df_1hr = self.aggregate_df_sample[
             [
@@ -1061,12 +1121,12 @@ class WakeLosses(FromDictMixin):
         df_ws_bin = df_1hr.groupby(("windspeed_mean_freestream_bin", "")).mean()
         df_ws_bin_count = df_1hr.groupby(("windspeed_mean_freestream_bin", "")).count()
 
-        valid_ws_bins = (df_ws_bin.index >= min_ws_bin_lin_reg) & (
-            df_ws_bin_count["windspeed_mean_freestream"] >= bin_count_thresh_lin_reg
+        valid_ws_bins = (df_ws_bin.index >= self.min_ws_bin_lin_reg) & (
+            df_ws_bin_count["windspeed_mean_freestream"] >= self.bin_count_thresh_lin_reg
         )
 
-        # Find linear regression mapping from SCADA freestream wind speed to reanalysis wind speeds and use to correct
-        # SCADA freestream wind speeds
+        # Find linear regression mapping from SCADA freestream wind speed to reanalysis wind speeds
+        # and use to correct SCADA freestream wind speeds
         reg = LinearRegression().fit(
             df_ws_bin.loc[valid_ws_bins].index.values.reshape(-1, 1),
             df_ws_bin.loc[valid_ws_bins, f"WMETR_HorWdSpd_{self._run.reanalysis_product}"].values,
@@ -1284,19 +1344,19 @@ class WakeLosses(FromDictMixin):
             figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
                 that are passed to `plt.figure()`. Defaults to None.
             plot_kwargs_line (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
-                `ax.plot()` for plotting lines for the wind farm efficiency and, if `plot_norm_energy` is True,
+                ``ax.plot()`` for plotting lines for the wind farm efficiency and, if `plot_norm_energy` is True,
                 energy distributions subplots. Defaults to {}.
             plot_kwargs_fill (:obj:`dict`, optional): If `UQ` is True, additional plotting keyword arguments
-                that are passed to `ax.fill_between()` for plotting shading regions for 95% confidence
+                that are passed to ``ax.fill_between()`` for plotting shading regions for 95% confidence
                 intervals for the wind farm efficiency and, if `plot_norm_energy` is True, energy
                 distributions subplots. Defaults to {}.
             legend_kwargs (:obj:`dict`, optional): Additional legend keyword arguments that are passed to
-                `ax.legend()` for the wind farm efficiency and, if `plot_norm_energy` is True, energy
+                ``ax.legend()`` for the wind farm efficiency and, if `plot_norm_energy` is True, energy
                 distributions subplots. Defaults to {}.
         Returns:
             None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes] | tuple[matplotlib.pyplot.Figure, tuple [matplotlib.pyplot.Axes, matplotlib.pyplot.Axes]]:
-                If `return_fig` is True, then the figure and axes object(s), corresponding to the wake
-                loss plot or, if `plot_norm_energy` is True, wake loss and normalized energy plots, are
+                If :py:attr:`return_fig` is True, then the figure and axes object(s), corresponding to the wake
+                loss plot or, if :py:attr:`plot_norm_energy` is True, wake loss and normalized energy plots, are
                 returned for further tinkering/saving.
         """
 
@@ -1374,21 +1434,21 @@ class WakeLosses(FromDictMixin):
                 plot). Defaults to (None, None).
             return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
             figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
-                that are passed to `plt.figure()`. Defaults to None.
+                that are passed to ``plt.figure()``. Defaults to None.
             plot_kwargs_line (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
-                `ax.plot()` for plotting lines for the wind farm efficiency and, if `plot_norm_energy` is True,
+                ``ax.plot()`` for plotting lines for the wind farm efficiency and, if :py:attr:`plot_norm_energy` is True,
                 energy distributions subplots. Defaults to {}.
             plot_kwargs_fill (:obj:`dict`, optional): If `UQ` is True, additional plotting keyword arguments
-                that are passed to `ax.fill_between()` for plotting shading regions for 95% confidence
-                intervals for the wind farm efficiency and, if `plot_norm_energy` is True, energy
+                that are passed to ``ax.fill_between()`` for plotting shading regions for 95% confidence
+                intervals for the wind farm efficiency and, if :py:attr:`plot_norm_energy` is True, energy
                 distributions subplots. Defaults to {}.
             legend_kwargs (:obj:`dict`, optional): Additional legend keyword arguments that are passed to
-                `ax.legend()` for the wind farm efficiency and, if `plot_norm_energy` is True, energy
+                ``ax.legend()`` for the wind farm efficiency and, if :py:attr:`plot_norm_energy` is True, energy
                 distributions subplots. Defaults to {}.
         Returns:
             None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes] | tuple[matplotlib.pyplot.Figure, tuple [matplotlib.pyplot.Axes, matplotlib.pyplot.Axes]]:
-                If `return_fig` is True, then the figure and axes object(s), corresponding to the wake
-                loss plot or, if `plot_norm_energy` is True, wake loss and normalized energy plots, are
+                If :py:attr:`return_fig` is True, then the figure and axes object(s), corresponding to the wake
+                loss plot or, if :py:attr:`plot_norm_energy` is True, wake loss and normalized energy plots, are
                 returned for further tinkering/saving.
         """
 

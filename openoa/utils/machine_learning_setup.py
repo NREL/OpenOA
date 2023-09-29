@@ -166,6 +166,7 @@ class MachineLearningSetup:
         cv: sklearn.model_selection._split = KFold(n_splits=5),
         n_iter_search: int = 20,
         report: bool = True,
+        verbose: int = 0,
     ) -> None:
         """
         Optimize hyperparameters through cross-validation
@@ -179,6 +180,12 @@ class MachineLearningSetup:
                 to 20.
             report(:obj:'boolean'): Indicator on whether to output a summary report on optimization
                 results. Defaults to True.
+            verbose(:ob:`int`): Directly fed to `RandomizedSearchCV(verbose=verbose)`. Controls the
+                verbosity: the higher, the more messages.
+
+                - >1 : the computation time for each fold and parameter candidate is displayed;
+                - >2 : the score is also displayed;
+                - >3 : the fold and candidate parameter indexes are also displayed together with the starting time of the computation.
 
         Returns:
             (none)

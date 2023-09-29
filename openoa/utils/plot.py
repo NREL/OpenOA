@@ -97,14 +97,14 @@ def map_wgs84_to_cartesian(
     return x, y
 
 
-def luminance(rgb):
+def luminance(rgb: tuple[int, int, int]):
     """Calculates the brightness of an rgb 255 color. See https://en.wikipedia.org/wiki/Relative_luminance
 
     Args:
-        rgb(:obj:`tuple`): 255 (red, green, blue) tuple
+        rgb(:obj:`tuple`): Tuple of red, gree, and blue values in the range of 0-255.
 
     Returns:
-        luminance(:obj:`scalar`): relative luminance
+        luminance(:obj:`int`): relative luminance.
 
     Example:
 
@@ -124,14 +124,14 @@ def luminance(rgb):
     return luminance
 
 
-def color_to_rgb(color):
+def color_to_rgb(color: str | tuple[int, int, int]):
     """Converts named colors, hex and normalised RGB to 255 RGB values
 
     Args:
-        color(:obj:`color`): RGB, HEX or named color
+        color(:obj:`color`): RGB, HEX or named color.
 
     Returns:
-        rgb(:obj:`tuple`): 255 RGB values
+        rgb(:obj:`tuple`): 255 RGB values.
 
     Example:
 
@@ -164,27 +164,26 @@ def plot_windfarm(
     plot_width=800,
     plot_height=800,
     marker_size=14,
-    kwargs_for_figure={},
-    kwargs_for_marker={},
+    figure_kwargs={},
+    marker_kwargs={},
 ):
     """Plot the windfarm spatially on a map using the Bokeh plotting libaray.
 
     Args:
         asset_df(:obj:`pd.DataFrame`): PlantData.asset object containing the asset metadata.
         tile_name(:obj:`str`): tile set to be used for the underlay, e.g. OpenMap, ESRI, OpenTopoMap
-        plot_width(:obj:`scalar`): width of plot
-        plot_height(:obj:`scalar`): height of plot
-        marker_size(:obj:`scalar`): size of markers
-        kwargs_for_figure(:obj:`dict`): additional figure options for advanced users, see Bokeh docs
-        kwargs_for_marker(:obj:`dict`): additional marker options for advanced users, see Bokeh docs. We have some custom behavior around the "fill_color" attribute. If "fill_color" is not defined, OpenOA will use an internally defined color pallete. If "fill_color" is the name of a column in the asset table, OpenOA will use the value of that column as the marker color. Otherwise, "fill_color" is passed through to Bokeh.
+        plot_width(:obj:`int`): width of plot
+        plot_height(:obj:`int`): height of plot
+        marker_size(:obj:`int`): size of markers
+        figure_kwargs(:obj:`dict`): additional figure options for advanced users, see Bokeh docs
+        marker_kwargs(:obj:`dict`): additional marker options for advanced users, see Bokeh docs.
+            We have some custom behavior around the "fill_color" attribute. If "fill_color" is not
+            defined, OpenOA will use an internally defined color pallete. If "fill_color" is the
+            name of a column in the asset table, OpenOA will use the value of that column as the
+            marker color. Otherwise, "fill_color" is passed through to Bokeh.
 
     Returns:
         Bokeh_plot(:obj:`axes handle`): windfarm map
-
-    """
-    """
-    TODO: Add this back in when it can be debugged
-    lats, lons = transformer.transform(...) -> ValueError: not enough values to unpack (expected 2, got 0)
 
     Example:
         .. bokeh-plot::
@@ -228,7 +227,7 @@ def plot_windfarm(
         "match_aspect": True,
         "tooltips": [("asset_id", "@asset_id"), ("type", "@type"), ("(Lat,Lon)", "@coordinates")],
     }
-    figure_options.update(kwargs_for_figure)
+    figure_options.update(figure_kwargs)
 
     marker_options = {
         "marker": "circle_y",
@@ -238,7 +237,7 @@ def plot_windfarm(
         "line_color": "auto_line_color",
         "legend_group": "type",
     }
-    marker_options.update(kwargs_for_marker)
+    marker_options.update(marker_kwargs)
 
     # Create an appropriate fill color map and contrasting line color
     if marker_options["fill_color"] == "auto_fill_color":
@@ -311,8 +310,8 @@ def plot_by_id(
     Args:
         df(:obj:`pd.DataFrame`): The dataframe for comparing values.
         id_col(:obj:`str`): The asset_id column (or index column) in `df`.
-        x_axis(:obj:`str`): Independent variable to plot, should align with a column in `df`.
-        y_axis(:obj:`str`): Dependent variable to plot, should align with a column in `df`.
+        x_axis(:obj:`str`): Independent variable to plot, should align with a column in :py:attr:`df`.
+        y_axis(:obj:`str`): Dependent variable to plot, should align with a column in :py:attr:`df`.
         max_cols(:obj:`int`, optional): The maximum number of columns in the plot. Defaults to 4.
         xlim(:obj:`tuple[float, float]`, optional): A tuple of the x-axis (min, max) values.
             Defaults to (None, None).
@@ -444,9 +443,9 @@ def plot_power_curve(
     legend_kwargs: dict = {},
     scatter_kwargs: dict = {},
 ) -> None | tuple[plt.Figure, plt.Axes]:
-    """Plots the individual points on a power curve, with an optional `flag` filtering for singling
-    out readings in the figure. If `flag` is all false values then no overlaid flagged scatter points
-    will be created.
+    """Plots the individual points on a power curve, with an optional :py:attr:`flag` filtering for
+    singling out readings in the figure. If `flag` is all false values then no overlaid flagge
+    scatter points will be created.
 
     Args:
         wind_speed (:obj:`pandas.Series`): A pandas Series or numpy array of the recorded wind
@@ -467,11 +466,11 @@ def plot_power_curve(
         return_fig (:obj:`bool`, optional): Set to True to return the figure and axes objects,
             otherwise set to False. Defaults to False.
         figure_kwargs (:obj:`dict`, optional): Additional keyword arguments that should be passed to
-            `plt.figure`. Defaults to {}.
+            ``plt.figure()``. Defaults to {}.
         scatter_kwargs (:obj:`dict`, optional): Additional keyword arguments that should be passed
-            to `ax.scatter`. Defaults to {}.
+            to ``ax.scatter()``. Defaults to {}.
         legend_kwargs (:obj:`dict`, optional): Additional keyword arguments that should be passed to
-            `ax.legend`. Defaults to {}.
+            ``ax.legend()``. Defaults to {}.
 
     Returns:
         None | tuple[plt.Figure, plt.Axes]: _description_
@@ -535,15 +534,15 @@ def plot_monthly_reanalysis_windspeed(
             Defaults to (None, None).
         return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
         figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
-            that are passed to `plt.figure()`. Defaults to {}.
+            that are passed to ``plt.figure()``. Defaults to {}.
         plot_kwargs (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
-            `ax.plot()`. Defaults to {}.
+            ``ax.plot()``. Defaults to {}.
         legend_kwargs (:obj:`dict`, optional): Additional legend keyword arguments that are passed to
-            `ax.legend()`. Defaults to {}.
+            ``ax.legend()``. Defaults to {}.
 
     Returns:
-        None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes]: If `return_fig` is True, then
-            the figure and axes objects are returned for further tinkering/saving.
+        None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes]: If :py:attr:`return_fig` is
+            True, then the figure and axes objects are returned for further tinkering/saving.
     """
     # Define parameters needed for plotting
     min_val, max_val = (np.inf, -np.inf) if ylim == (None, None) else ylim
@@ -623,15 +622,15 @@ def plot_plant_energy_losses_timeseries(
             limits for the loss plot (bottom figure). Defaults to (None, None).
         return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
         figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
-            that are passed to `plt.figure()`. Defaults to {}.
+            that are passed to ``plt.figure()``. Defaults to {}.
         plot_kwargs (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
-            `ax.plot()`. Defaults to {}.
+            ``ax.plot()``. Defaults to {}.
         legend_kwargs (:obj:`dict`, optional): Additional legend keyword arguments that are passed to
-            `ax.legend()`. Defaults to {}.
+            ``ax.legend()``. Defaults to {}.
 
     Returns:
         None | tuple[matplotlib.pyplot.Figure, tuple[matplotlib.pyplot.Axes, matplotlib.pyplot.Axes]]:
-            If `return_fig` is True, then the figure and axes objects are returned for further
+            If :py:attr:`return_fig` is True, then the figure and axes objects are returned for further
             tinkering/saving.
     """
     figure_kwargs.setdefault("figsize", (12, 9))
@@ -686,23 +685,23 @@ def plot_distributions(
         which:(:obj:`list[str]`): The list of columns in data that should have their distributions plot.
         xlabels:(obj:`list[str]`): The list of x-axis labels
         xlim(:obj:`tuple[tuple[float, float], ...]`, optional): A tuple of tuples (or None)
-            corresponding to each of elements of :py:attr:`which` that get passed to ax.set_xlim().
+            corresponding to each of elements of :py:attr:`which` that get passed to ``ax.set_xlim()``.
             Defaults to None.
         ylim(:obj:`tuple[tuple[float, float], ...]`, optional): A tuple of tuples (or None)
-            corresponding to each of elements of :py:attr:`which` that get passed to ax.set_ylim().
+            corresponding to each of elements of :py:attr:`which` that get passed to ``ax.set_ylim()``.
             Defaults to None.
-        return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
+        return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to ``False``.
         figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
-            that are passed to `plt.figure()`. Defaults to {}.
+            that are passed to ```plt.figure()```. Defaults to {}.
         plot_kwargs (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
-            `ax.hist()`. Defaults to {}.
+            ``ax.hist()``. Defaults to {}.
         annotate_kwargs (:obj:`dict`, optional): Additional annotation keyword arguments that are
-            passed to `ax.annotate()`. Defaults to {}.
+            passed to ``ax.annotate()``. Defaults to {}.
         title (:str:, optional): Title to place over all subplots.
 
     Returns:
-        None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes]: If `return_fig` is True, then
-            the figure and axes objects are returned for further tinkering/saving.
+        None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes]: If :py:attr:`return_fig` is
+            True, then the figure and axes objects are returned for further tinkering/saving.
     """
     if xlim is None:
         xlim = tuple([(None, None) for _ in range(len(which))])
@@ -756,19 +755,19 @@ def plot_distributions(
 
 
 def _generate_swarm_values(y, n_bins=None, width: float = 0.5):
-    """Create the x-coordiantes for `y` so that plotting each value in the distribution of `y` appears
-    like that of a `seaborn.swarmplot` without requiring an additional dependency.
+    """Create the x-coordiantes for `y` so that plotting each value in the distribution of
+    :py:attr:`y` appears like that of a `seaborn.swarmplot` without requiring an additional dependency.
 
     Args:
         y (:obj:`pandas.Series`): The values to generate a matching x-value for a non-overlapping
             scatter plot of all the points in the distribution.
         n_bins (:obj:`int`, optional): The number of bins to use to generate the x-coordinates. If
-            `None`, then it is `y.size // 6`. Defaults to None.
+            ``None``, then it is ``y.size // 6``. Defaults to None.
         width (:obj:`float`, optional): The maximum width of the x data in either
             direction. Defaults to 0.5.
 
     Returns:
-        :obj:`numpy.ndarray` An array of x-coordinates to plot as a scatter against `y`.
+        :obj:`numpy.ndarray` An array of x-coordinates to plot as a scatter against :py:attr:`y`.
     """
     if n_bins is None:
         n_bins = y.size // 6
@@ -832,21 +831,21 @@ def plot_boxplot(
         ylim(:obj:`tuple[float, float]`, optional): A tuple of the y-axis plotting display limits.
             Defaults to None.
         with_points(:obj:`bool`, optional): Flag to plot the individual points like a seaborn
-            `swarmplot`. Defaults to False.
+            ``swarmplot``. Defaults to False.
         points_label(:obj:`bool` | None, optional): Legend label for the points, if plotting.
             Defaults to None.
         return_fig(:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
         figure_kwargs(:obj:`dict`, optional): Additional figure instantiation keyword arguments
             that are passed to `plt.figure()`. Defaults to {}.
         plot_kwargs_box(:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
-            `ax.boxplot()`. Defaults to {}.
+            ``ax.boxplot()``. Defaults to {}.
         plot_kwargs_points(:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
-            `ax.boxplot()`. Defaults to {}.
+            ``ax.boxplot()``. Defaults to {}.
         legend_kwargs(:obj:`dict`, optional): Additional legend keyword arguments that are passed to
-            `ax.legend()`. Defaults to {}.
+            ``ax.legend()``. Defaults to {}.
 
     Returns:
-        None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes, dict]: If `return_fig` is
+        None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes, dict]: If :py:attr:`return_fig` is
             True, then the figure object, axes object, and a dictionary of the boxplot objects are
             returned for further tinkering/saving.
     """
@@ -916,11 +915,11 @@ def plot_waterfall(
         return_fig(:obj:`bool`, optional): Set to True to return the figure and axes objects,
             otherwise set to False. Defaults to False.
         figure_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be
-            passed to `plt.figure`. Defaults to {}.
+            passed to ``plt.figure()``. Defaults to {}.
         plot_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be
-            passed to `ax.plot`. Defaults to {}.
+            passed to ``ax.plot()``. Defaults to {}.
         legend_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be
-            passed to `ax.legend`. Defaults to {}.
+            passed to` `ax.legend()``. Defaults to {}.
 
     Returns:
         None | tuple[plt.Figure, plt.Axes]: If :py:attr:`return_fig`, then return the figure
@@ -1022,11 +1021,11 @@ def plot_power_curves(
         return_fig(:obj:`bool`, optional): Set to True to return the figure and axes objects,
             otherwise set to False. Defaults to False.
         figure_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be passed to
-            `plt.figure`. Defaults to {}.
+            ``plt.figure()``. Defaults to {}.
         plot_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be passed
-            to `ax.scatter`. Defaults to {}.
+            to ``ax.scatter()``. Defaults to {}.
         legend_kwargs(:obj:`dict`, optional): Additional keyword arguments that should be passed to
-            `ax.legend`. Defaults to {}.
+            ``ax.legend()``. Defaults to {}.
 
     Returns:
         None | tuple[plt.Figure, plt.Axes]: Returns the figure and axes objects if
@@ -1103,11 +1102,11 @@ def plot_wake_losses(
         bins (:obj:`np.ndarray`): Wind direction or wind speed bin values representing the x-axis in
             the plots.
         efficiency_data_por (:obj:`np.ndarray`): 1D or 2D array containing wind farm or wind turbine
-            efficiency for the period of record for each bin in the `bins` argument. If a 2D array is
+            efficiency for the period of record for each bin in the :py:attr:`bins` argument. If a 2D array is
             provided, the second dimension should contain results from different Monte Carlo iterations
             and 95% confidence intervals will be plotted.
         efficiency_data_lt (:obj:`np.ndarray`): 1D or 2D array containing long-term corrected wind farm
-            or wind turbine efficiency for each bin in the `bins` argument. If a 2D array is provided,
+            or wind turbine efficiency for each bin in the :py:attr:`bins` argument. If a 2D array is provided,
             the second dimension should contain results from different Monte Carlo iterations and 95%
             confidence intervals will be plotted.
         energy_data_por (:obj:`np.ndarray`, optional): Optional 1D or 2D array containing normalized
@@ -1116,7 +1115,7 @@ def plot_wake_losses(
             iterations and 95% confidence intervals will be plotted. If a value of None is provided,
             normalized energy will not be plotted. Defaults to None.
         energy_data_lt (:obj:`np.ndarray`, optional): Optional 1D or 2D array containing normalized
-            long-term corrected energy production for each bin in the `bins` argument. If a 2D array
+            long-term corrected energy production for each bin in the :py:attr:`bins` argument. If a 2D array
             is provided, the second dimension should contain results from different Monte Carlo
             iterations and 95% confidence intervals will be plotted. If a value of None is provided,
             normalized energy will not be plotted. Defaults to None.
@@ -1127,27 +1126,27 @@ def plot_wake_losses(
             wind direction plotting display limits (degrees). Defaults to (None, None).
         ylim_efficiency (:obj:`tuple[float, float]`, optional): A tuple of the y-axis plotting display
             limits for the wind farm efficiency plot (top plot). Defaults to (None, None).
-        ylim_energy (:obj:`tuple[float, float]`, optional): If `energy_data_por` and `energy_data_lt`
+        ylim_energy (:obj:`tuple[float, float]`, optional): If :py:attr:`energy_data_por` and :py:attr:`energy_data_lt`
             arguments are provided, a tuple of the y-axis plotting display limits for the wind farm
             energy distribution plot (bottom plot). Defaults to (None, None).
         return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
         figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
             that are passed to `plt.figure()`. Defaults to None.
         plot_kwargs_line (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
-            `ax.plot()` for plotting lines for the wind farm efficiency and, if `energy_data_por` and
+            `ax.plot()` for plotting lines for the wind farm efficiency and, if :py:attr:`energy_data_por` and
             `energy_data_lt` arguments are provided, energy distributions subplots. Defaults to {}.
         plot_kwargs_fill (:obj:`dict`, optional): If `UQ` is True, additional plotting keyword arguments
             that are passed to `ax.fill_between()` for plotting shading regions for 95% confidence
-            intervals for the wind farm efficiency and, if `energy_data_por` and `energy_data_lt` arguments
+            intervals for the wind farm efficiency and, if :py:attr:`energy_data_por` and `energy_data_lt` arguments
             are provided, energy distributions subplots. Defaults to {}.
         legend_kwargs (:obj:`dict`, optional): Additional legend keyword arguments that are passed to
-            `ax.legend()` for the wind farm efficiency and, if `energy_data_por` and `energy_data_lt`
+            `ax.legend()` for the wind farm efficiency and, if :py:attr:`energy_data_por` and `energy_data_lt`
             arguments are provided, energy distributions subplots. Defaults to {}.
 
     Returns:
         None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes] | tuple[matplotlib.pyplot.Figure, tuple [matplotlib.pyplot.Axes, matplotlib.pyplot.Axes]]:
-            If `return_fig` is True, then the figure and axes object(s), corresponding to the wake
-            loss plot or, if `energy_data_por` and `energy_data_lt` arguments are provided, wake loss
+            If :py:attr:`return_fig` is True, then the figure and axes object(s), corresponding to the wake
+            loss plot or, if :py:attr:`energy_data_por` and :py:attr:`energy_data_lt` arguments are provided, wake loss
             and normalized energy plots, are returned for further tinkering/saving.
     """
     color_codes = ["#4477AA", "#228833"]
@@ -1358,7 +1357,7 @@ def plot_yaw_misalignment(
         vane_bins (list[float]): Wind vane angle bin values for which power performance values are
             plotted (degrees).
         power_values_vane_ws (:obj:`np.ndarray`): 2D or 3D array containing power performance data
-            for each wind speed bin in the `ws_bins` argument (first dimension if a 2D array) and
+            for each wind speed bin in the :py:attr:`ws_bins` argument (first dimension if a 2D array) and
             each wind vane bin in the `vane_bins` argument (second dimension if a 2D array). If a
             3D array is provided, the first dimension should contain results from different Monte
             Carlo iterations and 95% confidence intervals will be plotted.
@@ -1369,9 +1368,9 @@ def plot_yaw_misalignment(
             confidence intervals will be plotted. The last dimension contains the optimal curve
             fit parameters.
         mean_vane_angle_ws (:obj:`np.ndarray`): Array containing mean wind vane angles for each
-            wind speed bin in the `ws_bins` argument (degrees).
+            wind speed bin in the :py:attr:`ws_bins` argument (degrees).
         yaw_misalignment_ws (:obj:`np.ndarray`): 1D or 2D array containing yaw misalignment values
-            for each wind speed bin in the `ws_bins` argument (degrees). If a 2D array is provided,
+            for each wind speed bin in the :py:attr:`ws_bins` argument (degrees). If a 2D array is provided,
             the first dimension should contain results from different Monte Carlo iterations and
             95% confidence intervals will be plotted.
         turbine_id (str, optional): Name of turbine for which yaw misalignment data are
@@ -1384,17 +1383,17 @@ def plot_yaw_misalignment(
             for the power performance vs. wind vane plots. Defaults to (None, None).
         return_fig (:obj:`bool`, optional): Flag to return the figure and axes objects. Defaults to False.
         figure_kwargs (:obj:`dict`, optional): Additional figure instantiation keyword arguments
-            that are passed to `plt.figure()`. Defaults to None.
+            that are passed to ``plt.figure()``. Defaults to None.
         plot_kwargs_curve (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
-            `ax.plot()` for plotting lines for the power performance vs. wind vane plots. Defaults to {}.
+            ``ax.plot()`` for plotting lines for the power performance vs. wind vane plots. Defaults to {}.
         plot_kwargs_line (:obj:`dict`, optional): Additional plotting keyword arguments that are passed to
-            `ax.plot()` for plotting vertical lines indicating mean vane angle and vane angle where
+            ``ax.plot()`` for plotting vertical lines indicating mean vane angle and vane angle where
             power is maximized. Defaults to {}.
-        plot_kwargs_fill (:obj:`dict`, optional): If `UQ` is True, additional plotting keyword arguments
-            that are passed to `ax.fill_between()` for plotting shading regions for 95% confidence
+        plot_kwargs_fill (:obj:`dict`, optional): If :py:attr:`UQ` is True, additional plotting keyword arguments
+            that are passed to ``ax.fill_between()`` for plotting shading regions for 95% confidence
             intervals for power performance vs. wind vane. Defaults to {}.
         legend_kwargs (:obj:`dict`, optional): Additional legend keyword arguments that are passed to
-            `ax.legend()` for the power performance vs. wind vane plots. Defaults to {}.
+            ``ax.legend()`` for the power performance vs. wind vane plots. Defaults to {}.
 
     Returns:
         None | tuple[matplotlib.pyplot.Figure, matplotlib.pyplot.Axes]:
