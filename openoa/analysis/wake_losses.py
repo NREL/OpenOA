@@ -29,7 +29,7 @@ from sklearn.linear_model import LinearRegression
 from openoa.plant import PlantData, convert_to_list
 from openoa.utils import plot, filters
 from openoa.utils import met_data_processing as met
-from openoa.schema import FromDictMixin
+from openoa.schema import FromDictMixin, ResetValuesMixin
 from openoa.logging import logging, logged_method_call
 from openoa.analysis._analysis_validators import (
     validate_UQ_input,
@@ -44,7 +44,7 @@ plot.set_styling()
 
 
 @define(auto_attribs=True)
-class WakeLosses(FromDictMixin):
+class WakeLosses(FromDictMixin, ResetValuesMixin):
     """
     A serial implementation of a method for estimating wake losses from SCADA data. Wake losses are
     estimated for the entire wind plant as well as for each individual turbine for a) the period of
@@ -279,6 +279,28 @@ class WakeLosses(FromDictMixin):
     wake_losses_por_std: float = field(init=False)
     turbine_wake_losses_por_std: float = field(init=False)
     _run: pd.DataFrame = field(init=False)
+    run_parameters: list[str] = field(
+        init=False,
+        default=[
+            "num_sim",
+            "reanalysis_products",
+            "wd_bin_width",
+            "freestream_sector_width",
+            "freestream_power_method",
+            "freestream_wind_speed_method",
+            "correct_for_derating",
+            "derating_filter_wind_speed_start",
+            "max_power_filter",
+            "wind_bin_mad_thresh",
+            "wd_bin_width_LT_corr",
+            "ws_bin_width_LT_corr",
+            "num_years_LT",
+            "assume_no_wakes_high_ws_LT_corr",
+            "no_wakes_ws_thresh_LT_corr",
+            "min_ws_bin_lin_reg",
+            "bin_count_thresh_lin_reg",
+        ],
+    )
 
     @reanalysis_products.validator
     def check_reanalysis_products(self, attribute: attrs.Attribute, value: list[str]) -> None:
@@ -446,44 +468,66 @@ class WakeLosses(FromDictMixin):
                 wind speed bin to include when finding linear regression from SCADA freestream wind
                 speeds to reanalysis wind speeds. Defaults to 50.
         """
+        initial_parameters = {}
         # Assign default parameter values depending on whether UQ is performed
         if num_sim is not None:
+            initial_parameters["num_sim"] = num_sim
             self.num_sim = num_sim
         if reanalysis_products is not None:
+            initial_parameters["reanalysis_products"] = reanalysis_products
             self.reanalysis_products = reanalysis_products
             logger.warning(
                 f"`reanalysis_products` has been changed, be sure the `end_date_lt`"
                 f"({self.end_date_lt}) is contained in the updated reanalyis products subset."
             )
         if wd_bin_width is not None:
+            initial_parameters["wd_bin_width"] = self.wd_bin_width
             self.wd_bin_width = wd_bin_width
         if freestream_sector_width is not None:
+            initial_parameters["freestream_sector_width"] = self.freestream_sector_width
             self.freestream_sector_width = freestream_sector_width
         if freestream_power_method is not None:
+            initial_parameters["freestream_power_method"] = self.freestream_power_method
             self.freestream_power_method = freestream_power_method
         if freestream_wind_speed_method is not None:
+            initial_parameters["freestream_wind_speed_method"] = self.freestream_wind_speed_method
             self.freestream_wind_speed_method = freestream_wind_speed_method
         if correct_for_derating is not None:
+            initial_parameters["correct_for_derating"] = correct_for_derating
             self.correct_for_derating = correct_for_derating
         if derating_filter_wind_speed_start is not None:
+            initial_parameters[
+                "derating_filter_wind_speed_start"
+            ] = self.derating_filter_wind_speed_start
             self.derating_filter_wind_speed_start = derating_filter_wind_speed_start
         if max_power_filter is not None:
+            initial_parameters["max_power_filter"] = self.max_power_filter
             self.max_power_filter = max_power_filter
         if wind_bin_mad_thresh is not None:
+            initial_parameters["wind_bin_mad_thresh"] = self.wind_bin_mad_thresh
             self.wind_bin_mad_thresh = wind_bin_mad_thresh
         if wd_bin_width_LT_corr is not None:
+            initial_parameters["wd_bin_width_LT_corr"] = self.wd_bin_width_LT_corr
             self.wd_bin_width_LT_corr = wd_bin_width_LT_corr
         if ws_bin_width_LT_corr is not None:
+            initial_parameters["ws_bin_width_LT_corr"] = self.ws_bin_width_LT_corr
             self.ws_bin_width_LT_corr = ws_bin_width_LT_corr
         if num_years_LT is not None:
+            initial_parameters["num_years_LT"] = self.num_years_LT
             self.num_years_LT = num_years_LT
         if assume_no_wakes_high_ws_LT_corr is not None:
+            initial_parameters[
+                "assume_no_wakes_high_ws_LT_corr"
+            ] = self.assume_no_wakes_high_ws_LT_corr
             self.assume_no_wakes_high_ws_LT_corr = assume_no_wakes_high_ws_LT_corr
         if no_wakes_ws_thresh_LT_corr is not None:
+            initial_parameters["no_wakes_ws_thresh_LT_corr"] = self.no_wakes_ws_thresh_LT_corr
             self.no_wakes_ws_thresh_LT_corr = no_wakes_ws_thresh_LT_corr
         if min_ws_bin_lin_reg is not None:
+            initial_parameters["min_ws_bin_lin_reg"] = self.min_ws_bin_lin_reg
             self.min_ws_bin_lin_reg = min_ws_bin_lin_reg
         if bin_count_thresh_lin_reg is not None:
+            initial_parameters["bin_count_thresh_lin_reg"] = self.bin_count_thresh_lin_reg
             self.bin_count_thresh_lin_reg = bin_count_thresh_lin_reg
 
         # Set up Monte Carlo simulation inputs if UQ = True or single simulation inputs if UQ = False.
@@ -835,6 +879,8 @@ class WakeLosses(FromDictMixin):
             self.turbine_wake_losses_lt_std = np.std(self.turbine_wake_losses_lt, axis=0)
             self.wake_losses_por_std = np.std(self.wake_losses_por)
             self.turbine_wake_losses_por_std = np.std(self.turbine_wake_losses_por, axis=0)
+
+        self.set_values(initial_parameters)
 
     @logged_method_call
     def _setup_monte_carlo_inputs(self):

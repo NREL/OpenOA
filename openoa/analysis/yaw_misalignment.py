@@ -35,7 +35,7 @@ from scipy.optimize import curve_fit
 
 from openoa.plant import PlantData
 from openoa.utils import plot, filters
-from openoa.schema import FromDictMixin
+from openoa.schema import FromDictMixin, ResetValuesMixin
 from openoa.logging import logging, logged_method_call
 from openoa.analysis._analysis_validators import validate_UQ_input, validate_half_closed_0_1_right
 
@@ -61,7 +61,7 @@ def cos_curve(x, A, Offset, cos_exp):
 
 
 @define(auto_attribs=True)
-class StaticYawMisalignment(FromDictMixin):
+class StaticYawMisalignment(FromDictMixin, ResetValuesMixin):
     """
     A method for estimating static yaw misalignment for different wind speed bins for each specified
     wind turbine as well as the average static yaw misalignment over all wind speed bins using
@@ -186,6 +186,23 @@ class StaticYawMisalignment(FromDictMixin):
     _df_turb: pd.DataFrame = field(init=False)
     _df_turb_ws: pd.DataFrame = field(init=False)
     _curve_fit_params_ws: NDArrayFloat = field(init=False)
+    run_parameters: list[str] = field(
+        init=False,
+        default=[
+            "num_sim",
+            "ws_bins",
+            "ws_bin_width",
+            "vane_bin_width",
+            "min_vane_bin_count",
+            "max_abs_vane_angle",
+            "pitch_thresh",
+            "num_power_bins",
+            "min_power_filter",
+            "max_power_filter",
+            "power_bin_mad_thresh",
+            "use_power_coeff",
+        ],
+    )
 
     @logged_method_call
     def __attrs_post_init__(self):
@@ -272,30 +289,42 @@ class StaticYawMisalignment(FromDictMixin):
                 angle will be quantified by normalizing power by the cube of the wind speed,
                 approximating the power coefficient. If False, only power will be used. Defaults to False.
         """
-
+        initial_parameters = {}
         if num_sim is not None:
+            initial_parameters["num_sim"] = self.num_sim
             self.num_sim = num_sim
         if ws_bins is not None:
+            initial_parameters["ws_bins"] = self.ws_bins
             self.ws_bins = ws_bins
         if ws_bin_width is not None:
+            initial_parameters["ws_bin_width"] = self.ws_bin_width
             self.ws_bin_width = ws_bin_width
         if vane_bin_width is not None:
+            initial_parameters["vane_bin_width"] = self.vane_bin_width
             self.vane_bin_width = vane_bin_width
         if min_vane_bin_count is not None:
+            initial_parameters["min_vane_bin_count"] = self.min_vane_bin_count
             self.min_vane_bin_count = min_vane_bin_count
         if max_abs_vane_angle is not None:
+            initial_parameters["max_abs_vane_angle"] = self.max_abs_vane_angle
             self.max_abs_vane_angle = max_abs_vane_angle
         if pitch_thresh is not None:
+            initial_parameters["pitch_thresh"] = self.pitch_thresh
             self.pitch_thresh = pitch_thresh
         if num_power_bins is not None:
+            initial_parameters["num_power_bins"] = self.num_power_bins
             self.num_power_bins = num_power_bins
         if min_power_filter is not None:
+            initial_parameters["min_power_filter"] = self.min_power_filter
             self.min_power_filter = min_power_filter
         if use_power_coeff is not None:
+            initial_parameters["use_power_coeff"] = self.use_power_coeff
             self.use_power_coeff = use_power_coeff
         if max_power_filter is not None:
+            initial_parameters["max_power_filter"] = self.max_power_filter
             self.max_power_filter = max_power_filter
         if power_bin_mad_thresh is not None:
+            initial_parameters["power_bin_mad_thresh"] = self.power_bin_mad_thresh
             self.power_bin_mad_thresh = power_bin_mad_thresh
         # determine wind vane angle bins
         max_abs_vane_angle_trunc = self.vane_bin_width * np.floor(
@@ -371,6 +400,8 @@ class StaticYawMisalignment(FromDictMixin):
             self.yaw_misalignment_95ci_ws = np.percentile(
                 self.yaw_misalignment_ws, [2.5, 97.5], 0
             ).transpose((1, 2, 0))
+
+        self.set_values(initial_parameters)
 
     @logged_method_call
     def _setup_monte_carlo_inputs(self):

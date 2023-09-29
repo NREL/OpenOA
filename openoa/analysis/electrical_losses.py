@@ -18,7 +18,7 @@ from attrs import field, define
 
 import openoa.utils.timeseries as ts
 from openoa.plant import PlantData
-from openoa.schema import FromDictMixin
+from openoa.schema import FromDictMixin, ResetValuesMixin
 from openoa.logging import logging, logged_method_call
 from openoa.utils.plot import set_styling
 from openoa.analysis._analysis_validators import validate_UQ_input, validate_half_closed_0_1_right
@@ -34,7 +34,7 @@ HOURS_PER_DAY = 24
 
 
 @define(auto_attribs=True)
-class ElectricalLosses(FromDictMixin):
+class ElectricalLosses(FromDictMixin, ResetValuesMixin):
     """
     A serial implementation of calculating the average monthly and annual electrical losses at a
     wind power plant, and the associated uncertainty. Energy output from the turbine SCADA meter and
@@ -92,6 +92,16 @@ class ElectricalLosses(FromDictMixin):
     combined_energy: pd.DataFrame = field(init=False)
     total_turbine_energy: pd.DataFrame = field(init=False)
     total_meter_energy: pd.DataFrame = field(init=False)
+    run_parameters: list[str] = field(
+        init=False,
+        default=[
+            "UQ",
+            "num_sim",
+            "uncertainty_meter",
+            "uncertainty_scada",
+            "uncertainty_correction_threshold",
+        ],
+    )
 
     @logged_method_call
     def __attrs_post_init__(self):
@@ -144,23 +154,33 @@ class ElectricalLosses(FromDictMixin):
                 then a 2-element tuple containing an upper and lower bound for a randomly selected value
                 should be given, otherwise, a scalar value should be provided.
         """
+        initial_parameters = {}
         if num_sim is not None:
             if self.UQ:
+                initial_parameters["num_sim"] = self.num_sim
                 self.num_sim = num_sim
             elif num_sim > 1:
                 logger.info(
                     "`num_sim` can NOT be greater than 1 when `UQ=False`, value has not been set."
                 )
         if uncertainty_meter is not None:
+            initial_parameters["uncertainty_meter"] = self.uncertainty_meter
             self.uncertainty_meter = uncertainty_meter
         if uncertainty_scada is not None:
+            initial_parameters["uncertainty_scada"] = self.uncertainty_scada
             self.uncertainty_scada = uncertainty_scada
         if uncertainty_correction_threshold is not None:
+            initial_parameters[
+                "uncertainty_correction_threshold"
+            ] = self.uncertainty_correction_threshold
             self.uncertainty_correction_threshold = uncertainty_correction_threshold
 
         # Setup Monte Carlo approach, and calculate the electrical losses
         self.setup_inputs()
         self.calculate_electrical_losses()
+
+        # Reset the class arguments back to the initialized values
+        self.set_values(initial_parameters)
 
     @logged_method_call
     def setup_inputs(self):

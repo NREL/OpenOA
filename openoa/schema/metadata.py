@@ -259,6 +259,52 @@ class FromDictMixin:
         return cls(**kwargs)  # type: ignore
 
 
+@define(auto_attribs=True)
+class ResetValuesMixin:
+    """
+    A MixinClass that provides the methods to reset initialized or default values for analysis
+    parameters.
+    """
+
+    @logged_method_call
+    def set_values(self, value_dict: dict):
+        """Resets the parameters to the values provided in :py:attr:`value_dict`.
+
+        Args:
+            value_dict (dict): The parameter names (keys) and their values (values) as a dictionary.
+        """
+        for name, value in value_dict.items():
+            logger.debug(f"{name} being set back to {value}")
+            object.__setattr__(self, name, value)
+
+    @logged_method_call
+    def reset_defaults(self, which: str | list[str] | tuple[str] | None = None):
+        """Reset all or a subset of the analysis parameters back to their defaults.
+
+        Args:
+            which (str | list[str] | tuple[str] | None): The parameter(s) to reset back to their
+                defaults. If None, then all run parameters are reset. Defaults to None.
+
+        Raises:
+            ValueError: Raised if any of :py:attr:`which` are not included in ``self.run_parameters``.
+        """
+        logger.info("Resetting run parameters back to the class defaults")
+        # Define the analysis class run parameters
+        valid = self.run_parameters
+
+        # If None, set to all run parameterizations
+        if which is None:
+            which = valid
+
+        # Check that all values of which are valid
+        if invalid := set(which).difference(valid):
+            raise ValueError(f"Invalid arguments provided to reset_defaults: {invalid}")
+
+        # Reset the selected values back to their defaults
+        reset_dict = {a.name: a.default for a in attrs.fields(self) if a.name in which}
+        self.set_values(reset_dict)
+
+
 def _make_single_repr(name: str, meta_class) -> str:
     summary = pd.concat(
         [

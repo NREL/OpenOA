@@ -22,7 +22,7 @@ from openoa.utils import plot, filters
 from openoa.utils import timeseries as tm
 from openoa.utils import unit_conversion as un
 from openoa.utils import met_data_processing as mt
-from openoa.schema import FromDictMixin
+from openoa.schema import FromDictMixin, ResetValuesMixin
 from openoa.logging import logging, logged_method_call
 from openoa.utils.machine_learning_setup import MachineLearningSetup
 from openoa.analysis._analysis_validators import validate_reanalysis_selections
@@ -61,7 +61,7 @@ def get_annual_values(data):
 # TODO: Split this into a more generic naming convention to have other AEP methods, such as QMC
 # TODO: Create an analysis result class that could be used for better results aggregation
 @define(auto_attribs=True)
-class MonteCarloAEP(FromDictMixin):
+class MonteCarloAEP(FromDictMixin, ResetValuesMixin):
     """
     A serial (Pandas-driven) implementation of the benchmark PRUF operational
     analysis implementation. This module collects standard processing and
@@ -192,6 +192,24 @@ class MonteCarloAEP(FromDictMixin):
     _mc_slope: NDArrayFloat = field(init=False)
     _run: pd.DataFrame = field(init=False)
     results: pd.DataFrame = field(init=False)
+    run_parameters: list[str] = field(
+        init=False,
+        default=[
+            "num_sim",
+            "reg_model",
+            "reanalysis_products",
+            "uncertainty_meter",
+            "uncertainty_losses",
+            "uncertainty_windiness",
+            "uncertainty_loss_max",
+            "outlier_detection",
+            "uncertainty_outlier",
+            "uncertainty_nan_energy",
+            "time_resolution",
+            "end_date_lt",
+            "ml_setup_kwargs",
+        ],
+    )
 
     @logged_method_call
     def __attrs_post_init__(self):
@@ -304,29 +322,42 @@ class MonteCarloAEP(FromDictMixin):
             None
         """
         self.num_sim = num_sim
+        initial_parameters = {}
         if reanalysis_products is not None:
+            initial_parameters["reanalysis_products"] = self.reanalysis_products
             self.reanalysis_products = reanalysis_products
         if reg_model is not None:
+            initial_parameters["reg_model"] = self.reg_model
             self.reg_model = reg_model
         if uncertainty_meter is not None:
+            initial_parameters["uncertainty_meter"] = self.uncertainty_meter
             self.uncertainty_meter = uncertainty_meter
         if uncertainty_losses is not None:
+            initial_parameters["uncertainty_losses"] = self.uncertainty_losses
             self.uncertainty_losses = uncertainty_losses
         if uncertainty_windiness is not None:
+            initial_parameters["uncertainty_windiness"] = self.uncertainty_windiness
             self.uncertainty_windiness = uncertainty_windiness
         if uncertainty_loss_max is not None:
+            initial_parameters["uncertainty_loss_max"] = self.uncertainty_loss_max
             self.uncertainty_loss_max = uncertainty_loss_max
         if outlier_detection is not None:
+            initial_parameters["outlier_detection"] = self.outlier_detection
             self.outlier_detection = outlier_detection
         if uncertainty_outlier is not None:
+            initial_parameters["uncertainty_outlier"] = self.uncertainty_outlier
             self.uncertainty_outlier = uncertainty_outlier
         if uncertainty_nan_energy is not None:
+            initial_parameters["uncertainty_nan_energy"] = self.uncertainty_nan_energy
             self.uncertainty_nan_energy = uncertainty_nan_energy
         if time_resolution is not None:
+            initial_parameters["time_resolution"] = self.time_resolution
             self.time_resolution = time_resolution
         if end_date_lt is not None:
+            initial_parameters["end_date_lt"] = self.end_date_lt
             self.end_date_lt = end_date_lt
         if ml_setup_kwargs is not None:
+            initial_parameters["ml_setup_kwargs"] = self.ml_setup_kwargs
             self.ml_setup_kwargs = ml_setup_kwargs
 
         # Write parameters of run to the log file
@@ -348,6 +379,9 @@ class MonteCarloAEP(FromDictMixin):
 
         # Log the completion of the run
         logger.info("Run completed")
+
+        # Reset the class arguments back to the initialized values
+        self.set_values(initial_parameters)
 
     @logged_method_call
     def groupby_time_res(self, df):

@@ -24,7 +24,7 @@ from openoa.plant import PlantData, convert_to_list
 from openoa.utils import plot, filters, imputing
 from openoa.utils import timeseries as ts
 from openoa.utils import met_data_processing as met
-from openoa.schema import FromDictMixin
+from openoa.schema import FromDictMixin, ResetValuesMixin
 from openoa.logging import logging, logged_method_call
 from openoa.utils.power_curve import functions
 from openoa.analysis._analysis_validators import (
@@ -44,7 +44,7 @@ HOURS_PER_DAY = 24
 
 
 @define(auto_attribs=True)
-class TurbineLongTermGrossEnergy(FromDictMixin):
+class TurbineLongTermGrossEnergy(FromDictMixin, ResetValuesMixin):
     """
     Calculates long-term gross energy for each turbine in a wind farm using methods implemented in
     the utils subpackage for data processing and analysis.
@@ -138,6 +138,17 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
     turb_lt_gross: pd.DataFrame = field(default=pd.DataFrame(), init=False)
     summary_results: pd.DataFrame = field(init=False)
     plant_gross: dict[int, pd.DataFrame] = field(factory=dict, init=False)
+    run_parameters: list[str] = field(
+        init=False,
+        default=[
+            "num_sim",
+            "reanalysis_products",
+            "uncertainty_scada",
+            "wind_bin_threshold",
+            "max_power_filter",
+            "correction_threshold",
+        ],
+    )
 
     @logged_method_call
     def __attrs_post_init__(self):
@@ -209,6 +220,7 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
                 tuple of the lower and upper limits of this threshold, otherwise a single value should
                 be used. Defaults to (0.85, 0.95)
         """
+        initial_parameters = {}
         if num_sim is not None:
             if self.UQ:
                 self.num_sim = num_sim
@@ -217,14 +229,19 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
                     "`num_sim` can NOT be greater than 1 when `UQ=False`, value has not been set."
                 )
         if reanalysis_products is not None:
+            initial_parameters["reanalysis_products"] = self.reanalysis_products
             self.reanalysis_products = reanalysis_products
         if uncertainty_scada is not None:
+            initial_parameters["uncertainty_scada"] = self.uncertainty_scada
             self.uncertainty_scada = uncertainty_scada
         if wind_bin_threshold is not None:
+            initial_parameters["wind_bin_threshold"] = self.wind_bin_threshold
             self.wind_bin_threshold = wind_bin_threshold
         if max_power_filter is not None:
+            initial_parameters["max_power_filter"] = self.max_power_filter
             self.max_power_filter = max_power_filter
         if correction_threshold is not None:
+            initial_parameters["correction_threshold"] = self.correction_threshold
             self.correction_threshold = correction_threshold
 
         self.setup_inputs()
@@ -243,6 +260,9 @@ class TurbineLongTermGrossEnergy(FromDictMixin):
 
         # Log the completion of the run
         logger.info("Run completed")
+
+        # Reset the class arguments back to the initialized values
+        self.set_values(initial_parameters)
 
     def setup_inputs(self) -> None:
         """
