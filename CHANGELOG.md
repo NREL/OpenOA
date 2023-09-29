@@ -1,46 +1,62 @@
 # Changelog
 All notable changes to this project will be documented in this file. If you make a notable change to the project, please add a line describing the change to the "unreleased" section. The maintainers will make an effort to keep the [Github Releases](https://github.com/NREL/OpenOA/releases) page up to date with this changelog. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## Unreleased
+## v3.0 - 29 September 2023
+
+Please see the [updated documentation](https://openoa.readthedocs.io/en/latest/index.html) for a complete overview of the new and improved OpenOA. Much will look familiar, but using the library should now be much more streamlined, and usage should be significantly faster.
+
+### Features
+
+#### PlantData and PlantMetaData
+
+- `from openoa import PlantData`
+- The `PlantData` class has been entirely reorganized around attrs dataclasses and direct use of Pandas data frames. For more details on usage, please check the [examples page of the documentation](https://openoa.readthedocs.io/en/latest/examples/index.html) or the [updated API documentation](https://openoa.readthedocs.io/en/latest/api/schema.html) for details.
+- `PlantData` now validates user data based on the data schema provided by the user through the `PlantMetaData` object. See the links above for details and usage, which means no more need to subclass `PlantData` and write a custom `prepare` method. Now users simply define their data schema, and `PlantData` is able to do all of the work and validate the data.
+- IEC 61400-25 tag names are now used throughout the code base for column naming/calling conventions
+- The package name is changed from `operational_analysis` to `openoa` to be more consistent with how we expect to import OpenOA!
+- Common methods are now readily available through `PlantData`, such as `PlantData.turbine_ids`, `PlantData.tower_ids`, `PlantData.turbine_df("turb_id")`, or `PlantData.tower_df("tower_id")`
+- Better `__repr__` methods for `PlantData` and `PlantMetaData`.
+  - Improved `__repr__` methods that can detect Jupyter Notebooks or terminal usage to print as a string or as markdowns.
+  - Printing a `PlantData` object now provides a high level statistical summary of each of the
+    datasets in `PlantData`, alongside other key variables.
+  - Printing a `PlantMetaData` object now shows the default or provided column mapping with the
+    associated expected dtypes and units, alongside other key variables.
+  - Creating a class will take all of the same parameters, moving all data validation parameters to the front of the arguments for each class, so check your class initializations when changing versions.
+  - `AnalysisClass.run()` now takes all of the same arguments as the class initialization, except for those that modify what data will be validated. For example, `MonteCarloAEP` has arguments `reg_temperature` and `reg_wind_direction`, which flag if additional columns should be present in the reanalysis data, therefore modifying the data validation requirements. As such, they will not be able to updated in `run()`, and a new analysis class instance will need to be created.
+  - `reanalysis_subset` is being replaced with `reanalysis_products` in all cases to use a consistent naming convention across classes.
+- Analysis requirements and minimum schema have been provided in the `openoa/schema` library. To review a dictionary of the minimal data requirements for an anaylsis, users may view the `ANALYSIS_REQUIREMENTS` found in `openoa/schema/metadata.py`, or be importing it and viewing as a dictionary `from openoa.schema.metadata import ANALYSIS_REQUIREMENTS`. Alternatively there is a simple landing page for analysis-specific schema files available in the [schema readme](openoa/schema/README.md)
+
+#### Analysis Classes
+
+- `from openoa.analysis import MonteCarloAEP`
 - A static yaw misalignment analysis class `StaticYawMisalignment` has been added to estimate static yaw misalignment as a function of wind speed for individual wind turbines using turbine-level SCADA data
-  - The new `07_static_yaw_misalignment` example notebook demonstrates the application of the yaw misalignment method using the example La Haute Borne data
-- Added downloader utils module containing functions for downloading generic files from the web, downloading files from Zenodo, and downloading monthly-resolution ERA5 and MERRA2 data
-- Added example notebook "02c_plant_aep_analysis_cubico.ipynb" that demonstrates creating a `PlantData` object and running AEP analysis for two Cubico wind plants (Kelmarsh and Penmanshiel) using open data downloaded from Zenodo
+- A new `WakeLosses` analysis class has been added to estimate wake losses utilizing either turbine-level or met-tower level wind conditions.
 - Hard-coded reanalyis product abbreviation requirements in the analysis classes have been moved to check that the provided abbreviations match the reanalysis abbreviations used for the `PlantData.reanalysis` dictionary keys.
+- A deep copy of the original `PlantData` object is now stored in the analysis class so that the project data is stable between uses, allowing more flexibility for users running a variety of analyses.
 - Analysis classes are now attached to `PlantData` at the time of import, maintaining the same behavior as a standalone analysis class import. For example, the following two import patters produce the same results
   ```python
   from openoa import PlantData
   from openoa.analysis import WakeLosses
 
-  project = PlantData(<kwargs>)
+  kwargs = {
+    metadata="path_to_metadata",
+    scada="scada data or path to CSV file",
+    meter="meter data or path to CSV file",
+    tower="tower data or path to CSV file",
+    asset="asset data or path to CSV file",
+    reanalysis={"product_key": "data or path to CSV file"},
+    status="status data or path to file",
+    }
+  project = PlantData.from_dict(kwargs)
 
-  # Original pattern
+  # Original pattern, that is still in operation
   wake_classic = WakeLosses(project)
 
   # New, equivalent pattern
   wake_new = project.WakeLosses()
   ```
-
-- Modern dependency stacks now supported!
-  - Upgrading past major versions of Scikit-Learn (1.0) and Pandas (2.0), in conjunction with their own dependencies, caused small divergences in the MonteCarloAEP analysis method with Daily GBM, and the Wake Losses analysis method with UQ. The magnitude of the differences are small compared with the magnitude of the output.
-  - In general, OpenOA is now moving away from pinning the maximum dependency version, and will stick to defining minimum dependencies to ensure modern API usage is supported across the software.
-- Updated documentation for users and contributors in the Getting Started section.
-- `utils.filters.bin_filter` was converted from a for loop to a vectorized method
-- `utils.filters.bin_filter` and `utils.timeseries.percent_nan` were converted to be nearly pure NumPy methods operating on NumPy arrays for significant speedups of the TIE analysis method.
-- `analysis.TurbineLongTermGrossEnergy.filter_turbine_data` was cleaned up for a minor gain in efficiency and readability.
-- Analysis class API redesign
-  - Analysis classes can be created from a `PlantData` object, like the following:
-
-    ```python
-    from openoa import PlantData
-
-    project = PlantData("""your kwargs""")
-    aep = project.MonteCarloAEP("""your analysis settings""")
-    ```
-
-  - A deep copy of the original `PlantData` object is now stored in the analysis class so that the project data is stable between uses, allowing more flexibility for users running a variety of analyses.
-  - All analysis inputs are able to be provided at the initialization or run level, allowing more flexibility for when analyses are designed and modified. Additionally, the analysis defaults are set at initialization, so settings are only changed between runs if the users specifies a change.
-  - The only settings that cannot be modified in an analysis run are those that change the underlying data settings, which will now require a new analysis method. See the following example:
+- All analysis inputs are able to be provided at the initialization or run level, allowing more flexibility for when analyses are designed and modified. Additionally, the analysis defaults are set at initialization, so settings are only changed between runs if the users specifies a change.
+- The only settings that cannot be modified in an analysis run are those that change the underlying data settings, which will now require a new analysis method. See the following example:
 
   ```python
   from openoa import PlantData
@@ -62,17 +78,29 @@ All notable changes to this project will be documented in this file. If you make
   # Compare your results
   ...
   ```
+- `TurbineLongTermGrossEnergy.filter_turbine_data` was cleaned up for a minor gain in efficiency and readability.
 
-  - Analysis requirements and minimum schema have been provided in the `openoa/schema` library. To review a dictionary of the minimal data requirements for an anaylsis, users may view the `ANALYSIS_REQUIREMENTS` found in `openoa/schema/metadata.py`, or be importing it and viewing as a dictionary `from openoa.schema.metadata import ANALYSIS_REQUIREMENTS`. Alternatively there is a simple landing page for analysis-specific schema files available in the [schema readme](openoa/schema/README.md)
+#### Utils (formerly `tools`)
 
-- Better `__repr__` methods for `PlantData` and `PlantMetaData`.
-  - Printing a `PlantData` object now provides a high level statistical summary of each of the
-    datasets in `PlantData`, alongside other key variables.
-  - Printing a `PlantMetaData` object now shows the default or provided column mapping with the
-    associated expected dtypes and units, alongside other key variables.
-  - Creating a class will take all of the same parameters, moving all data validation parameters to the front of the arguments for each class, so check your class initializations when changing versions.
-  - `AnalysisClass.run()` now takes all of the same arguments as the class initialization, except for those that modify what data will be validated. For example, `MonteCarloAEP` has arguments `reg_temperature` and `reg_wind_direction`, which flag if additional columns should be present in the reanalysis data, therefore modifying the data validation requirements. As such, they will not be able to updated in `run()`, and a new analysis class instance will need to be created.
-  - `reanalysis_subset` is being replaced with `reanalysis_products` in all cases to use a consistent naming convention across classes.
+- `tools` has been renamed to `utils`
+- `pandas_plotting` has been renamed to `plot`, and a new, more customizable plotting API has been implemented allowing for publication-quality figures to be generated with ease.
+- Added downloader utils module containing functions for downloading generic files from the web, downloading files from Zenodo, and downloading monthly-resolution ERA5 and MERRA2 data.
+- Nearly all methods can operate on a Pandas DataFrame with provided column names, or pandas Series for the parameters, and return back the data in the same manner.
+- Massive spedups across the board by using the most efficient Pandas and/or NumPy code under the hood to power the same methods with a more polished and robust interface.
+
+### Documentation
+
+- Updated documentation for users and contributors in the Getting Started section.
+- New and improved [contributing guide](https://openoa.readthedocs.io/en/latest/getting_started/contributing.html).
+- All notebooks have been updated to use our new API and demonstrate its usage.
+- New notebooks dedicated solely to introducing new concepts.
+- Added example notebook "02c_plant_aep_analysis_cubico.ipynb" that demonstrates creating a `PlantData` object and running AEP analysis for two Cubico wind plants (Kelmarsh and Penmanshiel) using open data downloaded from Zenodo
+- The new `06_wake_loss_analysis` example notebook highlights the new `WakeLosses` analysis class using the La Haute Borne data.
+- The new `07_static_yaw_misalignment` example notebook demonstrates the application of the yaw misalignment method using the example La Haute Borne data
+
+### General Improvements
+- Upgrading past major versions of Scikit-Learn (1.0) and Pandas (2.0), in conjunction with their own dependencies, caused small divergences in the MonteCarloAEP analysis method with Daily GBM, and the Wake Losses analysis method with UQ. The magnitude of the differences are small compared with the magnitude of the output.
+- In general, OpenOA is now moving away from pinning the maximum dependency version, and will stick to defining minimum dependencies to ensure modern API usage is supported across the software.
 
 ### Deprecations
 
