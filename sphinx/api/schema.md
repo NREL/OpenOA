@@ -14,7 +14,7 @@ of the available constructors.
 
 A quick reference for the required data for any analysis type or generally the types and units
 of the data that {py:class}`openoa.plant.PlantData` expects can be found in the repository at
-[OpeOA/openoa/schema/](https://github.com/NREL/OpenOA/tree/develop_v3/openoa/schema) in any of the
+[OpenOA/openoa/schema/](https://github.com/NREL/OpenOA/tree/main/openoa/schema) in any of the
 JSON or YAML files, with the README giving a brief overview of each.
 
 Additionally, {py:class}`PlantData` requires a metadata specification, as provided
