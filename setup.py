@@ -25,7 +25,6 @@ REQUIRED = [
     "bokeh>=2.4",
     "attrs>=22.2",
     "pytz",
-    "h5pyd",
     "pyyaml",
     "tabulate",
     "ipython",
@@ -54,7 +53,7 @@ EXTRAS = {
     ],
     "examples": ["jupyterlab"],
     "nrel-wind": ["h5pyd"],
-    "renalysis": [
+    "reanalysis": [
         "cdsapi",
         "xarray",
         "netcdf4",
