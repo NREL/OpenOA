@@ -55,7 +55,7 @@ EXTRAS = {
     "nrel-wind": ["h5pyd"],
     "reanalysis": [
         "cdsapi",
-        "xarray",
+        "xarray[parallel]",  # Dask required for loading data
         "netcdf4",
     ],
 }
