@@ -23,18 +23,12 @@ REQUIRED = [
     "tqdm>=4.28.1",
     "matplotlib>=3.6",
     "bokeh>=2.4",
-    "attrs>=22",
+    "attrs>=22.2",
     "pytz",
     "h5pyd",
     "pyyaml",
-    "pyspark",
     "tabulate",
-    "statsmodels",
-    "jupyterlab",
-    "xarray",
-    "dask",
-    "netcdf4",
-    "cdsapi",
+    "ipython",
 ]
 
 # Testing-only dependencies
@@ -57,6 +51,13 @@ EXTRAS = {
         "isort",
         "flake8",
         "flake8-docstrings",
+    ],
+    "examples": ["jupyterlab"],
+    "nrel-wind": ["h5pyd"],
+    "renalysis": [
+        "cdsapi",
+        "xarray",
+        "netcdf4",
     ],
 }
 EXTRAS["develop"] += TESTS
