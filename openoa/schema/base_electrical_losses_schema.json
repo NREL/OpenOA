@@ -1,0 +1,47 @@
+{
+  "meter": {
+    "MMTR_SupWh": {
+      "dtype": "float",
+      "name": "MMTR_SupWh",
+      "units": "kWh"
+    },
+    "frequency": [
+      "us",
+      "ms",
+      "MS",
+      "U",
+      "D",
+      "L",
+      "min",
+      "W",
+      "S",
+      "H",
+      "N",
+      "T"
+    ]
+  },
+  "scada": {
+    "WTUR_W": {
+      "dtype": "float",
+      "name": "WTUR_W",
+      "units": "kW"
+    },
+    "asset_id": {
+      "dtype": "str",
+      "name": "asset_id",
+      "units": null
+    },
+    "frequency": [
+      "us",
+      "ms",
+      "U",
+      "D",
+      "L",
+      "min",
+      "S",
+      "H",
+      "N",
+      "T"
+    ]
+  }
+}

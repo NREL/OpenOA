@@ -1,0 +1,38 @@
+scada:
+  asset_id:
+    name: asset_id
+    dtype: str
+    units: null
+  WTUR_W:
+    name: WTUR_W
+    dtype: float
+    units: kW
+  frequency:
+  - us
+  - ms
+  - U
+  - D
+  - L
+  - min
+  - S
+  - H
+  - N
+  - T
+meter:
+  MMTR_SupWh:
+    name: MMTR_SupWh
+    dtype: float
+    units: kWh
+  frequency:
+  - us
+  - ms
+  - MS
+  - U
+  - D
+  - L
+  - min
+  - W
+  - S
+  - H
+  - N
+  - T

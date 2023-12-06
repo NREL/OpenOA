@@ -1,0 +1,8 @@
+.bd-content {
+    flex-grow: 1;
+    max-width: 100%;
+  }
+
+html div.rendered_html table {
+  table-layout: auto;
+}

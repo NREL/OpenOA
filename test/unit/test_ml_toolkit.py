@@ -7,7 +7,7 @@ from numpy import testing as nptest
 from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import KFold
 
-from operational_analysis.toolkits.machine_learning_setup import MachineLearningSetup
+from openoa.utils.machine_learning_setup import MachineLearningSetup
 
 
 class TestMLToolkit(unittest.TestCase):

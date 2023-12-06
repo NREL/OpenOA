@@ -1,0 +1,75 @@
+{
+  "curtail": {
+    "IAVL_DnWh": {
+      "dtype": "float",
+      "name": "IAVL_DnWh",
+      "units": "kWh"
+    },
+    "IAVL_ExtPwrDnWh": {
+      "dtype": "float",
+      "name": "IAVL_ExtPwrDnWh",
+      "units": "kWh"
+    },
+    "frequency": [
+      "us",
+      "ms",
+      "MS",
+      "U",
+      "D",
+      "L",
+      "min",
+      "W",
+      "S",
+      "H",
+      "N",
+      "T"
+    ]
+  },
+  "meter": {
+    "MMTR_SupWh": {
+      "dtype": "float",
+      "name": "MMTR_SupWh",
+      "units": "kWh"
+    },
+    "frequency": [
+      "us",
+      "ms",
+      "MS",
+      "U",
+      "D",
+      "L",
+      "min",
+      "W",
+      "S",
+      "H",
+      "N",
+      "T"
+    ]
+  },
+  "reanalysis": {
+    "WMETR_AirDen": {
+      "dtype": "float",
+      "name": "WMETR_AirDen",
+      "units": "kg/m^3"
+    },
+    "WMETR_HorWdSpd": {
+      "dtype": "float",
+      "name": "WMETR_HorWdSpd",
+      "units": "m/s"
+    },
+    "frequency": [
+      "us",
+      "ms",
+      "MS",
+      "U",
+      "D",
+      "L",
+      "min",
+      "W",
+      "S",
+      "H",
+      "N",
+      "T"
+    ]
+  }
+}

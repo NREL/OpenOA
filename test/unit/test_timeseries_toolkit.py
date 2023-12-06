@@ -6,7 +6,7 @@ import pandas as pd
 from pytz import timezone
 from numpy import testing as nptest
 
-from operational_analysis.toolkits import timeseries
+from openoa.utils import timeseries
 
 
 class SimpleTimeseriesTests(unittest.TestCase):
@@ -18,10 +18,14 @@ class SimpleTimeseriesTests(unittest.TestCase):
         self.day_of_data = pd.Series(
             pd.date_range(start="1/1/2018 00:00:00", end="1/1/2018 23:59:59", freq="10min")
         )
-        self.two_days_of_data = self.day_of_data.append(
-            pd.Series(
-                pd.date_range(start="2/1/2018 00:00:00", end="2/1/2018 23:59:59", freq="10min")
-            )
+        self.two_days_of_data = pd.concat(
+            [
+                self.day_of_data,
+                pd.Series(
+                    pd.date_range(start="2/1/2018 00:00:00", end="2/1/2018 23:59:59", freq="10min")
+                ),
+            ],
+            axis=0,
         )
 
     def test_convert_local_to_utc(self):
@@ -71,12 +75,12 @@ class SimpleTimeseriesTests(unittest.TestCase):
         # Manually set one row to another and detect it
         day_of_data = self.day_of_data.copy()
         day_of_data[1] = day_of_data[2]
-        dupes = timeseries.find_duplicate_times(day_of_data, "10min")
+        dupes = timeseries.find_duplicate_times(day_of_data)
         self.assertEqual(dupes.size, 1, "T1: Detect one duplicated row")
 
         # Input series of length zero
         day_of_data = pd.Series(dtype=np.float64)
-        dupes = timeseries.find_duplicate_times(day_of_data, "10min")
+        dupes = timeseries.find_duplicate_times(day_of_data)
         self.assertEqual(dupes.size, 0, "T2: Empty series should have zero duplicates")
 
     def test_gap_fill_data_frame(self):
@@ -107,41 +111,43 @@ class SimpleTimeseriesTests(unittest.TestCase):
 
     def test_num_days(self):
         # Test 1 day of data
-        day_of_data = pd.DataFrame(index=self.day_of_data)
-        num = timeseries.num_days(day_of_data)
+        day_of_data = pd.DataFrame(index=self.day_of_data, columns=["dt_col"])
+        num = timeseries.num_days("dt_col", data=day_of_data)
         self.assertEqual(num, 1, "One day of data...")
 
         # Test 0 days of data
-        empty_data = pd.DataFrame(index=pd.DatetimeIndex([]))
-        num = timeseries.num_days(empty_data)
+        empty_data = pd.DataFrame(index=pd.DatetimeIndex([]), columns=["dt_col"])
+        num = timeseries.num_days("dt_col", data=empty_data)
         self.assertEqual(num, 0, "Zero days of data...")
 
         # Test 2 days of data separated by a month gap
-        two_days = pd.DataFrame(index=self.two_days_of_data)
+        two_days = pd.Series(index=self.two_days_of_data, data=self.two_days_of_data.values)
         num = timeseries.num_days(two_days)
         self.assertEqual(num, 32, "Two days of data separated by a month...")
 
     def test_num_hours(self):
         # Test 1 day of data
-        day_of_data = pd.DataFrame(index=self.day_of_data)
-        num = timeseries.num_hours(day_of_data)
+        day_of_data = pd.DataFrame(index=self.day_of_data, columns=["dt_col"])
+        num = timeseries.num_hours("dt_col", data=day_of_data)
         self.assertEqual(num, 24, "One day of data...")
 
         # Test 0 days of data
-        empty_data = pd.DataFrame(index=pd.DatetimeIndex([]))
-        num = timeseries.num_hours(empty_data)
+        empty_data = pd.DataFrame(index=pd.DatetimeIndex([]), columns=["dt_col"])
+        num = timeseries.num_hours("dt_col", data=empty_data)
         self.assertEqual(num, 0, "Zero days of data...")
 
         # Test 2 days of data separated by a month gap
-        two_days = pd.DataFrame(index=self.two_days_of_data)
-        num = timeseries.num_hours(two_days)
+        two_days = pd.DataFrame(index=self.two_days_of_data, columns=["dt_col"])
+        num = timeseries.num_hours("dt_col", data=two_days)
         self.assertEqual(num, 32 * 24, "Two days of data separated by a month...")
 
     def test_percent_nan(self):
         test_dict = {}
-        test_dict["a"] = pd.Series(["", 1, 2, 1e5, np.Inf])
-        test_dict["b"] = pd.Series(["", np.nan, 2, 1e5, np.Inf])
-        test_dict["c"] = pd.Series([np.nan, 1, 2, 1e5, np.nan])
+
+        # All should be float Series given PlantData requirements
+        test_dict["a"] = pd.Series([True, 1, 2, 1e5, np.Inf]).astype(float)
+        test_dict["b"] = pd.Series([False, np.nan, 2, 1e5, np.Inf]).astype(float)
+        test_dict["c"] = pd.Series([np.nan, 1, 2, 1e5, np.nan]).astype(float)
 
         nan_values = {"a": 0.0, "b": 0.2, "c": 0.4}
 

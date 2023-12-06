@@ -1,2 +1,7 @@
 jupyterlab
 matplotlib
+
+xarray
+dask
+netcdf4
+cdsapi

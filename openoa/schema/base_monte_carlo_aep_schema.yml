@@ -1,0 +1,62 @@
+meter:
+  MMTR_SupWh:
+    name: MMTR_SupWh
+    dtype: float
+    units: kWh
+  frequency:
+  - us
+  - ms
+  - MS
+  - U
+  - D
+  - L
+  - min
+  - W
+  - S
+  - H
+  - N
+  - T
+curtail:
+  IAVL_ExtPwrDnWh:
+    name: IAVL_ExtPwrDnWh
+    dtype: float
+    units: kWh
+  IAVL_DnWh:
+    name: IAVL_DnWh
+    dtype: float
+    units: kWh
+  frequency:
+  - us
+  - ms
+  - MS
+  - U
+  - D
+  - L
+  - min
+  - W
+  - S
+  - H
+  - N
+  - T
+reanalysis:
+  WMETR_HorWdSpd:
+    name: WMETR_HorWdSpd
+    dtype: float
+    units: m/s
+  WMETR_AirDen:
+    name: WMETR_AirDen
+    dtype: float
+    units: kg/m^3
+  frequency:
+  - us
+  - ms
+  - MS
+  - U
+  - D
+  - L
+  - min
+  - W
+  - S
+  - H
+  - N
+  - T

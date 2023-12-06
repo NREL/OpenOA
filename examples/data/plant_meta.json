@@ -1,0 +1,55 @@
+{
+  "asset": {
+    "asset_id": "Wind_turbine_name",
+    "elevation": "elevation_m",
+    "hub_height": "Hub_height_m",
+    "latitude": "Latitude",
+    "longitude": "Longitude",
+    "rated_power": "Rated_power",
+    "rotor_diameter": "Rotor_diameter_m"
+  },
+  "capacity": 8.2,
+  "curtail": {
+    "IAVL_DnWh": "availability_kwh",
+    "IAVL_ExtPwrDnWh": "curtailment_kwh",
+    "frequency": "10T",
+    "time": "time"
+  },
+  "latitude": 48.4497,
+  "longitude": 5.5896,
+  "meter": {
+    "MMTR_SupWh": "net_energy_kwh",
+    "time": "time"
+  },
+  "reanalysis": {
+    "era5": {
+      "WMETR_EnvPres": "surf_pres",
+      "WMETR_EnvTmp": "t_2m",
+      "WMETR_HorWdDir": "winddirection_deg",
+      "WMETR_HorWdSpdU": "u_100",
+      "WMETR_HorWdSpdV": "v_100",
+      "frequency": "H",
+      "time": "datetime"
+    },
+    "merra2": {
+      "WMETR_EnvPres": "surface_pressure",
+      "WMETR_EnvTmp": "temp_2m",
+      "WMETR_HorWdDir": "winddirection_deg",
+      "WMETR_HorWdSpdU": "u_50",
+      "WMETR_HorWdSpdV": "v_50",
+      "frequency": "H",
+      "time": "datetime"
+    }
+  },
+  "scada": {
+    "WMET_EnvTmp": "Ot_avg",
+    "WMET_HorWdDir": "Wa_avg",
+    "WMET_HorWdDirRel": "Va_avg",
+    "WMET_HorWdSpd": "Ws_avg",
+    "WROT_BlPthAngVal": "Ba_avg",
+    "WTUR_W": "P_avg",
+    "asset_id": "Wind_turbine_name",
+    "frequency": "10T",
+    "time": "Date_time"
+  }
+}

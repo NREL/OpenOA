@@ -1,0 +1,227 @@
+{
+  "asset": {
+    "asset_id": {
+      "dtype": "str",
+      "name": "asset_id",
+      "units": null
+    },
+    "elevation": {
+      "dtype": "float",
+      "name": "elevation",
+      "units": "m"
+    },
+    "hub_height": {
+      "dtype": "float",
+      "name": "hub_height",
+      "units": "m"
+    },
+    "latitude": {
+      "dtype": "float",
+      "name": "latitude",
+      "units": "WGS84"
+    },
+    "longitude": {
+      "dtype": "float",
+      "name": "longitude",
+      "units": "WGS84"
+    },
+    "rated_power": {
+      "dtype": "float",
+      "name": "rated_power",
+      "units": "kW"
+    },
+    "rotor_diameter": {
+      "dtype": "float",
+      "name": "rotor_diameter",
+      "units": "m"
+    },
+    "type": {
+      "dtype": "str",
+      "name": "type",
+      "units": null
+    }
+  },
+  "curtail": {
+    "IAVL_DnWh": {
+      "dtype": "float",
+      "name": "IAVL_DnWh",
+      "units": "kWh"
+    },
+    "IAVL_ExtPwrDnWh": {
+      "dtype": "float",
+      "name": "IAVL_ExtPwrDnWh",
+      "units": "kWh"
+    },
+    "frequency": "10T",
+    "time": {
+      "dtype": "numpy.datetime64",
+      "name": "time",
+      "units": "datetim64[ns]"
+    }
+  },
+  "meter": {
+    "MMTR_SupWh": {
+      "dtype": "float",
+      "name": "MMTR_SupWh",
+      "units": "kWh"
+    },
+    "frequency": "10T",
+    "time": {
+      "dtype": "numpy.datetime64",
+      "name": "time",
+      "units": "datetim64[ns]"
+    }
+  },
+  "reanalysis": {
+    "WMETR_AirDen": {
+      "dtype": "float",
+      "name": "WMETR_AirDen",
+      "units": "kg/m^3"
+    },
+    "WMETR_EnvPres": {
+      "dtype": "float",
+      "name": "surface_pressure",
+      "units": "Pa"
+    },
+    "WMETR_EnvTmp": {
+      "dtype": "float",
+      "name": "WMETR_EnvTmp",
+      "units": "K"
+    },
+    "WMETR_HorWdDir": {
+      "dtype": "float",
+      "name": "WMETR_HorWdDir",
+      "units": "deg"
+    },
+    "WMETR_HorWdSpd": {
+      "dtype": "float",
+      "name": "WMETR_HorWdSpd",
+      "units": "m/s"
+    },
+    "WMETR_HorWdSpdU": {
+      "dtype": "float",
+      "name": "WMETR_HorWdSpdU",
+      "units": "m/s"
+    },
+    "WMETR_HorWdSpdV": {
+      "dtype": "float",
+      "name": "WMETR_HorWdSpdV",
+      "units": "m/s"
+    },
+    "frequency": "10T",
+    "time": {
+      "dtype": "numpy.datetime64",
+      "name": "time",
+      "units": "datetim64[ns]"
+    }
+  },
+  "scada": {
+    "WMET_EnvTmp": {
+      "dtype": "float",
+      "name": "WMET_EnvTmp",
+      "units": "C"
+    },
+    "WMET_HorWdDir": {
+      "dtype": "float",
+      "name": "WMET_HorWdDir",
+      "units": "deg"
+    },
+    "WMET_HorWdDirRel": {
+      "dtype": "float",
+      "name": "WMET_HorWdDirRel",
+      "units": "deg"
+    },
+    "WMET_HorWdSpd": {
+      "dtype": "float",
+      "name": "WMET_HorWdSpd",
+      "units": "m/s"
+    },
+    "WROT_BlPthAngVal": {
+      "dtype": "float",
+      "name": "WROT_BlPthAngVal",
+      "units": "deg"
+    },
+    "WTUR_SupWh": {
+      "dtype": "float",
+      "name": "WTUR_SupWh",
+      "units": "kWh"
+    },
+    "WTUR_TurSt": {
+      "dtype": "str",
+      "name": "WTUR_TurSt",
+      "units": null
+    },
+    "WTUR_W": {
+      "dtype": "float",
+      "name": "WTUR_W",
+      "units": "kW"
+    },
+    "asset_id": {
+      "dtype": "str",
+      "name": "asset_id",
+      "units": null
+    },
+    "frequency": "10T",
+    "time": {
+      "dtype": "numpy.datetime64",
+      "name": "time",
+      "units": "datetim64[ns]"
+    }
+  },
+  "status": {
+    "asset_id": {
+      "dtype": "str",
+      "name": "asset_id",
+      "units": null
+    },
+    "frequency": "10T",
+    "status_code": {
+      "dtype": "numpy.int64",
+      "name": "status_code",
+      "units": null
+    },
+    "status_id": {
+      "dtype": "numpy.int64",
+      "name": "status_id",
+      "units": null
+    },
+    "status_text": {
+      "dtype": "str",
+      "name": "status_text",
+      "units": null
+    },
+    "time": {
+      "dtype": "numpy.datetime64",
+      "name": "time",
+      "units": "datetim64[ns]"
+    }
+  },
+  "tower": {
+    "WMET_EnvTmp": {
+      "dtype": "float",
+      "name": "WMET_EnvTmp",
+      "units": "C"
+    },
+    "WMET_HorWdDir": {
+      "dtype": "float",
+      "name": "WMET_HorWdDir",
+      "units": "deg"
+    },
+    "WMET_HorWdSpd": {
+      "dtype": "float",
+      "name": "WMET_HorWdSpd",
+      "units": "m/s"
+    },
+    "asset_id": {
+      "dtype": "str",
+      "name": "asset_id",
+      "units": null
+    },
+    "frequency": "10T",
+    "time": {
+      "dtype": "numpy.datetime64",
+      "name": "time",
+      "units": "datetim64[ns]"
+    }
+  }
+}

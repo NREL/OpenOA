@@ -4,25 +4,75 @@ import numpy as np
 import pandas as pd
 from numpy import testing as nptest
 
-from operational_analysis.toolkits import met_data_processing as mt
+from openoa.utils import met_data_processing as mt
 
 
 class SimpleMetProcessing(unittest.TestCase):
     def setUp(self):
         pass
 
+    def test_wrap_180(self):
+        # test Series input
+        x = pd.Series([-450.0, -270.0, -90.0, 0.0, 90.0, 270.0, 450.0])
+        wd_ans = [-90.0, 90.0, -90.0, 0.0, 90.0, -90.0, 90.0]  # Expected result
+
+        y = mt.wrap_180(x)  # Test result
+        nptest.assert_array_equal(y, wd_ans)
+
+        # test array input
+        x = np.array([-450.0, -270.0, -90.0, 0.0, 90.0, 270.0, 450.0])
+        wd_ans = [-90.0, 90.0, -90.0, 0.0, 90.0, -90.0, 90.0]  # Expected result
+
+        y = mt.wrap_180(x)  # Test result
+        nptest.assert_array_equal(y, wd_ans)
+
+        # test float input
+        x = -270.0
+        wd_ans = 90.0  # Expected result
+
+        y = mt.wrap_180(x)  # Test result
+        assert y == wd_ans
+
+    def test_circular_mean(self):
+        # wind direction test data
+        df = pd.DataFrame({"wd1": [-60.0, -90.0, 5.0], "wd2": [45.0, -5.0, 30.0]})
+
+        # test DataFrame input, averaging along rows
+        wd_ans = [352.5, 312.5, 17.5]  # Expected result
+
+        y = mt.circular_mean(df, axis=1)  # Test result
+        nptest.assert_allclose(y, wd_ans, rtol=1e-5)
+
+        # test DataFrame input, averaging along columns
+        wd_ans = [310.066954, 23.552040]  # Expected result
+
+        y = mt.circular_mean(df)  # Test result
+        nptest.assert_array_almost_equal(y, wd_ans)
+
+        # test Series input
+        wd_ans = 310.066954  # Expected result
+
+        y = mt.circular_mean(df["wd1"])  # Test result
+        nptest.assert_almost_equal(y, wd_ans, decimal=6)
+
+        # test 2D array input, averaging along rows
+        wd_ans = [352.5, 312.5, 17.5]  # Expected result
+
+        y = mt.circular_mean(df.values, axis=1)  # Test result
+        nptest.assert_allclose(y, wd_ans, rtol=1e-5)
+
     def test_compute_wind_direction(self):
-        u = [0, -1, -1, -1, 0, 1, 1, 1]  # u-vector of wind
-        v = [-1, -1, 0, 1, 1, 1, 0, -1]  # v-vector of wind
+        u = pd.Series([0, -1, -1, -1, 0, 1, 1, 1])
+        v = pd.Series([-1, -1, 0, 1, 1, 1, 0, -1])
         wd_ans = [0, 45, 90, 135, 180, 225, 270, 315]  # Expected result
 
         y = mt.compute_wind_direction(u, v)  # Test result
         nptest.assert_array_equal(y, wd_ans)
 
     def test_compute_u_v_components(self):
-        wind_speed = np.array([1, 1, 1, 1, 1, 1, 1, 1])  # Wind speed
-        wind_direction = np.array([0, 45, 90, 135, 180, 225, 270, 315])  # Wind direction
-        u, v = mt.compute_u_v_components(wind_speed, wind_direction)  # Test result
+        wind_speed = pd.Series(np.array([1, 1, 1, 1, 1, 1, 1, 1]))
+        wind_direction = pd.Series(np.array([0, 45, 90, 135, 180, 225, 270, 315]))
+        u, v = mt.compute_u_v_components(wind_speed, wind_direction)
 
         sqrt_2 = 1 / np.sqrt(2)  # Handy constant
 
@@ -35,20 +85,20 @@ class SimpleMetProcessing(unittest.TestCase):
     def test_compute_air_density(self):
         # Test data frame with pressure and temperature data
 
-        temp = np.arange(280, 300, 5)
-        pres = np.arange(90000, 110000, 5000)
+        temp = pd.Series(np.arange(280, 300, 5))
+        pres = pd.Series(np.arange(90000, 110000, 5000))
 
         rho = mt.compute_air_density(temp, pres)  # Test result
-        rho_ans = np.array([1.11744, 1.1581, 1.19706, 1.23427])  # Expected result
+        rho_ans = np.array([1.11741, 1.15807, 1.19702, 1.23424])  # Expected result
 
         nptest.assert_array_almost_equal(rho, rho_ans, decimal=5)
 
     def test_pressure_vertical_extrapolation(self):
         # Define test data
-        p_samp = np.array([1e6, 9.5e5])  # pressure at lower level
-        z0_samp = np.array([0, 30])  # lower level height
-        z1_samp = np.array([100, 100])  # extrapolation level height
-        t_samp = np.array([290, 300])  # average temperature in layer between z0 and z1
+        p_samp = pd.Series(np.array([1e6, 9.5e5]))  # pressure at lower level
+        z0_samp = pd.Series(np.array([0, 30]))  # lower level height
+        z1_samp = pd.Series(np.array([100, 100]))  # extrapolation level height
+        t_samp = pd.Series(np.array([290, 300]))  # average temperature in layer between z0 and z1
 
         p1 = mt.pressure_vertical_extrapolation(p_samp, t_samp, z0_samp, z1_samp)  # Test result
         p1_ans = np.array([988288.905, 942457.391])  # Expected result
@@ -57,8 +107,8 @@ class SimpleMetProcessing(unittest.TestCase):
 
     def test_air_density_adjusted_wind_speed(self):
         # Test dataframe with wind speed and density data
-        wind_speed = np.arange(0, 10, 2)
-        dens = np.arange(1.10, 1.20, 0.02)
+        wind_speed = pd.Series(np.arange(0, 10, 2))
+        dens = pd.Series(np.arange(1.10, 1.20, 0.02))
 
         adjusted_ws = mt.air_density_adjusted_wind_speed(wind_speed, dens)  # Test answer
         adjusted_ws_ans = np.array([0.0, 1.988235, 4.0, 6.034885, 8.092494])  # Expected answer
@@ -66,8 +116,8 @@ class SimpleMetProcessing(unittest.TestCase):
         nptest.assert_array_almost_equal(adjusted_ws, adjusted_ws_ans, decimal=5)
 
     def test_compute_turbulence_intensity(self):
-        mean = np.linspace(2.0, 25.0, 10)
-        std = np.linspace(0.1, 2.0, 10)
+        mean = pd.Series(np.linspace(2.0, 25.0, 10))
+        std = pd.Series(np.linspace(0.1, 2.0, 10))
         computed_TI = mt.compute_turbulence_intensity(mean, std)
         expected_TI = np.array(
             [
@@ -87,7 +137,7 @@ class SimpleMetProcessing(unittest.TestCase):
             computed_TI, expected_TI, err_msg="Turbulence intensity not properly computed."
         )
 
-    def test_compute_shear_v3(self):
+    def test_compute_shear(self):
         expected_alpha = np.array([-0.1, 0.1, 0.2, 0.4])
         height_low = 30.0
         height_mid = 60.0
@@ -105,20 +155,20 @@ class SimpleMetProcessing(unittest.TestCase):
         )
         # Two sensor test
         windspeed_heights = {"wind_low": height_low, "wind_mid": height_mid}
-        computed_alpha = mt.compute_shear_v3(df, windspeed_heights)
+        computed_alpha = mt.compute_shear(df, windspeed_heights)
         nptest.assert_allclose(
             computed_alpha, expected_alpha, err_msg="Shear two-sensor computation failing."
         )
 
         # Multiple sensor test
         windspeed_heights = {"wind_low": 30.0, "wind_mid": 60.0, "wind_high": 80.0}
-        computed_alpha = mt.compute_shear_v3(df, windspeed_heights)
+        computed_alpha = mt.compute_shear(df, windspeed_heights)
         nptest.assert_allclose(
             computed_alpha, expected_alpha, err_msg="Shear multi-sensor optimization failing."
         )
 
         # test reference height and reference wind speed
-        computed_alpha, computed_z_ref, computed_u_ref = mt.compute_shear_v3(
+        computed_alpha, computed_z_ref, computed_u_ref = mt.compute_shear(
             df, windspeed_heights, return_reference_values=True
         )
         nptest.assert_allclose(
@@ -130,40 +180,9 @@ class SimpleMetProcessing(unittest.TestCase):
 
         nptest.assert_allclose(computed_u_ref, expected_u_ref)
 
-    def test_compute_shear(self):
-        expected_alpha = np.array([-0.1, 0.1, 0.2, 0.4])
-        height_low = 30.0
-        height_mid = 60.0
-        # height_high = 80.0
-
-        df = pd.DataFrame(
-            data={
-                "wind_low": np.array(
-                    [4.2870938501451725, 7.464263932294459, 5.223303379776745, 3.031433133020796]
-                ),
-                "wind_mid": np.array([4.0, 8.0, 6.0, 4.0]),
-                "wind_high": np.array(
-                    [3.886566631452294, 8.233488071718085, 6.355343046292873, 4.487820581784798]
-                ),
-            }
-        )
-        # Two sensor test
-        windspeed_heights = {"wind_low": height_low, "wind_mid": height_mid}
-        computed_alpha = mt.compute_shear(df, windspeed_heights, "")
-        nptest.assert_allclose(
-            computed_alpha, expected_alpha, err_msg="Shear two-sensor computation failing."
-        )
-
-        # Multiple sensor test
-        windspeed_heights = {"wind_low": 30.0, "wind_mid": 60.0, "wind_high": 80.0}
-        computed_alpha = mt.compute_shear(df, windspeed_heights, "wind_mid")
-        nptest.assert_allclose(
-            computed_alpha, expected_alpha, err_msg="Shear multi-sensor optimization failing."
-        )
-
     def test_extrapolate_windspeed(self):
-        alpha = np.array([0.26, 0.31, 0.21])
-        v1 = np.array([5.632, 6.893, 6.023])
+        alpha = pd.Series(np.array([0.26, 0.31, 0.21]))
+        v1 = pd.Series(np.array([5.632, 6.893, 6.023]))
         z1 = 80
         z2 = 100
 
@@ -173,8 +192,8 @@ class SimpleMetProcessing(unittest.TestCase):
         nptest.assert_allclose(computed_v2, expected_v2)
 
     def test_compute_veer(self):
-        wind_low = np.linspace(2.0, 10.0, 10)
-        wind_high = np.linspace(8.0, 25.0, 10)
+        wind_low = pd.Series(np.linspace(2.0, 10.0, 10))
+        wind_high = pd.Series(np.linspace(8.0, 25.0, 10))
         height_low = 30.0
         height_high = 80.0
 

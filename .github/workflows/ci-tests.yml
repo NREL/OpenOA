@@ -2,9 +2,9 @@ name: Run Unit and Regression Tests with Code Coverage
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, develop_v3 ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main, develop, develop_v3 ]
   schedule:
     - cron: "0 0 * * MON"
 
@@ -18,20 +18,19 @@ jobs:
         python-version: [3.9]
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install -e .
+        pip install -e ".[develop]"
       shell: bash
     - name: Test with pytest
       run: |
-        pytest --cov=operational_analysis --cov-report=xml
+        pytest --cov=openoa --cov-report=xml
       shell: bash
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1
