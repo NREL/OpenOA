@@ -31,6 +31,13 @@ at the same time with the following.
 
     pip install "OpenOA[develop]"
 
+Additional options:
+- `develop`: for linting, automated formatting, and testing
+- `docs`: for building the documentation
+- `examples`: for the full Jupyter Lab suite
+- `renalysis`: for accessing and processing MERRA2 and ERA5 data
+- `nrel-wind`: for accessing the NREL WIND Toolkit
+
 
 Now you can verify the version that was installed
 
@@ -54,7 +61,7 @@ guidelines and processes, please see the :ref:`contributors guide <contributing>
     pip install -e .
 
     # Extras can also be installed as one or any combination of the following
-    pip install -e ".[develop,docs,extras]"
+    pip install -e ".[develop,docs]"
 
 Now you can verify the version that was installed
 

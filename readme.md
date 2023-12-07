@@ -26,7 +26,7 @@ If you would like to try out the code before installation or simply explore the 
 
 If you use this software in your work, please cite our JOSS article with the following BibTex:
 
-```
+```bibtex
 @article{Perr-Sauer2021,
   doi = {10.21105/joss.02171},
   url = {https://doi.org/10.21105/joss.02171},
@@ -72,6 +72,18 @@ python
 >>> openoa.__version__
 ```
 
+#### Installation Options
+
+There are a number of installation options that can be used, depending on the use case, which can be
+installed with the following pattern `pip install "openoa[opt1,opt2]"` (`pip install .` is still
+allowed with this usage).
+
+- `develop`: for linting, automated formatting, and testing
+- `docs`: for building the documentation
+- `examples`: for the full Jupyter Lab suite
+- `renalysis`: for accessing and processing MERRA2 and ERA5 data
+- `nrel-wind`: for accessing the NREL WIND Toolkit
+
 #### Common Installation Issues
 
 - In Windows you may get an error regarding geos_c.dll. To fix this install Shapely using:
@@ -87,6 +99,8 @@ pip install --upgrade pywin32==255
 ```
 
 #### Example Notebooks and Data
+
+Be sure to install OpenOA using the `examples` modifier from [above](#installation-options).
 
 The example data will be automaticaly extracted as needed by the tests. To manually extract the example data for use with the example notebooks, use the following command:
 
@@ -110,7 +124,7 @@ this second step must be done before committing any changes):
 
 ```bash
 cd OpenOA
-pip install -e ".[develop, docs]"
+pip install -e ".[develop, docs, examples]"
 pre-commit install
 ```
 
@@ -138,7 +152,7 @@ pytest
 To run unit tests only:
 
 ```bash
-pytest test/unit
+pytest --unit
 ```
 
 To run all tests and generate a code coverage report
