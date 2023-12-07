@@ -50,6 +50,9 @@ known_third_party = [
 ]
 
 [tool.pytest.ini_options]
+python_files = [
+  "test/*.py",
+]
 testpaths = [
   "test/unit/*.py",
   "test/regression/*.py",
