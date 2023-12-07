@@ -20,18 +20,17 @@ def pytest_addoption(parser):
 
 
 def pytest_configure(config):
+    # Check for the options
     unit = config.getoption("--unit")
     regression = config.getoption("--regression")
 
-    if regression:
-        regression_tests = list((ROOT / "regression").iterdir())
+    # Provide the
+    regression_tests = list((ROOT / "regression").iterdir())
+    unit_tests = list((ROOT / "unit").iterdir())
 
-    if unit:
-        unit_tests = list((ROOT / "unit").iterdir())
-
-    if regression and unit:
+    if regression and unit or (not regression and not unit):
         config.args = unit_tests + regression_tests
     elif regression:
         config.args = regression_tests
-    else:
+    elif unit:
         config.args = unit_tests
