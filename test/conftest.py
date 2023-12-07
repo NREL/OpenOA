@@ -24,10 +24,11 @@ def pytest_configure(config):
     unit = config.getoption("--unit")
     regression = config.getoption("--regression")
 
-    # Provide the
+    # Provide the appropriate directories
     regression_tests = list((ROOT / "regression").iterdir())
     unit_tests = list((ROOT / "unit").iterdir())
 
+    # If both or neither, run them all, otherwise run just the appropriate subset
     if regression and unit or (not regression and not unit):
         config.args = unit_tests + regression_tests
     elif regression:
