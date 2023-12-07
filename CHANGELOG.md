@@ -1,6 +1,17 @@
 # Changelog
 All notable changes to this project will be documented in this file. If you make a notable change to the project, please add a line describing the change to the "unreleased" section. The maintainers will make an effort to keep the [Github Releases](https://github.com/NREL/OpenOA/releases) page up to date with this changelog. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## Unreleased - TBD
+
+- Updates the dependency requirements to minimize the number of required packages, and have a more
+  expansive list of modifiers. Users can now use any combination of
+  `pip install openoa[examples, develop, docs, nrel-wind, reanalysis]` to ensure the appropriate
+  packages are installed for their workflow.
+- Adds a `--unit` and `--regression` flag for running pytest that works in addition to
+`pytest test/unit` or `pytest test/regression`.
+- Converts some configuration files into `pyproject.toml` settings to reduce visual clutter
+  at the top-level of the directory.
+
 ## v3.0 - 29 September 2023
 
 Please see the [updated documentation](https://openoa.readthedocs.io/en/latest/index.html) for a complete overview of the new and improved OpenOA. Much will look familiar, but using the library should now be much more streamlined, and usage should be significantly faster.
