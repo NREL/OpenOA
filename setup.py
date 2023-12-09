@@ -51,7 +51,10 @@ EXTRAS = {
         "flake8",
         "flake8-docstrings",
     ],
-    "examples": ["jupyterlab"],
+    "examples": [
+        "jupyterlab",
+        "h5pyd"
+    ],
     "nrel-wind": ["h5pyd"],
     "reanalysis": [
         "cdsapi",

@@ -43,14 +43,14 @@ If you use this software in your work, please cite our JOSS article with the fol
 
 ### Requirements
 
-- Python 3.8, 3.9, or 3.10 with pip.
+- Python 3.8-3.11 with pip.
 
 We strongly recommend using the Anaconda Python distribution and creating a new conda environment for OpenOA. You can download Anaconda through [their website.](https://www.anaconda.com/products/individual)
 
 After installing Anaconda, create and activate a new conda environment with the name "openoa-env":
 
 ```bash
-conda create --name openoa-env python=3.10
+conda create --name openoa-env python=3.11
 conda activate openoa-env
 ```
 
@@ -75,8 +75,7 @@ python
 #### Installation Options
 
 There are a number of installation options that can be used, depending on the use case, which can be
-installed with the following pattern `pip install "openoa[opt1,opt2]"` (`pip install .` is still
-allowed with this usage).
+installed with the following pattern `pip install "openoa[opt1,opt2]"` (`pip install .[opt1,opt2]` is also allowed).
 
 - `develop`: for linting, automated formatting, and testing
 - `docs`: for building the documentation
@@ -100,7 +99,7 @@ pip install --upgrade pywin32==255
 
 #### Example Notebooks and Data
 
-Be sure to install OpenOA using the `examples` modifier from [above](#installation-options).
+Be sure to install OpenOA using the `examples` modifier from [above](#installation-options). Such as: `pip install ".[examples]"`
 
 The example data will be automaticaly extracted as needed by the tests. To manually extract the example data for use with the example notebooks, use the following command:
 
@@ -113,6 +112,8 @@ The example notebooks are located in the `examples` directory. We suggest instal
 ```bash
 jupyter lab  # "jupyter notebook" is also ok if that's your preference
 ```
+
+Open the URL printed to your command prompt in your favorite browser. Once jupyter is open, navigate to the "examples" directory in the file explorer and open an example notebook.
 
 ### Development
 
