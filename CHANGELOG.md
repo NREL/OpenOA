@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file. If you make
 
 ## Unreleased - TBD
 
+- Python 3.11 is now supported.
 - Updates the dependency requirements to minimize the number of required packages, and have a more
   expansive list of modifiers. Users can now use any combination of
   `pip install openoa[examples, develop, docs, nrel-wind, reanalysis]` to ensure the appropriate
