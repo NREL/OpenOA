@@ -11,7 +11,6 @@ from setuptools import setup, find_packages
 # Core dependencies
 REQUIRED = [
     "scikit-learn>=1.0",
-    "requests>=2.21.0",
     "eia-python>=1.22",
     "pyproj>=3.5",
     "shapely>=1.8",
@@ -19,7 +18,8 @@ REQUIRED = [
     "pandas>=2.0",
     "pygam>=0.9.0",
     "scipy>=1.7",
-    "statsmodels>=0.11",
+    "statsmodels>=0.11; python_version<'3.11'",
+    "statsmodels>=0.13.3; python_version=='3.11'",
     "tqdm>=4.28.1",
     "matplotlib>=3.6",
     "bokeh>=2.4",
@@ -36,7 +36,6 @@ TESTS = ["pytest>=5.4.2", "pytest-cov>=2.8.1"]
 # All extra dependencies (see keys for breakdown by purpose)
 EXTRAS = {
     "docs": [
-        "ipython",
         "Sphinx>=5.0,!=7.2.0",
         "pydata-sphinx-theme",
         "sphinx_design>=0.3",
@@ -53,16 +52,19 @@ EXTRAS = {
     ],
     "examples": [
         "jupyterlab",
-        "h5pyd"
     ],
     "nrel-wind": ["h5pyd"],
     "reanalysis": [
         "cdsapi",
+        "requests>=2.21.0",
         "xarray[parallel]",  # Dask required for loading data
+        "h5py",  # Required for netcdf4
         "netcdf4",
     ],
 }
 EXTRAS["develop"] += TESTS
+EXTRAS["examples"] += EXTRAS["reanalysis"] + EXTRAS["nrel-wind"]
+EXTRAS["all"] = EXTRAS["develop"] + EXTRAS["docs"] + EXTRAS["examples"]
 
 
 # Read the version from the __init__.py file without importing it
@@ -102,6 +104,5 @@ setup(
     include_package_data=True,
     install_requires=REQUIRED,
     extras_require=EXTRAS,
-    tests_require=TESTS,
-    python_requires=">=3.8, <3.11",
+    python_requires=">=3.8, <3.12",
 )
