@@ -11,6 +11,7 @@ from setuptools import setup, find_packages
 # Core dependencies
 REQUIRED = [
     "scikit-learn>=1.0",
+    "requests>=2.21.0",
     "eia-python>=1.22",
     "pyproj>=3.5",
     "shapely>=1.8",
@@ -56,7 +57,6 @@ EXTRAS = {
     "nrel-wind": ["h5pyd"],
     "reanalysis": [
         "cdsapi",
-        "requests>=2.21.0",
         "xarray[parallel]",  # Dask required for loading data
         "h5py",  # Required for netcdf4
         "netcdf4",
