@@ -32,6 +32,10 @@ Source
 Additional Dependencies
 -----------------------
 
+.. important::
+    If using Python 3.11, install ``openoa`` only, then reinstall adding the modifiers to reduce
+    the amount of time it takes for pip to resolve the dependency stack.
+
 Whether installing from PyPI or source, any combination of the following can be used to install
 additional dependencies. For example, the examples requirements can be installed using
 `pip install "openoa[examples]"`.

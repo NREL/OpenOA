@@ -50,7 +50,7 @@ We strongly recommend using the Anaconda Python distribution and creating a new 
 After installing Anaconda, create and activate a new conda environment with the name "openoa-env":
 
 ```bash
-conda create --name openoa-env python=3.11
+conda create --name openoa-env python=3.10
 conda activate openoa-env
 ```
 
@@ -82,6 +82,10 @@ installed with the following pattern `pip install "openoa[opt1,opt2]"` (`pip ins
 - `examples`: for the full Jupyter Lab suite
 - `renalysis`: for accessing and processing MERRA2 and ERA5 data
 - `nrel-wind`: for accessing the NREL WIND Toolkit
+
+> **Important**
+> If using Python 3.11, install `openoa` only, then reinstall adding the modifiers to reduce
+> the amount of time it takes for pip to resolve the dependency stack.
 
 #### Common Installation Issues
 

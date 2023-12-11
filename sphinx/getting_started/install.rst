@@ -31,6 +31,10 @@ at the same time with the following.
 
     pip install "OpenOA[develop]"
 
+.. important::
+    If using Python 3.11, install ``openoa`` only, then reinstall adding the modifiers to reduce
+    the amount of time it takes for pip to resolve the dependency stack.
+
 Additional options:
 - `develop`: for linting, automated formatting, and testing
 - `docs`: for building the documentation
