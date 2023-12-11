@@ -4,7 +4,9 @@ All notebooks are located at /examples in the OpenOA repository, and can be modi
 [Binder](https://mybinder.org/v2/gh/NREL/OpenOA/develop_v3?filepath=examples).
 
 ```{important}
-Be sure to install OpenOA using the `examples` modifier (`pip install "openoa[examples]"`).
+Be sure to install OpenOA using the `examples` modifier (`pip install "openoa[examples]"`). This
+will install all of the dependencies used by the additional methods contained within the examples
+notebooks.
 ```
 
 ## Overview
