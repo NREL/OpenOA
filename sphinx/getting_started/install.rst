@@ -38,9 +38,10 @@ at the same time with the following.
 Additional options:
 - `develop`: for linting, automated formatting, and testing
 - `docs`: for building the documentation
-- `examples`: for the full Jupyter Lab suite
+- `examples`: for the full Jupyter Lab suite (also contains `reanalysis` and `nrel-wind`)
 - `renalysis`: for accessing and processing MERRA2 and ERA5 data
 - `nrel-wind`: for accessing the NREL WIND Toolkit
+- `all`: for the complete dependency stack
 
 
 Now you can verify the version that was installed

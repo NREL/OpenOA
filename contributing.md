@@ -1,7 +1,6 @@
 
 # Contributing
 
-
 ## Getting Started
 
 These contributing guidelines should be read by software developers wishing to contribute code or
