@@ -1,7 +1,6 @@
 
 # Contributing
 
-
 ## Getting Started
 
 These contributing guidelines should be read by software developers wishing to contribute code or
@@ -209,13 +208,13 @@ To run the tests you can use any of the following commands, depending on your ne
 3. Only the unit tests:
 
    ```bash
-   pytest test/unit
+   pytest --unit
    ```
 
 4. Only the regression (integration) tests:
 
    ```bash
-   pytest test/regression
+   pytest --regression
    ```
 
 ## Pull Request
@@ -239,6 +238,7 @@ base. Be sure to write a complete description of these changes in the pull reque
 All tests must pass. Pull requests will be rejected or have changes requested if tests do not pass,
 or cannot pass with changes. Tests are automatically run through Github Actions for any pull request
 or push to the main or develop branches, but should also be run locally before submission.
+
 #### Test Coverage
 
 The testing framework described below will generate a coverage report from the tests run through

@@ -35,4 +35,37 @@ length_sort_straight = "True"
 lines_after_imports = "2"
 sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
 known_first_party = "openoa"
-known_third_party = ["numpy","scipy","pandas","pygam","tqdm","statsmodels","scikit_learn","EIA-python","requests","pyproj","shapely"]
+known_third_party = [
+    "numpy",
+    "scipy",
+    "pandas",
+    "pygam",
+    "tqdm",
+    "statsmodels",
+    "scikit_learn",
+    "EIA-python",
+    "requests",
+    "pyproj",
+    "shapely"
+]
+
+[tool.pytest.ini_options]
+python_files = [
+  "test/*.py",
+]
+testpaths = [
+  "test/unit/*.py",
+  "test/regression/*.py",
+]
+filterwarnings = [
+  "ignore::DeprecationWarning:sklearn.*:",
+  "ignore::DeprecationWarning:patsy.*:",
+  "ignore::DeprecationWarning:pygam.*:",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "# pragma: no cover",
+    "def .+plot",
+    "def plot_.+",
+]

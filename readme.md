@@ -26,7 +26,7 @@ If you would like to try out the code before installation or simply explore the 
 
 If you use this software in your work, please cite our JOSS article with the following BibTex:
 
-```
+```bibtex
 @article{Perr-Sauer2021,
   doi = {10.21105/joss.02171},
   url = {https://doi.org/10.21105/joss.02171},
@@ -43,7 +43,7 @@ If you use this software in your work, please cite our JOSS article with the fol
 
 ### Requirements
 
-- Python 3.8, 3.9, or 3.10 with pip.
+- Python 3.8-3.11 with pip.
 
 We strongly recommend using the Anaconda Python distribution and creating a new conda environment for OpenOA. You can download Anaconda through [their website.](https://www.anaconda.com/products/individual)
 
@@ -72,6 +72,22 @@ python
 >>> openoa.__version__
 ```
 
+#### Installation Options
+
+There are a number of installation options that can be used, depending on the use case, which can be
+installed with the following pattern `pip install "openoa[opt1,opt2]"` (`pip install .[opt1,opt2]` is also allowed).
+
+- `develop`: for linting, automated formatting, and testing
+- `docs`: for building the documentation
+- `examples`: for the full Jupyter Lab suite (also contains `reanalysis` and `nrel-wind`)
+- `renalysis`: for accessing and processing MERRA2 and ERA5 data
+- `nrel-wind`: for accessing the NREL WIND Toolkit
+- `all`: for the complete dependency stack
+
+> **Important**
+> If using Python 3.11, install `openoa` only, then reinstall adding the modifiers to reduce
+> the amount of time it takes for pip to resolve the dependency stack.
+
 #### Common Installation Issues
 
 - In Windows you may get an error regarding geos_c.dll. To fix this install Shapely using:
@@ -88,6 +104,8 @@ pip install --upgrade pywin32==255
 
 #### Example Notebooks and Data
 
+Be sure to install OpenOA using the `examples` modifier from [above](#installation-options). Such as: `pip install ".[examples]"`
+
 The example data will be automaticaly extracted as needed by the tests. To manually extract the example data for use with the example notebooks, use the following command:
 
 ```bash
@@ -100,6 +118,8 @@ The example notebooks are located in the `examples` directory. We suggest instal
 jupyter lab  # "jupyter notebook" is also ok if that's your preference
 ```
 
+Open the URL printed to your command prompt in your favorite browser. Once jupyter is open, navigate to the "examples" directory in the file explorer and open an example notebook.
+
 ### Development
 
 Please see the developer section of the contributing guide [here](contributing.md), or on the [documentation site](https://openoa.readthedocs.io/en/latest/getting_started/contributing.html) for complete details.
@@ -110,7 +130,7 @@ this second step must be done before committing any changes):
 
 ```bash
 cd OpenOA
-pip install -e ".[develop, docs]"
+pip install -e ".[develop, docs, examples]"
 pre-commit install
 ```
 
@@ -138,7 +158,7 @@ pytest
 To run unit tests only:
 
 ```bash
-pytest test/unit
+pytest --unit
 ```
 
 To run all tests and generate a code coverage report
