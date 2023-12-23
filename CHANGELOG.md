@@ -1,6 +1,9 @@
 # Changelog
 All notable changes to this project will be documented in this file. If you make a notable change to the project, please add a line describing the change to the "unreleased" section. The maintainers will make an effort to keep the [Github Releases](https://github.com/NREL/OpenOA/releases) page up to date with this changelog. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [3.0.1 - 2023-12-22]
+- Includes warnings about limitations and lack of validation of static yaw misalignment method.
+
 ## v3.0 - 29 September 2023
 
 Please see the [updated documentation](https://openoa.readthedocs.io/en/latest/index.html) for a complete overview of the new and improved OpenOA. Much will look familiar, but using the library should now be much more streamlined, and usage should be significantly faster.
