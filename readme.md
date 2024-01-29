@@ -1,6 +1,8 @@
 <img src="https://github.com/NREL/OpenOA/blob/develop/Open%20OA%20Final%20Logos/Color/Open%20OA%20Color%20Transparent%20Background.png?raw=true" alt="OpenOA" width="300"/>
 
-[![Binder Badge](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/NREL/OpenOA/develop_v3?filepath=examples) [![Gitter Badge](https://badges.gitter.im/NREL_OpenOA/community.svg)](https://gitter.im/NREL_OpenOA/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge) [![Journal of Open Source Software Badge](https://joss.theoj.org/papers/d635ef3c3784d49f6e81e07a0b35ff6b/status.svg)](https://joss.theoj.org/papers/d635ef3c3784d49f6e81e07a0b35ff6b)
+-----
+
+[![Binder Badge](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/NREL/OpenOA/main?filepath=examples) [![Gitter Badge](https://badges.gitter.im/NREL_OpenOA/community.svg)](https://gitter.im/NREL_OpenOA/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge) [![Journal of Open Source Software Badge](https://joss.theoj.org/papers/d635ef3c3784d49f6e81e07a0b35ff6b/status.svg)](https://joss.theoj.org/papers/d635ef3c3784d49f6e81e07a0b35ff6b)
 
 [![Documentation Badge](https://readthedocs.org/projects/openoa/badge/?version=latest)](https://openoa.readthedocs.io) ![Tests Badge](https://github.com/NREL/OpenOA/workflows/Tests/badge.svg?branch=develop) [![Code Coverage Badge](https://codecov.io/gh/NREL/OpenOA/branch/develop/graph/badge.svg)](https://codecov.io/gh/NREL/OpenOA)
 
@@ -8,38 +10,75 @@
 
 -----
 
-This library provides a framework for working with large timeseries data from wind plants, such as SCADA.
-Its development has been motivated by the WP3 Benchmarking (PRUF) project,
-which aims to provide a reference implementation for plant-level performance assessment.
+# Overview
 
-Analysis routines are grouped by purpose into methods,
-and these methods in turn rely on more abstract toolkits.
-In addition to the provided analysis methods,
-anyone can write their own, which is intended to provide natural
-growth of tools within this framework.
+- Jump to [installation instructions](#installation-and-usage).
+- Try out the Binder [demo notebook](https://mybinder.org/v2/gh/NREL/OpenOA/main?filepath=examples).
+- Read the [documentation](https://openoa.readthedocs.io/en/latest/).
+- Learn how to [contribute](contributing.md).
 
-The library is written around Pandas Data Frames, utilizing a flexible backend
-so that data loading, processing, and analysis could be performed using other libraries,
-such as Dask and Spark, in the future.
+This library provides a framework to study operational assessment (OA) methodologies that consume timeseries data from wind plants.
+Its development has been motivated by the National Renewable Energy Laboratory (NREL) Wind Plant Performance Prediction (WP3) Benchmarking (PRUF) project, which developed an open source, baseline implementation of the 20-year annualized energy production (AEP) for plant-level performance assessment. It has grown to incororporate several more analyses, and a schema for time-series data from wind power plants.
 
-If you would like to try out the code before installation or simply explore the possibilities, please see our examples on [Binder](https://mybinder.org/v2/gh/NREL/OpenOA/develop_v3?filepath=examples).
+> **Warning** 
+OpenOA is a research software library and is released under a BSD-3 license. Please refer to the accompanying [license file](LICENSE.txt) for the full terms. The inclusion of any algorithms and their implementations in the code or accompanying documentation **shal not** be interpreted as an endorsement by the authors, NREL, nor the US Government for fitness in any particular purpose or situation. While the authors believe the software may be useful for industry practitioners, we encourage caution, use of best practices, and engagement with trained professionals when performing any data analysis.
 
-If you use this software in your work, please cite our JOSS article with the following BibTex:
+### Included Analysis Methods
 
-```
-@article{Perr-Sauer2021,
-  doi = {10.21105/joss.02171},
-  url = {https://doi.org/10.21105/joss.02171},
-  year = {2021},
-  publisher = {The Open Journal},
-  volume = {6},
-  number = {58},
-  pages = {2171},
-  author = {Jordan Perr-Sauer and Mike Optis and Jason M. Fields and Nicola Bodini and Joseph C.Y. Lee and Austin Todd and Eric Simley and Robert Hammond and Caleb Phillips and Monte Lunacek and Travis Kemper and Lindy Williams and Anna Craig and Nathan Agarwal and Shawn Sheng and John Meissner},
-  title = {OpenOA: An Open-Source Codebase For Operational Analysis of Wind Farms},
-  journal = {Journal of Open Source Software}
-}
-```
+| Name | Description | Citations |
+| --- | --- | --- |
+| ``MonteCarloAEP`` | This routine estimates the long-term annual energy production (AEP) of a wind power plant (typically over 10-20 years) based on operational data from a shorter period of record (e.g., 1-3 years), along with the uncertainty. | citation |
+| ``TurbineLongTermGrossEnergy``| This routine estimates the long-term turbine ideal energy (TIE) of a wind plant, defined as the long-term AEP that would be generated by the wind plant if all turbines operated normally (i.e., no downtime, derating, or severe underperformance, but still subject to wake losses and moderate performance losses), along with the uncertainty. | citation |
+| ``ElectricalLosses``| The ElectricalLosses routine estimates the average electrical losses at a wind plant, along with the uncertainty, by comparing the energy produced at the wind turbines to the energy delivered to the grid. | citation |
+| ``EYAGapAnalysis``| This class is used to perform a gap analysis between the estimated AEP from a pre-construction energy yield estimate (EYA) and the actual AEP. The gap analysis compares different wind plant performance categories to help understand the sources of differences between EYA AEP estimates and actual AEP, specifically availability losses, electrical losses, and TIE. | citation |
+| ``WakeLosses``| This routine estimates long-term internal wake losses experienced by a wind plant and for each individual turbine, along with the uncertainty. | citation |
+| ``StaticYawMisalignment``| The StaticYawMisalignment routine estimates the static yaw misalignment for individual wind turbines as a function of wind speed by comparing the estimated wind vane angle at which power is maximized to the mean wind vane angle at which the turbines operate. The routine includes uncertainty quantification. | citation |
+
+
+### PlantData Schema
+
+OpenOA contains a  `PlantData` class, which is based on Pandas data frames and provides a standardized base schema to combine raw data from wind turbines, meteorological (met) towers, revenue meters, and reanalysis products, such as MERRA-2 or ERA5. Additionally, the `PlantData` can perform some basic validation for the data required to perform the operational analyses.
+
+### Utility Functions
+
+Lower-level utility modules are provided in the utils subpackage.
+They can also be used individually to support general wind plant data analysis activities.
+Some examples of utils modules include:
+
+- **Quality Assurance**: This module provides quality assurance methods for identifying potential
+  quality issues with SCADA data prior to importing it into a `PlantData` object.
+- **Filters**: This module provides functions for flagging operational data based on a range of
+  criteria (e.g., outlier detection).
+- **Power Curve**: The power curve module contains methods for fitting power curve models to SCADA data.
+- **Imputing**: This module provides methods for filling in missing data with imputed values.
+- **Met Data Processing**: This module contains methods for processing meteorological data, such as
+  computing air density and wind shear coefficients.
+- **Plotting**: This module contains convenient functions for creating plots, such as power curve
+  plots and maps showing the wind plant layout.
+
+For further infromation about the features and citations, please see the [OpenOA documentation website](https://openoa.readthedocs.io/en/latest/).
+
+## How to cite OpenOA
+
+**To cite analysis methods or individual features:** Please cite the original authors of these methods, as noted in the [documentation](#included-analysis-methods) and inline comments.
+
+**To cite the open-source software framework as a whole, or the OpenOA open source development effort more broadly,** please use the following citation:
+
+   @article{Perr-Sauer2021,
+      doi = {10.21105/joss.02171},
+      url = {https://doi.org/10.21105/joss.02171},
+      year = {2021},
+      publisher = {The Open Journal},
+      volume = {6},
+      number = {58},
+      pages = {2171},
+      author = {Jordan Perr-Sauer and Mike Optis and Jason M. Fields and Nicola Bodini and Joseph C.Y. Lee and Austin Todd and Eric Simley and Robert Hammond and Caleb Phillips and Monte Lunacek and Travis Kemper and Lindy Williams and Anna Craig and Nathan Agarwal and Shawn Sheng and John Meissner},
+      title = {OpenOA: An Open-Source Codebase For Operational Analysis of Wind Farms},
+      journal = {Journal of Open Source Software}
+   }
+
+
+# Installation and Usage
 
 ### Requirements
 
