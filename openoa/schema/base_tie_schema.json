@@ -1,4 +1,11 @@
 {
+  "asset": {
+    "rated_power": {
+      "dtype": "float",
+      "name": "rated_power",
+      "units": "kW"
+    }
+  },
   "reanalysis": {
     "WMETR_AirDen": {
       "dtype": "float",
@@ -16,16 +23,16 @@
       "units": "m/s"
     },
     "frequency": [
-      "us",
-      "ms",
       "U",
-      "D",
-      "L",
-      "min",
-      "S",
-      "H",
+      "ms",
+      "T",
       "N",
-      "T"
+      "S",
+      "D",
+      "min",
+      "L",
+      "us",
+      "H"
     ]
   },
   "scada": {
@@ -45,16 +52,16 @@
       "units": null
     },
     "frequency": [
-      "us",
-      "ms",
       "U",
-      "D",
-      "L",
-      "min",
-      "S",
-      "H",
+      "ms",
+      "T",
       "N",
-      "T"
+      "S",
+      "D",
+      "min",
+      "L",
+      "us",
+      "H"
     ]
   }
 }

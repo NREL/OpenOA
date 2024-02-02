@@ -326,23 +326,25 @@ class TurbineLongTermGrossEnergy(FromDictMixin, ResetValuesMixin):
         self.scada = (
             self.plant.scada.swaplevel().sort_index().dropna(subset=["WMET_HorWdSpd", "WTUR_SupWh"])
         )
-        turbine_capacity = self.scada.groupby(level="asset_id").max()["WTUR_W"]
         flag_range = filters.range_flag(self.scada.loc[:, "WMET_HorWdSpd"], below=0, above=40)
         flag_frozen = filters.unresponsive_flag(self.scada.loc[:, "WMET_HorWdSpd"], threshold=3)
         flag_neg = pd.Series(index=self.scada.index, dtype=bool)
         flag_window = pd.Series(index=self.scada.index, dtype=bool)
         for t in self.turbine_ids:
             ix_turb = self.scada.index.get_level_values("asset_id") == t
+            turbine_capacity = self.plant.asset.loc[t, "rated_power"]
             flag_neg.loc[ix_turb] = filters.range_flag(
-                self.scada.loc[ix_turb, "power"], below=0, above=turbine_capacity.loc[t]
+                self.scada.loc[ix_turb, "power"],
+                below=0,
+                above=self.scada.loc[ix_turb, "power"].max(),
             )
             flag_window.loc[ix_turb] = filters.window_range_flag(
                 window_col=self.scada.loc[ix_turb, "WMET_HorWdSpd"],
                 window_start=5.0,
                 window_end=40,
                 value_col=self.scada.loc[ix_turb, "WTUR_W"],
-                value_min=0.02 * turbine_capacity.loc[t],
-                value_max=1.2 * turbine_capacity.loc[t],
+                value_min=0.02 * turbine_capacity,
+                value_max=1.2 * turbine_capacity,
             )
 
         flag_final = ~(flag_range | flag_frozen | flag_neg | flag_window).values
@@ -377,10 +379,10 @@ class TurbineLongTermGrossEnergy(FromDictMixin, ResetValuesMixin):
         # Loop through turbines
         for t in self.turbine_ids:
             scada_df = self.scada_dict[t]
-            turbine_capacity_real = scada_df.WTUR_W.max()
+            turbine_capacity = self.plant.asset.loc[t, "rated_power"]
 
             max_bin = (
-                self._run.max_power_filter * turbine_capacity_real
+                self._run.max_power_filter * turbine_capacity
             )  # Set maximum range for using bin-filter
 
             scada_df.dropna(
@@ -388,7 +390,7 @@ class TurbineLongTermGrossEnergy(FromDictMixin, ResetValuesMixin):
             )  # Drop any data where scada wind speed or energy is NaN
 
             scada_df = scada_df.assign(
-                flag_neg=filters.range_flag(scada_df.WTUR_W, lower=0, upper=turbine_capacity_real),
+                flag_neg=filters.range_flag(scada_df.WTUR_W, lower=0, upper=scada_df.WTUR_W.max()),
                 flag_range=filters.range_flag(scada_df.WMET_HorWdSpd, lower=0, upper=40),
                 flag_frozen=filters.unresponsive_flag(scada_df.WMET_HorWdSpd, threshold=3),
                 flag_window=filters.window_range_flag(
@@ -396,16 +398,16 @@ class TurbineLongTermGrossEnergy(FromDictMixin, ResetValuesMixin):
                     window_start=5.0,
                     window_end=40,
                     value_col=dic[t].loc[:, "WTUR_W"],
-                    value_min=0.02 * turbine_capacity_real,
-                    value_max=1.2 * turbine_capacity_real,
+                    value_min=0.02 * turbine_capacity,
+                    value_max=1.2 * turbine_capacity,
                 ),
                 flag_bin=filters.bin_filter(
                     bin_col=dic[t].loc[:, "WTUR_W"],
                     value_col=dic[t].loc[:, "WMET_HorWdSpd"],
-                    bin_width=0.06 * turbine_capacity_real,
+                    bin_width=0.06 * turbine_capacity,
                     threshold=self._run.wind_bin_thresh,
                     center_type="median",
-                    bin_min=np.round(0.01 * turbine_capacity_real),
+                    bin_min=np.round(0.01 * turbine_capacity),
                     bin_max=np.round(max_bin),
                     threshold_type="std",
                     direction="all",
