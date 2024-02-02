@@ -274,6 +274,9 @@ class TestSchema(unittest.TestCase):
             # Check that the correct required columns are pulled
             assert self.tie_schema[key].keys() == dict.keys()
             # Check for matching frequencies
+            if key == "asset":
+                assert "frequency" not in self.tie_schema[key]
+                continue
             assert set(dict["frequency"]) == set(self.tie_schema[key]["frequency"])
 
         wake_schema = create_analysis_schema("WakeLosses-scada")
