@@ -2,11 +2,17 @@
 
 -----
 
-[![Binder Badge](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/NREL/OpenOA/main?filepath=examples) [![Gitter Badge](https://badges.gitter.im/NREL_OpenOA/community.svg)](https://gitter.im/NREL_OpenOA/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge) [![Journal of Open Source Software Badge](https://joss.theoj.org/papers/d635ef3c3784d49f6e81e07a0b35ff6b/status.svg)](https://joss.theoj.org/papers/d635ef3c3784d49f6e81e07a0b35ff6b)
+[![Binder Badge](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/NREL/OpenOA/main?filepath=examples)
+[![Gitter Badge](https://badges.gitter.im/NREL_OpenOA/community.svg)](https://gitter.im/NREL_OpenOA/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+[![Journal of Open Source Software Badge](https://joss.theoj.org/papers/d635ef3c3784d49f6e81e07a0b35ff6b/status.svg)](https://joss.theoj.org/papers/d635ef3c3784d49f6e81e07a0b35ff6b)
 
-[![Documentation Badge](https://readthedocs.org/projects/openoa/badge/?version=latest)](https://openoa.readthedocs.io) ![Tests Badge](https://github.com/NREL/OpenOA/workflows/Tests/badge.svg?branch=develop) [![Code Coverage Badge](https://codecov.io/gh/NREL/OpenOA/branch/develop/graph/badge.svg)](https://codecov.io/gh/NREL/OpenOA)
+[![Documentation Badge](https://readthedocs.org/projects/openoa/badge/?version=latest)](https://openoa.readthedocs.io)
+![Tests Badge](https://github.com/NREL/OpenOA/workflows/Tests/badge.svg?branch=develop)
+[![Code Coverage Badge](https://codecov.io/gh/NREL/OpenOA/branch/develop/graph/badge.svg)](https://codecov.io/gh/NREL/OpenOA)
 
-[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit) [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black) [![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/)
+[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/)
 
 -----
 
@@ -17,11 +23,21 @@
 - Read the [documentation](https://openoa.readthedocs.io/en/latest/).
 - Learn how to [contribute](contributing.md).
 
-This library provides a framework to study operational assessment (OA) methodologies that consume timeseries data from wind plants.
-Its development has been motivated by the National Renewable Energy Laboratory (NREL) Wind Plant Performance Prediction (WP3) Benchmarking (PRUF) project, which developed an open source, baseline implementation of the 20-year annualized energy production (AEP) for plant-level performance assessment. It has grown to incororporate several more analyses, and a schema for time-series data from wind power plants.
+This library provides a framework to study operational assessment (OA) methodologies that consume
+timeseries data from wind plants. Its development has been motivated by the National Renewable
+Energy Laboratory (NREL) Wind Plant Performance Prediction (WP3) Benchmarking (PRUF) project, which
+developed an open source, baseline implementation of the 20-year annualized energy production (AEP)
+for plant-level performance assessment. It has grown to incororporate several more analyses, and a
+schema for time-series data from wind power plants.
 
-> **Warning** 
-OpenOA is a research software library and is released under a BSD-3 license. Please refer to the accompanying [license file](LICENSE.txt) for the full terms. The inclusion of any algorithms and their implementations in the code or accompanying documentation **shal not** be interpreted as an endorsement by the authors, NREL, nor the US Government for fitness in any particular purpose or situation. While the authors believe the software may be useful for industry practitioners, we encourage caution, use of best practices, and engagement with trained professionals when performing any data analysis.
+> **Warning**
+OpenOA is a research software library and is released under a BSD-3 license. Please refer to the
+accompanying [license file](LICENSE.txt) for the full terms. The inclusion of any algorithms and
+their implementations in the code or accompanying documentation **shal not** be interpreted as an
+endorsement by the authors, NREL, nor the US Government for fitness in any particular purpose or
+situation. While the authors believe the software may be useful for industry practitioners, we
+encourage caution, use of best practices, and engagement with trained professionals when performing
+any data analysis.
 
 ### Included Analysis Methods
 
@@ -67,6 +83,7 @@ For further infromation about the features and citations, please see the [OpenOA
 
 **To cite the open-source software framework as a whole, or the OpenOA open source development effort more broadly,** please use the following citation:
 
+```bibtex
    @article{Perr-Sauer2021,
       doi = {10.21105/joss.02171},
       url = {https://doi.org/10.21105/joss.02171},
@@ -79,7 +96,7 @@ For further infromation about the features and citations, please see the [OpenOA
       title = {OpenOA: An Open-Source Codebase For Operational Analysis of Wind Farms},
       journal = {Journal of Open Source Software}
    }
-
+```
 
 # Installation and Usage
 
