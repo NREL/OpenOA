@@ -12,6 +12,9 @@ All notable changes to this project will be documented in this file. If you make
 `pytest test/unit` or `pytest test/regression`.
 - Converts some configuration files into `pyproject.toml` settings to reduce visual clutter
   at the top-level of the directory.
+- The turbine capacity value used for power curve filtering in `TurbineLongTermGrossEnergy` is
+  changed to the rated power from the asset table instead of the maximum power from SCADA. This
+  makes the power curve filtering more robust to turbine power outliers above rated power.
 
 ## v3.0 - 29 September 2023
 
