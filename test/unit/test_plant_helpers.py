@@ -544,7 +544,7 @@ def test_PlantMetaData_from_file():
     longitude = 5.5896
     capacity = 8.2
     scada = SCADAMetaData(
-        frequency="10T",
+        frequency="10min",
         asset_id="Wind_turbine_name",
         WROT_BlPthAngVal="Ba_avg",
         WTUR_W="P_avg",
@@ -561,7 +561,7 @@ def test_PlantMetaData_from_file():
     curtail = CurtailMetaData(
         IAVL_DnWh="availability_kwh",
         IAVL_ExtPwrDnWh="curtailment_kwh",
-        frequency="10T",
+        frequency="10min",
         time="time",
     )
     asset = AssetMetaData(
@@ -575,7 +575,7 @@ def test_PlantMetaData_from_file():
     )
     reanalysis = {
         "era5": ReanalysisMetaData(
-            frequency="H",
+            frequency="h",
             WMETR_EnvPres="surf_pres",
             WMETR_EnvTmp="t_2m",
             time="datetime",
@@ -584,7 +584,7 @@ def test_PlantMetaData_from_file():
             WMETR_HorWdDir="winddirection_deg",
         ),
         "merra2": ReanalysisMetaData(
-            frequency="H",
+            frequency="h",
             WMETR_EnvPres="surface_pressure",
             WMETR_EnvTmp="temp_2m",
             time="datetime",
