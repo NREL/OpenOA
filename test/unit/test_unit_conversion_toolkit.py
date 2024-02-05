@@ -14,7 +14,7 @@ class SimpleUnitConversionTests(unittest.TestCase):
     def test_convert_power_to_energy(self):
         np.random.seed(42)
         power = np.random.random(100) * 100
-        time_interval = {"10T": 10, "30T": 30.0, "1H": 60}  # Minutes
+        time_interval = {"10min": 10, "30min": 30.0, "h": 60}  # Minutes
         df = pd.DataFrame(data={"power_kw": power})
 
         for key, item in time_interval.items():

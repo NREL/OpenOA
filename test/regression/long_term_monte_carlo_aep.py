@@ -210,7 +210,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         # ____________________________________________________________________
         # Test default aggregate reanalysis values and date range, at hourly time resolution
         self.analysis = MonteCarloAEP(
-            self.project_rean, reanalysis_products=["merra2", "era5"], time_resolution="H"
+            self.project_rean, reanalysis_products=["merra2", "era5"], time_resolution="h"
         )
         df_rean = self.analysis._reanalysis_aggregate
 
@@ -237,7 +237,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
             MonteCarloAEP(
                 self.project_rean,
                 reanalysis_products=["merra2", "era5"],
-                time_resolution="H",
+                time_resolution="h",
                 end_date_lt="2019-01-15 10:00",
             )
 
@@ -246,7 +246,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
             MonteCarloAEP(
                 self.project_rean,
                 reanalysis_products=["merra2", "era5"],
-                time_resolution="H",
+                time_resolution="h",
                 end_date_lt="2019-04-15 13:00",
             )
 
@@ -255,7 +255,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         self.analysis = MonteCarloAEP(
             self.project_rean,
             reanalysis_products=["merra2", "era5"],
-            time_resolution="H",
+            time_resolution="h",
             end_date_lt="2019-02-10 12:00",
         )
         df_rean = self.analysis._reanalysis_aggregate
