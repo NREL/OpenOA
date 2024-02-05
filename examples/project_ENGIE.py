@@ -255,7 +255,7 @@ def prepare(
 
     # Fill the 2 missing time stamps with NaN values
     reanalysis_era5_df = reanalysis_era5_df.set_index(pd.DatetimeIndex(reanalysis_era5_df.datetime))
-    reanalysis_era5_df = reanalysis_era5_df.asfreq("1H")
+    reanalysis_era5_df = reanalysis_era5_df.asfreq("1h")
     reanalysis_era5_df["datetime"] = reanalysis_era5_df.index
 
     # calculate wind direction from u, v
