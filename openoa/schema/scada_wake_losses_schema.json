@@ -28,15 +28,12 @@
       "units": "m/s"
     },
     "frequency": [
-      "us",
-      "ms",
-      "U",
-      "L",
       "min",
-      "S",
-      "H",
-      "N",
-      "T"
+      "ms",
+      "us",
+      "s",
+      "ns",
+      "h"
     ]
   },
   "scada": {
@@ -61,15 +58,12 @@
       "units": null
     },
     "frequency": [
-      "us",
-      "ms",
-      "U",
-      "L",
       "min",
-      "S",
-      "H",
-      "N",
-      "T"
+      "ms",
+      "us",
+      "s",
+      "ns",
+      "h"
     ]
   }
 }
