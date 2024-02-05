@@ -344,7 +344,7 @@ def prepare(asset: str = "kelmarsh", return_value: str = "plantdata") -> PlantDa
         "curtail": {
             "IAVL_DnWh": "Lost Production to Downtime (kWh)",
             "IAVL_ExtPwrDnWh": "Lost Production to Curtailment (Total) (kWh)",
-            "frequency": "10T",
+            "frequency": "10min",
             "time": "Timestamp",
         },
         "latitude": str(asset_df["Latitude"].mean()),
@@ -359,7 +359,7 @@ def prepare(asset: str = "kelmarsh", return_value: str = "plantdata") -> PlantDa
                 "WMETR_HorWdSpdU": "u_ms",
                 "WMETR_HorWdSpdV": "v_ms",
                 "WMETR_HorWdSpd": "windspeed_ms",
-                "frequency": "H",
+                "frequency": "h",
                 "time": "datetime",
             },
             "merra2": {
@@ -369,7 +369,7 @@ def prepare(asset: str = "kelmarsh", return_value: str = "plantdata") -> PlantDa
                 "WMETR_HorWdSpdU": "u_ms",
                 "WMETR_HorWdSpdV": "v_ms",
                 "WMETR_HorWdSpd": "windspeed_ms",
-                "frequency": "H",
+                "frequency": "h",
                 "time": "datetime",
             },
             "era5_monthly": {
@@ -394,7 +394,7 @@ def prepare(asset: str = "kelmarsh", return_value: str = "plantdata") -> PlantDa
             "WROT_BlPthAngVal": "Blade angle (pitch position) A (°)",
             "asset_id": "Turbine",
             "WTUR_W": "Power (kW)",
-            "frequency": "10T",
+            "frequency": "10min",
             "time": "Timestamp",
         },
     }

@@ -69,7 +69,7 @@ def clean_scada(scada_file: str | Path) -> pd.DataFrame:
     Returns:
         pd.DataFrame: The cleaned up SCADA data that is ready for loading into a `PlantData` object.
     """
-    scada_freq = "10T"
+    scada_freq = "10min"
 
     logger.info("Loading SCADA data")
     scada_df = pd.read_csv(scada_file)
