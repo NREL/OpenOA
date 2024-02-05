@@ -21,7 +21,7 @@ def convert_power_to_energy(
         power_col(:obj:`str` | :obj:`pandas.Series`): The power data, in kW, or the name of the column
             in :py:attr:`data`.
         sample_rate_min(:obj:`float`): Sampling rate as a pandas offset alias, in minutes, to use
-            for conversion. Defaults to "10T.
+            for conversion. Defaults to "10min.
         data(:obj:`pandas.DataFrame`): The pandas DataFrame containing the col :py:attr:`power_col`.
 
     Returns:
