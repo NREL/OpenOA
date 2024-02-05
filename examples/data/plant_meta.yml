@@ -27,7 +27,7 @@ reanalysis:
     WMETR_HorWdSpdV: v_100  # v-direction windspeed, m/s
     WMETR_HorWdDir: winddirection_deg  # wind direction, degrees
   merra2:  # reanalysis product name/ID
-    frequency: H  # timestamp frequency
+    frequency: h  # timestamp frequency
     WMETR_EnvPres: surface_pressure  # surface pressure, Pa
     WMETR_EnvTmp: temp_2m  # temperature, K
     time: datetime  # timestamps
