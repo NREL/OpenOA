@@ -12,7 +12,7 @@ from openoa.utils._converters import series_method
 
 @series_method(data_cols=["power_col"])
 def convert_power_to_energy(
-    power_col: str | pd.Series, sample_rate_min="10T", data: pd.DataFrame = None
+    power_col: str | pd.Series, sample_rate_min="10min", data: pd.DataFrame = None
 ) -> pd.Series:
     """
     Compute energy [kWh] from power [kw] and return the data column
