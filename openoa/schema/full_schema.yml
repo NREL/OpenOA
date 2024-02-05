@@ -35,7 +35,7 @@ scada:
     name: WMET_EnvTmp
     dtype: float
     units: C
-  frequency: 10T
+  frequency: 10min
   WTUR_SupWh:
     name: WTUR_SupWh
     dtype: float
@@ -49,7 +49,7 @@ meter:
     name: MMTR_SupWh
     dtype: float
     units: kWh
-  frequency: 10T
+  frequency: 10min
 tower:
   time:
     name: time
@@ -71,7 +71,7 @@ tower:
     name: WMET_EnvTmp
     dtype: float
     units: C
-  frequency: 10T
+  frequency: 10min
 status:
   time:
     name: time
@@ -93,7 +93,7 @@ status:
     name: status_text
     dtype: str
     units: null
-  frequency: 10T
+  frequency: 10min
 curtail:
   time:
     name: time
@@ -107,7 +107,7 @@ curtail:
     name: IAVL_DnWh
     dtype: float
     units: kWh
-  frequency: 10T
+  frequency: 10min
 asset:
   asset_id:
     name: asset_id
@@ -174,4 +174,4 @@ reanalysis:
     name: surface_pressure
     dtype: float
     units: Pa
-  frequency: 10T
+  frequency: 10min

@@ -52,7 +52,7 @@
       "name": "IAVL_ExtPwrDnWh",
       "units": "kWh"
     },
-    "frequency": "10T",
+    "frequency": "10min",
     "time": {
       "dtype": "numpy.datetime64",
       "name": "time",
@@ -65,7 +65,7 @@
       "name": "MMTR_SupWh",
       "units": "kWh"
     },
-    "frequency": "10T",
+    "frequency": "10min",
     "time": {
       "dtype": "numpy.datetime64",
       "name": "time",
@@ -108,7 +108,7 @@
       "name": "WMETR_HorWdSpdV",
       "units": "m/s"
     },
-    "frequency": "10T",
+    "frequency": "10min",
     "time": {
       "dtype": "numpy.datetime64",
       "name": "time",
@@ -161,7 +161,7 @@
       "name": "asset_id",
       "units": null
     },
-    "frequency": "10T",
+    "frequency": "10min",
     "time": {
       "dtype": "numpy.datetime64",
       "name": "time",
@@ -174,7 +174,7 @@
       "name": "asset_id",
       "units": null
     },
-    "frequency": "10T",
+    "frequency": "10min",
     "status_code": {
       "dtype": "numpy.int64",
       "name": "status_code",
@@ -217,7 +217,7 @@
       "name": "asset_id",
       "units": null
     },
-    "frequency": "10T",
+    "frequency": "10min",
     "time": {
       "dtype": "numpy.datetime64",
       "name": "time",
