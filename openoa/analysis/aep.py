@@ -103,7 +103,7 @@ class MonteCarloAEP(FromDictMixin, ResetValuesMixin):
         uncertainty_nan_energy(:obj:`float`): Threshold to flag days/months based on NaNs. Defaults
             to 0.01.
         time_resolution(:obj:`string`): whether to perform the AEP calculation at monthly ("M"),
-            daily ("D") or hourly ("H") time resolution. Defaults to "M".
+            daily ("D") or hourly ("h") time resolution. Defaults to "M".
         end_date_lt(:obj:`string` or :obj:`pandas.Timestamp`): The last date to use for the
             long-term correction. Note that only the component of the date corresponding to the
             time_resolution argument is considered. If None, the end of the last complete month of
@@ -158,7 +158,7 @@ class MonteCarloAEP(FromDictMixin, ResetValuesMixin):
         ),
     )
     uncertainty_nan_energy: float = field(default=0.01, converter=float)
-    time_resolution: str = field(default="M", validator=attrs.validators.in_(("M", "D", "H")))
+    time_resolution: str = field(default="M", validator=attrs.validators.in_(("M", "D", "h")))
     end_date_lt: str | pd.Timestamp = field(default=None)
     reg_model: str = field(
         default="lin", converter=str, validator=attrs.validators.in_(("lin", "gbm", "etr", "gam"))
@@ -237,9 +237,9 @@ class MonteCarloAEP(FromDictMixin, ResetValuesMixin):
 
         logger.info("Initializing MonteCarloAEP Analysis Object")
 
-        self.resample_freq = {"M": "MS", "D": "D", "H": "H"}[self.time_resolution]
-        self.resample_hours = {"M": 30 * 24, "D": 1 * 24, "H": 1}[self.time_resolution]
-        self.calendar_samples = {"M": 12, "D": 365, "H": 365 * 24}[self.time_resolution]
+        self.resample_freq = {"M": "MS", "D": "D", "h": "h"}[self.time_resolution]
+        self.resample_hours = {"M": 30 * 24, "D": 1 * 24, "h": 1}[self.time_resolution]
+        self.calendar_samples = {"M": 12, "D": 365, "h": 365 * 24}[self.time_resolution]
 
         if self.end_date_lt is not None:
             # Set to the bottom of the bottom of the hour
@@ -306,7 +306,7 @@ class MonteCarloAEP(FromDictMixin, ResetValuesMixin):
             uncertainty_nan_energy(:obj:`float`): Threshold to flag days/months based on NaNs. Defaults
                 to 0.01.
             time_resolution(:obj:`string`): whether to perform the AEP calculation at monthly ("M"),
-                daily ("D") or hourly ("H") time resolution. Defaults to "M".
+                daily ("D") or hourly ("h") time resolution. Defaults to "M".
             end_date_lt(:obj:`string` or :obj:`pandas.Timestamp`): The last date to use for the
                 long-term correction. Note that only the component of the date corresponding to the
                 time_resolution argument is considered. If None, the end of the last complete month of
@@ -399,7 +399,7 @@ class MonteCarloAEP(FromDictMixin, ResetValuesMixin):
             df_grouped = df.groupby(df.index.month).mean()
         elif self.time_resolution == "D":
             df_grouped = df.groupby([(df.index.month), (df.index.day)]).mean()
-        elif self.time_resolution == "H":
+        elif self.time_resolution == "h":
             df_grouped = df.groupby([(df.index.month), (df.index.day), (df.index.hour)]).mean()
 
         return df_grouped
@@ -1339,7 +1339,7 @@ class MonteCarloAEP(FromDictMixin, ResetValuesMixin):
 
             if self.time_resolution == "D":
                 ax.set_ylabel("Daily gross energy (GWh)")
-            elif self.time_resolution == "H":
+            elif self.time_resolution == "h":
                 ax.set_ylabel("Hourly gross energy (GWh)")
 
         ax.legend(**legend_kwargs)
