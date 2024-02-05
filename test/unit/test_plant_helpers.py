@@ -101,9 +101,9 @@ def test_frequency_validator() -> None:
     assert not frequency_validator(None, "whatever", exact=False)
 
     # Test for exact matches
-    actual = "10T"
-    desired_valid_1 = "10T"  # single input case
-    desired_valid_2 = ("10T", "H", "N")  # set of options case
+    actual = "10min"
+    desired_valid_1 = "10min"  # single input case
+    desired_valid_2 = ("10min", "h", "ns")  # set of options case
     desired_invalid = _at_least_hourly  # set of non exact matches
 
     assert frequency_validator(actual, desired_valid_1, True)
@@ -111,16 +111,16 @@ def test_frequency_validator() -> None:
     assert not frequency_validator(actual, desired_invalid, True)
 
     # Test for non-exact matches
-    actual_1 = "10T"
+    actual_1 = "10min"
     actual_2 = "1min"
-    actual_3 = "20S"
+    actual_3 = "20s"
     desired_valid = _at_least_hourly  # set of generic hourly or higher resolution frequencies
     desired_invalid = (
         "M",
         "MS",
         "W",
         "D",
-        "H",
+        "h",
     )  # set of greater than or equal to hourly frequency resolutions
 
     assert frequency_validator(actual_1, desired_valid, False)
@@ -188,7 +188,7 @@ def test_dtype_converter():
     have already been converted to pandas datetime objects in the reading methods.
     """
     df = pd.DataFrame([], columns=["time", "float_col", "string_col", "problem_col"])
-    df.time = pd.date_range(start="2022-July-25 00:00:00", end="2022-July-25 1:00:00", freq="10T")
+    df.time = pd.date_range(start="2022-July-25 00:00:00", end="2022-July-25 1:00:00", freq="10min")
     df.float_col = np.random.random(7).astype(str)
     df.string_col = np.arange(7)
     df.problem_col = ["one", "two", "string", "invalid", 5, 6.0, 7]
@@ -255,7 +255,7 @@ def test_SCADAMetaData():
         WTUR_TurSt="turb_stat",
         WROT_BlPthAngVal="rotor_angle",
         WMET_EnvTmp="temp",
-        frequency="H",
+        frequency="h",
     )
     valid_map = deepcopy(meta_dict)
     valid_map.update(dict(asset_id="asset_id", WTUR_W="WTUR_W"))
@@ -345,7 +345,7 @@ def test_StatusMetaData():
         asset_id="the_IDs",
         status_id="status_ids",
         status_code="code",
-        frequency="H",
+        frequency="h",
     )
     valid_map = deepcopy(meta_dict)
     valid_map.update(dict(time="time", status_text="status_text"))
@@ -374,7 +374,7 @@ def test_CurtailMetaData():
     meta_dict = dict(
         IAVL_ExtPwrDnWh="curtail",
         IAVL_DnWh="avail",
-        frequency="H",
+        frequency="h",
     )
     valid_map = deepcopy(meta_dict)
     valid_map.update(dict(time="time"))
