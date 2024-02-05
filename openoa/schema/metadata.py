@@ -24,9 +24,9 @@ logger = logging.getLogger(__name__)
 
 
 # Datetime frequency checks
-_at_least_monthly = ("MS", "W", "D", "H", "h", "T", "min", "S", "L", "ms", "U", "us", "N")
-_at_least_daily = ("D", "H", "h", "T", "min", "S", "L", "ms", "U", "us", "N")
-_at_least_hourly = ("H", "h", "T", "min", "S", "L", "ms", "U", "us", "N")
+_at_least_monthly = ("MS", "W", "D", "h", "min", "s", "ms", "us", "ns")
+_at_least_daily = ("D", "h", "min", "s", "ms", "us", "ns")
+_at_least_hourly = ("h", "min", "s", "ms", "us", "ns")
 
 ANALYSIS_REQUIREMENTS = {
     "MonteCarloAEP": {
