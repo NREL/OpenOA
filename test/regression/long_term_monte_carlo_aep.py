@@ -48,7 +48,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         self.analysis = MonteCarloAEP(
             self.project,
             reanalysis_products=["merra2", "era5"],
-            time_resolution="M",
+            time_resolution="MS",
             reg_temperature=True,
             reg_wind_direction=True,
         )
@@ -68,7 +68,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         # ____________________________________________________________________
         # Test default aggregate reanalysis values and date range, at monthly time resolution
         self.analysis = MonteCarloAEP(
-            self.project_rean, reanalysis_products=["merra2", "era5"], time_resolution="M"
+            self.project_rean, reanalysis_products=["merra2", "era5"], time_resolution="MS"
         )
         df_rean = self.analysis._reanalysis_aggregate
 
@@ -95,7 +95,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
             MonteCarloAEP(
                 self.project_rean,
                 reanalysis_products=["merra2", "era5"],
-                time_resolution="M",
+                time_resolution="MS",
                 end_date_lt="2018-12-15 12:00",
             )
 
@@ -104,7 +104,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
             MonteCarloAEP(
                 self.project_rean,
                 reanalysis_products=["merra2", "era5"],
-                time_resolution="M",
+                time_resolution="MS",
                 end_date_lt="2019-04-15 13:00",
             )
 
@@ -113,7 +113,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         self.analysis = MonteCarloAEP(
             self.project_rean,
             reanalysis_products=["merra2", "era5"],
-            time_resolution="M",
+            time_resolution="MS",
             end_date_lt="2019-02-10 12:00",
         )
         df_rean = self.analysis._reanalysis_aggregate
@@ -283,7 +283,7 @@ class TestLongTermMonteCarloAEP(unittest.TestCase):
         self.analysis = MonteCarloAEP(
             self.project,
             reanalysis_products=["merra2", "era5"],
-            time_resolution="M",
+            time_resolution="MS",
             reg_model="lin",
             reg_temperature=False,
             reg_wind_direction=False,

@@ -116,7 +116,7 @@ def test_frequency_validator() -> None:
     actual_3 = "20s"
     desired_valid = _at_least_hourly  # set of generic hourly or higher resolution frequencies
     desired_invalid = (
-        "M",
+        "ME",
         "MS",
         "W",
         "D",
