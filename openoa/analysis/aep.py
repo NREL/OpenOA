@@ -229,7 +229,7 @@ class MonteCarloAEP(FromDictMixin, ResetValuesMixin):
         else:
             analysis_type = "MonteCarloAEP"
 
-        if set((analysis_type, "all")).intersection(self.plant.analysis_type) == set():
+        if {analysis_type, "all"}.intersection(self.plant.analysis_type) == set():
             self.plant.analysis_type.append(analysis_type)
 
         # Ensure the data are up to spec before continuing with initialization
@@ -370,7 +370,7 @@ class MonteCarloAEP(FromDictMixin, ResetValuesMixin):
             num_sim=self.num_sim,
             reanalysis_products=self.reanalysis_products,
         )
-        logger.info("Running with parameters: {}".format(logged_params))
+        logger.info(f"Running with parameters: {logged_params}")
 
         # Start the computation
         self.calculate_long_term_losses()
@@ -563,11 +563,9 @@ class MonteCarloAEP(FromDictMixin, ResetValuesMixin):
 
             if self.end_date_lt > end_date:
                 raise ValueError(
-                    (
-                        "Invalid end date for long-term correction. The end date cannot exceed the "
-                        "last full time period (defined by the time resolution) in the provided "
-                        "reanalysis data."
-                    )
+                    "Invalid end date for long-term correction. The end date cannot exceed the "
+                    "last full time period (defined by the time resolution) in the provided "
+                    "reanalysis data."
                 )
             else:
                 # replace end date
@@ -592,17 +590,13 @@ class MonteCarloAEP(FromDictMixin, ResetValuesMixin):
         if self._reanalysis_aggregate.index[0] > start_date_required:
             if self.end_date_lt is not None:
                 raise ValueError(
-                    (
-                        "Invalid end date argument for long-term correction. This end date does not "
-                        "provide enough reanalysis data for the long-term correction."
-                    )
+                    "Invalid end date argument for long-term correction. This end date does not "
+                    "provide enough reanalysis data for the long-term correction."
                 )
             else:
                 raise ValueError(
-                    (
-                        "The date range of the provided reanalysis data is not long enough to "
-                        "perform the long-term correction."
-                    )
+                    "The date range of the provided reanalysis data is not long enough to "
+                    "perform the long-term correction."
                 )
 
         # Correct each reanalysis product, density-correct wind speeds, and take monthly averages

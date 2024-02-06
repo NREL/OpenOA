@@ -67,7 +67,7 @@ def impute_data(
     """
     final_col_name = deepcopy(target_col)
     if data is None:
-        if any((not isinstance(x, pd.DataFrame) for x in (target_data, reference_data))):
+        if any(not isinstance(x, pd.DataFrame) for x in (target_data, reference_data)):
             raise TypeError(
                 "If `data` is not provided, then `ref_data` and `target_data` must be provided as pandas DataFrames."
             )

@@ -108,7 +108,7 @@ class ElectricalLosses(FromDictMixin, ResetValuesMixin):
         """
         Initialize logging and post-initialization setup steps.
         """
-        if set(("ElectricalLosses", "all")).intersection(self.plant.analysis_type) == set():
+        if {"ElectricalLosses", "all"}.intersection(self.plant.analysis_type) == set():
             self.plant.analysis_type.append("ElectricalLosses")
 
         # Ensure the data are up to spec before continuing with initialization
@@ -371,7 +371,7 @@ class ElectricalLosses(FromDictMixin, ResetValuesMixin):
         std = losses.std()
         ax.plot(
             losses * 100,
-            label=f"Electrical Losses\n$\mu$={mean:.2%}, $\sigma$={std:.2%}",  # noqa: W605
+            label=f"Electrical Losses\n$\\mu$={mean:.2%}, $\\sigma$={std:.2%}",  # noqa: W605
             **plot_kwargs,
         )
 
