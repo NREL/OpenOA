@@ -50,6 +50,7 @@ EXTRAS = {
         "isort",
         "flake8",
         "flake8-docstrings",
+        "pyupgrade",
     ],
     "examples": [
         "jupyterlab",
@@ -70,7 +71,7 @@ EXTRAS["all"] = EXTRAS["develop"] + EXTRAS["docs"] + EXTRAS["examples"]
 # Read the version from the __init__.py file without importing it
 def read(*names, **kwargs):
     directory = Path(__file__).resolve().parent
-    with io.open(Path(directory, *names), encoding=kwargs.get("encoding", "utf8")) as fp:
+    with open(Path(directory, *names), encoding=kwargs.get("encoding", "utf8")) as fp:
         return fp.read()
 
 
