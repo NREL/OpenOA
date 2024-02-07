@@ -23,6 +23,10 @@ All notable changes to this project will be documented in this file. If you make
 - Converts some configuration files into `pyproject.toml` settings to reduce visual clutter
   at the top-level of the directory.
 
+## [3.0.1 - 2023-12-22]
+
+- Includes warnings about limitations and lack of validation of static yaw misalignment method.
+
 ## v3.0 - 29 September 2023
 
 Please see the [updated documentation](https://openoa.readthedocs.io/en/latest/index.html) for a complete overview of the new and improved OpenOA. Much will look familiar, but using the library should now be much more streamlined, and usage should be significantly faster.
