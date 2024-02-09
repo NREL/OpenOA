@@ -191,7 +191,8 @@ def convert_frequency(offset: str) -> str:
             "min", "s", "ms", "us", "ns", "M", "H", "T", "S", "L", "U", or "N".
     """
     # Separate leading digits and the offset code
-    offset_digits, *_ = re.findall(r"\d+", offset)
+    offset_digits = re.findall(r"\d+", offset)
+    offset_digits = "" if offset_digits == [] else offset_digits[0]
     offset_str = offset.translate(remove_digits)
 
     # Check the code is a valid format
