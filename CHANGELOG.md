@@ -30,6 +30,9 @@ All notable changes to this project will be documented in this file. If you make
   results for the TIE and wake loss regression tests.
 - `openoa.utils.timeseries.gap_fill_data_frame()` now returns the original data if there is no data
   to fill in, avoiding a Pandas `concat` deprecation warning about pending behavioral changes.
+- The turbine capacity value used for power curve filtering in `TurbineLongTermGrossEnergy` is
+  changed to the rated power from the asset table instead of the maximum power from SCADA. This
+  makes the power curve filtering more robust to turbine power outliers above rated power.
 
 ## [3.0.1 - 2023-12-22]
 

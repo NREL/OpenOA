@@ -113,6 +113,10 @@ ANALYSIS_REQUIREMENTS = {
             "columns": ["WMETR_HorWdSpd", "WMETR_HorWdDir", "WMETR_AirDen"],
             "freq": _at_least_daily,
         },
+        "asset": {
+            "columns": ["rated_power"],
+            "freq": (),
+        },
     },
     "ElectricalLosses": {
         "scada": {

@@ -20,12 +20,12 @@ scada:
     dtype: float
     units: deg
   frequency:
-  - us
   - ns
-  - s
   - h
   - ms
   - min
+  - us
+  - s
 asset:
   rated_power:
     name: rated_power

@@ -33,12 +33,12 @@
       "units": null
     },
     "frequency": [
-      "us",
       "ns",
-      "s",
       "h",
       "ms",
-      "min"
+      "min",
+      "us",
+      "s"
     ]
   }
 }
