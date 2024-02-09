@@ -6,15 +6,16 @@
       "units": "kWh"
     },
     "frequency": [
-      "min",
-      "ms",
-      "W",
       "us",
+      "ns",
+      "ME",
+      "W",
       "D",
       "s",
-      "ns",
+      "MS",
       "h",
-      "MS"
+      "ms",
+      "min"
     ]
   },
   "scada": {
@@ -29,13 +30,13 @@
       "units": null
     },
     "frequency": [
-      "min",
-      "ms",
       "us",
+      "ns",
       "D",
       "s",
-      "ns",
-      "h"
+      "h",
+      "ms",
+      "min"
     ]
   }
 }

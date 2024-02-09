@@ -5,7 +5,9 @@ All notable changes to this project will be documented in this file. If you make
 
 - Updated compatibility with Pandas datetime offsets. All uppercase offset strings representing
   one hour or less have been replaced with the lowercase version. This stems from an update in the
-  Pandas frequency API that breaks in 2.2.0. See the below changes to update frequency settings
+  Pandas frequency API that breaks in 2.2.0. See the below changes to update frequency settings. The
+  soon-to-be-deprecated style from Pandas will continue to be supported in OpenOA, but will display
+  a `DeprecationWarning` with support extending until OpenOA v4.
   - M -> ME (MS still allowed)
   - H -> h
   - T -> min
@@ -28,6 +30,10 @@ All notable changes to this project will be documented in this file. If you make
   results for the TIE and wake loss regression tests.
 - `openoa.utils.timeseries.gap_fill_data_frame()` now returns the original data if there is no data
   to fill in, avoiding a Pandas `concat` deprecation warning about pending behavioral changes.
+
+## [3.0.1 - 2023-12-22]
+
+- Includes warnings about limitations and lack of validation of static yaw misalignment method.
 
 ## v3.0 - 29 September 2023
 

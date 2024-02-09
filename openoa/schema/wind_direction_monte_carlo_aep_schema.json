@@ -11,15 +11,16 @@
       "units": "kWh"
     },
     "frequency": [
-      "min",
-      "ms",
-      "W",
       "us",
+      "ns",
+      "ME",
+      "W",
       "D",
       "s",
-      "ns",
+      "MS",
       "h",
-      "MS"
+      "ms",
+      "min"
     ]
   },
   "meter": {
@@ -29,15 +30,16 @@
       "units": "kWh"
     },
     "frequency": [
-      "min",
-      "ms",
-      "W",
       "us",
+      "ns",
+      "ME",
+      "W",
       "D",
       "s",
-      "ns",
+      "MS",
       "h",
-      "MS"
+      "ms",
+      "min"
     ]
   },
   "reanalysis": {
@@ -62,15 +64,16 @@
       "units": "m/s"
     },
     "frequency": [
-      "min",
-      "ms",
-      "W",
       "us",
+      "ns",
+      "ME",
+      "W",
       "D",
       "s",
-      "ns",
+      "MS",
       "h",
-      "MS"
+      "ms",
+      "min"
     ]
   }
 }

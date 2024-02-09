@@ -24,6 +24,7 @@ from openoa.utils import unit_conversion as un
 from openoa.utils import met_data_processing as mt
 from openoa.schema import FromDictMixin, ResetValuesMixin
 from openoa.logging import logging, logged_method_call
+from openoa.schema.metadata import convert_frequency
 from openoa.utils.machine_learning_setup import MachineLearningSetup
 from openoa.analysis._analysis_validators import validate_reanalysis_selections
 
@@ -159,7 +160,9 @@ class MonteCarloAEP(FromDictMixin, ResetValuesMixin):
     )
     uncertainty_nan_energy: float = field(default=0.01, converter=float)
     time_resolution: str = field(
-        default="ME", validator=attrs.validators.in_(("MS", "ME", "D", "h"))
+        default="ME",
+        converter=convert_frequency,
+        validator=attrs.validators.in_(("MS", "ME", "D", "h")),
     )
     end_date_lt: str | pd.Timestamp = field(default=None)
     reg_model: str = field(

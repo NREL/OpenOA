@@ -8,25 +8,26 @@ scada:
     dtype: float
     units: kW
   frequency:
-  - min
-  - ms
   - us
+  - ns
   - D
   - s
-  - ns
   - h
+  - ms
+  - min
 meter:
   MMTR_SupWh:
     name: MMTR_SupWh
     dtype: float
     units: kWh
   frequency:
-  - min
-  - ms
-  - W
   - us
+  - ns
+  - ME
+  - W
   - D
   - s
-  - ns
-  - h
   - MS
+  - h
+  - ms
+  - min

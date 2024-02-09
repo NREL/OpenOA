@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import random
 from copy import deepcopy
 from pathlib import Path
 
@@ -31,13 +32,40 @@ from openoa.schema import (  # , compose_error_message
     CurtailMetaData,
     ReanalysisMetaData,
 )
-from openoa.schema.metadata import _at_least_hourly, convert_reanalysis
+from openoa.schema.metadata import (
+    _at_least_hourly,
+    convert_frequency,
+    convert_reanalysis,
+    deprecated_offset_map,
+)
 
 
 EXAMPLE_DATA_PATH = Path(__file__).resolve().parents[2] / "examples/data"
 
 
 # Test the FromDictMixin mixin class and class-dependent methods
+
+
+def test_convert_frequency():
+    # Check that any deprecated code is caught
+    # NOTE: Not all are checked because the warning will only be raised once
+    offset = random.choice([*deprecated_offset_map])
+    with pytest.warns(DeprecationWarning):
+        convert_frequency(offset)
+
+    assert "ME" == convert_frequency("M")
+    assert "1h" == convert_frequency("1H")
+    assert "10min" == convert_frequency("10T")
+    assert "20s" == convert_frequency("20S")
+    assert "ms" == convert_frequency("L")
+    assert "us" == convert_frequency("U")
+    assert "ns" == convert_frequency("N")
+
+    with pytest.raises(ValueError):
+        convert_frequency("10min1")
+
+    with pytest.raises(ValueError):
+        convert_frequency("bh")
 
 
 @define
@@ -470,7 +498,7 @@ def test_convert_reanalysis_value():
         WMETR_EnvTmp="temps",
         WMETR_AirDen="dens",
         WMETR_EnvPres="pressure",
-        frequency="5T",
+        frequency="5min",
     )
     valid_era5_map = deepcopy(era5_meta_dict)
     valid_era5_map.pop("frequency")
