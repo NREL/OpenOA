@@ -12,13 +12,18 @@ scada:
     dtype: float
     units: m/s
   frequency:
-  - us
   - ns
   - D
-  - s
   - h
   - ms
   - min
+  - us
+  - s
+asset:
+  rated_power:
+    name: rated_power
+    dtype: float
+    units: kW
 reanalysis:
   WMETR_HorWdSpd:
     name: WMETR_HorWdSpd
@@ -33,10 +38,10 @@ reanalysis:
     dtype: float
     units: kg/m^3
   frequency:
-  - us
   - ns
   - D
-  - s
   - h
   - ms
   - min
+  - us
+  - s
