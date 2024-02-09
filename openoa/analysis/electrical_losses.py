@@ -125,7 +125,7 @@ class ElectricalLosses(FromDictMixin, ResetValuesMixin):
 
         # Process the SCADA and meter data appropriately
         self.process_scada()
-        if self.plant.metadata.meter.frequency not in ("MS", "M", "1MS"):
+        if self.plant.metadata.meter.frequency not in ("MS", "ME", "1MS"):
             self.process_meter()
             self.monthly_meter = False
 
