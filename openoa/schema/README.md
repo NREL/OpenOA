@@ -21,7 +21,7 @@ scada:
     dtype: numpy.datetime64
     units: datetim64[ns]
   ...
-  frequency: 10T
+  frequency: 10min
 ```
 
 the expected matching input for this column would be the following to indicate in the SCADA data
@@ -29,7 +29,7 @@ that the time column is still the default value, and that the frequency is still
 of 10 minutes.
 
 ```python
-metadata = {"scada": {"time": "time", "frequency": "10T", ...}}
+metadata = {"scada": {"time": "time", "frequency": "10min", ...}}
 ```
 
 For a less trivial example, we can bring in our data's actual column naming convention by simply
@@ -37,7 +37,7 @@ indicating that the time column in the SCADA data should be mapped from "datetim
 Additionally, we're indicate that our data have an hourly frequency.
 
 ```python
-metadata = {"scada": {"time": "datetime_mst", "frequency": "H", ...}}
+metadata = {"scada": {"time": "datetime_mst", "frequency": "h", ...}}
 ```
 
 ## Full Schema

@@ -274,6 +274,9 @@ class TestSchema(unittest.TestCase):
             # Check that the correct required columns are pulled
             assert self.tie_schema[key].keys() == dict.keys()
             # Check for matching frequencies
+            if key == "asset":
+                assert "frequency" not in self.tie_schema[key]
+                continue
             assert set(dict["frequency"]) == set(self.tie_schema[key]["frequency"])
 
         wake_schema = create_analysis_schema("WakeLosses-scada")
@@ -306,15 +309,12 @@ class TestSchema(unittest.TestCase):
                 "WMET_HorWdDirRel": {"name": "WMET_HorWdDirRel", "dtype": "float", "units": "deg"},
                 "WROT_BlPthAngVal": {"name": "WROT_BlPthAngVal", "dtype": "float", "units": "deg"},
                 "frequency": [
-                    "H",
-                    "S",
+                    "h",
                     "min",
-                    "U",
-                    "us",
-                    "L",
+                    "s",
                     "ms",
-                    "N",
-                    "T",
+                    "us",
+                    "ns",
                 ],
             },
             "reanalysis": {
@@ -322,25 +322,22 @@ class TestSchema(unittest.TestCase):
                 "WMETR_HorWdDir": {"name": "WMETR_HorWdDir", "dtype": "float", "units": "deg"},
                 "WMETR_AirDen": {"name": "WMETR_AirDen", "dtype": "float", "units": "kg/m^3"},
                 "frequency": [
-                    "H",
-                    "S",
+                    "h",
                     "min",
-                    "U",
-                    "us",
-                    "L",
+                    "s",
                     "ms",
-                    "N",
-                    "T",
+                    "us",
+                    "ns",
                 ],
             },
             "meter": {
                 "MMTR_SupWh": {"name": "MMTR_SupWh", "dtype": "float", "units": "kWh"},
-                "frequency": ["min", "MS", "D", "N", "W", "us", "T", "S", "U", "L", "H", "ms"],
+                "frequency": ["min", "MS", "ME", "D", "ns", "W", "us", "min", "s", "h", "ms"],
             },
             "curtail": {
                 "IAVL_ExtPwrDnWh": {"name": "IAVL_ExtPwrDnWh", "dtype": "float", "units": "kWh"},
                 "IAVL_DnWh": {"name": "IAVL_DnWh", "dtype": "float", "units": "kWh"},
-                "frequency": ["min", "MS", "D", "N", "W", "us", "T", "S", "U", "L", "H", "ms"],
+                "frequency": ["min", "MS", "ME", "D", "ns", "W", "us", "min", "s", "h", "ms"],
             },
             "asset": {
                 "latitude": {"name": "latitude", "dtype": "float", "units": "WGS84"},

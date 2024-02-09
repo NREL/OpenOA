@@ -52,7 +52,9 @@ includes the following analysis classes:
 * ``StaticYawMisalignment``: The StaticYawMisalignment routine estimates the static yaw misalignment
   for individual wind turbines as a function of wind speed by comparing the estimated wind vane
   angle at which power is maximized to the mean wind vane angle at which the turbines operate.
-  The routine includes uncertainty quantification.
+  The routine includes uncertainty quantification. **Warning: This method has not been validated
+  using data from wind turbines with known static yaw misalignments and the results should be
+  treated with caution.**
 
 Lower-level "toolkit" modules are provided in the utils subpackage. These methods are used
 throughout the analysis classes. They can also be used individually to support general wind plant
