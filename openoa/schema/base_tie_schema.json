@@ -23,16 +23,13 @@
       "units": "m/s"
     },
     "frequency": [
-      "U",
-      "ms",
-      "T",
-      "N",
-      "S",
-      "D",
-      "min",
-      "L",
       "us",
-      "H"
+      "ns",
+      "D",
+      "s",
+      "h",
+      "ms",
+      "min"
     ]
   },
   "scada": {
@@ -52,16 +49,13 @@
       "units": null
     },
     "frequency": [
-      "U",
-      "ms",
-      "T",
-      "N",
-      "S",
-      "D",
-      "min",
-      "L",
       "us",
-      "H"
+      "ns",
+      "D",
+      "s",
+      "h",
+      "ms",
+      "min"
     ]
   }
 }

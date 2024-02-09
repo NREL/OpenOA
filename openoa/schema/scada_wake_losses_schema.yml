@@ -17,14 +17,11 @@ scada:
     units: deg
   frequency:
   - us
+  - ns
+  - s
+  - h
   - ms
-  - U
-  - L
   - min
-  - S
-  - H
-  - N
-  - T
 asset:
   latitude:
     name: latitude
@@ -49,11 +46,8 @@ reanalysis:
     units: deg
   frequency:
   - us
+  - ns
+  - s
+  - h
   - ms
-  - U
-  - L
   - min
-  - S
-  - H
-  - N
-  - T

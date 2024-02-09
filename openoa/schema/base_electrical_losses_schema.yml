@@ -9,15 +9,12 @@ scada:
     units: kW
   frequency:
   - us
-  - ms
-  - U
+  - ns
   - D
-  - L
+  - s
+  - h
+  - ms
   - min
-  - S
-  - H
-  - N
-  - T
 meter:
   MMTR_SupWh:
     name: MMTR_SupWh
@@ -25,14 +22,12 @@ meter:
     units: kWh
   frequency:
   - us
-  - ms
-  - MS
-  - U
-  - D
-  - L
-  - min
+  - ns
+  - ME
   - W
-  - S
-  - H
-  - N
-  - T
+  - D
+  - s
+  - MS
+  - h
+  - ms
+  - min

@@ -69,7 +69,7 @@ def clean_scada(scada_file: str | Path) -> pd.DataFrame:
     Returns:
         pd.DataFrame: The cleaned up SCADA data that is ready for loading into a `PlantData` object.
     """
-    scada_freq = "10T"
+    scada_freq = "10min"
 
     logger.info("Loading SCADA data")
     scada_df = pd.read_csv(scada_file)
@@ -96,14 +96,11 @@ def clean_scada(scada_file: str | Path) -> pd.DataFrame:
 
         # Cancel out readings where the wind vane direction repeats more than 3 times in a row
         ix_flag = filters.unresponsive_flag(scada_df.loc[ix_turbine], 3, col=["Va_avg"])
-        scada_df.loc[ix_turbine].loc[ix_flag.values, sensor_cols]
+        scada_df.loc[ix_flag.loc[ix_flag["Va_avg"]].index, sensor_cols] = np.nan
 
         # Cancel out the temperature readings where the value repeats more than 20 times in a row
         ix_flag = filters.unresponsive_flag(scada_df.loc[ix_turbine], 20, col=["Ot_avg"])
-
-        # NOTE: ix_flag is flattened here because as a series it's shape = (N, 1) and
-        # incompatible with this style of indexing, so we need it as shape = (N,)
-        scada_df.loc[ix_turbine, "Ot_avg"].loc[ix_flag.values.flatten()] = np.nan
+        scada_df.loc[ix_flag.loc[ix_flag["Ot_avg"]].index, "Ot_avg"] = np.nan
 
     logger.info("Converting pitch to the range [-180, 180]")
     scada_df.loc[:, "Ba_avg"] = scada_df["Ba_avg"] % 360
@@ -255,7 +252,7 @@ def prepare(
 
     # Fill the 2 missing time stamps with NaN values
     reanalysis_era5_df = reanalysis_era5_df.set_index(pd.DatetimeIndex(reanalysis_era5_df.datetime))
-    reanalysis_era5_df = reanalysis_era5_df.asfreq("1H")
+    reanalysis_era5_df = reanalysis_era5_df.asfreq("1h")
     reanalysis_era5_df["datetime"] = reanalysis_era5_df.index
 
     # calculate wind direction from u, v

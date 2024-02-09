@@ -115,8 +115,8 @@ class TestWakeLosses(unittest.TestCase):
         # Make sure wake loss results are consistent to six decimal places
         # Confirm plant-level and turbine-level wake losses for POR and long-term corrected
         # wake loss estimates.
-        expected_results_por = [0.341373, -11.731022, 10.896697, 4.066565, -1.901445]
-        expected_results_lt = [0.366551, -9.720648, 10.275454, 2.925906, -2.043558]
+        expected_results_por = [0.341363, -11.731031, 10.896701, 4.066524, -1.901442]
+        expected_results_lt = [0.366556, -9.720608, 10.275471, 2.925847, -2.043537]
 
         calculated_results_por = [100 * self.analysis.wake_losses_por]
         calculated_results_por += list(100 * np.array(self.analysis.turbine_wake_losses_por))
@@ -133,28 +133,28 @@ class TestWakeLosses(unittest.TestCase):
         # Confirm plant-level and turbine-level means and std. devs. from Monte Carlo simulation results
         # for POR and long-term corrected wake loss estimates.
         expected_results_por = [
-            0.472843,
-            1.525822,
-            -11.556679,
-            11.021310,
-            4.174661,
-            -1.781930,
-            1.704648,
-            1.367939,
-            1.487695,
-            1.557837,
+            0.472743,
+            1.521414,
+            -11.563967,
+            11.02269,
+            4.175078,
+            -1.776634,
+            1.698539,
+            1.36572,
+            1.484835,
+            1.551052,
         ]
         expected_results_lt = [
-            0.646298,
-            1.368696,
-            -9.434464,
-            10.603648,
-            3.129204,
-            -1.735165,
-            1.535812,
-            1.321793,
-            1.356194,
-            1.420057,
+            0.646731,
+            1.374425,
+            -9.437244,
+            10.615733,
+            3.114511,
+            -1.728213,
+            1.548299,
+            1.325133,
+            1.364934,
+            1.428777,
         ]
 
         calculated_results_por = [
@@ -180,28 +180,28 @@ class TestWakeLosses(unittest.TestCase):
         # Confirm plant-level and turbine-level means and std. devs. from Monte Carlo simulation results
         # for POR and long-term corrected wake loss estimates.
         expected_results_por = [
-            0.916847,
-            2.543303,
-            -10.936793,
-            11.132650,
-            5.244208,
-            -1.772678,
-            2.863249,
-            2.275958,
-            2.405864,
-            2.637304,
+            0.917651,
+            2.541353,
+            -10.941171,
+            11.134159,
+            5.245831,
+            -1.768214,
+            2.867614,
+            2.271275,
+            2.404548,
+            2.631516,
         ]
         expected_results_lt = [
-            1.140988,
-            2.420986,
-            -8.820242,
-            10.996425,
-            3.488785,
-            -1.101014,
-            2.496057,
-            2.331142,
-            2.502902,
-            2.430892,
+            1.140835,
+            2.426398,
+            -8.811414,
+            10.995446,
+            3.487754,
+            -1.108443,
+            2.525045,
+            2.318111,
+            2.507327,
+            2.43125,
         ]
 
         calculated_results_por = [
