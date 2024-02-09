@@ -12,17 +12,15 @@
     },
     "frequency": [
       "us",
-      "ms",
-      "MS",
-      "U",
-      "D",
-      "L",
-      "min",
+      "ns",
+      "ME",
       "W",
-      "S",
-      "H",
-      "N",
-      "T"
+      "D",
+      "s",
+      "MS",
+      "h",
+      "ms",
+      "min"
     ]
   },
   "meter": {
@@ -33,17 +31,15 @@
     },
     "frequency": [
       "us",
-      "ms",
-      "MS",
-      "U",
-      "D",
-      "L",
-      "min",
+      "ns",
+      "ME",
       "W",
-      "S",
-      "H",
-      "N",
-      "T"
+      "D",
+      "s",
+      "MS",
+      "h",
+      "ms",
+      "min"
     ]
   },
   "reanalysis": {
@@ -59,17 +55,15 @@
     },
     "frequency": [
       "us",
-      "ms",
-      "MS",
-      "U",
-      "D",
-      "L",
-      "min",
+      "ns",
+      "ME",
       "W",
-      "S",
-      "H",
-      "N",
-      "T"
+      "D",
+      "s",
+      "MS",
+      "h",
+      "ms",
+      "min"
     ]
   }
 }

@@ -5,17 +5,15 @@ meter:
     units: kWh
   frequency:
   - us
-  - ms
-  - MS
-  - U
-  - D
-  - L
-  - min
+  - ns
+  - ME
   - W
-  - S
-  - H
-  - N
-  - T
+  - D
+  - s
+  - MS
+  - h
+  - ms
+  - min
 curtail:
   IAVL_ExtPwrDnWh:
     name: IAVL_ExtPwrDnWh
@@ -27,17 +25,15 @@ curtail:
     units: kWh
   frequency:
   - us
-  - ms
-  - MS
-  - U
-  - D
-  - L
-  - min
+  - ns
+  - ME
   - W
-  - S
-  - H
-  - N
-  - T
+  - D
+  - s
+  - MS
+  - h
+  - ms
+  - min
 reanalysis:
   WMETR_HorWdSpd:
     name: WMETR_HorWdSpd
@@ -57,14 +53,12 @@ reanalysis:
     units: kg/m^3
   frequency:
   - us
-  - ms
-  - MS
-  - U
-  - D
-  - L
-  - min
+  - ns
+  - ME
   - W
-  - S
-  - H
-  - N
-  - T
+  - D
+  - s
+  - MS
+  - h
+  - ms
+  - min

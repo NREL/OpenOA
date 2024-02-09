@@ -3,6 +3,18 @@ All notable changes to this project will be documented in this file. If you make
 
 ## Unreleased - TBD
 
+- Updated compatibility with Pandas datetime offsets. All uppercase offset strings representing
+  one hour or less have been replaced with the lowercase version. This stems from an update in the
+  Pandas frequency API that breaks in 2.2.0. See the below changes to update frequency settings. The
+  soon-to-be-deprecated style from Pandas will continue to be supported in OpenOA, but will display
+  a `DeprecationWarning` with support extending until OpenOA v4.
+  - M -> ME (MS still allowed)
+  - H -> h
+  - T -> min
+  - S -> s
+  - L -> ms
+  - U -> us
+  - N -> ns
 - Python 3.11 is now supported.
 - Updates the dependency requirements to minimize the number of required packages, and have a more
   expansive list of modifiers. Users can now use any combination of

@@ -21,6 +21,8 @@ def setup_logging(
     else:
         logging.basicConfig(level=level)
 
+    logging.captureWarnings(True)
+
 
 def logged_method_call(the_method, msg="call"):
     def _wrapper(self, *args, **kwargs):

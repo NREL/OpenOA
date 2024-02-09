@@ -13,15 +13,12 @@ scada:
     units: m/s
   frequency:
   - us
-  - ms
-  - U
+  - ns
   - D
-  - L
+  - s
+  - h
+  - ms
   - min
-  - S
-  - H
-  - N
-  - T
 reanalysis:
   WMETR_HorWdSpd:
     name: WMETR_HorWdSpd
@@ -37,12 +34,9 @@ reanalysis:
     units: kg/m^3
   frequency:
   - us
-  - ms
-  - U
+  - ns
   - D
-  - L
+  - s
+  - h
+  - ms
   - min
-  - S
-  - H
-  - N
-  - T

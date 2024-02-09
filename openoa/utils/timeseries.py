@@ -261,4 +261,4 @@ def num_hours(dt_col: pd.Series | str, *, data: pd.DataFrame = None) -> int:
     Returns:
         :obj:`int`: Number of hours in the data
     """
-    return dt_col[~dt_col.index.duplicated()].resample("H").asfreq().index.size
+    return dt_col[~dt_col.index.duplicated()].resample("h").asfreq().index.size
