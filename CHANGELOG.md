@@ -24,6 +24,12 @@ All notable changes to this project will be documented in this file. If you make
 `pytest test/unit` or `pytest test/regression`.
 - Converts some configuration files into `pyproject.toml` settings to reduce visual clutter
   at the top-level of the directory.
+- Updates chained `.loc` expressions to be a single `.loc` expression in project_ENGIE.py to silence
+  a Pandas deprecation warning about future changes.
+- Adds a missing NaN assignment to `project_ENGIE.py:clean_scada`, which causes a slight change in
+  results for the TIE and wake loss regression tests.
+- `openoa.utils.timeseries.gap_fill_data_frame()` now returns the original data if there is no data
+  to fill in, avoiding a Pandas `concat` deprecation warning about pending behavioral changes.
 
 ## [3.0.1 - 2023-12-22]
 

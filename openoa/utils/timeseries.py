@@ -209,7 +209,8 @@ def gap_fill_data_frame(data: pd.DataFrame, dt_col: str, freq: str) -> pd.DataFr
 
     gap_df = pd.DataFrame(columns=data.columns)
     gap_df[dt_col] = find_time_gaps(data[dt_col], freq)
-
+    if gap_df.size == 0:
+        return data.sort_values(dt_col)
     return pd.concat([data, gap_df], axis=0).sort_values(dt_col)
 
 
