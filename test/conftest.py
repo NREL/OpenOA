@@ -26,7 +26,7 @@ def pytest_configure(config):
 
     # Provide the appropriate directories
     unit_tests = [el for el in (ROOT / "unit").iterdir() if el.suffix == ".py"]
-    regression_tests = [el for el in (ROOT / "regresion").iterdir() if el.suffix == ".py"]
+    regression_tests = [el for el in (ROOT / "regression").iterdir() if el.suffix == ".py"]
 
     # If both, run them all; if neither skip any modifications; otherwise run just the appropriate subset
     if regression and unit:
