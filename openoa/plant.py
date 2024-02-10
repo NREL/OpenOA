@@ -148,7 +148,7 @@ def _compose_error_message(
 @logged_method_call
 def frequency_validator(
     actual_freq: str | int | float | None,
-    desired_freq: str | None | set[str] | None,
+    desired_freq: str | set[str] | None,
     exact: bool,
 ) -> bool:
     """Helper function to check if the actual datetime stamp frequency is valid compared
