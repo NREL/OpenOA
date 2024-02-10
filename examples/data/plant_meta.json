@@ -12,7 +12,7 @@
   "curtail": {
     "IAVL_DnWh": "availability_kwh",
     "IAVL_ExtPwrDnWh": "curtailment_kwh",
-    "frequency": "10T",
+    "frequency": "10min",
     "time": "time"
   },
   "latitude": 48.4497,
@@ -28,7 +28,7 @@
       "WMETR_HorWdDir": "winddirection_deg",
       "WMETR_HorWdSpdU": "u_100",
       "WMETR_HorWdSpdV": "v_100",
-      "frequency": "H",
+      "frequency": "h",
       "time": "datetime"
     },
     "merra2": {
@@ -37,7 +37,7 @@
       "WMETR_HorWdDir": "winddirection_deg",
       "WMETR_HorWdSpdU": "u_50",
       "WMETR_HorWdSpdV": "v_50",
-      "frequency": "H",
+      "frequency": "h",
       "time": "datetime"
     }
   },
@@ -49,7 +49,7 @@
     "WROT_BlPthAngVal": "Ba_avg",
     "WTUR_W": "P_avg",
     "asset_id": "Wind_turbine_name",
-    "frequency": "10T",
+    "frequency": "10min",
     "time": "Date_time"
   }
 }

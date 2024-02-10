@@ -722,15 +722,17 @@ def plot_distributions(
 
     for ax, col, label, _xlim, _ylim in zip(axes.flatten(), which, xlabels, xlim, ylim):
         vals = data[col].values
+        u_vals = vals.mean()
         ax.hist(vals, 40, density=1, **plot_kwargs)
         ax.annotate(
-            f"Mean = {vals.mean():.1f}",
+            f"Mean = {u_vals:.1f}",
             (0.05, 0.9),
             xycoords="axes fraction",
             **annotate_kwargs,
         )
+        uncertainty = (vals.std() / u_vals) if u_vals != 0.0 else 0.0
         ax.annotate(
-            f"Uncertainty = {(vals.std() / vals.mean())*100:.1f}%",
+            f"Uncertainty = {uncertainty * 100:.1f}%",
             (0.05, 0.85),
             xycoords="axes fraction",
             **annotate_kwargs,

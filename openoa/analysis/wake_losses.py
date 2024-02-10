@@ -1037,7 +1037,7 @@ class WakeLosses(FromDictMixin, ResetValuesMixin):
             df_rean = self.plant.reanalysis[product][["WMETR_HorWdSpd", "WMETR_HorWdDir"]].copy()
 
             # Drop minute field
-            df_rean.index = df_rean.index.floor("H")
+            df_rean.index = df_rean.index.floor("h")
 
             # Upsample to match SCADA data frequency
             df_rean = df_rean.resample(self.plant.metadata.scada.frequency).ffill()
@@ -1113,7 +1113,7 @@ class WakeLosses(FromDictMixin, ResetValuesMixin):
             + [(f"WMETR_HorWdSpd_{self._run.reanalysis_product}", "")]
         ].copy()
 
-        df_1hr = df_1hr.resample("H").mean().dropna(how="any")
+        df_1hr = df_1hr.resample("h").mean().dropna(how="any")
 
         df_1hr["windspeed_mean_freestream_bin"] = df_1hr["windspeed_mean_freestream"].round()
 
