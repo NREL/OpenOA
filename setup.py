@@ -53,6 +53,7 @@ EXTRAS = {
     ],
     "examples": [
         "jupyterlab",
+        "jupyterlab-myst",
     ],
     "nrel-wind": ["h5pyd"],
     "reanalysis": [
