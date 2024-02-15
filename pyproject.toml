@@ -39,7 +39,9 @@ keywords = [
     "wind-energy",
     "operations",
     "operational-analysis",
+    "operational-assessement",
     "turbine-performance",
+    "wind-plant-performance",
 ]
 classifiers = [  # https://pypi.org/classifiers/
     "Development Status :: 5 - Production/Stable",
