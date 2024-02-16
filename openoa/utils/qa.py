@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 set_styling()
 
 
-def _remove_tz(df: pd.DataFrame, t_local_column: str) -> Tuple[np.ndarray, np.ndarray]:
+def _remove_tz(df: pd.DataFrame, t_local_column: str) -> tuple[np.ndarray, np.ndarray]:
     """Identify the non-timestamp elements in the DataFrame timestamp column and return
     a truth array for filtering the values and the timezone-naive timestamps.
 

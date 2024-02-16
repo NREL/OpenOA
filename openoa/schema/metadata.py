@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import re
 import json
+import warnings
 import itertools
 from copy import deepcopy
+from string import digits
 from pathlib import Path
 
 import yaml
@@ -16,6 +19,7 @@ from openoa.logging import logging, logged_method_call
 
 
 logger = logging.getLogger(__name__)
+warnings.filterwarnings("once", category=DeprecationWarning)
 
 
 # *************************************************************************
@@ -24,9 +28,18 @@ logger = logging.getLogger(__name__)
 
 
 # Datetime frequency checks
-_at_least_monthly = ("MS", "W", "D", "H", "T", "min", "S", "L", "ms", "U", "us", "N")
-_at_least_daily = ("D", "H", "T", "min", "S", "L", "ms", "U", "us", "N")
-_at_least_hourly = ("H", "T", "min", "S", "L", "ms", "U", "us", "N")
+_at_least_monthly = ("MS", "ME", "W", "D", "h", "min", "s", "ms", "us", "ns")
+_at_least_daily = ("D", "h", "min", "s", "ms", "us", "ns")
+_at_least_hourly = ("h", "min", "s", "ms", "us", "ns")
+deprecated_offset_map = {
+    "M": "ME",
+    "H": "h",
+    "T": "min",
+    "S": "s",
+    "L": "ms",
+    "U": "us",
+    "N": "ns",
+}
 
 ANALYSIS_REQUIREMENTS = {
     "MonteCarloAEP": {
@@ -100,6 +113,10 @@ ANALYSIS_REQUIREMENTS = {
             "columns": ["WMETR_HorWdSpd", "WMETR_HorWdDir", "WMETR_AirDen"],
             "freq": _at_least_daily,
         },
+        "asset": {
+            "columns": ["rated_power"],
+            "freq": (),
+        },
     },
     "ElectricalLosses": {
         "scada": {
@@ -160,6 +177,49 @@ ANALYSIS_REQUIREMENTS = {
         },
     },
 }
+
+
+remove_digits = str.maketrans("", "", digits)
+
+
+@logged_method_call
+def convert_frequency(offset: str) -> str:
+    """Convert Pandas offset strings that have a deprecation warning to the upcoming standard.
+
+    Note:
+        When Pandas fully deprecates the usage of "M", "H", "T", "S", "L", "U", and "N", we will
+        follow shortly thereafter
+
+    Args:
+        offset (str): The alphanumeric offset string. Must be one of: "MS", "ME", "W", "D", "h",
+            "min", "s", "ms", "us", "ns", "M", "H", "T", "S", "L", "U", or "N".
+    """
+    # Separate leading digits and the offset code
+    offset_digits = re.findall(r"\d+", offset)
+    offset_digits = "" if offset_digits == [] else offset_digits[0]
+    offset_str = offset.translate(remove_digits)
+
+    # Check the code is a valid format
+    _check = f"{offset_digits}{offset_str}"
+    if offset != _check:
+        raise ValueError(
+            f"Offset strings must have leading digits only, input form: '{offset}' is invalid"
+        )
+
+    # Check that the offset code is valid
+    if offset_str in deprecated_offset_map:
+        warnings.warn(
+            f"Pandas 3.0 will deprecated the following codes, please use the following mapping {deprecated_offset_map}",
+            DeprecationWarning,
+        )
+        offset_str = deprecated_offset_map.get(offset_str, None)
+
+    elif offset_str not in _at_least_monthly:
+        raise ValueError(
+            f"The offset string identifier: '{offset_str}' is invalid. Use one of: {_at_least_monthly}"
+        )
+
+    return f"{offset_digits}{offset_str}"
 
 
 def determine_analysis_requirements(
@@ -391,7 +451,7 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
             should be of type: ``float``.
         WMET_EnvTmp (str): The temperature column in the SCADA data, by default "WMET_EnvTmp". This
             data should be of type: ``float``.
-        frequency (str): The frequency of `time` in the SCADA data, by default "10T". The input
+        frequency (str): The frequency of `time` in the SCADA data, by default "10min". The input
             should align with the `Pandas frequency offset aliases`_.
 
 
@@ -412,7 +472,7 @@ class SCADAMetaData(FromDictMixin):  # noqa: F821
     WMET_EnvTmp: str = field(default="WMET_EnvTmp")
 
     # Data about the columns
-    frequency: str = field(default="10T")
+    frequency: str = field(default="10min", converter=convert_frequency)
 
     # Parameterizations that should not be changed
     # Prescribed mappings, datatypes, and units for in-code reference.
@@ -482,7 +542,7 @@ class MeterMetaData(FromDictMixin):  # noqa: F821
             Additional columns describing the datetime stamps are: :py:attr:`frequency`
         MMTR_SupWh (str): The energy produced, in kWh, column in the meter data, by default
             "MMTR_SupWh". This data should be of type: ``float``.
-        frequency (str): The frequency of `time` in the meter data, by default "10T". The input
+        frequency (str): The frequency of `time` in the meter data, by default "10min". The input
             should align with the `Pandas frequency offset aliases`_.
 
 
@@ -496,7 +556,7 @@ class MeterMetaData(FromDictMixin):  # noqa: F821
     MMTR_SupWh: str = field(default="MMTR_SupWh")
 
     # Data about the columns
-    frequency: str = field(default="10T")
+    frequency: str = field(default="10min", converter=convert_frequency)
 
     # Parameterizations that should not be changed
     # Prescribed mappings, datatypes, and units for in-code reference.
@@ -545,7 +605,7 @@ class TowerMetaData(FromDictMixin):  # noqa: F821
             "WMET_HorWdDir". This data should be of type: ``float``.
         WMET_EnvTmp (str): The temperature column in the SCADA data, by default "WMET_EnvTmp". This
             data should be of type: ``float``.
-        frequency (str): The frequency of `time` in the met tower data, by default "10T". The input
+        frequency (str): The frequency of `time` in the met tower data, by default "10min". The input
             should align with the `Pandas frequency offset aliases`_.
 
     .. _Pandas frequency offset aliases:
@@ -561,7 +621,7 @@ class TowerMetaData(FromDictMixin):  # noqa: F821
     WMET_EnvTmp: str = field(default="WMET_EnvTmp")
 
     # Data about the columns
-    frequency: str = field(default="10T")
+    frequency: str = field(default="10min", converter=convert_frequency)
 
     # Parameterizations that should not be changed
     # Prescribed mappings, datatypes, and units for in-code reference.
@@ -619,7 +679,7 @@ class StatusMetaData(FromDictMixin):  # noqa: F821
             should be of type: ``str``.
         status_text (str): The status text description column in the status data, by default "asset_id".
             This data should be of type: ``str``.
-        frequency (str): The frequency of `time` in the met tower data, by default "10T". The input
+        frequency (str): The frequency of `time` in the met tower data, by default "10min". The input
             should align with the `Pandas frequency offset aliases`_.
 
     .. _Pandas frequency offset aliases:
@@ -635,7 +695,7 @@ class StatusMetaData(FromDictMixin):  # noqa: F821
     status_text: str = field(default="status_text")
 
     # Data about the columns
-    frequency: str = field(default="10T")
+    frequency: str = field(default="10min", converter=convert_frequency)
 
     # Parameterizations that should not be changed
     # Prescribed mappings, datatypes, and units for in-code reference.
@@ -689,7 +749,7 @@ class CurtailMetaData(FromDictMixin):  # noqa: F821
             "IAVL_ExtPwrDnWh". This data should be of type: ``float``.
         IAVL_DnWh (str): The availability, in kWh, column in the curtailment data, by default
             "IAVL_DnWh". This data should be of type: ``float``.
-        frequency (str): The frequency of `time` in the met tower data, by default "10T". The input
+        frequency (str): The frequency of `time` in the met tower data, by default "10min". The input
             should align with the `Pandas frequency offset aliases`_.
 
     .. _Pandas frequency offset aliases:
@@ -703,7 +763,7 @@ class CurtailMetaData(FromDictMixin):  # noqa: F821
     IAVL_DnWh: str = field(default="IAVL_DnWh")
 
     # Data about the columns
-    frequency: str = field(default="10T")
+    frequency: str = field(default="10min", converter=convert_frequency)
 
     # Parameterizations that should not be changed
     # Prescribed mappings, datatypes, and units for in-code reference.
@@ -846,7 +906,7 @@ class ReanalysisMetaData(FromDictMixin):  # noqa: F821
         WMETR_EnvPres (:obj:`str`): The surface air pressure reanalysis data column name, in Pa, by
             default "WMETR_EnvPres".
         frequency (:obj:`str`): The frequency of the timestamps in the :py:attr:`time` column, by
-            default "10T".
+            default "10min".
     """
 
     time: str = field(default="time")
@@ -859,7 +919,7 @@ class ReanalysisMetaData(FromDictMixin):  # noqa: F821
     WMETR_EnvPres: str = field(default="surface_pressure")
 
     # Data about the columns
-    frequency: str = field(default="10T")
+    frequency: str = field(default="10min", converter=convert_frequency)
 
     # Parameterizations that should not be changed
     # Prescribed mappings, datatypes, and units for in-code reference.

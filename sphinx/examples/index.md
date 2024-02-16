@@ -3,6 +3,12 @@
 All notebooks are located at /examples in the OpenOA repository, and can be modified and run on
 [Binder](https://mybinder.org/v2/gh/NREL/OpenOA/develop_v3?filepath=examples).
 
+```{important}
+Be sure to install OpenOA using the `examples` modifier (`pip install "openoa[examples]"`). This
+will install all of the dependencies used by the additional methods contained within the examples
+notebooks.
+```
+
 ## Overview
 
 In each of the following examples we'll be providing more insight into the different functionalities
@@ -31,6 +37,11 @@ of OpenOA. In each notebook, OpenOA is demonstrated using two years of operation
   interface
 
 ## Gap Analysis Step 1b: Estimate the AEP and Its Uncertainty Using Cubico Open Data [[link]](02b_plant_aep_analysis_cubico.ipynb)
+
+```{important}
+Be sure to install OpenOA using the `examples` and `reanalysis` modifiers for this notebook
+(`pip install "openoa[examples,reanalysis]"`).
+```
 
 * Introduces the annual energy production (AEP) class, and how to estimate the uncertainty using
   a Monte Carlo approach

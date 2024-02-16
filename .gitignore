@@ -27,7 +27,7 @@ junit-xml-report.xml
 
 examples/operational_AEP_analysis/data/*.csv
 examples/turbine_analysis/data/*.csv
-examples/cleansed
+examples/data/cleansed
 
 examples/data/kelmarsh/
 examples/data/penmanshiel/

@@ -20,6 +20,13 @@
 #    detection and calibration of yaw misalignment," Renewable Energy, 160, 1217-1227, 2020.
 # 5. L. Gao and J. Hong, “Data-driven yaw misalignment correction for utility-scale wind turbines,”
 #    J. Renewable Sustainable Energy, 13, 063302, 2021.
+#
+# WARNING: This is a relatively simple method that has not yet been validated using data from wind
+# turbines with known static yaw misalignments. Therefore, the results should be treated with
+# caution. One known issue is that the method currently relies on nacelle wind speed measurements
+# to determine the power performance as a function of wind vane angle. If the measured wind speed
+# is affected by the amount of yaw misalignment, potential biases can exist in the estimated static
+# yaw misalignment values.
 
 from __future__ import annotations
 
@@ -94,6 +101,13 @@ class StaticYawMisalignment(FromDictMixin, ResetValuesMixin):
        angle offset for the best-fit cosine curve, and the mean wind vane angle.
     6. The overall yaw misalignment is estimated as the average yaw misalignment over all wind
        speed bins.
+
+    .. warning:: This is a relatively simple method that has not yet been validated using data from
+        wind turbines with known static yaw misalignments. Therefore, the results should be treated
+        with caution. One known issue is that the method currently relies on nacelle wind speed
+        measurements to determine the power performance as a function of wind vane angle. If the
+        measured wind speed is affected by the amount of yaw misalignment, potential biases can
+        exist in the estimated static yaw misalignment values.
 
     Args:
         plant (:obj:`PlantData`): A :py:attr:`openoa.plant.PlantData` object that has been validated
@@ -209,7 +223,7 @@ class StaticYawMisalignment(FromDictMixin, ResetValuesMixin):
         """
         Initialize logging and post-initialization setup steps.
         """
-        if set(("StaticYawMisalignment", "all")).intersection(self.plant.analysis_type) == set():
+        if {"StaticYawMisalignment", "all"}.intersection(self.plant.analysis_type) == set():
             self.plant.analysis_type.append("StaticYawMisalignment")
 
         # Ensure the data are up to spec before continuing with initialization

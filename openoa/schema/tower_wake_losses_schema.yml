@@ -12,15 +12,12 @@ scada:
     dtype: float
     units: m/s
   frequency:
-  - us
+  - ns
+  - h
   - ms
-  - U
-  - L
   - min
-  - S
-  - H
-  - N
-  - T
+  - us
+  - s
 tower:
   asset_id:
     name: asset_id
@@ -35,15 +32,12 @@ tower:
     dtype: float
     units: deg
   frequency:
-  - us
+  - ns
+  - h
   - ms
-  - U
-  - L
   - min
-  - S
-  - H
-  - N
-  - T
+  - us
+  - s
 asset:
   latitude:
     name: latitude
@@ -67,12 +61,9 @@ reanalysis:
     dtype: float
     units: deg
   frequency:
-  - us
+  - ns
+  - h
   - ms
-  - U
-  - L
   - min
-  - S
-  - H
-  - N
-  - T
+  - us
+  - s

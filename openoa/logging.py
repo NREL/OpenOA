@@ -21,6 +21,8 @@ def setup_logging(
     else:
         logging.basicConfig(level=level)
 
+    logging.captureWarnings(True)
+
 
 def logged_method_call(the_method, msg="call"):
     def _wrapper(self, *args, **kwargs):
@@ -35,7 +37,7 @@ def logged_method_call(the_method, msg="call"):
 def logged_function_call(the_function, msg="call"):
     def _wrapper(*args, **kwargs):
         logger = logging.getLogger(the_function.__module__)
-        logger.debug("{}: {}".format(the_function.__name__, msg))
+        logger.debug(f"{the_function.__name__}: {msg}")
         return the_function(*args, **kwargs)
 
     return _wrapper
