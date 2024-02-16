@@ -176,8 +176,9 @@ def frequency_validator(
         desired_freq = {desired_freq}
 
     # If an offset alias couldn't be found, then convert the desired frequency strings to seconds
+    # unless the frequency string is a monthly time encoding, which is deprecated.
     if not isinstance(actual_freq, str):
-        desired_freq = {ts.offset_to_seconds(el) for el in desired_freq}
+        desired_freq = {ts.offset_to_seconds(el) for el in desired_freq if el not in ("MS", "ME")}
 
     if exact:
         return actual_freq in desired_freq
