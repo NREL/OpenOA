@@ -145,10 +145,8 @@ def get_scada_df(scada_headers: pd.DataFrame, use_columns: list[str] | None = No
     scada_lst = list()
     for turbine in scada_headers["Turbine"].unique():
         scada_wt = pd.concat(
-            (
-                pd.read_csv(f, **csv_params)
-                for f in list(scada_headers.loc[scada_headers["Turbine"] == turbine]["File"])
-            )
+            pd.read_csv(f, **csv_params)
+            for f in list(scada_headers.loc[scada_headers["Turbine"] == turbine]["File"])
         )
 
         scada_wt["Turbine"] = turbine
@@ -297,33 +295,45 @@ def prepare(asset: str = "kelmarsh", return_value: str = "plantdata") -> PlantDa
         reanalysis_dict.update(dict(era5=reanalysis_era5_df))
 
     # ERA5 monthly 10m from CDS
-    logger.info("Downloading ERA5 monthly")
-    downloader.get_era5_monthly(
-        lat=asset_df["Latitude"].mean(),
-        lon=asset_df["Longitude"].mean(),
-        save_pathname=f"{path}/era5_monthly_10m/",
-        save_filename=f"{asset}_era5_monthly_10m",
-    )
+    if Path(f"{path}/era5_monthly_10m/{asset}_era5_monthly_10m.csv").exists():
+        logger.info("Reading ERA5 monthly")
+        reanalysis_era5_monthly_df = pd.read_csv(
+            f"{path}/era5_monthly_10m/{asset}_era5_monthly_10m.csv"
+        )
+    else:
+        logger.info("Downloading ERA5 monthly")
+        downloader.get_era5_monthly(
+            lat=asset_df["Latitude"].mean(),
+            lon=asset_df["Longitude"].mean(),
+            save_pathname=f"{path}/era5_monthly_10m/",
+            save_filename=f"{asset}_era5_monthly_10m",
+        )
 
-    logger.info("Reading ERA5 monthly")
-    reanalysis_era5_monthly_df = pd.read_csv(
-        f"{path}/era5_monthly_10m/{asset}_era5_monthly_10m.csv"
-    )
+        logger.info("Reading ERA5 monthly")
+        reanalysis_era5_monthly_df = pd.read_csv(
+            f"{path}/era5_monthly_10m/{asset}_era5_monthly_10m.csv"
+        )
     reanalysis_dict.update(dict(era5_monthly=reanalysis_era5_monthly_df))
 
     # MERRA2 monthly 10m from GES DISC
-    logger.info("Downloading MERRA2 monthly")
-    downloader.get_merra2_monthly(
-        lat=asset_df["Latitude"].mean(),
-        lon=asset_df["Longitude"].mean(),
-        save_pathname=f"{path}/merra2_monthly_10m/",
-        save_filename=f"{asset}_merra2_monthly_10m",
-    )
+    if Path(f"{path}/merra2_monthly_10m/{asset}_merra2_monthly_10m.csv").exists():
+        logger.info("Reading MERRA2 monthly")
+        reanalysis_merra2_monthly_df = pd.read_csv(
+            f"{path}/merra2_monthly_10m/{asset}_merra2_monthly_10m.csv"
+        )
+    else:
+        logger.info("Downloading MERRA2 monthly")
+        downloader.get_merra2_monthly(
+            lat=asset_df["Latitude"].mean(),
+            lon=asset_df["Longitude"].mean(),
+            save_pathname=f"{path}/merra2_monthly_10m/",
+            save_filename=f"{asset}_merra2_monthly_10m",
+        )
 
-    logger.info("Reading MERRA2 monthly")
-    reanalysis_merra2_monthly_df = pd.read_csv(
-        f"{path}/merra2_monthly_10m/{asset}_merra2_monthly_10m.csv"
-    )
+        logger.info("Reading MERRA2 monthly")
+        reanalysis_merra2_monthly_df = pd.read_csv(
+            f"{path}/merra2_monthly_10m/{asset}_merra2_monthly_10m.csv"
+        )
     reanalysis_dict.update(dict(merra2_monthly=reanalysis_merra2_monthly_df))
 
     ###################
