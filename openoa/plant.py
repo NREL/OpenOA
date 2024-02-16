@@ -79,10 +79,10 @@ def _analysis_filter(
             for k in reanalysis_keys:
                 name = k.split("-")[1]
                 col_map = getattr(metadata, key)[name].col_map
-                _add[k] = set([col_map[v] for v in value])
+                _add[k] = {col_map[v] for v in value}
         else:
             col_map = getattr(metadata, key).col_map
-            column_requirements.update({key: set([col_map[v] for v in value])})
+            column_requirements.update({key: {col_map[v] for v in value}})
     column_requirements.update(_add)
 
     # Filter the missing columns, so only analysis-specific columns are provided
@@ -148,7 +148,7 @@ def _compose_error_message(
 @logged_method_call
 def frequency_validator(
     actual_freq: str | int | float | None,
-    desired_freq: Optional[str | None | set[str]],
+    desired_freq: str | set[str] | None,
     exact: bool,
 ) -> bool:
     """Helper function to check if the actual datetime stamp frequency is valid compared
@@ -173,11 +173,11 @@ def frequency_validator(
         return False
 
     if isinstance(desired_freq, str):
-        desired_freq = set([desired_freq])
+        desired_freq = {desired_freq}
 
     # If an offset alias couldn't be found, then convert the desired frequency strings to seconds
     if not isinstance(actual_freq, str):
-        desired_freq = set([ts.offset_to_seconds(el) for el in desired_freq])
+        desired_freq = {ts.offset_to_seconds(el) for el in desired_freq}
 
     if exact:
         return actual_freq in desired_freq
@@ -987,7 +987,7 @@ class PlantData:
         return invalid_freq
 
     @logged_method_call
-    def validate(self, metadata: Optional[dict | str | Path | PlantMetaData] = None) -> None:
+    def validate(self, metadata: dict | str | Path | PlantMetaData | None = None) -> None:
         """Secondary method to validate the plant data objects after loading or changing
         data with option to provide an updated `metadata` object/file as well
 

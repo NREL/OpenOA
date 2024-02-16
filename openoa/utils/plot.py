@@ -1179,10 +1179,8 @@ def plot_wake_losses(
             plot_norm_energy = True
         else:
             raise ValueError(
-                (
-                    "The inputs `energy_data_por` and `energy_data_lt` must both have the same dimensions"
-                    "as `efficiency_data_por` and `efficiency_data_lt`."
-                )
+                "The inputs `energy_data_por` and `energy_data_lt` must both have the same dimensions"
+                "as `efficiency_data_por` and `efficiency_data_lt`."
             )
     elif (energy_data_por is None) & (energy_data_lt is None):
         plot_norm_energy = False
@@ -1511,7 +1509,7 @@ def plot_yaw_misalignment(
                 ],
                 color=curve_fit_color_code,
                 linestyle="--",
-                label=f"Max. Power Vane Angle = {round(curve_fit_params_ws[:,i,1].mean(),1)}$^\circ$",  # noqa: W605
+                label=rf"Max. Power Vane Angle = {round(curve_fit_params_ws[:,i,1].mean(),1)}$^\circ$",  # noqa: W605
             )
 
             yaw_mis_mean = np.round(np.mean(yaw_misalignment_ws[:, i]), 1)
@@ -1519,10 +1517,8 @@ def plot_yaw_misalignment(
             yaw_mis_ub = np.round(np.percentile(yaw_misalignment_ws[:, i], 97.5), 1)
 
             ax.set_title(
-                (
-                    f"{ws} m/s\nYaw Misalignment = "
-                    f"{yaw_mis_mean}$^\circ$ [{yaw_mis_lb}$^\circ$, {yaw_mis_ub}$^\circ$]"  # noqa: W605
-                )
+                f"{ws} m/s\nYaw Misalignment = "
+                rf"{yaw_mis_mean}$^\circ$ [{yaw_mis_lb}$^\circ$, {yaw_mis_ub}$^\circ$]"  # noqa: W605
             )
         else:
             norm_factor = curve_fit_params_ws[i, 0]
@@ -1557,11 +1553,11 @@ def plot_yaw_misalignment(
                 ],
                 color=curve_fit_color_code,
                 linestyle="--",
-                label=f"Max. Power Vane Angle = {round(curve_fit_params_ws[i,1],1)}$^\circ$",  # noqa: W605
+                label=rf"Max. Power Vane Angle = {round(curve_fit_params_ws[i,1],1)}$^\circ$",  # noqa: W605
             )
 
             ax.set_title(
-                f"{ws} m/s\nYaw Misalignment = {np.round(yaw_misalignment_ws[i],1)}$^\circ$"  # noqa: W605
+                f"{ws} m/s\nYaw Misalignment = {np.round(yaw_misalignment_ws[i],1)}$^\\circ$"  # noqa: W605
             )
 
         ax.plot(
@@ -1572,7 +1568,7 @@ def plot_yaw_misalignment(
             ],
             color=mean_vane_color_code,
             linestyle="--",
-            label=f"Mean Vane Angle = {round(mean_vane_angle_ws[i],1)}$^\circ$",  # noqa: W605
+            label=rf"Mean Vane Angle = {round(mean_vane_angle_ws[i],1)}$^\circ$",  # noqa: W605
         )
 
         ax.grid("on")
@@ -1598,13 +1594,13 @@ def plot_yaw_misalignment(
         for i in range(len(ws_bins) % 3, 3):
             axs[last_row][i].remove()
             axs[last_row - 1][i].tick_params(labelbottom=True)
-            axs[last_row - 1][i].set_xlabel("Wind Vane Angle ($^\circ$)")  # noqa: W605
+            axs[last_row - 1][i].set_xlabel(r"Wind Vane Angle ($^\circ$)")  # noqa: W605
 
         for i in range(len(ws_bins) % 3):
-            axs[last_row][i].set_xlabel("Wind Vane Angle ($^\circ$)")  # noqa: W605
+            axs[last_row][i].set_xlabel(r"Wind Vane Angle ($^\circ$)")  # noqa: W605
     else:
         for i in range(N_col):
-            axs[last_row][i].set_xlabel("Wind Vane Angle ($^\circ$)")  # noqa: W605
+            axs[last_row][i].set_xlabel(r"Wind Vane Angle ($^\circ$)")  # noqa: W605
 
     mean_yaw_mis = np.round(np.mean(yaw_misalignment_ws), 1)
     if UQ:
@@ -1612,14 +1608,12 @@ def plot_yaw_misalignment(
             np.percentile(np.mean(yaw_misalignment_ws, 1), [2.5, 97.5]), 1
         )
         fig.suptitle(
-            (
-                f"Turbine {turbine_id}, Yaw Misalignment = {mean_yaw_mis}$^\circ$ "  # noqa: W605
-                f"[{yaw_misalignment_95CI[0]}$^\circ$, {yaw_misalignment_95CI[1]}$^\circ$]"  # noqa: W605
-            )
+            rf"Turbine {turbine_id}, Yaw Misalignment = {mean_yaw_mis}$^\circ$ "  # noqa: W605
+            rf"[{yaw_misalignment_95CI[0]}$^\circ$, {yaw_misalignment_95CI[1]}$^\circ$]"  # noqa: W605
         )
     else:
         fig.suptitle(
-            f"Turbine {turbine_id}, Mean Yaw Misalignment = {str(mean_yaw_mis)}$^\circ$"  # noqa: W605
+            rf"Turbine {turbine_id}, Mean Yaw Misalignment = {str(mean_yaw_mis)}$^\circ$"  # noqa: W605
         )
 
     plt.tight_layout()

@@ -155,10 +155,7 @@ class TurbineLongTermGrossEnergy(FromDictMixin, ResetValuesMixin):
         """
         Runs any non-automated setup steps for the analysis class.
         """
-        if (
-            set(("TurbineLongTermGrossEnergy", "all")).intersection(self.plant.analysis_type)
-            == set()
-        ):
+        if {"TurbineLongTermGrossEnergy", "all"}.intersection(self.plant.analysis_type) == set():
             self.plant.analysis_type.append("TurbineLongTermGrossEnergy")
 
         # Ensure the data are up to spec before continuing with initialization
@@ -400,7 +397,7 @@ class TurbineLongTermGrossEnergy(FromDictMixin, ResetValuesMixin):
 
         # Capture the runs reanalysis data set and ensure the U/V components exist
         reanalysis_df = self.plant.reanalysis[self._run.reanalysis_product]
-        if len(set(("WMETR_HorWdSpdU", "WMETR_HorWdSpdV")).intersection(reanalysis_df.columns)) < 2:
+        if len({"WMETR_HorWdSpdU", "WMETR_HorWdSpdV"}.intersection(reanalysis_df.columns)) < 2:
             (
                 reanalysis_df["WMETR_HorWdSpdU"],
                 reanalysis_df["WMETR_HorWdSpdV"],

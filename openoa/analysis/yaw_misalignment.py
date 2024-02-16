@@ -223,7 +223,7 @@ class StaticYawMisalignment(FromDictMixin, ResetValuesMixin):
         """
         Initialize logging and post-initialization setup steps.
         """
-        if set(("StaticYawMisalignment", "all")).intersection(self.plant.analysis_type) == set():
+        if {"StaticYawMisalignment", "all"}.intersection(self.plant.analysis_type) == set():
             self.plant.analysis_type.append("StaticYawMisalignment")
 
         # Ensure the data are up to spec before continuing with initialization
