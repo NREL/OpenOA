@@ -209,9 +209,18 @@ def gap_fill_data_frame(data: pd.DataFrame, dt_col: str, freq: str) -> pd.DataFr
 
     gap_df = pd.DataFrame(columns=data.columns)
     gap_df[dt_col] = find_time_gaps(data[dt_col], freq)
-    if gap_df.size == 0:
+    if gap_df.size > 0:
+        data = pd.concat([data, gap_df], axis=0)
+    try:
         return data.sort_values(dt_col)
-    return pd.concat([data, gap_df], axis=0).sort_values(dt_col)
+    except ValueError:
+        # Catches when dt_col and the index name are the same, and temporarily renames the column
+        # to perform the sort, and puts it back for the returned data
+        return (
+            data.rename(columns={dt_col: f"_{dt_col}"})
+            .sort_values(f"_{dt_col}")
+            .rename(columns={f"_{dt_col}": dt_col})
+        )
 
 
 @series_method(data_cols=["col"])

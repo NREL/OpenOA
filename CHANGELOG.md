@@ -15,6 +15,11 @@ All notable changes to this project will be documented in this file. If you make
   - L -> ms
   - U -> us
   - N -> ns
+- Replaced the "ME" default time basis with "MS" to maintain consistency with the examples.
+- Fixes a bug in the frequency validation where a monthly frequency offset is attempted to be
+  converted into seconds. Prior to Pandas 2.0 this was supported, but "M" would return 1 minute,
+  so OpenOA will no longer attempt to convert "ME" or "MS", which are unsupported or incorrect,
+  respectively.
 - Python 3.11 is now supported.
 - Updates the dependency requirements to minimize the number of required packages, and have a more
   expansive list of modifiers. Users can now use any combination of
@@ -33,6 +38,8 @@ All notable changes to this project will be documented in this file. If you make
 - The turbine capacity value used for power curve filtering in `TurbineLongTermGrossEnergy` is
   changed to the rated power from the asset table instead of the maximum power from SCADA. This
   makes the power curve filtering more robust to turbine power outliers above rated power.
+- Fixed a minor bug in the Cubico example workflow that caused the download of reanalysis data
+  without checking for its existence, unlike what is done with the project data.
 
 ## [3.0.1 - 2023-12-22]
 
