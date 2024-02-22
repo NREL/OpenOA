@@ -2,7 +2,7 @@
   "projectName": "OpenOA",
   "projectOwner": "NREL"
   "files": [
-    "readme.md"
+    "README.md"
   ],
   "imageSize": 100
 }
