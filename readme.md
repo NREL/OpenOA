@@ -18,7 +18,7 @@
 
 -----
 
-# Overview
+## Software Overview
 
 - Jump to [installation instructions](#installation-and-usage).
 - Demo the code by running the [example notebooks on Binder](https://mybinder.org/v2/gh/NREL/OpenOA/main?filepath=examples).
@@ -38,7 +38,7 @@ plants.
 > **Warning**
 OpenOA is a research software library and is released under a BSD-3 license. Please refer to the
 accompanying [license file](LICENSE.txt) for the full terms. The inclusion of any algorithms and
-their implementations in the code or accompanying documentation **shal not** be interpreted as an
+their implementations in the code or accompanying documentation **shall not** be interpreted as an
 endorsement by the authors, NREL, nor the US Government for fitness in any particular purpose or
 situation. While the authors believe the software may be useful for industry practitioners, we
 encourage caution, use of best practices, and engagement with trained professionals when performing
@@ -125,7 +125,7 @@ For further infromation about the features and citations, please see the [OpenOA
    }
 ```
 
-# Installation and Usage
+## Installation and Usage
 
 ### Requirements
 
@@ -150,7 +150,7 @@ cd OpenOA
 pip install .
 ```
 
-You should now be able to import openoa from the Python interpreter:
+You should now be able to import OpenOA from the Python interpreter:
 
 ```bash
 python
