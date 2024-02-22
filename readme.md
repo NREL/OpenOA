@@ -19,7 +19,7 @@
 # Overview
 
 - Jump to [installation instructions](#installation-and-usage).
-- Try out the Binder [demo notebook](https://mybinder.org/v2/gh/NREL/OpenOA/main?filepath=examples).
+- Demo the code by running the [example notebooks on Binder](https://mybinder.org/v2/gh/NREL/OpenOA/main?filepath=examples).
 - Read the [documentation](https://openoa.readthedocs.io/en/latest/).
 - Learn how to [contribute](contributing.md).
 
