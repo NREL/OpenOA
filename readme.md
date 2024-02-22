@@ -23,12 +23,15 @@
 - Read the [documentation](https://openoa.readthedocs.io/en/latest/).
 - Learn how to [contribute](contributing.md).
 
-This library provides a framework to study operational assessment (OA) methodologies that consume
-timeseries data from wind plants. Its development has been motivated by the National Renewable
-Energy Laboratory (NREL) Wind Plant Performance Prediction (WP3) Benchmarking (PRUF) project [^1], which
-developed an open source, baseline implementation of the 20-year annualized energy production (AEP)
-for plant-level performance assessment. It has grown to incororporate several more analyses, and a
-schema for time-series data from wind power plants.
+This library provides a framework for assessing wind plant performance using operational assessment
+(OA) methodologies that consume timeseries data from wind plants. Its development has been motivated
+by the Wind Plant Performance Prediction (WP3) Benchmark project, led by the National Renewable
+Energy Laboratory (NREL), which focuses on quantifying and understanding differences between the
+expected and actual energy production of wind plants. To support the WP3 Benchmark project, OpenOA
+was initially developed to provide a baseline implementation of a long-term operational annual
+energy production (AEP) estimation method. It has since grown to incorporate several more OA
+analysis methods, lower-level utility functions, and a schema for time-series data from wind power
+plants.
 
 > **Warning**
 OpenOA is a research software library and is released under a BSD-3 license. Please refer to the
