@@ -26,7 +26,9 @@
 - Learn how to [contribute](contributing.md).
 
 This library provides a framework for assessing wind plant performance using operational assessment
-(OA) methodologies that consume timeseries data from wind plants. Its development has been motivated
+(OA) methodologies that consume timeseries data from wind plants. The software is implemented in Python and uses the Pandas data frame library. The goal of the project is to provide an open source implementation of common data structures, analysis methods, and utility functions relevant to wind plant OA, while providing a platform to collaborate on new functionality.
+
+Development of OpenOA was motivated
 by the Wind Plant Performance Prediction (WP3) Benchmark project, led by the National Renewable
 Energy Laboratory (NREL), which focuses on quantifying and understanding differences between the
 expected and actual energy production of wind plants. To support the WP3 Benchmark project, OpenOA
@@ -108,7 +110,7 @@ For further infromation about the features and citations, please see the [OpenOA
 
 **To cite analysis methods or individual features:** Please cite the original authors of these methods, as noted in the [documentation](#included-analysis-methods) and inline comments.
 
-**To cite the open-source software framework as a whole, or the OpenOA open source development effort more broadly,** please use the following citation:
+**To cite the open-source software framework as a whole, or the OpenOA open source development effort more broadly,** please use the following citation [^14]:
 
 ```bibtex
    @article{Perr-Sauer2021,
@@ -124,6 +126,8 @@ For further infromation about the features and citations, please see the [OpenOA
       journal = {Journal of Open Source Software}
    }
 ```
+
+[^14]: Perr-Sauer, J., and Optis, M., Fields, J.M., Bodini, N., Lee, J.C.Y., Todd, A., Simley, E., Hammond, R., Phillips, C., Lunacek, M., Kemper, T., Williams, L., Craig, A., Agarwal, N., Sheng, S., and Meissner, J. OpenOA: An Open-Source Codebase For Operational Analysis of Wind Farms. *Journal of Open Source Software*, (2022). https://doi.org/10.21105/joss.02171.
 
 ## Installation and Usage
 
