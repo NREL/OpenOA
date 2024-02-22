@@ -43,13 +43,10 @@ since grown to incorporate several more OA analysis methods, lower-level utility
 schema for time-series data from wind power plants.
 
 > **Warning**
-OpenOA is a research software library and is released under a BSD-3 license. Please refer to the
-accompanying [license file](LICENSE.txt) for the full terms. The inclusion of any algorithms and
-their implementations in the code or accompanying documentation **shall not** be interpreted as an
-endorsement by the authors, NREL, nor the US Government for fitness in any particular purpose or
-situation. While the authors believe the software may be useful for industry practitioners, we
-encourage caution, use of best practices, and engagement with trained professionals when performing
-any data analysis.
+Warning OpenOA is a research software library and is released under a BSD-3 license. Please refer
+to the accompanying [license file](LICENSE.txt) for the full terms. We encourage caution, use of
+best practices, and engagement with subject matter experts when performing any data analysis.
+
 
 ### Included Analysis Methods
 
