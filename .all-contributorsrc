@@ -7,9 +7,91 @@
     "README.md"
   ],
   "imageSize": 100,
-  "commit": true,
+  "commit": false,
   "commitConvention": "angular",
-  "contributors": [],
   "contributorsPerLine": 7,
-  "linkToUsage": true
+  "linkToUsage": true,
+  "contributors": [
+    {
+      "login": "jordanperr",
+      "name": "Jordan Perr-Sauer",
+      "avatar_url": "https://avatars.githubusercontent.com/u/355615?v=4",
+      "profile": "https://github.com/jordanperr",
+      "contributions": [
+        "doc",
+        "code"
+      ]
+    },
+    {
+      "login": "RHammond2",
+      "name": "Rob Hammond",
+      "avatar_url": "https://avatars.githubusercontent.com/u/13874373?v=4",
+      "profile": "https://www.linkedin.com/in/rob-hammond-33583756/",
+      "contributions": [
+        "code",
+        "doc"
+      ]
+    },
+    {
+      "login": "ejsimley",
+      "name": "ejsimley",
+      "avatar_url": "https://avatars.githubusercontent.com/u/40040961?v=4",
+      "profile": "https://github.com/ejsimley",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "zheitkamp1",
+      "name": "zheitkamp1",
+      "avatar_url": "https://avatars.githubusercontent.com/u/53791791?v=4",
+      "profile": "https://github.com/zheitkamp1",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "nbodini",
+      "name": "Nicola Bodini",
+      "avatar_url": "https://avatars.githubusercontent.com/u/55894604?v=4",
+      "profile": "https://github.com/nbodini",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "charlie9578",
+      "name": "Charlie",
+      "avatar_url": "https://avatars.githubusercontent.com/u/14888896?v=4",
+      "profile": "https://charlie9578.github.io/",
+      "contributions": [
+        "code",
+        "data",
+        "doc"
+      ]
+    },
+    {
+      "login": "Dynorat",
+      "name": "Jason Fields",
+      "avatar_url": "https://avatars.githubusercontent.com/u/4141650?v=4",
+      "profile": "https://github.com/Dynorat",
+      "contributions": [
+        "projectManagement",
+        "business",
+        "design",
+        "fundingFinding"
+      ]
+    },
+    {
+      "login": "moptis",
+      "name": "moptis",
+      "avatar_url": "https://avatars.githubusercontent.com/u/32751681?v=4",
+      "profile": "https://github.com/moptis",
+      "contributions": [
+        "code",
+        "data",
+        "doc"
+      ]
+    }
+  ]
 }
