@@ -19,7 +19,11 @@
       "profile": "https://www.linkedin.com/in/rob-hammond-33583756/",
       "contributions": [
         "code",
-        "doc"
+        "doc",
+        "review",
+        "tutorial",
+        "maintenance",
+        "ideas"
       ]
     },
     {
@@ -29,7 +33,11 @@
       "profile": "https://github.com/jordanperr",
       "contributions": [
         "doc",
-        "code"
+        "code",
+        "review",
+        "tutorial",
+        "maintenance",
+        "ideas"
       ]
     },
     {
@@ -38,7 +46,11 @@
       "avatar_url": "https://avatars.githubusercontent.com/u/40040961?v=4",
       "profile": "https://github.com/ejsimley",
       "contributions": [
-        "code"
+        "code",
+        "doc",
+        "review",
+        "tutorial",
+        "ideas"
       ]
     },
     {
@@ -59,7 +71,9 @@
       "avatar_url": "https://avatars.githubusercontent.com/u/55894604?v=4",
       "profile": "https://github.com/nbodini",
       "contributions": [
-        "code"
+        "code",
+        "tutorial",
+        "ideas"
       ]
     },
     {
@@ -70,7 +84,9 @@
       "contributions": [
         "code",
         "data",
-        "doc"
+        "doc",
+        "tutorial",
+        "ideas"
       ]
     },
     {
@@ -90,7 +106,9 @@
       "contributions": [
         "code",
         "data",
-        "doc"
+        "doc",
+        "tutorial",
+        "ideas"
       ]
     },
     {
