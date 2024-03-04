@@ -47,7 +47,6 @@ Warning OpenOA is a research software library and is released under a BSD-3 lice
 to the accompanying [license file](LICENSE.txt) for the full terms. We encourage caution, use of
 best practices, and engagement with subject matter experts when performing any data analysis.
 
-
 ### Included Analysis Methods
 
 | Name | Description | Citations |
