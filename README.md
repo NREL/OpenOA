@@ -1,7 +1,4 @@
 <img src="https://github.com/NREL/OpenOA/blob/develop/Open%20OA%20Final%20Logos/Color/Open%20OA%20Color%20Transparent%20Background.png?raw=true" alt="OpenOA" width="300"/>
-<!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-0-orange.svg?style=flat-square)](#contributors-)
-<!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 -----
 
@@ -18,7 +15,9 @@
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/)
-[![All Contributors](https://img.shields.io/github/all-contributors/NREL/OpenOA?color=ee8449&style=flat-square)](#contributors)
+<!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
+[![All Contributors](https://img.shields.io/badge/all_contributors-15-orange.svg?style=flat-square)](#contributors-)
+<!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 -----
 
@@ -273,6 +272,41 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
 <!-- prettier-ignore-start -->
 <!-- markdownlint-disable -->
+<table>
+  <tbody>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="https://www.linkedin.com/in/rob-hammond-33583756/"><img src="https://avatars.githubusercontent.com/u/13874373?v=4?s=100" width="100px;" alt="Rob Hammond"/><br /><sub><b>Rob Hammond</b></sub></a><br /><a href="https://github.com/NREL/OpenOA/commits?author=RHammond2" title="Code">💻</a> <a href="https://github.com/NREL/OpenOA/commits?author=RHammond2" title="Documentation">📖</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/jordanperr"><img src="https://avatars.githubusercontent.com/u/355615?v=4?s=100" width="100px;" alt="Jordan Perr-Sauer"/><br /><sub><b>Jordan Perr-Sauer</b></sub></a><br /><a href="https://github.com/NREL/OpenOA/commits?author=jordanperr" title="Documentation">📖</a> <a href="https://github.com/NREL/OpenOA/commits?author=jordanperr" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/ejsimley"><img src="https://avatars.githubusercontent.com/u/40040961?v=4?s=100" width="100px;" alt="ejsimley"/><br /><sub><b>ejsimley</b></sub></a><br /><a href="https://github.com/NREL/OpenOA/commits?author=ejsimley" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/Dynorat"><img src="https://avatars.githubusercontent.com/u/4141650?v=4?s=100" width="100px;" alt="Jason Fields"/><br /><sub><b>Jason Fields</b></sub></a><br /><a href="#projectManagement-Dynorat" title="Project Management">📆</a> <a href="#business-Dynorat" title="Business development">💼</a> <a href="#design-Dynorat" title="Design">🎨</a> <a href="#fundingFinding-Dynorat" title="Funding Finding">🔍</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/nbodini"><img src="https://avatars.githubusercontent.com/u/55894604?v=4?s=100" width="100px;" alt="Nicola Bodini"/><br /><sub><b>Nicola Bodini</b></sub></a><br /><a href="https://github.com/NREL/OpenOA/commits?author=nbodini" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/moptis"><img src="https://avatars.githubusercontent.com/u/32751681?v=4?s=100" width="100px;" alt="moptis"/><br /><sub><b>moptis</b></sub></a><br /><a href="https://github.com/NREL/OpenOA/commits?author=moptis" title="Code">💻</a> <a href="#data-moptis" title="Data">🔣</a> <a href="https://github.com/NREL/OpenOA/commits?author=moptis" title="Documentation">📖</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/joejoeyjoseph"><img src="https://avatars.githubusercontent.com/u/22756182?v=4?s=100" width="100px;" alt="Joseph Lee"/><br /><sub><b>Joseph Lee</b></sub></a><br /><a href="https://github.com/NREL/OpenOA/commits?author=joejoeyjoseph" title="Code">💻</a></td>
+    </tr>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="https://charlie9578.github.io/"><img src="https://avatars.githubusercontent.com/u/14888896?v=4?s=100" width="100px;" alt="Charlie"/><br /><sub><b>Charlie</b></sub></a><br /><a href="https://github.com/NREL/OpenOA/commits?author=charlie9578" title="Code">💻</a> <a href="#data-charlie9578" title="Data">🔣</a> <a href="https://github.com/NREL/OpenOA/commits?author=charlie9578" title="Documentation">📖</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/zheitkamp1"><img src="https://avatars.githubusercontent.com/u/53791791?v=4?s=100" width="100px;" alt="zheitkamp1"/><br /><sub><b>zheitkamp1</b></sub></a><br /><a href="https://github.com/NREL/OpenOA/commits?author=zheitkamp1" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/abbey2017"><img src="https://avatars.githubusercontent.com/u/26353690?v=4?s=100" width="100px;" alt="Abiodun Timothy Olaoye"/><br /><sub><b>Abiodun Timothy Olaoye</b></sub></a><br /><a href="https://github.com/NREL/OpenOA/commits?author=abbey2017" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="http://kristenthyng.com/"><img src="https://avatars.githubusercontent.com/u/3487237?v=4?s=100" width="100px;" alt="Kristen Thyng"/><br /><sub><b>Kristen Thyng</b></sub></a><br /><a href="https://github.com/NREL/OpenOA/commits?author=kthyng" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="http://www.rafmudaf.com/"><img src="https://avatars.githubusercontent.com/u/13797903?v=4?s=100" width="100px;" alt="Rafael M Mudafort"/><br /><sub><b>Rafael M Mudafort</b></sub></a><br /><a href="https://github.com/NREL/OpenOA/commits?author=rafmudaf" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/sebastianpfaffel"><img src="https://avatars.githubusercontent.com/u/22168894?v=4?s=100" width="100px;" alt="sebastianpfaffel"/><br /><sub><b>sebastianpfaffel</b></sub></a><br /><a href="https://github.com/NREL/OpenOA/commits?author=sebastianpfaffel" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/nateagarwal"><img src="https://avatars.githubusercontent.com/u/51377789?v=4?s=100" width="100px;" alt="nateagarwal"/><br /><sub><b>nateagarwal</b></sub></a><br /><a href="https://github.com/NREL/OpenOA/commits?author=nateagarwal" title="Code">💻</a></td>
+    </tr>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/Var-Char"><img src="https://avatars.githubusercontent.com/u/16821332?v=4?s=100" width="100px;" alt="Var-Char"/><br /><sub><b>Var-Char</b></sub></a><br /><a href="https://github.com/NREL/OpenOA/commits?author=Var-Char" title="Code">💻</a></td>
+    </tr>
+  </tbody>
+  <tfoot>
+    <tr>
+      <td align="center" size="13px" colspan="7">
+        <img src="https://raw.githubusercontent.com/all-contributors/all-contributors-cli/1b8533af435da9854653492b1327a23a4dbd0a10/assets/logo-small.svg">
+          <a href="https://all-contributors.js.org/docs/en/bot/usage">Add your contributions</a>
+        </img>
+      </td>
+    </tr>
+  </tfoot>
+</table>
+
 <!-- markdownlint-restore -->
 <!-- prettier-ignore-end -->
 <!-- ALL-CONTRIBUTORS-LIST:END -->
