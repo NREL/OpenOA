@@ -23,7 +23,8 @@
         "review",
         "tutorial",
         "maintenance",
-        "ideas"
+        "ideas",
+        "fundingFinding"
       ]
     },
     {
@@ -37,7 +38,8 @@
         "review",
         "tutorial",
         "maintenance",
-        "ideas"
+        "ideas",
+        "fundingFinding"
       ]
     },
     {
@@ -46,11 +48,14 @@
       "avatar_url": "https://avatars.githubusercontent.com/u/40040961?v=4",
       "profile": "https://github.com/ejsimley",
       "contributions": [
+        "projectManagement",
         "code",
+        "data",
         "doc",
         "review",
         "tutorial",
-        "ideas"
+        "ideas",
+        "fundingFinding"
       ]
     },
     {
@@ -60,6 +65,7 @@
       "profile": "https://github.com/Dynorat",
       "contributions": [
         "projectManagement",
+        "review",
         "business",
         "design",
         "fundingFinding"
@@ -72,6 +78,7 @@
       "profile": "https://github.com/nbodini",
       "contributions": [
         "code",
+        "review",
         "tutorial",
         "ideas"
       ]
@@ -85,6 +92,7 @@
         "code",
         "data",
         "doc",
+        "review",
         "tutorial",
         "ideas"
       ]
@@ -162,7 +170,8 @@
       "avatar_url": "https://avatars.githubusercontent.com/u/51377789?v=4",
       "profile": "https://github.com/nateagarwal",
       "contributions": [
-        "code"
+        "code",
+        "review"
       ]
     },
     {
