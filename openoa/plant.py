@@ -1252,7 +1252,9 @@ class PlantData:
 
         # Maintain v2 compatibility of np.inf for the diagonal
         distance = distance + distance.values.T - np.diag(np.diag(distance.values))
-        np.fill_diagonal(distance.values, np.inf)
+        distance_array = distance.values
+        np.fill_diagonal(distance_array, np.inf)
+        distance.loc[:, :] = distance_array
         self.asset_distance_matrix = distance
 
     def turbine_distance_matrix(self, turbine_id: str = None) -> pd.DataFrame:
@@ -1330,7 +1332,9 @@ class PlantData:
             + np.triu((direction.values - 180.0) % 360.0, 1).T
             - np.diag(np.diag(direction.values))
         )
-        np.fill_diagonal(direction.values, np.inf)
+        direction_array = direction.values
+        np.fill_diagonal(direction_array, np.inf)
+        direction.loc[:, :] = direction_array
         self.asset_direction_matrix = direction
 
     def turbine_direction_matrix(self, turbine_id: str = None) -> pd.DataFrame:
@@ -1443,7 +1447,7 @@ class PlantData:
                 'Invalid freestream method. Currently, "sector" and "IEC" are supported.'
             )
 
-        return list(self.asset.index[freestream_indices])
+        return list(self.asset.loc[self.asset["type"] == "turbine"].index[freestream_indices])
 
     @logged_method_call
     def calculate_nearest_neighbor(
