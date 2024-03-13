@@ -1,36 +1,5 @@
 # OpenOA Documentation
 
-## Installation
-
-Compatible with Python 3.8 through 3.11 with pip.
-
-We strongly recommend using the Anaconda Python distribution and creating a new conda environment
-for OpenOA. You can download Anaconda through
-[their website.](https://www.anaconda.com/products/individual)
-
-After installing Anaconda, create and activate a new conda environment with the name "openoa-env":
-
-```bash
-conda create --name openoa-env python=3.10
-conda activate openoa-env
-```
-
-### Source Code
-
-Clone the repository and install the library and its dependencies using pip:
-
-```bash
-git clone https://github.com/NREL/OpenOA.git
-cd OpenOA
-pip install .
-```
-
-### Pip
-
-```bash
-pip install openoa
-```
-
 ## Software Overview
 
 OpenOA [^1] is a software framework written in Python for assessing wind plant performance using
@@ -91,6 +60,37 @@ Some examples of utils modules include:
 
 For further information about the features and citations, please see the
 [OpenOA documentation website](https://openoa.readthedocs.io/en/latest/).
+
+## Installation
+
+Compatible with Python 3.8 through 3.11 with pip.
+
+We strongly recommend using the Anaconda Python distribution and creating a new conda environment
+for OpenOA. You can download Anaconda through
+[their website.](https://www.anaconda.com/products/individual)
+
+After installing Anaconda, create and activate a new conda environment with the name "openoa-env":
+
+```bash
+conda create --name openoa-env python=3.10
+conda activate openoa-env
+```
+
+### Source Code
+
+Clone the repository and install the library and its dependencies using pip:
+
+```bash
+git clone https://github.com/NREL/OpenOA.git
+cd OpenOA
+pip install .
+```
+
+### Pip
+
+```bash
+pip install openoa
+```
 
 ## Citing OpenOA
 
