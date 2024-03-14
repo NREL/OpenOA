@@ -3,13 +3,11 @@ name: Run Unit and Regression Tests with Code Coverage
 on:
   push:
     branches: [main, develop]
-    paths:  # No need to rerun all the tests if we're only editing documentation and examples
-      - "openoa/**"
-      - "test/**"
-      - "examples/data/**"
-      - "examples/**"
-      - "!examples/**.ipynb"
-      - ".github/workflows/**"
+    paths-ignore:  # No need to rerun all the tests if we're only editing documentation and examples
+      - "examples/**.ipynb"
+      - "sphinx/**"
+      - "**.md"
+      - "**.rst"
   pull_request:
     branches: [main, develop]
   schedule:
