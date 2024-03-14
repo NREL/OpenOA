@@ -8,10 +8,17 @@
 
 # The general approach for estimating wake losses and quantifying uncertainty using bootstrapping
 # is based in part on the following publications:
-# 1. N. G. Nygaard, "Systematic quantification of wake model uncertainty,"" Proc. EWEA Offshore,
-#    Copenhagen, Denmark, 2015.
-# 2. J. Xue and L. Wang, “Online data-driven approach of yaw error estimation and correction of
-#    horizontal axis wind turbine,” IET J. Eng., 2019(18), 4937–4940, 2019.
+# 1. Barthelmie, R. J. and Jensen, L. E. Evaluation of wind farm efficiency and wind turbine wakes
+#    at the Nysted offshore wind farm, *Wind Energy* 13(6):573–586 (2010).
+#    https://doi.org/10.1002/we.408.
+# 2. Nygaard, N. G. Systematic quantification of wake model uncertainty. Proc. EWEA Offshore,
+#    Copenhagen, Denmark, March 10-12 (2015).
+# 3. Walker, K., Adams, N., Gribben, B., Gellatly, B., Nygaard, N. G., Henderson, A., Marchante
+#    Jimémez, M., Schmidt, S. R., Rodriguez Ruiz, J., Paredes, D., Harrington, G., Connell, N.,
+#    Peronne, O., Cordoba, M., Housley, P., Cussons, R., Håkansson, M., Knauer, A., and Maguire,
+#    E.: An evaluation of the predictive accuracy of wake effects models for offshore wind farms.
+#    *Wind Energy* 19(5):979–996 (2016). https://doi.org/10.1002/we.1871.
+
 
 from __future__ import annotations
 

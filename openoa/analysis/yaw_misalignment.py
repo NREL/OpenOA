@@ -9,18 +9,22 @@
 # averaged over all wind speed bins is calculated.
 #
 # Many parts of this method are based on or inspired by the following publications:
-# 1. Y. Bao, Q. Yang, L. Fu, Q. Chen, C. Cheng, and Y. Sun, "Identification of Yaw Error Inherent
-#    Misalignment for Wind Turbine Based on SCADA Data: A Data Mining Approach," Proc. 12th Asian
-#    Control Conference (ASCC), Kitakyushu, Japan, 1095-1100, 2019.
-# 2. J. Xue and L. Wang, “Online data-driven approach of yaw error estimation and correction of
-#    horizontal axis wind turbine,” IET J. Eng., 2019(18), 4937–4940, 2019.
-# 3. D. Astolfi, F. Castellani, and L. Terzi, “An Operation Data-Based Method for the Diagnosis of
-#    Zero-Point Shift of Wind Turbines Yaw Angle,” J. Solar Energy Engineering, 142, 024501, 2020.
-# 4. B. Jing, Z. Qian, Y. Pei, L. Zhang, and T. Yang, "Improving wind turbine efficiency through
-#    detection and calibration of yaw misalignment," Renewable Energy, 160, 1217-1227, 2020.
-# 5. L. Gao and J. Hong, “Data-driven yaw misalignment correction for utility-scale wind turbines,”
-#    J. Renewable Sustainable Energy, 13, 063302, 2021.
-#
+
+# 1. Bao, Y., Yang, Q., Fu, L., Chen, Q., Cheng, C., and Sun, Y. Identification of Yaw Error
+#    Inherent Misalignment for Wind Turbine Based on SCADA Data: A Data Mining Approach. Proc. 12th
+#    Asian Control Conference (ASCC), Kitakyushu, Japan, June 9-12 (2019). 1095-1100.
+# 2. Xue, J. and Wang, L. Online data-driven approach of yaw error estimation and correction of
+#    horizontal axis wind turbine. *IET J. Eng.* 2019(18):4937–4940 (2019).
+#    https://doi.org/10.1049/joe.2018.9293.
+# 3. Astolfi, D., Castellani, F., and Terzi, L. An Operation Data-Based Method for the Diagnosis of
+#    Zero-Point Shift of Wind Turbines Yaw Angle. *J. Solar Energy Engineering* 142(2):024501
+#    (2020). https://doi.org/10.1115/1.4045081.
+# 4. Jing, B., Qian, Z., Pei, Y., Zhang, L., and Yang, T. Improving wind turbine efficiency through
+#    detection and calibration of yaw misalignment. *Renewable Energy* 160:1217-1227 (2020).
+#    https://doi.org/10.1016/j.renene.2020.07.063.
+# 5. Gao, L. and Hong, J. Data-driven yaw misalignment correction for utility-scale wind turbines.
+#    *J. Renewable Sustainable Energy* 13(6):063302 (2021). https://doi.org/10.1063/5.0056671.
+
 # WARNING: This is a relatively simple method that has not yet been validated using data from wind
 # turbines with known static yaw misalignments. Therefore, the results should be treated with
 # caution. One known issue is that the method currently relies on nacelle wind speed measurements

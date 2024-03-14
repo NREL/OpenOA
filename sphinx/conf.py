@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Operational Analysis documentation build configuration file, created by
 # sphinx-quickstart on Fri Dec  8 11:30:30 2017.
@@ -75,7 +74,7 @@ author = "NREL PRUF OA Team"
 #
 # Read the version from the __init__.py file without importing it
 def read(*names, **kwargs):
-    with io.open(
+    with open(
         os.path.join(os.path.dirname(__file__)[:-7], *names),
         encoding=kwargs.get("encoding", "utf8"),
     ) as fp:
@@ -131,7 +130,7 @@ html_css_files = [
 html_theme_options = {
     "github_url": "https://github.com/NREL/OpenOA",
     "navbar_start": ["navbar-logo"],
-    "show_toc_level": 2,
+    "show_toc_level": 3,
     "show_nav_level": 2,
     "navigation_depth": 2,
     "collapse_navigation": True,

@@ -3,6 +3,7 @@ import json
 import logging
 import logging.config
 from pathlib import Path
+from functools import wraps
 
 
 def setup_logging(
@@ -25,6 +26,7 @@ def setup_logging(
 
 
 def logged_method_call(the_method, msg="call"):
+    @wraps(the_method)
     def _wrapper(self, *args, **kwargs):
         logger = logging.getLogger(the_method.__module__)
         logger.debug(f"{self.__class__.__name__}#{id(self)}.{the_method.__name__}: {msg}")
@@ -35,6 +37,7 @@ def logged_method_call(the_method, msg="call"):
 
 
 def logged_function_call(the_function, msg="call"):
+    @wraps(the_function)
     def _wrapper(*args, **kwargs):
         logger = logging.getLogger(the_function.__module__)
         logger.debug(f"{the_function.__name__}: {msg}")
