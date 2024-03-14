@@ -3,8 +3,6 @@ name: Run Unit and Regression Tests with Code Coverage
 on:
   push:
     branches: [main, develop]
-  pull_request:
-    branches: [main, develop]
     paths:  # No need to rerun all the tests if we're only editing documentation and examples
       - "openoa/**"
       - "test/**"
@@ -12,6 +10,8 @@ on:
       - "examples/**"
       - "!examples/**.ipynb"
       - ".github/workflows/**"
+  pull_request:
+    branches: [main, develop]
   schedule:
     - cron: "0 0 * * MON"
 
