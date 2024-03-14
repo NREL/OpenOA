@@ -1,4 +1,4 @@
-__version__ = "3.0.1"
+__version__ = "3.1.0"
 """
 When bumping version, please be sure to also update parameters in sphinx/conf.py
 """

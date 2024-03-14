@@ -1,7 +1,7 @@
 # Changelog
 All notable changes to this project will be documented in this file. If you make a notable change to the project, please add a line describing the change to the "unreleased" section. The maintainers will make an effort to keep the [Github Releases](https://github.com/NREL/OpenOA/releases) page up to date with this changelog. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## Unreleased - TBD
+## v3.1 - 2024-03-14
 
 - Updated compatibility with Pandas datetime offsets. All uppercase offset strings representing
   one hour or less have been replaced with the lowercase version. This stems from an update in the
@@ -40,6 +40,7 @@ All notable changes to this project will be documented in this file. If you make
   makes the power curve filtering more robust to turbine power outliers above rated power.
 - Fixed a minor bug in the Cubico example workflow that caused the download of reanalysis data
   without checking for its existence, unlike what is done with the project data.
+- Updates the README file and documentation site homepage to be more user friendly.
 
 ## [3.0.1 - 2023-12-22]
 
