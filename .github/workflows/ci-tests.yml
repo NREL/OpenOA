@@ -2,9 +2,14 @@ name: Run Unit and Regression Tests with Code Coverage
 
 on:
   push:
-    branches: [ main, develop, develop_v3 ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main, develop, develop_v3 ]
+    branches: [main, develop]
+    paths-ignore:  # No need to rerun all the tests if we're only editing documentation and examples
+      - "examples/**.ipynb"
+      - "sphinx/**"
+      - "**.md"
+      - "**.rst"
   schedule:
     - cron: "0 0 * * MON"
 
@@ -15,7 +20,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
-        python-version: [3.9]
+        python-version: [3.9, 3.11]
 
     steps:
     - uses: actions/checkout@v3

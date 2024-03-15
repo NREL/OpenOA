@@ -155,10 +155,7 @@ class TurbineLongTermGrossEnergy(FromDictMixin, ResetValuesMixin):
         """
         Runs any non-automated setup steps for the analysis class.
         """
-        if (
-            set(("TurbineLongTermGrossEnergy", "all")).intersection(self.plant.analysis_type)
-            == set()
-        ):
+        if {"TurbineLongTermGrossEnergy", "all"}.intersection(self.plant.analysis_type) == set():
             self.plant.analysis_type.append("TurbineLongTermGrossEnergy")
 
         # Ensure the data are up to spec before continuing with initialization
@@ -310,45 +307,6 @@ class TurbineLongTermGrossEnergy(FromDictMixin, ResetValuesMixin):
 
         self._inputs = pd.DataFrame(inputs)
 
-    @logged_method_call
-    def prepare_scada(self) -> None:
-        """
-        Performs the following manipulations:
-         1. Creates a copy of the SCADA data
-         2. Sorts it by turbine asset_id, then timestamp (the two index columns)
-         3. Drops any rows that don't have any windspeed or energy data
-         4. Flags windspeed values outside the range [0, 40]
-         5. Flags windspeed values that have stayed the same for at least 3 straight readings
-         6. Flags power values outside the range [0, turbine capacity]
-         7. Flags windspeed and power values that don't mutually coincide within a reasonable range
-         8. Combine the flags using an "or" combination to be a new column in scada: "valid"
-        """
-        self.scada = (
-            self.plant.scada.swaplevel().sort_index().dropna(subset=["WMET_HorWdSpd", "WTUR_SupWh"])
-        )
-        turbine_capacity = self.scada.groupby(level="asset_id").max()["WTUR_W"]
-        flag_range = filters.range_flag(self.scada.loc[:, "WMET_HorWdSpd"], below=0, above=40)
-        flag_frozen = filters.unresponsive_flag(self.scada.loc[:, "WMET_HorWdSpd"], threshold=3)
-        flag_neg = pd.Series(index=self.scada.index, dtype=bool)
-        flag_window = pd.Series(index=self.scada.index, dtype=bool)
-        for t in self.turbine_ids:
-            ix_turb = self.scada.index.get_level_values("asset_id") == t
-            flag_neg.loc[ix_turb] = filters.range_flag(
-                self.scada.loc[ix_turb, "power"], below=0, above=turbine_capacity.loc[t]
-            )
-            flag_window.loc[ix_turb] = filters.window_range_flag(
-                window_col=self.scada.loc[ix_turb, "WMET_HorWdSpd"],
-                window_start=5.0,
-                window_end=40,
-                value_col=self.scada.loc[ix_turb, "WTUR_W"],
-                value_min=0.02 * turbine_capacity.loc[t],
-                value_max=1.2 * turbine_capacity.loc[t],
-            )
-
-        flag_final = ~(flag_range | flag_frozen | flag_neg | flag_window).values
-        self.scada.assign(valid=flag_final)
-        self.scada.assign(valid_run=flag_final)
-
     def sort_scada_by_turbine(self) -> None:
         """
         Sorts the SCADA DataFrame by the asset_id and timestamp index columns, respectively.
@@ -370,6 +328,14 @@ class TurbineLongTermGrossEnergy(FromDictMixin, ResetValuesMixin):
         """
         Apply a set of filtering algorithms to the turbine wind speed vs power curve to flag
         data not representative of normal turbine operation
+
+        Performs the following manipulations:
+         1. Drops any scada rows that don't have any windspeed or energy data
+         2. Flags windspeed values outside the range [0, 40]
+         3. Flags windspeed values that have stayed the same for at least 3 straight readings
+         4. Flags power values less than 2% of turbine capacity when wind speed above cut-in
+         5. Flags windspeed and power values that don't mutually coincide within a reasonable range
+         6. Combine the flags using an "or" combination to be a new column in scada: "flag_final"
         """
 
         dic = self.scada_dict
@@ -377,10 +343,10 @@ class TurbineLongTermGrossEnergy(FromDictMixin, ResetValuesMixin):
         # Loop through turbines
         for t in self.turbine_ids:
             scada_df = self.scada_dict[t]
-            turbine_capacity_real = scada_df.WTUR_W.max()
+            turbine_capacity = self.plant.asset.loc[t, "rated_power"]
 
             max_bin = (
-                self._run.max_power_filter * turbine_capacity_real
+                self._run.max_power_filter * turbine_capacity
             )  # Set maximum range for using bin-filter
 
             scada_df.dropna(
@@ -388,7 +354,7 @@ class TurbineLongTermGrossEnergy(FromDictMixin, ResetValuesMixin):
             )  # Drop any data where scada wind speed or energy is NaN
 
             scada_df = scada_df.assign(
-                flag_neg=filters.range_flag(scada_df.WTUR_W, lower=0, upper=turbine_capacity_real),
+                flag_neg=filters.range_flag(scada_df.WTUR_W, lower=0, upper=scada_df.WTUR_W.max()),
                 flag_range=filters.range_flag(scada_df.WMET_HorWdSpd, lower=0, upper=40),
                 flag_frozen=filters.unresponsive_flag(scada_df.WMET_HorWdSpd, threshold=3),
                 flag_window=filters.window_range_flag(
@@ -396,16 +362,16 @@ class TurbineLongTermGrossEnergy(FromDictMixin, ResetValuesMixin):
                     window_start=5.0,
                     window_end=40,
                     value_col=dic[t].loc[:, "WTUR_W"],
-                    value_min=0.02 * turbine_capacity_real,
-                    value_max=1.2 * turbine_capacity_real,
+                    value_min=0.02 * turbine_capacity,
+                    value_max=1.2 * turbine_capacity,
                 ),
                 flag_bin=filters.bin_filter(
                     bin_col=dic[t].loc[:, "WTUR_W"],
                     value_col=dic[t].loc[:, "WMET_HorWdSpd"],
-                    bin_width=0.06 * turbine_capacity_real,
+                    bin_width=0.06 * turbine_capacity,
                     threshold=self._run.wind_bin_thresh,
                     center_type="median",
-                    bin_min=np.round(0.01 * turbine_capacity_real),
+                    bin_min=np.round(0.01 * turbine_capacity),
                     bin_max=np.round(max_bin),
                     threshold_type="std",
                     direction="all",
@@ -431,7 +397,7 @@ class TurbineLongTermGrossEnergy(FromDictMixin, ResetValuesMixin):
 
         # Capture the runs reanalysis data set and ensure the U/V components exist
         reanalysis_df = self.plant.reanalysis[self._run.reanalysis_product]
-        if len(set(("WMETR_HorWdSpdU", "WMETR_HorWdSpdV")).intersection(reanalysis_df.columns)) < 2:
+        if len({"WMETR_HorWdSpdU", "WMETR_HorWdSpdV"}.intersection(reanalysis_df.columns)) < 2:
             (
                 reanalysis_df["WMETR_HorWdSpdU"],
                 reanalysis_df["WMETR_HorWdSpdV"],

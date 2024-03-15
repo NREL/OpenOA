@@ -9,9 +9,9 @@ library on our `Binder page`_.
 Quick Start
 ***********
 
-For most users, getting started should be as easy as either below code blocks, but if you get hung up on running examples
-locally, or interacting with the code, you can always interact with our `Binder page`_
-
+For most users, getting started should be as easy as either below code blocks, but if you get hung
+up on running examples locally, or interacting with the code, you can always interact with our
+`Binder page`_
 
 Pip
 ---
@@ -29,6 +29,23 @@ Source
     cd openoa
     pip install -e .
 
+Additional Dependencies
+-----------------------
+
+.. important::
+    If using Python 3.11, install ``openoa`` only, then reinstall adding the modifiers to reduce
+    the amount of time it takes for pip to resolve the dependency stack.
+
+Whether installing from PyPI or source, any combination of the following can be used to install
+additional dependencies. For example, the examples requirements can be installed using
+`pip install "openoa[examples]"`.
+
+- `develop`: for linting, automated formatting, and testing
+- `docs`: for building the documentation
+- `examples`: for the full Jupyter Lab suite (also contains `reanalysis` and `nrel-wind`)
+- `renalysis`: for accessing and processing MERRA2 and ERA5 data
+- `nrel-wind`: for accessing the NREL WIND Toolkit
+- `all`: for the complete dependency stack
 
 Installation and Contributing
 *****************************
@@ -38,7 +55,6 @@ Installation and Contributing
     install
     contributing
     changelog
-
 
 
 .. _Binder page: https://mybinder.org/v2/gh/NREL/OpenOA/develop_v3?filepath=examples

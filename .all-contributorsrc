@@ -1,0 +1,187 @@
+{
+  "projectName": "OpenOA",
+  "projectOwner": "NREL",
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "files": [
+    "README.md"
+  ],
+  "imageSize": 100,
+  "commit": false,
+  "commitConvention": "angular",
+  "contributorsPerLine": 7,
+  "linkToUsage": true,
+  "contributors": [
+    {
+      "login": "RHammond2",
+      "name": "Rob Hammond",
+      "avatar_url": "https://avatars.githubusercontent.com/u/13874373?v=4",
+      "profile": "https://www.linkedin.com/in/rob-hammond-33583756/",
+      "contributions": [
+        "code",
+        "doc",
+        "review",
+        "tutorial",
+        "maintenance",
+        "ideas",
+        "fundingFinding"
+      ]
+    },
+    {
+      "login": "jordanperr",
+      "name": "Jordan Perr-Sauer",
+      "avatar_url": "https://avatars.githubusercontent.com/u/355615?v=4",
+      "profile": "https://github.com/jordanperr",
+      "contributions": [
+        "doc",
+        "code",
+        "review",
+        "tutorial",
+        "maintenance",
+        "ideas",
+        "fundingFinding"
+      ]
+    },
+    {
+      "login": "ejsimley",
+      "name": "ejsimley",
+      "avatar_url": "https://avatars.githubusercontent.com/u/40040961?v=4",
+      "profile": "https://github.com/ejsimley",
+      "contributions": [
+        "projectManagement",
+        "code",
+        "data",
+        "doc",
+        "review",
+        "tutorial",
+        "ideas",
+        "fundingFinding"
+      ]
+    },
+    {
+      "login": "Dynorat",
+      "name": "Jason Fields",
+      "avatar_url": "https://avatars.githubusercontent.com/u/4141650?v=4",
+      "profile": "https://github.com/Dynorat",
+      "contributions": [
+        "projectManagement",
+        "review",
+        "business",
+        "design",
+        "fundingFinding"
+      ]
+    },
+    {
+      "login": "nbodini",
+      "name": "Nicola Bodini",
+      "avatar_url": "https://avatars.githubusercontent.com/u/55894604?v=4",
+      "profile": "https://github.com/nbodini",
+      "contributions": [
+        "code",
+        "review",
+        "tutorial",
+        "ideas"
+      ]
+    },
+    {
+      "login": "moptis",
+      "name": "moptis",
+      "avatar_url": "https://avatars.githubusercontent.com/u/32751681?v=4",
+      "profile": "https://github.com/moptis",
+      "contributions": [
+        "code",
+        "data",
+        "doc",
+        "review",
+        "tutorial",
+        "ideas"
+      ]
+    },
+    {
+      "login": "joejoeyjoseph",
+      "name": "Joseph Lee",
+      "avatar_url": "https://avatars.githubusercontent.com/u/22756182?v=4",
+      "profile": "https://github.com/joejoeyjoseph",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "charlie9578",
+      "name": "Charlie",
+      "avatar_url": "https://avatars.githubusercontent.com/u/14888896?v=4",
+      "profile": "https://charlie9578.github.io/",
+      "contributions": [
+        "code",
+        "data",
+        "doc",
+        "tutorial",
+        "ideas"
+      ]
+    },
+    {
+      "login": "zheitkamp1",
+      "name": "zheitkamp1",
+      "avatar_url": "https://avatars.githubusercontent.com/u/53791791?v=4",
+      "profile": "https://github.com/zheitkamp1",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "abbey2017",
+      "name": "Abiodun Timothy Olaoye",
+      "avatar_url": "https://avatars.githubusercontent.com/u/26353690?v=4",
+      "profile": "https://github.com/abbey2017",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "kthyng",
+      "name": "Kristen Thyng",
+      "avatar_url": "https://avatars.githubusercontent.com/u/3487237?v=4",
+      "profile": "http://kristenthyng.com/",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "rafmudaf",
+      "name": "Rafael M Mudafort",
+      "avatar_url": "https://avatars.githubusercontent.com/u/13797903?v=4",
+      "profile": "http://www.rafmudaf.com/",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "sebastianpfaffel",
+      "name": "sebastianpfaffel",
+      "avatar_url": "https://avatars.githubusercontent.com/u/22168894?v=4",
+      "profile": "https://github.com/sebastianpfaffel",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
+      "login": "nateagarwal",
+      "name": "nateagarwal",
+      "avatar_url": "https://avatars.githubusercontent.com/u/51377789?v=4",
+      "profile": "https://github.com/nateagarwal",
+      "contributions": [
+        "code",
+        "review"
+      ]
+    },
+    {
+      "login": "Var-Char",
+      "name": "Var-Char",
+      "avatar_url": "https://avatars.githubusercontent.com/u/16821332?v=4",
+      "profile": "https://github.com/Var-Char",
+      "contributions": [
+        "code"
+      ]
+    }
+  ]
+}

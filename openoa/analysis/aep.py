@@ -24,6 +24,7 @@ from openoa.utils import unit_conversion as un
 from openoa.utils import met_data_processing as mt
 from openoa.schema import FromDictMixin, ResetValuesMixin
 from openoa.logging import logging, logged_method_call
+from openoa.schema.metadata import convert_frequency
 from openoa.utils.machine_learning_setup import MachineLearningSetup
 from openoa.analysis._analysis_validators import validate_reanalysis_selections
 
@@ -102,8 +103,8 @@ class MonteCarloAEP(FromDictMixin, ResetValuesMixin):
             filter. Defaults to (1, 3).
         uncertainty_nan_energy(:obj:`float`): Threshold to flag days/months based on NaNs. Defaults
             to 0.01.
-        time_resolution(:obj:`string`): whether to perform the AEP calculation at monthly ("M"),
-            daily ("D") or hourly ("H") time resolution. Defaults to "M".
+        time_resolution(:obj:`string`): whether to perform the AEP calculation at monthly ("ME" or
+            "MS"), daily ("D") or hourly ("h") time resolution. Defaults to "MS".
         end_date_lt(:obj:`string` or :obj:`pandas.Timestamp`): The last date to use for the
             long-term correction. Note that only the component of the date corresponding to the
             time_resolution argument is considered. If None, the end of the last complete month of
@@ -158,7 +159,11 @@ class MonteCarloAEP(FromDictMixin, ResetValuesMixin):
         ),
     )
     uncertainty_nan_energy: float = field(default=0.01, converter=float)
-    time_resolution: str = field(default="M", validator=attrs.validators.in_(("M", "D", "H")))
+    time_resolution: str = field(
+        default="MS",
+        converter=convert_frequency,
+        validator=attrs.validators.in_(("MS", "ME", "D", "h")),
+    )
     end_date_lt: str | pd.Timestamp = field(default=None)
     reg_model: str = field(
         default="lin", converter=str, validator=attrs.validators.in_(("lin", "gbm", "etr", "gam"))
@@ -229,7 +234,7 @@ class MonteCarloAEP(FromDictMixin, ResetValuesMixin):
         else:
             analysis_type = "MonteCarloAEP"
 
-        if set((analysis_type, "all")).intersection(self.plant.analysis_type) == set():
+        if {analysis_type, "all"}.intersection(self.plant.analysis_type) == set():
             self.plant.analysis_type.append(analysis_type)
 
         # Ensure the data are up to spec before continuing with initialization
@@ -237,16 +242,18 @@ class MonteCarloAEP(FromDictMixin, ResetValuesMixin):
 
         logger.info("Initializing MonteCarloAEP Analysis Object")
 
-        self.resample_freq = {"M": "MS", "D": "D", "H": "H"}[self.time_resolution]
-        self.resample_hours = {"M": 30 * 24, "D": 1 * 24, "H": 1}[self.time_resolution]
-        self.calendar_samples = {"M": 12, "D": 365, "H": 365 * 24}[self.time_resolution]
+        self.resample_freq = self.time_resolution
+        self.resample_hours = {"MS": 30 * 24, "ME": 30 * 24, "D": 1 * 24, "h": 1}[
+            self.time_resolution
+        ]
+        self.calendar_samples = {"MS": 12, "ME": 12, "D": 365, "h": 365 * 24}[self.time_resolution]
 
         if self.end_date_lt is not None:
             # Set to the bottom of the bottom of the hour
             self.end_date_lt = pd.to_datetime(self.end_date_lt).replace(minute=0)
 
         # Monthly data can only use robust linear regression because of limited number of data
-        if (self.time_resolution == "M") & (self.reg_model != "lin"):
+        if (self.time_resolution in ("ME", "MS")) & (self.reg_model != "lin"):
             raise ValueError("For monthly time resolution, only linear regression is allowed!")
 
         # Run preprocessing step
@@ -305,8 +312,8 @@ class MonteCarloAEP(FromDictMixin, ResetValuesMixin):
                 filter. Defaults to (1, 3).
             uncertainty_nan_energy(:obj:`float`): Threshold to flag days/months based on NaNs. Defaults
                 to 0.01.
-            time_resolution(:obj:`string`): whether to perform the AEP calculation at monthly ("M"),
-                daily ("D") or hourly ("H") time resolution. Defaults to "M".
+            time_resolution(:obj:`string`): whether to perform the AEP calculation at monthly ("ME" or
+                "MS"), daily ("D") or hourly ("h") time resolution. Defaults to "ME".
             end_date_lt(:obj:`string` or :obj:`pandas.Timestamp`): The last date to use for the
                 long-term correction. Note that only the component of the date corresponding to the
                 time_resolution argument is considered. If None, the end of the last complete month of
@@ -370,7 +377,7 @@ class MonteCarloAEP(FromDictMixin, ResetValuesMixin):
             num_sim=self.num_sim,
             reanalysis_products=self.reanalysis_products,
         )
-        logger.info("Running with parameters: {}".format(logged_params))
+        logger.info(f"Running with parameters: {logged_params}")
 
         # Start the computation
         self.calculate_long_term_losses()
@@ -395,11 +402,11 @@ class MonteCarloAEP(FromDictMixin, ResetValuesMixin):
             None
         """
 
-        if self.time_resolution == "M":
+        if self.time_resolution in ("MS", "ME"):
             df_grouped = df.groupby(df.index.month).mean()
         elif self.time_resolution == "D":
             df_grouped = df.groupby([(df.index.month), (df.index.day)]).mean()
-        elif self.time_resolution == "H":
+        elif self.time_resolution == "h":
             df_grouped = df.groupby([(df.index.month), (df.index.day), (df.index.hour)]).mean()
 
         return df_grouped
@@ -421,7 +428,7 @@ class MonteCarloAEP(FromDictMixin, ResetValuesMixin):
 
         # Remove first and last reporting months if only partial month reported
         # (only for monthly time resolution calculations)
-        if self.time_resolution == "M":
+        if self.time_resolution in ("MS", "ME"):
             self.trim_monthly_df()
 
         # Drop any data that have NaN gross energy values or NaN reanalysis data
@@ -449,7 +456,7 @@ class MonteCarloAEP(FromDictMixin, ResetValuesMixin):
             tm.percent_nan
         )
 
-        if self.time_resolution == "M":
+        if self.time_resolution in ("MS", "ME"):
             # Create a column with expected number of days per month (to be used when normalizing to 30-days for regression)
             days_per_month = (pd.Series(self.aggregate.index)).dt.daysinmonth
             days_per_month.index = self.aggregate.index
@@ -542,7 +549,7 @@ class MonteCarloAEP(FromDictMixin, ResetValuesMixin):
         # Next, update the start date to make sure it corresponds to a full time period, by shifting
         # to either the start of the next month, or start of the next day, depending on the frequency
         start_date_minus = start_date - pd.DateOffset(hours=1)
-        if (self.time_resolution == "M") & (start_date.month == start_date_minus.month):
+        if (self.time_resolution in ("MS", "ME")) & (start_date.month == start_date_minus.month):
             start_date = start_date.replace(day=1, hour=0, minute=0) + pd.DateOffset(months=1)
         elif (self.time_resolution == "D") & (start_date.day == start_date_minus.day):
             start_date = start_date.replace(hour=0, minute=0) + pd.DateOffset(days=1)
@@ -552,7 +559,9 @@ class MonteCarloAEP(FromDictMixin, ResetValuesMixin):
         if self.end_date_lt is not None:
             # If valid (before the last full time period in the data), use the specified end date
             end_date_lt_plus = self.end_date_lt + pd.DateOffset(hours=1)
-            if (self.time_resolution == "M") & (self.end_date_lt.month == end_date_lt_plus.month):
+            if (self.time_resolution in ("MS", "ME")) & (
+                self.end_date_lt.month == end_date_lt_plus.month
+            ):
                 self.end_date_lt = (
                     self.end_date_lt.replace(day=1, hour=0, minute=0)
                     + pd.DateOffset(months=1)
@@ -563,11 +572,9 @@ class MonteCarloAEP(FromDictMixin, ResetValuesMixin):
 
             if self.end_date_lt > end_date:
                 raise ValueError(
-                    (
-                        "Invalid end date for long-term correction. The end date cannot exceed the "
-                        "last full time period (defined by the time resolution) in the provided "
-                        "reanalysis data."
-                    )
+                    "Invalid end date for long-term correction. The end date cannot exceed the "
+                    "last full time period (defined by the time resolution) in the provided "
+                    "reanalysis data."
                 )
             else:
                 # replace end date
@@ -592,17 +599,13 @@ class MonteCarloAEP(FromDictMixin, ResetValuesMixin):
         if self._reanalysis_aggregate.index[0] > start_date_required:
             if self.end_date_lt is not None:
                 raise ValueError(
-                    (
-                        "Invalid end date argument for long-term correction. This end date does not "
-                        "provide enough reanalysis data for the long-term correction."
-                    )
+                    "Invalid end date argument for long-term correction. This end date does not "
+                    "provide enough reanalysis data for the long-term correction."
                 )
             else:
                 raise ValueError(
-                    (
-                        "The date range of the provided reanalysis data is not long enough to "
-                        "perform the long-term correction."
-                    )
+                    "The date range of the provided reanalysis data is not long enough to "
+                    "perform the long-term correction."
                 )
 
         # Correct each reanalysis product, density-correct wind speeds, and take monthly averages
@@ -770,7 +773,7 @@ class MonteCarloAEP(FromDictMixin, ResetValuesMixin):
         )
 
         if self.outlier_detection:
-            if self.time_resolution == "M":
+            if self.time_resolution in ("MS", "ME"):
                 # Monthly linear regression (i.e., few data points):
                 # flag outliers with robust linear regression using Huber algorithm
 
@@ -826,7 +829,7 @@ class MonteCarloAEP(FromDictMixin, ResetValuesMixin):
             valid_data_to_add = df_sub.loc[~df_sub.loc[:, "flag_final"], [f"{reanal}_WMETR_EnvTmp"]]
             valid_data = pd.concat([valid_data, valid_data_to_add], axis=1)
 
-        if self.time_resolution == "M":
+        if self.time_resolution in ("MS", "ME"):
             valid_data_to_add = df_sub.loc[~df_sub.loc[:, "flag_final"], ["num_days_expected"]]
             valid_data = pd.concat([valid_data, valid_data_to_add], axis=1)
 
@@ -869,7 +872,7 @@ class MonteCarloAEP(FromDictMixin, ResetValuesMixin):
 
         # Calculate gorss energy and normalize to 30-days
         mc_gross_energy = mc_energy + mc_availability + mc_curtailment
-        if self.time_resolution == "M":
+        if self.time_resolution in ("MS", "ME"):
             num_days_expected = reg_data["num_days_expected"]
             mc_gross_norm = mc_gross_energy * 30 / num_days_expected
         else:
@@ -1033,7 +1036,7 @@ class MonteCarloAEP(FromDictMixin, ResetValuesMixin):
                 )
             )
 
-            if self.time_resolution == "M":  # Undo normalization to 30-day months
+            if self.time_resolution in ("MS", "ME"):  # Undo normalization to 30-day months
                 # Shift the list of number of days per month to align with the reanalysis data
                 last_month = self._reanalysis_aggregate.index[-1].month
                 gross_lt = (
@@ -1288,7 +1291,7 @@ class MonteCarloAEP(FromDictMixin, ResetValuesMixin):
         valid_aggregate = self.aggregate
 
         # Monthly case: apply robust linear regression for outliers detection
-        if self.time_resolution == "M":
+        if self.time_resolution in ("MS", "ME"):
             for name, df in self.plant.reanalysis.items():
                 x = sm.add_constant(valid_aggregate[name])
                 y = valid_aggregate["gross_energy_gwh"] * 30 / valid_aggregate["num_days_expected"]
@@ -1339,7 +1342,7 @@ class MonteCarloAEP(FromDictMixin, ResetValuesMixin):
 
             if self.time_resolution == "D":
                 ax.set_ylabel("Daily gross energy (GWh)")
-            elif self.time_resolution == "H":
+            elif self.time_resolution == "h":
                 ax.set_ylabel("Hourly gross energy (GWh)")
 
         ax.legend(**legend_kwargs)

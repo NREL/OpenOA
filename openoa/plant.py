@@ -79,10 +79,10 @@ def _analysis_filter(
             for k in reanalysis_keys:
                 name = k.split("-")[1]
                 col_map = getattr(metadata, key)[name].col_map
-                _add[k] = set([col_map[v] for v in value])
+                _add[k] = {col_map[v] for v in value}
         else:
             col_map = getattr(metadata, key).col_map
-            column_requirements.update({key: set([col_map[v] for v in value])})
+            column_requirements.update({key: {col_map[v] for v in value}})
     column_requirements.update(_add)
 
     # Filter the missing columns, so only analysis-specific columns are provided
@@ -148,7 +148,7 @@ def _compose_error_message(
 @logged_method_call
 def frequency_validator(
     actual_freq: str | int | float | None,
-    desired_freq: Optional[str | None | set[str]],
+    desired_freq: str | set[str] | None,
     exact: bool,
 ) -> bool:
     """Helper function to check if the actual datetime stamp frequency is valid compared
@@ -173,11 +173,12 @@ def frequency_validator(
         return False
 
     if isinstance(desired_freq, str):
-        desired_freq = set([desired_freq])
+        desired_freq = {desired_freq}
 
     # If an offset alias couldn't be found, then convert the desired frequency strings to seconds
+    # unless the frequency string is a monthly time encoding, which is deprecated.
     if not isinstance(actual_freq, str):
-        desired_freq = set([ts.offset_to_seconds(el) for el in desired_freq])
+        desired_freq = {ts.offset_to_seconds(el) for el in desired_freq if el not in ("MS", "ME")}
 
     if exact:
         return actual_freq in desired_freq
@@ -987,7 +988,7 @@ class PlantData:
         return invalid_freq
 
     @logged_method_call
-    def validate(self, metadata: Optional[dict | str | Path | PlantMetaData] = None) -> None:
+    def validate(self, metadata: dict | str | Path | PlantMetaData | None = None) -> None:
         """Secondary method to validate the plant data objects after loading or changing
         data with option to provide an updated `metadata` object/file as well
 
@@ -1251,7 +1252,9 @@ class PlantData:
 
         # Maintain v2 compatibility of np.inf for the diagonal
         distance = distance + distance.values.T - np.diag(np.diag(distance.values))
-        np.fill_diagonal(distance.values, np.inf)
+        distance_array = distance.values
+        np.fill_diagonal(distance_array, np.inf)
+        distance.loc[:, :] = distance_array
         self.asset_distance_matrix = distance
 
     def turbine_distance_matrix(self, turbine_id: str = None) -> pd.DataFrame:
@@ -1329,7 +1332,9 @@ class PlantData:
             + np.triu((direction.values - 180.0) % 360.0, 1).T
             - np.diag(np.diag(direction.values))
         )
-        np.fill_diagonal(direction.values, np.inf)
+        direction_array = direction.values
+        np.fill_diagonal(direction_array, np.inf)
+        direction.loc[:, :] = direction_array
         self.asset_direction_matrix = direction
 
     def turbine_direction_matrix(self, turbine_id: str = None) -> pd.DataFrame:
@@ -1442,7 +1447,7 @@ class PlantData:
                 'Invalid freestream method. Currently, "sector" and "IEC" are supported.'
             )
 
-        return list(self.asset.index[freestream_indices])
+        return list(self.asset.loc[self.asset["type"] == "turbine"].index[freestream_indices])
 
     @logged_method_call
     def calculate_nearest_neighbor(
