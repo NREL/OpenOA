@@ -2,9 +2,6 @@
 requires = ["setuptools", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
-[metadata]
-version = "attr: openoa.__version__"
-
 [project]
 name = "OpenOA"
 dynamic = ["version"]
@@ -103,7 +100,7 @@ all = ["openoa[develop,docs,examples]"]
 include-package-data = true
 
 [tool.setuptools.packages.find]
-include = ["test", "examples"]
+include = ["openoa", "test", "examples"]
 
 [tool.setuptools.dynamic]
 version = {attr = "openoa.__version__"}
