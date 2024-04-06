@@ -1,6 +1,10 @@
 # Changelog
 All notable changes to this project will be documented in this file. If you make a notable change to the project, please add a line describing the change to the "unreleased" section. The maintainers will make an effort to keep the [Github Releases](https://github.com/NREL/OpenOA/releases) page up to date with this changelog. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## v3.1.1 - 2024-04-05
+
+- Patches `pyproject.toml`'s package data specification to include openoa in the valid packages to install.
+
 ## v3.1 - 2024-03-14
 
 - Updated compatibility with Pandas datetime offsets. All uppercase offset strings representing
