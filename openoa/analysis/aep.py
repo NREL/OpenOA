@@ -1321,7 +1321,7 @@ class MonteCarloAEP(FromDictMixin, ResetValuesMixin):
             for name, df in self.plant.reanalysis.items():
                 x = valid_aggregate[name]
                 y = valid_aggregate["gross_energy_gwh"]
-                plant_capac = self.plant.metadata.capacity / 1000.0 * self._hours_in_res
+                plant_capac = self.plant.metadata.capacity / 1000.0 * self.resample_hours
 
                 # Apply bin filter
                 flag = filters.bin_filter(
