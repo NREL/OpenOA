@@ -37,12 +37,14 @@ import datetime
 from pathlib import Path
 from zipfile import ZipFile
 
+import numpy as np
 import cdsapi
 import pandas as pd
 import xarray as xr
 import requests
 from tqdm import tqdm
 
+from openoa.utils import met_data_processing as met
 from openoa.logging import logging
 
 
@@ -333,6 +335,244 @@ def get_era5_monthly(
     return df
 
 
+def get_era5_hourly(
+    lat: float,
+    lon: float,
+    save_pathname: str | Path,
+    save_filename: str,
+    start_date: str = "2000-01",
+    end_date: str = None,
+    calc_derived_vars: bool = False,
+) -> pd.DataFrame:
+    """
+    Get ERA5 data directly from the CDS service. This requires registration on the CDS service.
+    See registration details at: https://cds.climate.copernicus.eu/api-how-to
+
+    This function returns hourly ERA5 data from the "ERA5 monthly averaged data on single levels
+    from 1959 to present" dataset. See further details regarding the dataset at:
+    https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-single-levels-monthly-means.
+    U and V components of wind speed at 100 m, temperature at 2 m, and surface pressure are
+    downloaded here.
+
+    As well as returning the data as a dataframe, the data is also saved as monthly NetCDF files and
+    a csv file with the concatenated data. These are located in the "save_pathname" directory, with
+    "save_filename" prefix. This allows future loading without download from the CDS service.
+
+    Args:
+        lat(:obj:`float`): Latitude in WGS 84 spatial reference system (decimal degrees).
+        lon(:obj:`float`): Longitude in WGS 84 spatial reference system (decimal degrees).
+        save_pathname(:obj:`str` | :obj:`Path`): The path where the downloaded reanalysis data will
+            be saved.
+        save_filename(:obj:`str`): The file name used to save the downloaded reanalysis data.
+        start_date(:obj:`str`): The starting year and month that data is downloaded for. This
+            should be provided as a string in the format "YYYY-MM". Defaults to "2000-01".
+        end_date(:obj:`str`): The final year and month that data is downloaded for. This should be
+            provided as a string in the format "YYYY-MM". Defaults to current year and most recent
+            month with full data, accounting for the fact that the ERA5 monthly dataset is released
+            around the the 6th of the month.
+        calc_derived_vars (:obj:`bool`, optional): Boolean that specifies whether wind speed, wind
+            direction, and air density are computed from the downloaded reanalysis variables and
+            saved. Defaults to False.
+
+
+    Returns:
+        df(:obj:`dataframe`): A dataframe containing time series of the requested reanalysis
+            variables:
+            1. u_ms: the U component of wind speed at a height of 100 m in m/s.
+            2. v_ms: the V component of wind speed at a height of 100 m in m/s.
+            3. temperature_K: air temperature at a height of 2 m in Kelvin.
+            4. surf_pres_Pa: surface pressure in Pascals.
+
+    Raises:
+        ValueError: If the start_date is greater than the end_date.
+        Exception: If unable to connect to the cdsapi client.
+    """
+
+    logger.info("Please note access to ERA5 data requires registration")
+    logger.info("Please see: https://cds.climate.copernicus.eu/api-how-to")
+
+    # set up cds-api client
+    try:
+        c = cdsapi.Client()
+    except Exception as e:
+        logger.error("Failed to make connection to cds")
+        logger.error("Please see https://cds.climate.copernicus.eu/api-how-to for help")
+        logger.error(e)
+        raise
+
+    # create save_pathname if it does not exist
+    save_pathname = Path(save_pathname).resolve()
+    if not save_pathname.exists():
+        save_pathname.mkdir()
+
+    # get the current date
+    now = datetime.datetime.now()
+
+    # assign end_year to current year if not provided by the user
+    if end_date is None:
+        end_date = f"{now.year}-{now.month:02}"
+
+    # convert dates to datetime objects
+    start_date = datetime.datetime.strptime(start_date, "%Y-%m")
+    end_date = datetime.datetime.strptime(end_date, "%Y-%m")
+
+    # check that the start and end dates are the right way around
+    if start_date > end_date:
+        logger.error("The start_date should be less than or equal to the end_date")
+        logger.error(f"start_date = {start_date.date()}, end_date = {end_date.date()}")
+        raise ValueError("The start_date should be less than or equal to the end_date")
+
+    # list all years that will be downloaded
+    years = list(range(start_date.year, end_date.year + 1, 1))
+
+    # get the data for the closest 9 nodes to the coordinates
+    node_spacing = 0.250500001 * 1
+
+    # See: https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-single-levels?tab=form
+    # for formulating other requests from cds
+    cds_dataset = "reanalysis-era5-single-levels"
+    cds_request = {
+        "product_type": "reanalysis",
+        "format": "netcdf",
+        "variable": [
+            "100m_u_component_of_wind",
+            "100m_v_component_of_wind",
+            "2m_temperature",
+            "surface_pressure",
+        ],
+        "year": None,
+        "month": None,
+        "day": [
+            "01",
+            "02",
+            "03",
+            "04",
+            "05",
+            "06",
+            "07",
+            "08",
+            "09",
+            "10",
+            "11",
+            "12",
+            "13",
+            "14",
+            "15",
+            "16",
+            "17",
+            "18",
+            "19",
+            "20",
+            "21",
+            "22",
+            "23",
+            "24",
+            "25",
+            "26",
+            "27",
+            "28",
+            "29",
+            "30",
+            "31",
+        ],
+        "time": [
+            "00:00",
+            "01:00",
+            "02:00",
+            "03:00",
+            "04:00",
+            "05:00",
+            "06:00",
+            "07:00",
+            "08:00",
+            "09:00",
+            "10:00",
+            "11:00",
+            "12:00",
+            "13:00",
+            "14:00",
+            "15:00",
+            "16:00",
+            "17:00",
+            "18:00",
+            "19:00",
+            "20:00",
+            "21:00",
+            "22:00",
+            "23:00",
+        ],
+        "product_type": "reanalysis",
+        "area": [
+            lat + node_spacing,
+            lon - node_spacing,
+            lat - node_spacing,
+            lon + node_spacing,
+        ],
+    }
+
+    # download the data
+    for year in years:
+        outfile = save_pathname / f"{save_filename}_{year}.nc"
+
+        if year == now.year:
+            # Limit to up to 2 months ago to ensure data are available
+            # TODO: Is this needed?
+            months = list(range(1, now.month - 1, 1))
+        else:
+            months = list(range(1, 12 + 1, 1))
+
+        if not outfile.is_file():
+            logger.info(f"Downloading ERA5: {outfile}")
+
+            try:
+                cds_request.update({"year": year, "month": months})
+                c.retrieve(cds_dataset, cds_request, outfile)
+
+            except Exception as e:
+                logger.error(f"Failed to download ERA5: {outfile}")
+                logger.error(e)
+
+    # get the saved data
+    ds_nc = xr.open_mfdataset(f"{save_pathname / f'{save_filename}*.nc'}")
+
+    # rename variables to conform with OpenOA
+    ds_nc = ds_nc.rename_vars(
+        {"u100": "u_ms", "v100": "v_ms", "t2m": "temperature_K", "sp": "surf_pres_Pa"}
+    )
+
+    # select the central node only for now
+    if "expver" in ds_nc.dims:
+        sel = ds_nc.sel(expver=1, latitude=lat, longitude=lon, method="nearest")
+    else:
+        sel = ds_nc.sel(latitude=lat, longitude=lon, method="nearest")
+
+    # convert to a pandas dataframe
+    df = sel.to_dataframe()
+
+    # select required columns
+    df = df[["u_ms", "v_ms", "temperature_K", "surf_pres_Pa"]]
+
+    # compute derived variables if requested
+    if calc_derived_vars:
+        df["windspeed_ms"] = np.sqrt(df["u_ms"] ** 2 + df["v_ms"] ** 2)
+        df["winddirection_deg"] = met.compute_wind_direction(df["u_ms"], df["v_ms"]).values
+        df["rho_kgm-3"] = met.compute_air_density(df["temperature_K"], df["surf_pres_Pa"])
+
+    # rename the index to match other datasets
+    df.index.name = "datetime"
+
+    # drop any empty rows
+    df = df.dropna()
+
+    # crop time series to only the selected time period
+    df = df.loc[start_date:end_date]
+
+    # save to csv for easy loading as required
+    df.to_csv(save_pathname / f"{save_filename}.csv", index=True)
+
+    return df
+
+
 def get_merra2_monthly(
     lat: float,
     lon: float,
@@ -491,6 +731,7 @@ def get_merra2_hourly(
     save_filename: str,
     start_date: str = "2000-01",
     end_date: str = None,
+    calc_derived_vars: bool = False,
 ) -> pd.DataFrame:
     """
     Get MERRA2 data directly from the NASA GES DISC service, which requires registration on the
@@ -516,13 +757,17 @@ def get_merra2_hourly(
         end_date(:obj:`str`): The final year and month that data is downloaded for. This should be
             provided as a string in the format "YYYY-MM". Defaults to current year and most recent
             month.
+        calc_derived_vars (:obj:`bool`, optional): Boolean that specifies whether wind speed, wind
+            direction, and air density are computed from the downloaded reanalysis variables and
+            saved. Defaults to False.
 
     Returns:
         df(:obj:`dataframe`): A dataframe containing time series of the requested reanalysis
             variables:
-            1. windspeed_ms: the surface wind speed in m/s.
-            2. temperature_K: surface air temperature in Kelvin.
-            3. surf_pres_Pa: surface pressure in Pascals.
+            1. u_ms: the U component of wind speed at a height of 50 m in m/s.
+            2. v_ms: the V component of wind speed at a height of 50 m in m/s.
+            3. temperature_K: air temperature at a height of 2 m in Kelvin.
+            4. surf_pres_Pa: surface pressure in Pascals.
 
     Raises:
         ValueError: If the start_year is greater than the end_year.
@@ -631,6 +876,12 @@ def get_merra2_hourly(
 
     # select required columns
     df = df[["u_ms", "v_ms", "temperature_K", "surf_pres_Pa"]]
+
+    # compute derived variables if requested
+    if calc_derived_vars:
+        df["windspeed_ms"] = np.sqrt(df["u_ms"] ** 2 + df["v_ms"] ** 2)
+        df["winddirection_deg"] = met.compute_wind_direction(df["u_ms"], df["v_ms"]).values
+        df["rho_kgm-3"] = met.compute_air_density(df["temperature_K"], df["surf_pres_Pa"])
 
     # rename the index to match other datasets
     df.index.name = "datetime"
