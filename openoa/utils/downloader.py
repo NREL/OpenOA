@@ -364,12 +364,11 @@ def get_era5_hourly(
         save_pathname(:obj:`str` | :obj:`Path`): The path where the downloaded reanalysis data will
             be saved.
         save_filename(:obj:`str`): The file name used to save the downloaded reanalysis data.
-        start_date(:obj:`str`): The starting year and month that data is downloaded for. This
-            should be provided as a string in the format "YYYY-MM". Defaults to "2000-01".
-        end_date(:obj:`str`): The final year and month that data is downloaded for. This should be
-            provided as a string in the format "YYYY-MM". Defaults to current year and most recent
-            month with full data, accounting for the fact that the ERA5 monthly dataset is released
-            around the the 6th of the month.
+        start_date(:obj:`str`): The starting year, month, and day that data is downloaded for. This
+            should be provided as a string in the format "YYYY-MM-DD". Defaults to "2000-01-01".
+        end_date(:obj:`str`): The final year, month, and day that data is downloaded for. This should be
+            provided as a string in the format "YYYY-MM-DD". Defaults to current date. Note that data
+            may not be available yet for the most recent couple months.
         calc_derived_vars (:obj:`bool`, optional): Boolean that specifies whether wind speed, wind
             direction, and air density are computed from the downloaded reanalysis variables and
             saved. Defaults to False.
@@ -410,11 +409,12 @@ def get_era5_hourly(
 
     # assign end_year to current year if not provided by the user
     if end_date is None:
-        end_date = f"{now.year}-{now.month:02}"
+        end_date = f"{now.year}-{now.month:02}-{now.day:02}"
 
     # convert dates to datetime objects
-    start_date = datetime.datetime.strptime(start_date, "%Y-%m")
-    end_date = datetime.datetime.strptime(end_date, "%Y-%m")
+    start_date = datetime.datetime.strptime(start_date, "%Y-%m-%d")
+    end_date = datetime.datetime.strptime(end_date, "%Y-%m-%d")
+    end_date += datetime.timedelta(hours=23, minutes=59)  # include all times in last day
 
     # check that the start and end dates are the right way around
     if start_date > end_date:
@@ -514,10 +514,14 @@ def get_era5_hourly(
     for year in years:
         outfile = save_pathname / f"{save_filename}_{year}.nc"
 
-        if year == now.year:
-            # Limit to up to 2 months ago to ensure data are available
-            # TODO: Is this needed?
-            months = list(range(1, now.month - 1, 1))
+        # limit to months of interest
+        if year == start_date.year:
+            if year == end_date.year:
+                months = list(range(start_date.month, end_date.month + 1, 1))
+            else:
+                months = list(range(start_date.month, 12 + 1, 1))
+        elif year == end_date.year:
+            months = list(range(1, end_date.month + 1, 1))
         else:
             months = list(range(1, 12 + 1, 1))
 
@@ -752,11 +756,11 @@ def get_merra2_hourly(
         save_pathname(:obj:`str` | :obj:`Path`): The path where the downloaded reanalysis data will
             be saved.
         save_filename(:obj:`str`): The file name used to save the downloaded reanalysis data.
-        start_date(:obj:`str`): The starting year and month that data is downloaded for. This
-            should be provided as a string in the format "YYYY-MM". Defaults to "2000-01".
-        end_date(:obj:`str`): The final year and month that data is downloaded for. This should be
-            provided as a string in the format "YYYY-MM". Defaults to current year and most recent
-            month.
+        start_date(:obj:`str`): The starting year, month, and day that data is downloaded for. This
+            should be provided as a string in the format "YYYY-MM-DD". Defaults to "2000-01-01".
+        end_date(:obj:`str`): The final year, month, and day that data is downloaded for. This should be
+            provided as a string in the format "YYYY-MM-DD". Defaults to current date. Note that data
+            may not be available yet for the most recent couple months.
         calc_derived_vars (:obj:`bool`, optional): Boolean that specifies whether wind speed, wind
             direction, and air density are computed from the downloaded reanalysis variables and
             saved. Defaults to False.
@@ -789,11 +793,12 @@ def get_merra2_hourly(
 
     # assign end_year to current year if not provided by the user
     if end_date is None:
-        end_date = f"{now.year}-{now.month:02}"
+        end_date = f"{now.year}-{now.month:02}-{now.day:02}"
 
     # convert dates to datetime objects
-    start_date = datetime.datetime.strptime(start_date, "%Y-%m")
-    end_date = datetime.datetime.strptime(end_date, "%Y-%m")
+    start_date = datetime.datetime.strptime(start_date, "%Y-%m-%d")
+    end_date = datetime.datetime.strptime(end_date, "%Y-%m-%d")
+    end_date += datetime.timedelta(hours=23, minutes=59)  # include all times in last day
 
     # check that the start and end dates are the right way around
     if start_date > end_date:
@@ -806,10 +811,14 @@ def get_merra2_hourly(
 
     # download the data
     for year in years:
-        # Limit to up to 2 months ago to ensure data are available
-        # TODO: Can we update to check for most recent data if available?
-        if year == now.year:
-            months = list(range(1, now.month - 1, 1))
+        # limit to months of interest
+        if year == start_date.year:
+            if year == end_date.year:
+                months = list(range(start_date.month, end_date.month + 1, 1))
+            else:
+                months = list(range(start_date.month, 12 + 1, 1))
+        elif year == end_date.year:
+            months = list(range(1, end_date.month + 1, 1))
         else:
             months = list(range(1, 12 + 1, 1))
 
@@ -829,7 +838,7 @@ def get_merra2_hourly(
                 outfile = save_pathname / f"{save_filename}_{f.split('.')[-2]}.nc"
 
                 if not outfile.is_file():
-                    # download one file for determining coordinate indicies
+                    # download one file for determining coordinate indices
                     if lat_i == "":
                         url = (
                             f"{base_url}{year}/{month:02d}//{f}"
