@@ -1,18 +1,19 @@
 """
-This module provides functions for downloading files, including reanalysis data
+This module provides functions for downloading files, including arbitrary files, files from Zenodo,
+and reanalysis data.
 
-This module provides functions for downloading data, including long-term historical atmospheric
-data from the MERRA2 and ERA5 reanalysis products and returning as pandas DataFrames and saving
-data in csv files. The module contains functions for downloading either monthly or hourly
-reanalysis data for a time period of interest using NASA Goddard Earth Sciences Data and Information
-Services Center (GES DISC) for MERRA2 and the Copernicus Climate Data Store (CDS) API for ERA5.
-These functions could be modified to get other data sources available on GES DISC and CDS if desired.
+It contains functions for downloading long-term historical atmospheric data from the MERRA2 and
+ERA5 reanalysis products and returning as pandas DataFrames and saving data in csv files. The
+module contains functions for downloading either monthly or hourly reanalysis data for a time
+period of interest using NASA Goddard Earth Sciences Data and Information Services Center (GES
+DISC) for MERRA2 and the Copernicus Climate Data Store (CDS) API for ERA5. These functions could be
+modified to get other data sources available on GES DISC and CDS if desired.
 
-To use this module to download data users must first create user accounts and save user credential
-files locally. Instructions can be found at https://disc.gsfc.nasa.gov/data-access#python-requests
-and https://cds.climate.copernicus.eu/api-how-to
+To use this module to download reanalysis data users must first create user accounts and save user
+credential files locally. Instructions can be found at
+https://disc.gsfc.nasa.gov/data-access#python-requests and https://cds.climate.copernicus.eu/api-how-to
 
-In addition you can download data directly from these source:
+In addition you can download reanalysis data directly from these source:
 
 * Hourly MERRA2 data can be downloaded directly from NASA GES DISC by selecting the
   "Subset / Get Data" link on the following webpage:

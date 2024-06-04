@@ -7,6 +7,15 @@ The utils subpackage provides module-level methods that operate on Pandas `DataF
 `Series`. These modules and their methods are used throughout the OpenOA codebase, and can
 be imported and used individually into your own scripts.
 
+Downloader
+*******
+
+.. automodule:: openoa.utils.downloader
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
 Quality Assurance
 *****************
 
@@ -14,6 +23,7 @@ Quality Assurance
     :members:
     :undoc-members:
     :show-inheritance:
+
 
 Filters
 *******
