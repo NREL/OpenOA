@@ -393,7 +393,7 @@ def get_era5_hourly(
 
     # set up cds-api client
     try:
-        c = cdsapi.Client()
+        c = cdsapi.Client(verify=False)
     except Exception as e:
         logger.error("Failed to make connection to cds")
         logger.error("Please see https://cds.climate.copernicus.eu/api-how-to for help")
