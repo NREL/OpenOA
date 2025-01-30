@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to this project will be documented in this file. If you make a notable change to the project, please add a line describing the change to the "unreleased" section. The maintainers will make an effort to keep the [Github Releases](https://github.com/NREL/OpenOA/releases) page up to date with this changelog. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## v3.1.2 - 2025 01-30
+
+- Pin SciPy to >= 1.7 and <1.14 to avoid an incompatibility error with PyGAM.
+- Fixes minor typos throughout the documentation.
+- Fixes internal naming inconsistencies.
+
 ## v3.1.1 - 2024-04-05
 
 - Patches `pyproject.toml`'s package data specification to include openoa in the valid packages to install.
