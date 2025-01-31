@@ -118,7 +118,15 @@ We strongly recommend using the Anaconda Python distribution and creating a new 
 for OpenOA. You can download Anaconda through
 [their website.](https://www.anaconda.com/products/individual)
 
-After installing Anaconda, create and activate a new conda environment with the name "openoa-env":
+> [!IMPORTANT]
+> In 2020, Anaconda has changed the Terms of Service for its commercial distribution, and so it is
+> recommended to use either [Miniforge Conda](https://github.com/conda-forge/miniforge), which
+> uses a BSD-3 clause license, or
+> [Miniconda](https://docs.anaconda.com/free/miniconda/index.html), the free tier of Anaconda,
+> depending on your organization's considerations.
+
+After installing Anaconda (or alternative), create and activate a new conda environment with the
+name "openoa-env":
 
 ```bash
 conda create --name openoa-env python=3.10

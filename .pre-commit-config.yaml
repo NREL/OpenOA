@@ -25,7 +25,7 @@ repos:
     hooks:
         - id: black
           name: black
-          stages: [commit]
+          stages: [pre-commit]
           language_version: python3
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
