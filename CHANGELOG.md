@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file. If you make
 
 ## Unreleased - TBD
 
+- Pin SciPy to >= 1.7 and <1.14 to avoid an incompatibility error with PyGAM.
 - Updates the Anaconda recommendation to alert users to the fact that Anaconda is no longer
 technically free, and so commercial users should consider Miniforge or Miniconda installations.
 
