@@ -191,11 +191,11 @@ def get_era5_monthly(
 ) -> pd.DataFrame:
     """
     Get ERA5 data directly from the CDS service. This requires registration on the CDS service.
-    See registration details at: https://cds.climate.copernicus.eu/api-how-to
+    See registration details at: https://cds.climate.copernicus.eu/how-to-api
 
     This function returns monthly ERA5 data from the "ERA5 monthly averaged data on single levels
     from 1959 to present" dataset. See further details regarding the dataset at:
-    https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-single-levels-monthly-means.
+    https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels-monthly-means.
     Only 10m wind speed, the temperature at 2m, and the surface pressure are downloaded here.
 
     As well as returning the data as a dataframe, the data is also saved as monthly NetCDF files and
@@ -264,10 +264,13 @@ def get_era5_monthly(
     # list all dates that will be downloaded
     dates = pd.date_range(start=start_date, end=end_date, freq="MS", inclusive="both")
 
-    # get the data for the closest 9 nodes to the coordinates
-    node_spacing = 0.250500001 * 1
+    # find the nearest coordinate grid point
+    node_spacing = 0.25
+    lat_nearest = node_spacing * np.round(lat / node_spacing)
+    lon_nearest = node_spacing * np.round(lon / node_spacing)
 
-    # See: https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-single-levels-monthly-means?tab=form
+    # Get data for 9 nearest grid points
+    # See: https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels-monthly-means?tab=form
     # for formulating other requests from cds
     cds_dataset = "reanalysis-era5-single-levels-monthly-means"
     cds_request = {
@@ -282,10 +285,10 @@ def get_era5_monthly(
         "month": None,
         "time": ["00:00"],
         "area": [
-            lat + node_spacing,
-            lon - node_spacing,
-            lat - node_spacing,
-            lon + node_spacing,
+            lat_nearest + node_spacing,
+            lon_nearest - node_spacing,
+            lat_nearest - node_spacing,
+            lon_nearest + node_spacing,
         ],
     }
 
@@ -314,9 +317,9 @@ def get_era5_monthly(
 
     # select the central node only for now
     if "expver" in ds_nc.dims:
-        sel = ds_nc.sel(expver=1, latitude=lat, longitude=lon, method="nearest")
+        sel = ds_nc.sel(expver=1, latitude=lat_nearest, longitude=lon_nearest, method="nearest")
     else:
-        sel = ds_nc.sel(latitude=lat, longitude=lon, method="nearest")
+        sel = ds_nc.sel(latitude=lat_nearest, longitude=lon_nearest, method="nearest")
 
     # convert to a pandas dataframe
     df = sel.to_dataframe()
@@ -335,6 +338,10 @@ def get_era5_monthly(
 
     # save to csv for easy loading as required
     df.to_csv(save_pathname / f"{save_filename}.csv", index=True)
+
+    # delete downloaded NetCDF files
+    for file in save_pathname.glob(f"{save_filename}*.nc"):
+        os.remove(file)
 
     return df
 
@@ -427,9 +434,12 @@ def get_era5_hourly(
     # list all years that will be downloaded
     years = list(range(start_date.year, end_date.year + 1, 1))
 
-    # get the data for the closest 9 nodes to the coordinates
-    node_spacing = 0.250500001 * 1
+    # find the nearest coordinate grid point
+    node_spacing = 0.25
+    lat_nearest = node_spacing * np.round(lat / node_spacing)
+    lon_nearest = node_spacing * np.round(lon / node_spacing)
 
+    # Get data for single grid point
     # See: https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels?tab=form
     # for formulating other requests from cds
     cds_dataset = "reanalysis-era5-single-levels"
@@ -448,10 +458,10 @@ def get_era5_hourly(
         "time": [f"{i:02d}:00" for i in range(24)],
         "product_type": "reanalysis",
         "area": [
-            lat + node_spacing,
-            lon - node_spacing,
-            lat - node_spacing,
-            lon + node_spacing,
+            lat_nearest + 0.01,
+            lon_nearest,
+            lat_nearest,
+            lon_nearest + 0.01,
         ],
     }
 
@@ -490,9 +500,9 @@ def get_era5_hourly(
 
     # select the central node only for now
     if "expver" in ds_nc.dims:
-        sel = ds_nc.sel(expver=1, latitude=lat, longitude=lon, method="nearest")
+        sel = ds_nc.sel(expver=1, latitude=lat_nearest, longitude=lon_nearest, method="nearest")
     else:
-        sel = ds_nc.sel(latitude=lat, longitude=lon, method="nearest")
+        sel = ds_nc.sel(latitude=lat_nearest, longitude=lon_nearest, method="nearest")
 
     # convert to a pandas dataframe
     df = sel.to_dataframe()
@@ -535,7 +545,7 @@ def get_merra2_monthly(
 ) -> pd.DataFrame:
     """
     Get MERRA2 data directly from the NASA GES DISC service, which requires registration on the
-    GES DISC service. See: https://disc.gsfc.nasa.gov/data-access#python-requests.
+    GES DISC service. See: https://disc.gsfc.nasa.gov/information/documents?title=Data%20Access#python-requests.
 
     This function returns monthly MERRA2 data from the "M2IMNXLFO" dataset. See further details
     regarding the dataset at: https://disc.gsfc.nasa.gov/datasets/M2IMNXLFO_5.12.4/summary.
@@ -569,7 +579,9 @@ def get_merra2_monthly(
     """
 
     logger.info("Please note access to MERRA2 data requires registration")
-    logger.info("Please see: https://disc.gsfc.nasa.gov/data-access#python-requests")
+    logger.info(
+        "Please see: https://disc.gsfc.nasa.gov/information/documents?title=Data%20Access#python-requests"
+    )
 
     # base url containing the monthly data set M2IMNXLFO
     base_url = r"https://goldsmr4.gesdisc.eosdis.nasa.gov/opendap/MERRA2_MONTHLY/M2IMNXLFO.5.12.4/"
@@ -672,6 +684,10 @@ def get_merra2_monthly(
 
     # save to csv for easy loading as required
     df.to_csv(save_pathname / f"{save_filename}.csv", index=True)
+
+    # delete downloaded NetCDF files
+    for file in save_pathname.glob(f"{save_filename}*.nc"):
+        os.remove(file)
 
     return df
 
