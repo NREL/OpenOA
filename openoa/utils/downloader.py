@@ -11,7 +11,8 @@ modified to get other data sources available on GES DISC and CDS if desired.
 
 To use this module to download reanalysis data users must first create user accounts and save user
 credential files locally. Instructions can be found at
-https://disc.gsfc.nasa.gov/data-access#python-requests and https://cds.climate.copernicus.eu/api-how-to
+https://disc.gsfc.nasa.gov/information/documents?title=Data%20Access#python-requests and
+https://cds.climate.copernicus.eu/how-to-api
 
 In addition you can download reanalysis data directly from these source:
 
@@ -24,14 +25,15 @@ In addition you can download reanalysis data directly from these source:
   explained here: https://confluence.ecmwf.int/display/CKB/How+to+download+ERA5. Data for specific
   dates, variables, and coordinates can be downloaded using the CDS web interface via the "Download
   data" tab here:
-  https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-single-levels?tab=overview.
+  https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels?tab=overview.
   Instructions for using the CDS Toolbox API to download ERA5 data programatically is found here:
-  https://cds.climate.copernicus.eu/toolbox/doc/how-to/1_how_to_retrieve_data/1_how_to_retrieve_data.html
-  (note that the "reanalysis-era5-single-levels" dataset should generally be used).
+  https://cds.climate.copernicus.eu/how-to-api (note that the "reanalysis-era5-single-levels" dataset
+  should generally be used).
 """
 
 from __future__ import annotations
 
+import os
 import re
 import hashlib
 import datetime
@@ -44,6 +46,7 @@ import pandas as pd
 import xarray as xr
 import requests
 from tqdm import tqdm
+from requests.exceptions import SSLError
 
 from openoa.utils import met_data_processing as met
 from openoa.logging import logging
@@ -346,12 +349,13 @@ def get_era5_hourly(
     calc_derived_vars: bool = False,
 ) -> pd.DataFrame:
     """
-    Get ERA5 data directly from the CDS service. This requires registration on the CDS service.
-    See registration details at: https://cds.climate.copernicus.eu/api-how-to
+    Get ERA5 data directly from the CDS service. This requires registration on the CDS service and
+    an API key to be saved. See registration and API setup details at:
+    https://cds.climate.copernicus.eu/how-to-api
 
-    This function returns hourly ERA5 data from the "ERA5 monthly averaged data on single levels
-    from 1959 to present" dataset. See further details regarding the dataset at:
-    https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-single-levels-monthly-means.
+    This function returns hourly ERA5 data from the "ERA5 hourly data on single levels from 1940 to
+    present" dataset. See further details regarding the dataset at:
+    https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels.
     U and V components of wind speed at 100 m, temperature at 2 m, and surface pressure are
     downloaded here.
 
@@ -385,7 +389,6 @@ def get_era5_hourly(
 
     Raises:
         ValueError: If the start_date is greater than the end_date.
-        Exception: If unable to connect to the cdsapi client.
     """
 
     logger.info("Please note access to ERA5 data requires registration")
@@ -393,12 +396,10 @@ def get_era5_hourly(
 
     # set up cds-api client
     try:
-        c = cdsapi.Client(verify=False)
-    except Exception as e:
-        logger.error("Failed to make connection to cds")
-        logger.error("Please see https://cds.climate.copernicus.eu/api-how-to for help")
-        logger.error(e)
-        raise
+        c = cdsapi.Client()
+    except SSLError:
+        print("Skipping certificate verification")
+        c = cdsapi.Client(verify=False)  # verification error for self-signed certificate
 
     # create save_pathname if it does not exist
     save_pathname = Path(save_pathname).resolve()
@@ -429,7 +430,7 @@ def get_era5_hourly(
     # get the data for the closest 9 nodes to the coordinates
     node_spacing = 0.250500001 * 1
 
-    # See: https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-single-levels?tab=form
+    # See: https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels?tab=form
     # for formulating other requests from cds
     cds_dataset = "reanalysis-era5-single-levels"
     cds_request = {
@@ -475,7 +476,6 @@ def get_era5_hourly(
             try:
                 cds_request.update({"year": year, "month": months})
                 c.retrieve(cds_dataset, cds_request, outfile)
-
             except Exception as e:
                 logger.error(f"Failed to download ERA5: {outfile}")
                 logger.error(e)
@@ -517,6 +517,10 @@ def get_era5_hourly(
 
     # save to csv for easy loading as required
     df.to_csv(save_pathname / f"{save_filename}.csv", index=True)
+
+    # delete downloaded NetCDF files
+    for file in save_pathname.glob(f"{save_filename}*.nc"):
+        os.remove(file)
 
     return df
 
@@ -683,7 +687,7 @@ def get_merra2_hourly(
 ) -> pd.DataFrame:
     """
     Get MERRA2 data directly from the NASA GES DISC service, which requires registration on the
-    GES DISC service. See: https://disc.gsfc.nasa.gov/data-access#python-requests.
+    GES DISC service. See: https://disc.gsfc.nasa.gov/information/documents?title=Data%20Access#python-requests.
 
     This function returns hourly MERRA2 data from the "M2T1NXSLV" dataset. See further details
     regarding the dataset at: https://disc.gsfc.nasa.gov/datasets/M2T1NXSLV_5.12.4/summary.
@@ -718,11 +722,13 @@ def get_merra2_hourly(
             4. surf_pres_Pa: surface pressure in Pascals.
 
     Raises:
-        ValueError: If the start_year is greater than the end_year.
+        ValueError: If the start_date is greater than the end_date.
     """
 
     logger.info("Please note access to MERRA2 data requires registration")
-    logger.info("Please see: https://disc.gsfc.nasa.gov/data-access#python-requests")
+    logger.info(
+        "Please see: https://disc.gsfc.nasa.gov/information/documents?title=Data%20Access#python-requests"
+    )
 
     # base url containing the monthly data set M2T1NXSLV
     base_url = r"https://goldsmr4.gesdisc.eosdis.nasa.gov/opendap/MERRA2/M2T1NXSLV.5.12.4/"
@@ -847,5 +853,9 @@ def get_merra2_hourly(
 
     # save to csv for easy loading as required
     df.to_csv(save_pathname / f"{save_filename}.csv", index=True)
+
+    # delete downloaded NetCDF files
+    for file in save_pathname.glob(f"{save_filename}*.nc"):
+        os.remove(file)
 
     return df
