@@ -194,13 +194,14 @@ def get_era5_monthly(
     See registration details at: https://cds.climate.copernicus.eu/how-to-api
 
     This function returns monthly ERA5 data from the "ERA5 monthly averaged data on single levels
-    from 1959 to present" dataset. See further details regarding the dataset at:
+    from 1959 to present" dataset at the nearest grid point to the provided coordinates. See
+    further details regarding the dataset at:
     https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels-monthly-means.
     Only 10m wind speed, the temperature at 2m, and the surface pressure are downloaded here.
 
-    As well as returning the data as a dataframe, the data is also saved as monthly NetCDF files and
-    a csv file with the concatenated data. These are located in the "save_pathname" directory, with
-    "save_filename" prefix. This allows future loading without download from the CDS service.
+    As well as returning the data as a dataframe, the data is also saved as a csv file with the
+    concatenated data. These are located in the "save_pathname" directory, with "save_filename"
+    prefix. This allows future loading without download from the CDS service.
 
     Args:
         lat(:obj:`float`): Latitude in WGS 84 spatial reference system (decimal degrees).
@@ -361,14 +362,15 @@ def get_era5_hourly(
     https://cds.climate.copernicus.eu/how-to-api
 
     This function returns hourly ERA5 data from the "ERA5 hourly data on single levels from 1940 to
-    present" dataset. See further details regarding the dataset at:
+    present" dataset at the nearest grid point to the provided coordinates. See further details
+    regarding the dataset at:
     https://cds.climate.copernicus.eu/datasets/reanalysis-era5-single-levels.
     U and V components of wind speed at 100 m, temperature at 2 m, and surface pressure are
     downloaded here.
 
-    As well as returning the data as a dataframe, the data is also saved as monthly NetCDF files and
-    a csv file with the concatenated data. These are located in the "save_pathname" directory, with
-    "save_filename" prefix. This allows future loading without download from the CDS service.
+    As well as returning the data as a dataframe, the data is also saved as a csv file with the
+    concatenated data. These are located in the "save_pathname" directory, with "save_filename"
+    prefix. This allows future loading without download from the CDS service.
 
     Args:
         lat(:obj:`float`): Latitude in WGS 84 spatial reference system (decimal degrees).
@@ -432,7 +434,7 @@ def get_era5_hourly(
         raise ValueError("The start_date should be less than or equal to the end_date")
 
     # list all years that will be downloaded
-    years = list(range(start_date.year, end_date.year + 1, 1))
+    years = list(range(start_date.year, end_date.year + 1))
 
     # find the nearest coordinate grid point
     node_spacing = 0.25
@@ -547,13 +549,14 @@ def get_merra2_monthly(
     Get MERRA2 data directly from the NASA GES DISC service, which requires registration on the
     GES DISC service. See: https://disc.gsfc.nasa.gov/information/documents?title=Data%20Access#python-requests.
 
-    This function returns monthly MERRA2 data from the "M2IMNXLFO" dataset. See further details
-    regarding the dataset at: https://disc.gsfc.nasa.gov/datasets/M2IMNXLFO_5.12.4/summary.
+    This function returns monthly MERRA2 data from the "M2IMNXLFO" dataset at the nearest grid
+    point to the provided coordinates. See further details regarding the dataset at:
+    https://disc.gsfc.nasa.gov/datasets/M2IMNXLFO_5.12.4/summary.
     Only surface wind speed, temperature and surface pressure are downloaded here.
 
-    As well as returning the data as a dataframe, the data is also saved as monthly NetCDF files
-    and a csv file with the concatenated data. These are located in the "save_pathname" directory,
-    with "save_filename" prefix. This allows future loading without download from the CDS service.
+    As well as returning the data as a dataframe, the data is also saved as a csv file with the
+    concatenated data. These are located in the "save_pathname" directory, with "save_filename"
+    prefix. This allows future loading without download from the CDS service.
 
     Args:
         lat(:obj:`float`): Latitude in WGS 84 spatial reference system (decimal degrees).
@@ -639,8 +642,8 @@ def get_merra2_monthly(
                         lat_idx=("lat", range(ds_nc.dims["lat"])),
                     )
                     sel = ds_nc_idx.sel(lat=lat, lon=lon, method="nearest")
-                    lon_i = f"[{sel.lon_idx.values-1}:{sel.lon_idx.values+1}]"
-                    lat_i = f"[{sel.lat_idx.values-1}:{sel.lat_idx.values+1}]"
+                    lon_i = f"[{sel.lon_idx.values}:{sel.lon_idx.values}]"
+                    lat_i = f"[{sel.lat_idx.values}:{sel.lat_idx.values}]"
                     ds_nc.close()
                     outfile.unlink()
 
@@ -705,14 +708,15 @@ def get_merra2_hourly(
     Get MERRA2 data directly from the NASA GES DISC service, which requires registration on the
     GES DISC service. See: https://disc.gsfc.nasa.gov/information/documents?title=Data%20Access#python-requests.
 
-    This function returns hourly MERRA2 data from the "M2T1NXSLV" dataset. See further details
-    regarding the dataset at: https://disc.gsfc.nasa.gov/datasets/M2T1NXSLV_5.12.4/summary.
+    This function returns hourly MERRA2 data from the "M2T1NXSLV" dataset at the nearest grid point
+    to the provided coordinates. See further details regarding the dataset at:
+    https://disc.gsfc.nasa.gov/datasets/M2T1NXSLV_5.12.4/summary.
     U and V components of wind speed at 50 m, temperature at 2 m, and surface pressure are
     downloaded here.
 
-    As well as returning the data as a dataframe, the data is also saved as monthly NetCDF files
-    and a csv file with the concatenated data. These are located in the "save_pathname" directory,
-    with "save_filename" prefix. This allows future loading without download from the CDS service.
+    As well as returning the data as a dataframe, the data is also saved as a csv file with the
+    concatenated data. These are located in the "save_pathname" directory, with "save_filename"
+    prefix. This allows future loading without download from the CDS service.
 
     Args:
         lat(:obj:`float`): Latitude in WGS 84 spatial reference system (decimal degrees).
@@ -773,7 +777,7 @@ def get_merra2_hourly(
         raise ValueError("The start_date should be less than or equal to the end_date")
 
     # list all years that will be downloaded
-    years = list(range(start_date.year, end_date.year + 1, 1))
+    years = list(range(start_date.year, end_date.year + 1))
 
     # download the data
     for year in years:
@@ -817,8 +821,8 @@ def get_merra2_hourly(
                             lat_idx=("lat", range(ds_nc.dims["lat"])),
                         )
                         sel = ds_nc_idx.sel(lat=lat, lon=lon, method="nearest")
-                        lon_i = f"[{sel.lon_idx.values-1}:{sel.lon_idx.values+1}]"
-                        lat_i = f"[{sel.lat_idx.values-1}:{sel.lat_idx.values+1}]"
+                        lon_i = f"[{sel.lon_idx.values}:{sel.lon_idx.values}]"
+                        lat_i = f"[{sel.lat_idx.values}:{sel.lat_idx.values}]"
                         ds_nc.close()
                         outfile.unlink()
 
