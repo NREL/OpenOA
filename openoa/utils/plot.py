@@ -915,7 +915,11 @@ def plot_boxplot(
     ax = fig.add_subplot(111)
 
     parameters = x.unique()
-    parameters.to_numpy().sort()  # NOTE: Pandas ArrowStringArray doesn't have .sort(), revert to NumPy
+
+    # NOTE: Pandas ArrowStringArray doesn't have .sort(), revert to NumPy
+    parameters = parameters.to_numpy() if not isinstance(parameters, np.ndarray) else parameters
+    parameters.sort()
+
     y_groups = [df.loc[df["x"] == el, "y"] for el in parameters]
 
     plot_kwargs_box.setdefault("tick_labels", parameters)
