@@ -764,7 +764,7 @@ def plot_distributions(
     axes = fig.subplots(2, 2, gridspec_kw={"wspace": 0.1, "hspace": 0.2})
 
     for ax, col, label, _xlim, _ylim in zip(
-        axes.flatten(), which, xlabels, xlim, ylim, strict=True
+        axes.flatten(), which, xlabels, xlim, ylim, strict=False
     ):
         vals = data[col].values
         u_vals = vals.mean()
