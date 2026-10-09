@@ -918,7 +918,7 @@ def plot_boxplot(
     parameters.to_numpy().sort()  # NOTE: Pandas ArrowStringArray doesn't have .sort(), revert to NumPy
     y_groups = [df.loc[df["x"] == el, "y"] for el in parameters]
 
-    plot_kwargs_box.setdefault("labels", parameters)
+    plot_kwargs_box.setdefault("tick_labels", parameters)
     box_data = ax.boxplot(y_groups, **plot_kwargs_box)
 
     if with_points:
