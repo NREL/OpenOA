@@ -57,7 +57,7 @@ def get_annual_values(data):
     # shift time index to beginning of first month so resampling by 'MS' groups the data into full years
     # starting from the beginning of the time series
     ix_start = data.index[0]
-    month_start = ix_start.floor("d") + pd.offsets.MonthEnd(0) - pd.offsets.MonthBegin(1)
+    month_start = ix_start.floor("D") + pd.offsets.MonthEnd(0) - pd.offsets.MonthBegin(1)
     data.index = data.index - pd.Timedelta(ix_start - month_start)
 
     return data.resample("12MS").sum().values
@@ -107,7 +107,7 @@ class MonteCarloAEP(FromDictMixin, ResetValuesMixin):
         uncertainty_nan_energy(:obj:`float`): Threshold to flag days/months based on NaNs. Defaults
             to 0.01.
         time_resolution(:obj:`string`): whether to perform the AEP calculation at monthly ("ME" or
-            "MS"), daily ("D") or hourly ("h") time resolution. Defaults to "MS".
+            "MS"), daily ("D") or hourly ("H") time resolution. Defaults to "MS".
         end_date_lt(:obj:`string` or :obj:`pandas.Timestamp`): The last date to use for the
             long-term correction. Note that only the component of the date corresponding to the
             time_resolution argument is considered. If None, the end of the last complete month of
