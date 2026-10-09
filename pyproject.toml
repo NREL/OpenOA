@@ -8,7 +8,7 @@ dynamic = ["version"]
 authors = [{name = "NREL PRUF OA Team", email = "openoa@nrel.gov"}]
 readme = {file = "README.md", content-type = "text/markdown"}
 description = "A package for collecting and assigning wind turbine metrics"
-requires-python = ">=3.10,<3.14"
+requires-python = ">=3.11,<3.15"
 license = {file = "LICENSE.txt"}
 dependencies = [
     "scikit-learn>=1.0,<1.7",
