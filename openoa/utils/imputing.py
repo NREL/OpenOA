@@ -22,10 +22,10 @@ def asset_correlation_matrix(data: pd.DataFrame, value_col: str) -> pd.DataFrame
 
     """
     corr_df = data.loc[:, [value_col]].unstack().corr(min_periods=2)
+    corr_df = corr_df.where(np.identity(corr_df.shape[0]) != 1, np.nan)
     corr_df = corr_df.droplevel(0).droplevel(0, axis=1)  # drop the added axes
     corr_df.index = corr_df.index.set_names(None)
     corr_df.columns = corr_df.index.set_names(None)
-    np.fill_diagonal(corr_df.values, np.nan)
     return corr_df
 
 
