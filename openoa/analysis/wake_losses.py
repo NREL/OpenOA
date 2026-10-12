@@ -917,7 +917,9 @@ class WakeLosses(FromDictMixin, ResetValuesMixin):
                     / self.aggregate_df_sample[("potential_turbine_power", t)].sum()
                 )
 
-            df_wd_bin = self.aggregate_df_sample.groupby("wind_direction_bin").sum()
+            df_wd_bin = (
+                self.aggregate_df_sample.sort_index(axis=1).groupby("wind_direction_bin").sum()
+            )
 
             index = np.arange(0.0, 360.0, self.wd_bin_width_LT_corr)
             df_wd_bin = df_wd_bin.reindex(index)
