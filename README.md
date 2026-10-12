@@ -9,7 +9,7 @@
 [![Binder Badge](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/NREL/OpenOA/main?filepath=examples)
 
 [![Documentation Badge](https://readthedocs.org/projects/openoa/badge/?version=latest)](https://openoa.readthedocs.io)
-[![Code Coverage Badge](https://codecov.io/gh/NREL/OpenOA/branch/develop/graph/badge.svg)](https://codecov.io/gh/NREL/OpenOA)
+[![Coverage Status](https://coveralls.io/repos/github/NatLabRockies/OpenOA/badge.svg?branch=main)](https://coveralls.io/github/NatLabRockies/OpenOA?branch=main)
 [![PyPI downloads](https://img.shields.io/pypi/dm/openoa)](https://pypi.org/project/WOMBAT/)
 
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
