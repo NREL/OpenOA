@@ -21,6 +21,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
         python-version: ["3.10", "3.13"]
+        test-type: [unit, regression]
 
     steps:
     - uses: actions/checkout@v7
@@ -33,9 +34,26 @@ jobs:
         python -m pip install --upgrade pip
         pip install -e ".[develop]"
       shell: bash
-    - name: Test with pytest
-      run: |
-        pytest --cov=openoa --cov-report=xml
-      shell: bash
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v4
+    - name: Run ${{ matrix.test-type }} tests
+      shell: bash -el {0}
+      run: pytest . --${{ matrix.test-type }} --cov=openoa --cov-report=lcov:./${{ matrix.test-type }}-coverage.lcov
+    - name: Upload test coverage
+      uses: coverallsapp/github-action@v2
+      if: contains(matrix.os, 'ubuntu') && contains(matrix.python-version, '3.13')
+      with:
+        github-token: ${{ secrets.COVERALLS_REPO_TOKEN }}
+        files: ./${{ matrix.test-type }}-coverage.lcov
+        flag-name: ${{ matrix.test-type }}
+        parallel: true
+        fail-on-error: false
+  coverage-finish:
+    needs: build
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Coveralls finished
+        uses: coverallsapp/github-action@v2
+        with:
+          github-token: ${{ secrets.COVERALLS_REPO_TOKEN }}
+          parallel-finished: true
+          fail-on-error: false
