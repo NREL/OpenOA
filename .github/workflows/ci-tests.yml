@@ -21,6 +21,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
         python-version: ["3.11", "3.14"]
+        test-type: [unit, regression]
 
     steps:
     - uses: actions/checkout@v7
