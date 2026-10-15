@@ -663,22 +663,22 @@ class StaticYawMisalignment(FromDictMixin, ResetValuesMixin):
                 yaw_misalignment_ws = self.yaw_misalignment_ws[i, :]
 
             return_vals = plot.plot_yaw_misalignment(
-                self.ws_bins,
-                self._vane_bins,
-                power_values_vane_ws,
-                curve_fit_params_ws,
-                mean_vane_angle_ws,
-                yaw_misalignment_ws,
-                turbine_id,
-                power_performance_label,
-                xlim,
-                ylim,
-                return_fig,
-                figure_kwargs,
-                plot_kwargs_curve,
-                plot_kwargs_line,
-                plot_kwargs_fill,
-                legend_kwargs,
+                ws_bins=self.ws_bins,
+                vane_bins=self._vane_bins,
+                power_values_vane_ws=power_values_vane_ws,
+                curve_fit_params_ws=curve_fit_params_ws,
+                mean_vane_angle_ws=mean_vane_angle_ws,
+                yaw_misalignment_ws=yaw_misalignment_ws,
+                turbine_id=turbine_id,
+                power_performance_label=power_performance_label,
+                xlim=xlim,
+                ylim=ylim,
+                return_fig=return_fig,
+                figure_kwargs=figure_kwargs,
+                plot_kwargs_curve=plot_kwargs_curve,
+                plot_kwargs_line=plot_kwargs_line,
+                plot_kwargs_fill=plot_kwargs_fill,
+                legend_kwargs=legend_kwargs,
             )
 
             if return_fig:

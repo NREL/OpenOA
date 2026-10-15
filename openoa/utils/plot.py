@@ -764,7 +764,7 @@ def plot_distributions(
     axes = fig.subplots(2, 2, gridspec_kw={"wspace": 0.1, "hspace": 0.2})
 
     for ax, col, label, _xlim, _ylim in zip(
-        axes.flatten(), which, xlabels, xlim, ylim, strict=True
+        axes.flatten(), which, xlabels, xlim, ylim, strict=False
     ):
         vals = data[col].values
         u_vals = vals.mean()
@@ -915,10 +915,14 @@ def plot_boxplot(
     ax = fig.add_subplot(111)
 
     parameters = x.unique()
+
+    # NOTE: Pandas ArrowStringArray doesn't have .sort(), revert to NumPy
+    parameters = parameters.to_numpy() if not isinstance(parameters, np.ndarray) else parameters
     parameters.sort()
+
     y_groups = [df.loc[df["x"] == el, "y"] for el in parameters]
 
-    plot_kwargs_box.setdefault("labels", parameters)
+    plot_kwargs_box.setdefault("tick_labels", parameters)
     box_data = ax.boxplot(y_groups, **plot_kwargs_box)
 
     if with_points:
